@@ -722,3 +722,27 @@ Date: 2026-09-28
 
 
 
+CHANGELOG: COMPREHENSIVE MULTILINGUAL TRANSLATION (ENGLISH US & PORTUGUESE BR)
+Date: 2026-11-01
+
+1. FULL MULTILINGUAL LOCALIZATION & PARITY
+- Expanded translation dictionary in js/i18n.js to 722 symmetrical keys with 100% parity between Portuguese (pt-BR) and English (en-US).
+- Full browser language detection: Portuguese (BR, PT) and Spanish automatically map to pt-BR; all other locales map to en-US, with fallback to pt-BR.
+- Language switcher in header and settings modal persists user preference to localStorage and broadcasts cross-tab updates.
+
+2. HTML TEMPLATES AND ATTRIBUTE LOCALIZATION
+- Completely audited and localized all 5 application HTML views (index.html, pages/game.html, pages/generate.html, pages/stats.html, pages/bulk-add.html).
+- Added data-i18n, data-i18n-html, data-i18n-placeholder, data-i18n-title, and data-i18n-aria-label attributes across all interactive UI controls, labels, tooltips, dialogs, badges, and empty states.
+- Localized dynamic <title> tags across all application pages.
+
+3. DYNAMIC JAVASCRIPT UI MODULE LOCALIZATION
+- js/explore-modal.js: Localized all slot cards, empty state triggers, cloud sync indicators, delete/share alerts, Stripe payment banners, CPF alerts, and PIX copy feedback.
+- js/account-modal.js: Localized logged-in and logged-out profile headers, lifetime access guarantees, monthly billing details, cancellation confirmations, re-subscription prompts, and account deletion confirmation workflows.
+- js/game.js: Localized toast notification pills, daily streak freeze alerts, time-of-day circadian advice, deck completion summaries, empty notebook screens, tutor greetings, and study action menus.
+- js/stats.js: Localized cognitive pace estimations, forecast cards, accuracy KPI feedbacks, timeline history toggles, pedagogical performance insights, and activity heatmaps.
+- js/generate.js: Localized document parsing errors, file upload constraints, Gemini AI generation status banners, card editor placeholders, and section divisor labels.
+- js/index.js: Localized exam mix session banners, upload error alerts, deck size restrictions, and daily streak badge tooltips.
+
+4. SERVICE WORKER & ASSETS
+- Bumped PWA cache version to 'flashcards-v14.9' in sw.js to ensure immediate client updates.
+

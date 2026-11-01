@@ -79,9 +79,9 @@ async function renderAccountModalContent() {
           <span class="material-symbols-rounded text-3xl">account_circle</span>
         </div>
         <div>
-          <h4 class="font-bold text-base text-[var(--md-sys-color-on-surface)]">Conecte sua conta Google</h4>
-          <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 max-w-xs mx-auto">
-            Faça login para sincronizar seus baralhos na nuvem, acessar as ferramentas de IA e gerenciar sua assinatura Pro.
+          <h4 class="font-bold text-base text-[var(--md-sys-color-on-surface)]" data-i18n="connect_google_title">${t('connect_google_title')}</h4>
+          <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 max-w-xs mx-auto" data-i18n="connect_google_desc">
+            ${t('connect_google_desc')}
           </p>
         </div>
 
@@ -93,7 +93,7 @@ async function renderAccountModalContent() {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
           </svg>
-          <span>Entrar com Google</span>
+          <span>${t('sign_in_with_google')}</span>
         </button>
       </div>
     `;
@@ -123,15 +123,15 @@ async function renderAccountModalContent() {
   let planBadge = '';
   if (lifetime) {
     planBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-      <span class="material-symbols-rounded text-xs">star</span> PRO VITALÍCIO
+      <span class="material-symbols-rounded text-xs">star</span> ${t('pro_lifetime_badge')}
     </span>`;
   } else if (pro) {
     planBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-      <span class="material-symbols-rounded text-xs">verified</span> PRO ATIVO
+      <span class="material-symbols-rounded text-xs">verified</span> ${t('pro_active_badge')}
     </span>`;
   } else {
     planBadge = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
-      GRATUITO
+      ${t('free_plan_badge')}
     </span>`;
   }
 
@@ -142,7 +142,7 @@ async function renderAccountModalContent() {
       <div class="relative flex-shrink-0">
         ${photo ? `<img src="${photo}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover border-2 border-blue-400" alt="Avatar">`
                 : `<span class="material-symbols-rounded text-5xl text-blue-600">account_circle</span>`}
-        ${pro ? `<span class="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 text-[10px]" title="Assinante Pro"><span class="material-symbols-rounded text-xs block">star</span></span>` : ''}
+        ${pro ? `<span class="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 text-[10px]" title="${t('pro_subscriber_title')}"><span class="material-symbols-rounded text-xs block">star</span></span>` : ''}
       </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
@@ -156,15 +156,15 @@ async function renderAccountModalContent() {
 
   // Bloco da Assinatura
   if (lifetime) {
-    // 2.1 PRO VITALÍCIO
+    // 2.1 ${t('pro_lifetime_badge')}
     html += `
       <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
         <div class="flex items-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
           <span class="material-symbols-rounded text-lg text-amber-600">verified</span>
-          <span>Acesso Vitalício Garantido</span>
+          <span>${t('lifetime_access_guaranteed')}</span>
         </div>
         <p class="text-xs text-amber-800/90 leading-relaxed">
-          Sua conta possui acesso irrestrito e vitalício a todas as ferramentas de IA, gerações de baralho, tutor interativo e sincronização contínua na nuvem sem mensalidades.
+          ${t('lifetime_access_desc')}
         </p>
       </div>
     `;
@@ -187,10 +187,10 @@ async function renderAccountModalContent() {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 text-blue-950 font-bold text-xs sm:text-sm">
             <span class="material-symbols-rounded text-lg text-blue-600">workspace_premium</span>
-            <span>Flashcards Pro (Mensal)</span>
+            <span>${t('flashcards_pro_monthly')}</span>
           </div>
           <span class="text-xs font-black text-blue-700 bg-blue-100/80 px-2.5 py-0.5 rounded-full border border-blue-300">
-            R$ 4,99 / mês
+            ${t('price_per_month')}
           </span>
         </div>
 
@@ -198,17 +198,17 @@ async function renderAccountModalContent() {
           <!-- Disclaimer de Cancelamento: Assinatura ativa até o dia X -->
           <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium flex items-center gap-2">
             <span class="material-symbols-rounded text-base text-amber-700 flex-shrink-0">info</span>
-            <span>Assinatura ativa até o dia <strong>${activeUntilDateFormatted}</strong></span>
+            <span>${t('active_until_label')} <strong>${activeUntilDateFormatted}</strong></span>
           </div>
         ` : `
           <div class="space-y-1.5 text-xs text-blue-900/90 pt-1">
             <div class="flex items-center gap-2">
               <span class="material-symbols-rounded text-base text-blue-600">calendar_month</span>
-              <span>Próxima renovação: <strong>${activeUntilDateFormatted}</strong></span>
+              <span>${t('next_renewal_label')}: <strong>${activeUntilDateFormatted}</strong></span>
             </div>
             <div class="flex items-center gap-2">
               <span class="material-symbols-rounded text-base text-blue-600">bolt</span>
-              <span>Tutor de IA ilimitado + 3 gerações de decks por mês</span>
+              <span>${t('pro_unlimited_tutor_generations')}</span>
             </div>
           </div>
         `}
@@ -219,12 +219,12 @@ async function renderAccountModalContent() {
             <a href="${invoiceUrl}" target="_blank" rel="noopener noreferrer"
               class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 transition cursor-pointer shadow-xs">
               <span class="material-symbols-rounded text-base">credit_card</span>
-              <span>Ver Fatura ou Gerenciar no Stripe</span>
+              <span>${t('view_invoice_or_manage_stripe')}</span>
               <span class="material-symbols-rounded text-sm">open_in_new</span>
             </a>
           ` : `
             <div id="account-loading-details" class="text-[11px] text-blue-700 font-medium text-center">
-              ${isLoadingSubDetails ? 'Carregando opções de pagamento...' : (isCanceling ? 'Cancelamento agendado.' : 'Assinatura ativa via Stripe.')}
+              ${isLoadingSubDetails ? t('loading_payment_options') : (isCanceling ? t('cancellation_scheduled') : t('renewals_active'))}
             </div>
           `}
 
@@ -232,7 +232,7 @@ async function renderAccountModalContent() {
           <button type="button" id="account-buy-extra-deck-btn"
             class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer shadow-xs">
             <span class="material-symbols-rounded text-base text-amber-700">add_circle</span>
-            <span>Comprar Baralho Extra (R$ 0,99)</span>
+            <span>${t('buy_extra_deck_btn')}</span>
           </button>
 
           ${isCanceling ? `
@@ -240,45 +240,45 @@ async function renderAccountModalContent() {
             <button type="button" id="account-resubscribe-btn"
               class="m3-btn-expressive m3-btn-filled w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-white bg-blue-600 hover:bg-blue-700 transition cursor-pointer shadow-xs">
               <span class="material-symbols-rounded text-base">restart_alt</span>
-              <span>Voltar a assinar</span>
+              <span>${t('resubscribe_btn')}</span>
             </button>
           ` : `
             <!-- Botão Cancelar Assinatura -->
             <button type="button" id="account-cancel-sub-btn"
               class="w-full py-2 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer">
               <span class="material-symbols-rounded text-base">block</span>
-              <span>Cancelar assinatura</span>
+              <span>${t('cancel_sub_btn')}</span>
             </button>
           `}
         </div>
       </div>
     `;
   } else {
-    // 2.3 USUÁRIO GRATUITO
+    // 2.3 USUÁRIO ${t('free_plan_badge')}
     html += `
       <div class="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Plano Atual: Gratuito</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">${t('current_plan_free')}</span>
           <span class="text-xs font-bold text-[var(--md-sys-color-primary)]">R$ 0,00</span>
         </div>
 
         <div class="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl space-y-2">
           <p class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
             <span class="material-symbols-rounded text-base text-blue-600">workspace_premium</span>
-            Vantagens do Plano Pro (R$ 4,99/mês):
+            ${t('pro_plan_perks_title')}
           </p>
           <ul class="text-[11px] text-blue-950/90 space-y-1 pl-1">
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> Gerar flashcards com IA usando materiais</li>
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> Tutor de IA que explica seu card</li>
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> Corretor de respostas com sinônimos</li>
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> Sincronização em nuvem e links públicos</li>
+            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_generate')}</li>
+            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_tutor')}</li>
+            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_synonyms')}</li>
+            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_cloud')}</li>
           </ul>
         </div>
 
         <button type="button" id="account-upgrade-pro-btn"
           class="m3-btn-expressive m3-btn-filled w-full py-2.5 px-4 font-bold text-xs flex items-center justify-center gap-2 shadow cursor-pointer">
           <span class="material-symbols-rounded text-base">star</span>
-          <span>Assinar Flashcards Pro</span>
+          <span>${t('subscribe_flashcards_pro_btn')}</span>
         </button>
       </div>
     `;
@@ -290,13 +290,13 @@ async function renderAccountModalContent() {
       <button type="button" id="account-logout-btn"
         class="px-3 py-1.5 rounded-xl hover:bg-gray-100 text-xs font-bold text-[var(--md-sys-color-on-surface-variant)] hover:text-red-600 transition cursor-pointer flex items-center gap-1.5">
         <span class="material-symbols-rounded text-base">logout</span>
-        <span>Sair da conta</span>
+        <span>${t('logout_account')}</span>
       </button>
 
       <button type="button" id="account-delete-account-btn"
         class="text-[11px] text-gray-400 hover:text-red-600 transition underline cursor-pointer"
-        title="Excluir conta e todos os dados">
-        Excluir conta
+        title="${t('delete_account_tooltip')}">
+        ${t('delete_account_link')}
       </button>
     </div>
   `;
@@ -330,16 +330,14 @@ async function renderAccountModalContent() {
 
   // Cancelar Assinatura (mantém acesso até o fim do período já pago)
   document.getElementById('account-cancel-sub-btn')?.addEventListener('click', async () => {
-    const confirmed = confirm(
-      "Deseja realmente cancelar sua assinatura do Flashcards Pro?\n\nAs próximas renovações automáticas serão canceladas e você manterá seu acesso PRO até o final do período já pago."
-    );
+    const confirmed = confirm(t('confirm_cancel_sub_modal'));
     if (!confirmed) return;
 
     try {
       const btn = document.getElementById('account-cancel-sub-btn');
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = `<span class="material-symbols-rounded text-base animate-spin">refresh</span> Cancelando...`;
+        btn.innerHTML = `<span class="material-symbols-rounded text-base animate-spin">refresh</span> ${t('canceling_ellipsis')}`;
       }
 
       const res = await cancelSubscriptionOnly();
@@ -351,10 +349,10 @@ async function renderAccountModalContent() {
       const formattedDate = (res?.activeUntil || subDetailsCache?.nextDueDate)
         ? new Date((res?.activeUntil || subDetailsCache?.nextDueDate) + 'T12:00:00Z').toLocaleDateString('pt-BR')
         : '';
-      alert(`Assinatura cancelada com sucesso. Você não terá novas cobranças e seu acesso continuará ativo até o dia ${formattedDate || 'o final do ciclo'}.`);
+      alert(t('sub_canceled_success_modal'));
       renderAccountModalContent();
     } catch (err) {
-      alert("Erro ao cancelar assinatura: " + (err.message || "Tente novamente mais tarde"));
+      alert(t('error_canceling_sub', { error: err.message || "Tente novamente mais tarde" }));
       renderAccountModalContent();
     }
   });
@@ -364,14 +362,14 @@ async function renderAccountModalContent() {
     const btn = document.getElementById('account-resubscribe-btn');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = `<span class="material-symbols-rounded text-base animate-spin">refresh</span> Processando...`;
+      btn.innerHTML = `<span class="material-symbols-rounded text-base animate-spin">refresh</span> ${t('reactivating_ellipsis')}`;
     }
 
     try {
       await reactivateSubscription();
       subDetailsCache = null;
       await refreshUserProStatus();
-      alert("Assinatura reativada com sucesso! As renovações automáticas estão ativas novamente.");
+      alert(t('sub_reactivated_success_modal'));
       renderAccountModalContent();
     } catch (err) {
       console.warn("Reativação direta falhou, abrindo modal Pro:", err);
@@ -382,14 +380,12 @@ async function renderAccountModalContent() {
 
   // Exclusão definitiva de conta
   document.getElementById('account-delete-account-btn')?.addEventListener('click', async () => {
-    const confirmed = confirm(
-      "Atenção: Esta ação é definitiva e irreversível.\n\nSua conta, baralhos sincronizados na nuvem e eventual assinatura no Stripe serão cancelados e apagados permanentemente.\n\nDeseja continuar?"
-    );
+    const confirmed = confirm(t('confirm_delete_account_modal'));
     if (!confirmed) return;
 
-    const check = prompt("Para confirmar a exclusão definitiva de sua conta, digite EXCLUIR:");
-    if (check !== 'EXCLUIR') {
-      alert("Ação cancelada. Sua conta permanece ativa.");
+    const check = prompt(t('prompt_delete_confirm'));
+    if (!check || (check.trim().toUpperCase() !== 'EXCLUIR' && check.trim().toUpperCase() !== 'DELETE')) {
+      alert(t('action_canceled_account_active'));
       return;
     }
 
@@ -400,10 +396,10 @@ async function renderAccountModalContent() {
       localStorage.removeItem('flashcardsActiveMode');
       await signOutUser();
       closeAccountModal();
-      alert("Sua conta e todos os seus dados foram excluídos com sucesso.");
+      alert(t('account_deleted_success'));
       window.location.reload();
     } catch (err) {
-      alert("Erro ao excluir conta: " + (err.message || "Erro inesperado"));
+      alert(t('error_deleting_account', { error: err.message || "Erro inesperado" }));
     }
   });
 

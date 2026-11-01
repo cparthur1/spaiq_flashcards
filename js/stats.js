@@ -327,7 +327,7 @@ function renderCurrentSession(sess, gameState, history) {
                 icon.className = 'material-symbols-rounded text-sm';
                 icon.textContent = 'track_changes';
                 const text = document.createElement('span');
-                text.textContent = ` ${Number(accuracyPct) || 0}% Precisão`;
+                text.textContent = t('accuracy_stat_label', { accuracy: Number(accuracyPct) || 0 });
                 bannerStatAcc.append(icon, text);
             }
             if (bannerStatTime) {
@@ -371,7 +371,7 @@ function renderCurrentSession(sess, gameState, history) {
 
     // Update KPIs
     kpiProgressPercent.textContent = `${progressPct}%`;
-    kpiProgressRatio.textContent = `${completedCards} / ${totalCards} cards`;
+    kpiProgressRatio.textContent = t('kpi_progress_ratio', { completed: completedCards, total: totalCards });
     kpiProgressBar.style.width = `${progressPct}%`;
 
     kpiAccuracyPercent.textContent = `${accuracyPct}%`;
@@ -379,7 +379,7 @@ function renderCurrentSession(sess, gameState, history) {
         accuracyPct >= 80 ? 'text-emerald-600' :
         accuracyPct >= 65 ? 'text-amber-500' : 'text-red-600'
     }`;
-    kpiAccuracyFeedback.textContent = accuracyPct >= 85 ? 'Excelente Domínio' : accuracyPct >= 70 ? 'Bom Ritmo' : 'Atenção Necessária';
+    kpiAccuracyFeedback.textContent = accuracyPct >= 85 ? t('excellent_mastery') : accuracyPct >= 70 ? t('good_pace') : t('needs_attention');
     kpiCorrectCount.textContent = correct;
     kpiIncorrectCount.textContent = incorrect;
 
@@ -512,11 +512,11 @@ function renderPaceAndEstimate(sess, gameState, avgSeconds, poolRemaining, accur
     const allQuestionsCount = gameState.allQuestions ? gameState.allQuestions.length : 0;
     if (poolRemaining === 0 && allQuestionsCount > 0) {
         if (paceEstimateTime) {
-            paceEstimateTime.textContent = 'Concluído!';
+            paceEstimateTime.textContent = t('pace_completed');
             paceEstimateTime.removeAttribute('title');
         }
         if (paceEstimateSub) {
-            paceEstimateSub.textContent = 'Todos os cards foram respondidos';
+            paceEstimateSub.textContent = t('all_cards_answered');
             paceEstimateSub.removeAttribute('title');
         }
         if (paceEstimateBadge) {
@@ -553,23 +553,22 @@ function renderPaceAndEstimate(sess, gameState, avgSeconds, poolRemaining, accur
         const totalAttempts = Math.round(expectedAttempts);
         const errPercent = Math.round((1 - effectiveAccuracy) * 100);
         const tooltip = errPercent > 0
-            ? `Previsão considerando taxa de erro de ${errPercent}% (~${totalAttempts} tentativas a ${avgSeconds}s/card)`
-            : `Previsão considerando 100% de acerto a ${avgSeconds}s/card`;
+            ? t('forecast_with_errors', { err: errPercent, attempts: totalAttempts, avg: avgSeconds })
+            : t('forecast_clean', { avg: avgSeconds });
 
         if (paceEstimateTime) {
             paceEstimateTime.textContent = timeStr;
             paceEstimateTime.title = tooltip;
         }
         if (paceEstimateSub) {
-            if (totalAttempts > poolRemaining) {
-                paceEstimateSub.textContent = `para ${poolRemaining} card${poolRemaining > 1 ? 's' : ''} restante${poolRemaining > 1 ? 's' : ''} (~${totalAttempts} tentativas)`;
-            } else {
-                paceEstimateSub.textContent = `para ${poolRemaining} card${poolRemaining > 1 ? 's' : ''} restante${poolRemaining > 1 ? 's' : ''}`;
-            }
+            const remTxt = t('pace_remaining_cards', { count: poolRemaining, suffix: poolRemaining > 1 ? 's' : '', suffix_pl: poolRemaining > 1 ? 's' : '' });
+            paceEstimateSub.textContent = totalAttempts > poolRemaining
+                ? `${remTxt}${t('attempts_suffix', { attempts: totalAttempts })}`
+                : remTxt;
             paceEstimateSub.title = tooltip;
         }
         if (paceEstimateBadge) {
-            paceEstimateBadge.textContent = `Ritmo: ${avgSeconds}s/card`;
+            paceEstimateBadge.textContent = t('pace_badge_label', { sec: avgSeconds });
             paceEstimateBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700';
             paceEstimateBadge.title = tooltip;
         }
@@ -579,7 +578,7 @@ function renderPaceAndEstimate(sess, gameState, avgSeconds, poolRemaining, accur
             paceEstimateTime.removeAttribute('title');
         }
         if (paceEstimateSub) {
-            paceEstimateSub.textContent = 'Inicie o estudo para calcular a previsão';
+            paceEstimateSub.textContent = t('pace_start_hint');
             paceEstimateSub.removeAttribute('title');
         }
         if (paceEstimateBadge) {
@@ -600,7 +599,7 @@ function renderDeckMastery(progressPct, accuracyPct, currentStreak, completedCar
             masteryLevelBadge.textContent = 'Sem dados';
             masteryLevelBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600';
         }
-        if (masteryDescription) masteryDescription.textContent = 'Nenhum card disponível no baralho.';
+        if (masteryDescription) masteryDescription.textContent = t('no_cards_in_deck');
         return;
     }
 
@@ -688,9 +687,9 @@ function renderTimelineFlow(sess) {
     const log = sess && sess.answersLog ? sess.answersLog : [];
 
     if (log.length === 0) {
-        timelineStrip.innerHTML = '<p class="text-xs text-gray-400 italic py-2">Nenhum card respondido nesta sessão ainda.</p>';
+        timelineStrip.innerHTML = `<p class="text-xs text-gray-400 italic py-2">${t('no_cards_answered_session')}</p>`;
         if (timelineCounterBadge) {
-            timelineCounterBadge.innerHTML = '<span>&larr; Mais recentes (últimos 10)</span>';
+            timelineCounterBadge.innerHTML = `<span>${t('timeline_most_recent_10')}</span>`;
         }
         return;
     }
@@ -701,13 +700,13 @@ function renderTimelineFlow(sess) {
 
     if (timelineCounterBadge) {
         timelineCounterBadge.style.cursor = 'pointer';
-        timelineCounterBadge.title = showAllTimelineCards ? 'Clique para mostrar apenas os últimos 10 cards' : 'Clique para ver todos os cards respondidos nesta rodada';
+        timelineCounterBadge.title = showAllTimelineCards ? t('timeline_click_last_10') : t('timeline_click_see_all');
         if (showAllTimelineCards) {
-            timelineCounterBadge.innerHTML = `<span>&larr; Todos os ${totalAnswered} cards <span class="underline font-normal opacity-80 ml-1">(ver 10)</span></span>`;
+            timelineCounterBadge.innerHTML = `<span>&larr; ${t('timeline_all_cards', { total: totalAnswered })} <span class="underline font-normal opacity-80 ml-1">${t('timeline_see_10')}</span></span>`;
         } else {
             timelineCounterBadge.innerHTML = totalAnswered > 10
-                ? `<span>&larr; 10 de ${totalAnswered} respondidos <span class="underline font-normal opacity-80 ml-1">(ver todos)</span></span>`
-                : `<span>&larr; Mais recentes (${totalAnswered} nesta rodada)</span>`;
+                ? `<span>&larr; ${t('timeline_10_of_total', { total: totalAnswered })} <span class="underline font-normal opacity-80 ml-1">${t('timeline_see_all')}</span></span>`
+                : `<span>&larr; ${t('timeline_recent_round', { total: totalAnswered })}</span>`;
         }
     }
 
@@ -766,8 +765,8 @@ function renderTimelineFlow(sess) {
 function generatePedagogicalInsight(progressPct, accuracyPct, avgSeconds, anki, answered, history) {
     if (!insightTitle || !insightText) return;
     if (answered === 0) {
-        insightTitle.textContent = 'Sessão em Andamento';
-        insightText.textContent = 'Continue estudando seus flashcards para que nosso sistema trace sua curva de retenção e ritmo de aprendizado.';
+        insightTitle.textContent = t('session_in_progress');
+        insightText.textContent = t('session_in_progress_desc');
         return;
     }
 
@@ -777,23 +776,23 @@ function generatePedagogicalInsight(progressPct, accuracyPct, avgSeconds, anki, 
         const lastAcc = lastSess.accuracy !== undefined ? lastSess.accuracy : 0;
         const diff = accuracyPct - lastAcc;
         if (diff > 0) {
-            comparisonText = ` Você está com desempenho +${diff}% superior à sua última sessão (${lastAcc}%)!`;
+            comparisonText = t('comparison_performance_better', { diff, lastAcc });
         } else if (diff < 0) {
-            comparisonText = ` Seu rendimento está ${Math.abs(diff)}% abaixo da última sessão (${lastAcc}%). Revisite os cartões sinalizados para recuperar a retenção.`;
+            comparisonText = t('comparison_lower', { diff: Math.abs(diff), lastAcc });
         } else {
-            comparisonText = ` Seu índice de precisão está perfeitamente estável em relação à última sessão (${lastAcc}%).`;
+            comparisonText = t('comparison_stable', { lastAcc });
         }
     }
 
     if (accuracyPct >= 85) {
-        insightTitle.textContent = 'Alta Retenção e Domínio!';
-        insightText.textContent = `Você está com ${accuracyPct}% de precisão com média de ${avgSeconds}s por cartão. Seu recall ativo está muito afiado!${comparisonText} Recomendamos avançar nos cartões restantes para consolidar o baralho na memória de longo prazo.`;
+        insightTitle.textContent = t('high_retention_title');
+        insightText.textContent = t('high_retention_desc', { accuracy: accuracyPct, avg: avgSeconds, comparison: comparisonText });
     } else if (accuracyPct >= 70) {
-        insightTitle.textContent = 'Bom Progresso com Margem de Ajuste';
-        insightText.textContent = `Sua precisão atual é de ${accuracyPct}%.${comparisonText} Foque nos cards marcados como "Errei" ou "Difícil" para fechar lacunas pontuais de retenção antes de finalizar a rodada.`;
+        insightTitle.textContent = t('good_progress_title');
+        insightText.textContent = t('good_progress_desc', { accuracy: accuracyPct, comparison: comparisonText });
     } else {
-        insightTitle.textContent = 'Foco Recomendado em Revisão Espaçada';
-        insightText.textContent = `A precisão atual está em ${accuracyPct}%.${comparisonText} Cartões errados continuarão aparecendo em intervalos menores para fortalecer as sinapses neurais desse conteúdo.`;
+        insightTitle.textContent = t('spaced_rep_recommended_title');
+        insightText.textContent = t('spaced_rep_recommended_desc', { accuracy: accuracyPct, comparison: comparisonText });
     }
 }
 
@@ -1596,7 +1595,7 @@ function renderHistory(statsData) {
 function renderAccuracyChart(history) {
     accuracyChartContainer.innerHTML = '';
     if (!history || history.length === 0) {
-        accuracyChartContainer.innerHTML = '<p class="text-xs text-gray-400 italic m-auto">Sem histórico de sessões para exibir gráfico.</p>';
+        accuracyChartContainer.innerHTML = `<p class="text-xs text-gray-400 italic m-auto">${t('no_session_history_chart')}</p>`;
         chartTrendBadge.classList.add('hidden');
         return;
     }

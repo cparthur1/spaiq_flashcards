@@ -911,11 +911,11 @@ function handleDailyStreakOnCardAnswered() {
         playHeaderShimmer('fire');
         triggerHaptic('streakUp');
         if (res.streakProtectedByFreeze) {
-            showNotificationPill(`Sequência protegida pelo congelador! ${res.streak} dias!`, 'fire.svg');
+            showNotificationPill(t('streak_protected_freeze', { count: res.streak }), 'fire.svg');
         } else if (res.freezeAwarded) {
-            showNotificationPill(`+1 Protetor de Streak ganho! ${res.streak} dias!`, 'fire.svg');
+            showNotificationPill(t('freeze_awarded_toast', { count: res.streak }), 'fire.svg');
         } else {
-            showNotificationPill(`Sequência diária: ${res.streak} ${res.streak === 1 ? 'dia' : 'dias'}!`, 'fire.svg');
+            showNotificationPill(t('daily_streak_toast', { count: res.streak, unit: res.streak === 1 ? t('day_unit_singular') : t('day_unit_plural') }), 'fire.svg');
         }
     }
 }
@@ -969,34 +969,34 @@ export function getDeckCompletionAdviceForHour(hour = new Date().getHours()) {
     if (hour >= 5 && hour < 12) {
         return {
             icon: 'self_improvement',
-            text: 'Hora de um alongamento! Movimentar o corpo ativa a circulação e renova o foco ;)'
+            text: t('advice_stretch')
         };
     }
     // 12:00 - 13:59: De meio-dia -> Almoçar
     if (hour >= 12 && hour < 14) {
         return {
             icon: 'restaurant',
-            text: 'Hora de almoçar! Uma boa refeição repõe as energias e a glicose do cérebro ;)'
+            text: t('advice_lunch')
         };
     }
     // 14:00 - 17:59: De tarde -> Exercício físico
     if (hour >= 14 && hour < 18) {
         return {
             icon: 'directions_run',
-            text: 'Hora de exercício físico! A atividade física oxigena o cérebro e consolida a memória ;)'
+            text: t('advice_exercise')
         };
     }
     // 18:00 - 20:59: Final de tarde -> Ler ou relaxar
     if (hour >= 18 && hour < 21) {
         return {
             icon: 'auto_stories',
-            text: 'Final de tarde! Uma leitura leve ou uma pausa para relaxar ajuda a fixar o conteúdo ;)'
+            text: t('advice_afternoon')
         };
     }
     // 21:00 - 04:59: De noite -> Dormir (Sono REM)
     return {
         icon: 'bedtime',
-        text: 'Agora durma! Sono REM vai fazer você salvar tudo isso ;)'
+        text: t('advice_sleep')
     };
 }
 
@@ -1023,7 +1023,7 @@ function showDeckCompletionScreen() {
         }
         precomputedNextCard = null;
         const completedSession = completeCurrentSession();
-        showNotificationPill("Sessão concluída! Parabéns!", "stats.svg");
+        showNotificationPill(t('session_completed_toast'), "stats.svg");
         
         // Silky-smooth translucent gradient shockwave (GPU-composited)
         playCompletionShockwave();
@@ -1067,7 +1067,7 @@ function showDeckCompletionScreen() {
         }
         if (deckCompletionSubtitle) {
             const dTitle = (deckTitle?.textContent || '').trim() || 'deste baralho';
-            deckCompletionSubtitle.textContent = `Todos os cards de "${dTitle}" foram concluídos com sucesso nesta rodada!`;
+            deckCompletionSubtitle.textContent = t('all_cards_completed_subtitle', { title: dTitle });
         }
 
         // Dynamically update time-of-day health and neuro-consolidation advice
@@ -1137,7 +1137,7 @@ function restartDeckSession() {
     initStatsSession(deckTitle?.textContent || 'Flashcards', activeMode, questionsPool.length, 0, true);
     hideDeckCompletionScreen();
     loadQuestion();
-    showNotificationPill("Baralho reiniciado!", "reset.svg");
+    showNotificationPill(t('deck_restarted_toast'), "reset.svg");
     console.log("[Game] Baralho reiniciado com sucesso. Nova sessão de estatísticas iniciada.");
 }
 
@@ -1166,12 +1166,12 @@ function loadQuestion() {
                     <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-xs">
                         <img src="../assets/img/bookmark_check.svg" class="w-7 h-7" alt="Caderno">
                     </div>
-                    <h3 class="text-lg font-bold text-gray-800">Seu Caderno está vazio</h3>
+                    <h3 class="text-lg font-bold text-gray-800">${t('notebook_empty_title')}</h3>
                     <p class="text-xs sm:text-sm text-gray-500 max-w-sm leading-relaxed">
-                        Favorite cartões durante o estudo clicando no ícone de marcador para salvá-los no Caderno e revisá-los a longo prazo com repetição espaçada.
+                        ${t('notebook_empty_desc')}
                     </p>
                     <button id="notebook-empty-back-btn" class="mt-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-sm">
-                        Ir para o Baralho Principal
+                        ${t('notebook_empty_btn')}
                     </button>
                 </div>
             `;
@@ -1351,7 +1351,7 @@ function loadQuestion() {
         chatMessages.innerHTML = ''; // Limpa o placeholder inicial do HTML
         const welcomeMsg = document.createElement('div');
         welcomeMsg.className = 'chat-message-ai';
-        welcomeMsg.textContent = 'Olá! Como posso ajudar você a entender melhor esta questão?';
+        welcomeMsg.textContent = t('tutor_welcome_msg');
         chatMessages.appendChild(welcomeMsg);
         isFirstQuestion = false;
     } else if (getHasChatInteraction()) {
@@ -1366,7 +1366,7 @@ function loadQuestion() {
 
         const welcomeMsg = document.createElement('div');
         welcomeMsg.className = 'chat-message-ai';
-        welcomeMsg.textContent = 'Olá! Como posso ajudar você a entender melhor esta questão?';
+        welcomeMsg.textContent = t('tutor_welcome_msg');
         chatMessages.appendChild(welcomeMsg);
 
         // Garantir que o scroll vá para o final para mostrar a nova mensagem
@@ -2615,7 +2615,7 @@ function checkAndCelebrateNotebookDailyGoal(isFromAnsweringCard = false) {
     launchCelebrationParticles(120);
     triggerHaptic('streakUp');
     playFeedbackSound('confirm');
-    showNotificationPill('Meta diária do caderno concluída!', 'collection.svg');
+    showNotificationPill(t('notebook_daily_goal_done_toast'), 'collection.svg');
 }
 
 function renderHeaderPinnedStats() {
@@ -2705,7 +2705,7 @@ function updateHeaderPinnedStatsValues() {
         const scLabel = document.getElementById('score-label');
 
         if (cntLabel) cntLabel.textContent = "Para Hoje";
-        if (scLabel) scLabel.textContent = "Revisões";
+        if (scLabel) scLabel.textContent = t('revisions_count_label');
 
         if (dailyGoal > 0) {
             const rem = Math.max(0, dailyGoal - reviewedToday);
@@ -2871,7 +2871,7 @@ function togglePinStat(statId) {
 
     if (isPinned) {
         if (pinnedIds.length <= MIN_PINNED_STATS) {
-            showNotificationPill('Pelo menos 1 estatística deve permanecer fixada', 'pinned.svg', true);
+            showNotificationPill(t('pinned_stat_min_toast'), 'pinned.svg', true);
             triggerHaptic('shake');
             return;
         }
@@ -2879,7 +2879,7 @@ function togglePinStat(statId) {
         triggerHaptic('light');
     } else {
         if (pinnedIds.length >= MAX_PINNED_STATS) {
-            showNotificationPill('Máximo de 3 estatísticas fixadas atingido', 'pinned.svg', true);
+            showNotificationPill(t('pinned_stat_max_toast'), 'pinned.svg', true);
             triggerHaptic('shake');
             return;
         }
@@ -2992,11 +2992,11 @@ async function checkAnswerWithAi(questionObj, actualAnswer, ballIdx) {
             questionObj,
             actualAnswer,
             onSlowConnection: () => {
-                showNotificationPill("A conexão está lenta", "poor_wifi.svg", true);
+                showNotificationPill(t('slow_connection_toast'), "poor_wifi.svg", true);
             },
             onAiDisabledByErrors: () => {
                 updateAiUI();
-                showNotificationPill("IA não quer trabalhar hoje", "cloud_alert.svg");
+                showNotificationPill(t('ai_error_toast'), "cloud_alert.svg");
             }
         });
 
@@ -3098,7 +3098,7 @@ async function sendChatMessage() {
 
 // --- EVENT LISTENERS ---
 resetBtn.addEventListener('click', () => { 
-    if (confirm("Sair?")) { 
+    if (confirm(t('confirm_exit_game'))) { 
         localStorage.removeItem('flashcardsSave'); 
         localStorage.removeItem('flashcardsActiveMode');
         window.location.href = ROUTES.HOME; 
@@ -3845,14 +3845,14 @@ if (hlAiBtn) {
             if (hlAiLoading) hlAiLoading.classList.add('hidden');
             if (hlAiContent) {
                 hlAiContent.classList.remove('hidden');
-                hlAiContent.innerHTML = renderMathAndMarkdown(definition || 'Nenhuma definição encontrada.');
+                hlAiContent.innerHTML = renderMathAndMarkdown(definition || t('no_definition_found'));
             }
         } catch (err) {
             console.error("[Tutor] Erro ao buscar definição resumida:", err);
             if (hlAiLoading) hlAiLoading.classList.add('hidden');
             if (hlAiContent) {
                 hlAiContent.classList.remove('hidden');
-                hlAiContent.innerHTML = '<span class="text-red-500 font-medium">Erro ao conectar à IA. Verifique sua chave ou cota da API.</span>';
+                hlAiContent.innerHTML = `<span class="text-red-500 font-medium">${t('ai_connection_error')}</span>`;
             }
         } finally {
             isFetchingDefinition = false;
@@ -4199,7 +4199,7 @@ if (restartGameBtn) {
             initStatsSession(deckTitle.textContent, activeMode, questionsPool.length, 0, true);
             hideDeckCompletionScreen();
             loadQuestion();
-            showNotificationPill("Jogo reiniciado!", "reset.svg");
+            showNotificationPill(t('game_restarted_toast'), "reset.svg");
             console.log("[Game] Jogo reiniciado via header com sucesso.");
         });
     });
@@ -4222,7 +4222,7 @@ exportBtn.addEventListener('click', () => {
     );
 
     if (!isUserPro() && isFreeTrial) {
-        showNotificationPill("Baralhos do teste gratuito não podem ser exportados. Assine o Spaiq Pro!", "PRO.svg", true);
+        showNotificationPill(t('free_trial_no_export'), "PRO.svg", true);
         openProModal();
         return;
     }
@@ -4303,7 +4303,7 @@ goToEditorBtn.addEventListener('click', () => {
 // --- CLEAR NOTEBOOK LISTENER ---
 clearNotebookBtn?.addEventListener('click', () => {
     closeHamburgerMenu();
-    const confirmed = confirm("Tem certeza de que deseja limpar todo o Caderno? Todos os cartões salvos e históricos de repetição serão apagados. Essa ação não pode ser desfeita.");
+    const confirmed = confirm(t('confirm_clear_entire_notebook'));
     if (confirmed) {
         localStorage.removeItem('flashcardsNotebook');
         allQuestions = [];
@@ -4318,7 +4318,7 @@ clearNotebookBtn?.addEventListener('click', () => {
         updateScoreDisplay();
         loadQuestion();
         triggerHaptic('delete');
-        showNotificationPill("Caderno limpo com sucesso!", "delete.svg");
+        showNotificationPill(t('notebook_cleared_toast'), "delete.svg");
     }
 });
 
@@ -4342,7 +4342,7 @@ function openDailyGoalModal() {
         dailyGoalInput.value = currentGoal > 0 ? currentGoal : '';
     }
     if (dailyGoalProgressText) {
-        dailyGoalProgressText.textContent = `${reviewedToday} ${reviewedToday === 1 ? 'card revisado hoje' : 'cards revisados hoje'}`;
+        dailyGoalProgressText.textContent = t('reviewed_today_count', { count: reviewedToday, unit: reviewedToday === 1 ? t('card_unit_singular') : t('card_unit_plural') });
     }
     if (dailyGoalDueText) {
         dailyGoalDueText.textContent = `${dueInfo.dueToday} vencidos`;
@@ -4383,7 +4383,7 @@ saveDailyGoalBtn?.addEventListener('click', () => {
     triggerHaptic('snap');
 
     if (goal > 0) {
-        showNotificationPill(`Meta diária: ${goal} cards por dia!`, 'collection.svg');
+        showNotificationPill(t('daily_goal_toast', { goal }), 'collection.svg');
     } else {
         showNotificationPill("Estudando todos os cards vencidos", 'collection.svg');
     }
@@ -4628,22 +4628,22 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
 
             if (currentlyPinned) {
                 if (currentList.length <= MIN_PINNED_STATS) {
-                    showNotificationPill('Pelo menos 1 estatística deve permanecer fixada', 'pinned.svg', true);
+                    showNotificationPill(t('pinned_stat_min_toast'), 'pinned.svg', true);
                     triggerHaptic('shake');
                     return;
                 }
                 currentList = currentList.filter(id => id !== stat.id);
                 triggerHaptic('light');
-                showNotificationPill(`"${displayLabel}" desafixada do ${targetMode === 'notebook' ? 'Caderno' : 'Jogo Normal'}`, 'unpinned.svg');
+                showNotificationPill(t('stat_unpinned_toast', { label: displayLabel, target: targetMode === 'notebook' ? t('notebook') : t('nav_normal_game') }), 'unpinned.svg');
             } else {
                 if (currentList.length >= MAX_PINNED_STATS) {
-                    showNotificationPill('Máximo de 3 estatísticas fixadas atingido', 'pinned.svg', true);
+                    showNotificationPill(t('pinned_stat_max_toast'), 'pinned.svg', true);
                     triggerHaptic('shake');
                     return;
                 }
                 currentList.push(stat.id);
                 triggerHaptic('streakUp');
-                showNotificationPill(`"${displayLabel}" fixada no cabeçalho do ${targetMode === 'notebook' ? 'Caderno' : 'Jogo Normal'}`, 'pinned.svg');
+                showNotificationPill(t('stat_pinned_toast', { label: displayLabel, target: targetMode === 'notebook' ? t('notebook') : t('nav_normal_game') }), 'pinned.svg');
             }
 
             savePinnedHeaderStats(currentList, targetMode);
@@ -4848,12 +4848,12 @@ settingClearNotebookBtn?.addEventListener('click', () => {
 // --- DAILY NOTIFICATIONS SETTINGS LISTENERS ---
 async function ensureNotificationPermission() {
     if (!hasNotificationSupport()) {
-        showNotificationPill('Seu navegador não suporta notificações web.', 'poor_wifi.svg', true);
+        showNotificationPill(t('browser_no_web_notif'), 'poor_wifi.svg', true);
         return false;
     }
     const perm = await requestNotificationPermission();
     if (perm !== 'granted') {
-        showNotificationPill('Permissão de notificação negada no navegador.', 'poor_wifi.svg', true);
+        showNotificationPill(t('notif_permission_denied'), 'poor_wifi.svg', true);
         return false;
     }
     return true;
@@ -4967,7 +4967,7 @@ settingNotifTestBtn?.addEventListener('click', async () => {
     const sent = await sendDailyNotification(periodToTest, true);
     if (sent) {
         triggerHaptic('tap');
-        showNotificationPill(`Notificação de teste (${periodToTest === 'night' ? 'Alerta Urgente' : 'Lembrete'}) enviada!`, 'notifications.svg');
+        showNotificationPill(t('test_notif_toast', { type: periodToTest === 'night' ? t('urgent_alert') : t('reminder') }), 'notifications.svg');
     }
 });
 
@@ -5075,7 +5075,7 @@ nextQuestionBtn.addEventListener('click', () => {
 });
 
 const handleDelete = () => {
-    if (!confirm("Excluir?")) return;
+    if (!confirm(t('confirm_delete_card_simple'))) return;
     allQuestions = allQuestions.filter(q => q !== currentQuestion);
     questionsPool.splice(currentQuestionIndexInPool, 1);
     saveGameState();
@@ -5296,7 +5296,7 @@ function renderEditMcOptions(options = ["", "", "", ""], correctAnswer = "") {
         removeBtn.addEventListener('click', () => {
             const currentVals = Array.from(document.querySelectorAll('.edit-mc-opt-val')).map(inp => inp.value);
             if (currentVals.length <= 2) {
-                alert("A questão de múltipla escolha deve conter pelo menos 2 alternativas.");
+                alert(t('mc_min_options_error'));
                 return;
             }
             currentVals.splice(i, 1);
@@ -5442,7 +5442,7 @@ function toggleBookmark() {
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCardForStorage);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCardForStorage);
         localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookState));
-        showNotificationPill("Card removido do Caderno", "add_bookmark.svg");
+        showNotificationPill(t('card_removed_from_notebook_toast'), "add_bookmark.svg");
 
         // If we are currently in notebook mode, remove from in-memory and go to next question
         if (activeMode === 'notebook') {
@@ -5489,7 +5489,7 @@ function toggleBookmark() {
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCardForStorage);
 
         localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookState));
-        showNotificationPill("Card adicionado ao Caderno", "bookmark_check.svg");
+        showNotificationPill(t('card_added_to_notebook_toast'), "bookmark_check.svg");
     }
 
     renderBookmarkIcon();
@@ -5564,7 +5564,7 @@ function renderExamDecksInDropdown(examData) {
 
     const decks = (examData && examData.decks) ? examData.decks : [];
     if (dropdownExamDecksCount) {
-        dropdownExamDecksCount.textContent = `${decks.length} baralho${decks.length !== 1 ? 's' : ''}`;
+        dropdownExamDecksCount.textContent = t('exam_decks_count', { count: decks.length, suffix: decks.length !== 1 ? 's' : '' });
     }
 
     if (decks.length === 0) {
@@ -5603,7 +5603,7 @@ function renderExamDecksInDropdown(examData) {
         const delBtn = item.querySelector('.exam-deck-del-btn');
         delBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (confirm(`Remover o baralho "${deck.name}" da Semana de Provas?`)) {
+            if (confirm(t('confirm_remove_deck_from_exam', { name: deck.name }))) {
                 removeDeckFromExamMix(deck.id);
             }
         });
@@ -5639,7 +5639,7 @@ function toggleDeckInExamMix(deckId, enabled) {
     }
 
     renderExamDecksInDropdown(examData);
-    showNotificationPill(`${targetDeck.name}: ${enabled ? 'Ativado' : 'Desativado'}`, "dropdown.svg");
+    showNotificationPill(t('deck_status_toast', { name: targetDeck.name, status: enabled ? t('enabled_status') : t('disabled_status') }), "dropdown.svg");
 }
 
 function removeDeckFromExamMix(deckId) {
@@ -5667,7 +5667,7 @@ function removeDeckFromExamMix(deckId) {
     }
 
     renderExamDecksInDropdown(examData);
-    showNotificationPill(`Baralho removido da mistura`, "delete.svg");
+    showNotificationPill(t('deck_removed_from_mix_toast'), "delete.svg");
 }
 
 // Add Deck to Mix from Dropdown
@@ -5736,7 +5736,7 @@ if (dropdownAddDeckBtn && dropdownAddDeckInput) {
 
         updateScoreDisplay();
         renderExamDecksInDropdown(examData);
-        showNotificationPill(`+${addedCardsCount} cards adicionados à mistura!`, "new.svg");
+        showNotificationPill(t('cards_added_to_mix_toast', { count: addedCardsCount }), "new.svg");
     });
 }
 
@@ -5758,8 +5758,8 @@ function updateMenuButtonsForActiveMode() {
         if (exportDesc) exportDesc.textContent = "Exportar backup completo (.json)";
         if (exportBtn) exportBtn.title = "Salvar Backup do Caderno";
 
-        if (editorTitle) editorTitle.textContent = "Adicionar vários";
-        if (editorDesc) editorDesc.textContent = "Importar múltiplos baralhos para o caderno";
+        if (editorTitle) editorTitle.textContent = t('add_multiple_title');
+        if (editorDesc) editorDesc.textContent = t('add_multiple_desc');
         if (editorIcon) {
             editorIcon.src = "../assets/img/bulk_add.svg";
             editorIcon.alt = "Adicionar vários";
@@ -5767,11 +5767,11 @@ function updateMenuButtonsForActiveMode() {
         if (goToEditorBtn) goToEditorBtn.title = "Adicionar múltiplos baralhos ao Caderno";
         if (clearNotebookBtn) clearNotebookBtn.classList.remove('hidden');
     } else {
-        if (exportTitle) exportTitle.textContent = "Salvar Baralho";
-        if (exportDesc) exportDesc.textContent = "Exportar cópia em .json";
+        if (exportTitle) exportTitle.textContent = t('save_deck_title');
+        if (exportDesc) exportDesc.textContent = t('save_deck_desc');
         if (exportBtn) exportBtn.title = "Baixar JSON Atualizado";
 
-        if (editorTitle) editorTitle.textContent = "Editar Baralho";
+        if (editorTitle) editorTitle.textContent = t('edit_deck_action_title');
         if (editorDesc) editorDesc.textContent = "Abrir editor e gerador IA";
         if (editorIcon) {
             editorIcon.src = "../assets/img/edit.svg";
@@ -6176,7 +6176,7 @@ export function updateHamburgerUserUI(user) {
             menuAccountTitle.textContent = displayName;
         }
         if (menuAccountSubtitle) {
-            menuAccountSubtitle.textContent = isUserPro() ? 'Plano Pro Ativo' : 'Conectado com Google';
+            menuAccountSubtitle.textContent = isUserPro() ? t('menu_pro_active') : t('menu_connected_google');
         }
     } else {
         if (menuAccountAvatar) {
@@ -6189,7 +6189,7 @@ export function updateHamburgerUserUI(user) {
             menuAccountTitle.textContent = 'Minha Conta';
         }
         if (menuAccountSubtitle) {
-            menuAccountSubtitle.textContent = 'Sincronização e Plano Pro';
+            menuAccountSubtitle.textContent = t('menu_sync_and_pro');
         }
     }
 }

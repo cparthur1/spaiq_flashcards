@@ -59,11 +59,11 @@ async function init() {
                 if (examSavedBadge) examSavedBadge.classList.remove('hidden');
                 if (examSavedSessionBox) examSavedSessionBox.classList.remove('hidden');
                 if (examSavedCardsCount) {
-                    examSavedCardsCount.textContent = `${savedExamData.questionsPool.length} cards restantes`;
+                    examSavedCardsCount.textContent = t('cards_remaining', { count: savedExamData.questionsPool.length });
                 }
                 if (examSavedDecksText) {
                     const deckNames = (savedExamData.decks || []).map(d => d.name).join(', ');
-                    examSavedDecksText.textContent = deckNames ? `Baralhos: ${deckNames}` : "Você já tem uma mistura salva.";
+                    examSavedDecksText.textContent = deckNames ? t('saved_mix_prefix', { names: deckNames }) : t('exam_saved_desc');
                 }
             }
         }
@@ -149,9 +149,9 @@ async function init() {
             window.location.href = ROUTES.GAME;
         } catch (err) {
             if (err.name === 'QuotaExceededError') {
-                alert("Os baralhos somados são grandes demais para o navegador. Tente carregar menos baralhos.");
+                alert(t('exam_decks_large_error'));
             } else {
-                alert("Erro ao iniciar Semana de Provas: " + err.message);
+                alert(t('exam_error_start_alert', { message: err.message }));
             }
         }
     }
@@ -189,7 +189,7 @@ async function init() {
     if (startBtn) {
         startBtn.addEventListener('click', async () => {
             if (!selectedFiles || selectedFiles.length === 0) {
-                uploadError.textContent = 'Por favor, selecione um ou mais arquivos .json.';
+                uploadError.textContent = t('select_json_files_error');
                 return;
             }
 
@@ -237,7 +237,7 @@ async function init() {
 
                     startExamWeek(loadedDecks);
                 } catch (e) {
-                    setUploadError(`Erro ao carregar baralhos: ${e.message}`);
+                    setUploadError(t('error_loading_decks', { message: e.message }));
                 }
                 return;
             }
@@ -294,9 +294,9 @@ async function init() {
                         window.location.href = ROUTES.GAME;
                     } catch (err) {
                         if (err.name === 'QuotaExceededError') {
-                            setUploadError('O backup do Caderno é grande demais para salvar no navegador.');
+                            setUploadError(t('notebook_backup_too_large'));
                         } else {
-                            setUploadError(`Erro ao salvar Caderno: ${err.message}`);
+                            setUploadError(t('error_saving_notebook', { message: err.message }));
                         }
                     }
                 } else {
@@ -304,7 +304,7 @@ async function init() {
                     saveAndRedirect(questions, deckTitle);
                 }
             } catch (e) {
-                setUploadError(`Erro ao ler o arquivo: ${e.message}`);
+                setUploadError(t('error_reading_file', { message: e.message }));
             }
         });
     }
@@ -322,9 +322,9 @@ async function init() {
             window.location.href = ROUTES.GAME;
         } catch (err) {
             if (err.name === 'QuotaExceededError') {
-                setUploadError('Este baralho é grande demais para salvar no navegador. Converta imagens para links da web.');
+                setUploadError(t('deck_too_large_error'));
             } else {
-                setUploadError(`Erro ao salvar baralho: ${err.message}`);
+                setUploadError(t('error_saving_deck', { message: err.message }));
             }
         }
     }
@@ -446,7 +446,7 @@ async function init() {
                 }
             } catch (err) {
                 if (examError) {
-                    examError.textContent = `Erro ao ler ${file.name}: ${err.message}`;
+                    examError.textContent = t('error_reading_file_named', { name: file.name, message: err.message });
                     examError.classList.remove('hidden');
                 }
             }
@@ -461,7 +461,7 @@ async function init() {
         if (modalDecks.length === 0) {
             if (examEmptyMsg) examEmptyMsg.classList.remove('hidden');
             if (examDecksCount) examDecksCount.textContent = '0';
-            if (examTotalCards) examTotalCards.textContent = '0 cards no total';
+            if (examTotalCards) examTotalCards.textContent = t('total_cards_count', { count: 0 });
             if (startExamBtn) startExamBtn.disabled = true;
             return;
         }
@@ -497,7 +497,7 @@ async function init() {
         });
 
         if (examDecksCount) examDecksCount.textContent = modalDecks.length;
-        if (examTotalCards) examTotalCards.textContent = `${totalCards} cards no total`;
+        if (examTotalCards) examTotalCards.textContent = t('total_cards_count', { count: totalCards });
         if (startExamBtn) startExamBtn.disabled = modalDecks.length === 0;
     }
 
@@ -535,14 +535,14 @@ export function updateHomeDailyStreak() {
             streakBadge?.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-900');
             streakCount?.classList.remove('text-gray-700');
             streakCount?.classList.add('text-amber-700');
-            streakBadge?.setAttribute('title', isToday ? 'Sequência ativa mantida hoje!' : 'Estude hoje para manter sua sequência diária!');
+            streakBadge?.setAttribute('title', isToday ? t('streak_active_today') : t('streak_maintain_today'));
         } else {
             streakFire?.classList.add('grayscale', 'opacity-60');
             streakBadge?.classList.remove('bg-amber-50', 'border-amber-200', 'text-amber-900');
             streakBadge?.classList.add('bg-gray-50', 'border-gray-200', 'text-gray-600');
             streakCount?.classList.remove('text-amber-700');
             streakCount?.classList.add('text-gray-700');
-            streakBadge?.setAttribute('title', 'Estude hoje para iniciar sua sequência diária!');
+            streakBadge?.setAttribute('title', t('streak_start_today'));
         }
     } catch (e) {
         console.warn('Erro ao atualizar streak na tela inicial:', e);

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-    <title>Spaiq Flashcards</title>
+    <title data-i18n="app_title">Flashcards - Domine Qualquer Assunto</title>
     <meta name="description" content="Estude de forma eficiente com flashcards inteligentes e interativos.">
     <link rel="canonical" href="https://flashcards.camblu.org/">
 
@@ -80,7 +80,8 @@
         <div class="relative">
             <button id="lang-menu-btn" type="button"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-[var(--md-sys-color-on-surface)] shadow-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition cursor-pointer select-none"
-                aria-label="Idioma / Language" title="Idioma / Language">
+                aria-label="Idioma / Language" title="Idioma / Language"
+                data-i18n-aria-label="language_selector" data-i18n-title="language_selector">
                 <span class="material-symbols-rounded text-base text-[var(--md-sys-color-primary)]">translate</span>
                 <span id="lang-current-label">PT</span>
                 <span class="material-symbols-rounded text-sm text-[var(--md-sys-color-on-surface-variant)]">expand_more</span>
@@ -177,7 +178,7 @@
                 <div id="exam-saved-session-box" class="hidden p-4 bg-purple-50 rounded-2xl border border-purple-200 text-left">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-xs font-bold text-purple-700 uppercase tracking-wide" data-i18n="exam_saved_title">Sessão em Andamento</span>
-                        <span id="exam-saved-cards-count" class="text-xs px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-800 font-semibold">0 cards restantes</span>
+                        <span id="exam-saved-cards-count" class="text-xs px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-800 font-semibold" data-i18n="cards_remaining_zero">0 cards restantes</span>
                     </div>
                     <p class="text-xs text-purple-600 mb-3" id="exam-saved-decks-text" data-i18n="exam_saved_desc">Você já tem uma mistura salva.</p>
                     <button id="exam-continue-btn" class="m3-btn-expressive w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow cursor-pointer">
@@ -206,7 +207,7 @@
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]"><span data-i18n="exam_selected_decks">Baralhos Selecionados</span> (<span id="exam-decks-count">0</span>)</span>
-                        <span id="exam-total-cards" class="text-xs text-[var(--md-sys-color-on-surface-variant)]">0 cards no total</span>
+                        <span id="exam-total-cards" class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="cards_total_zero">0 cards no total</span>
                     </div>
                     <div id="exam-deck-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
                         <p id="exam-empty-msg" class="text-xs text-gray-400 text-center py-4 italic" data-i18n="exam_empty_msg">Nenhum baralho adicionado ainda.</p>

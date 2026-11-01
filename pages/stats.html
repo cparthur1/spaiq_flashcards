@@ -13,7 +13,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estatísticas & Progresso | Flashcards</title>
+    <title data-i18n="stats_page_title">Estatísticas & Progresso | Flashcards</title>
     <meta name="description" content="Acompanhe suas estatísticas de estudo, retenção e progresso com flashcards.">
     <link rel="canonical" href="https://flashcards.camblu.org/pages/stats.html">
 
@@ -112,7 +112,7 @@
             <div class="relative">
                 <button id="lang-menu-btn" type="button"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-[var(--md-sys-color-on-surface)] shadow-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition cursor-pointer select-none"
-                    aria-label="Idioma / Language" title="Idioma / Language">
+                    aria-label="Idioma / Language" title="Idioma / Language" data-i18n-aria-label="language_selector" data-i18n-title="language_selector">
                     <span class="material-symbols-rounded text-base text-[var(--md-sys-color-primary)]">translate</span>
                     <span id="lang-current-label">PT</span>
                     <span class="material-symbols-rounded text-sm text-[var(--md-sys-color-on-surface-variant)]">expand_more</span>
@@ -160,7 +160,7 @@
 
         <!-- NAVIGATION TABS -->
         <div class="flex items-center justify-center sm:justify-start">
-            <nav class="flex p-1 bg-gray-200/80 rounded-2xl shadow-inner max-w-full overflow-x-auto custom-scrollbar" aria-label="Abas de Estatísticas">
+            <nav class="flex p-1 bg-gray-200/80 rounded-2xl shadow-inner max-w-full overflow-x-auto custom-scrollbar" aria-label="Abas de Estatísticas" data-i18n-aria-label="stats_tabs">
                 <button id="tab-btn-current" class="tab-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap flex items-center gap-2 bg-white text-blue-600 shadow-sm cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -259,7 +259,7 @@
                     </div>
                     <div>
                         <span id="kpi-duration" class="text-2xl sm:text-3xl font-extrabold text-[var(--md-sys-color-on-surface)]">00:00</span>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-2"><span id="kpi-time-per-card-wrapper">Média: <span id="kpi-time-per-card" class="font-semibold text-[var(--md-sys-color-on-surface)]">0s</span> / card</span></p>
+                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-2"><span id="kpi-time-per-card-wrapper"><span data-i18n="kpi_avg_prefix">Média:</span> <span id="kpi-time-per-card" class="font-semibold text-[var(--md-sys-color-on-surface)]">0s</span> <span data-i18n="kpi_per_card_suffix">/ card</span></span></p>
                     </div>
                 </div>
 
@@ -276,7 +276,7 @@
                             <span id="kpi-current-streak" class="text-2xl sm:text-3xl font-extrabold text-amber-500">0</span>
                             <span class="text-xs text-gray-500" data-i18n="consecutive_correct">acertos seguidos</span>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2"><span id="kpi-best-streak-wrapper">Maior recorde: <span id="kpi-best-streak" class="font-bold text-gray-800">0</span></span></p>
+                        <p class="text-xs text-gray-400 mt-2"><span id="kpi-best-streak-wrapper"><span data-i18n="kpi_best_record_label">Maior recorde:</span> <span id="kpi-best-streak" class="font-bold text-gray-800">0</span></span></p>
                     </div>
                 </div>
             </div>
@@ -299,11 +299,11 @@
                         </div>
                     </div>
                     <div class="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-                        <div class="flex items-center gap-1" title="Card respondido mais rápido nesta sessão">
-                            <span class="material-symbols-rounded text-xs text-amber-500">bolt</span> <span id="pace-fastest-card-label">Mais rápido:</span> <span id="pace-fastest-card" class="font-bold text-emerald-600">--</span>
+                        <div class="flex items-center gap-1" title="Card respondido mais rápido nesta sessão" data-i18n-title="pace_fastest_card_title">
+                            <span class="material-symbols-rounded text-xs text-amber-500">bolt</span> <span id="pace-fastest-card-label" data-i18n="pace_fastest_label">Mais rápido:</span> <span id="pace-fastest-card" class="font-bold text-emerald-600">--</span>
                         </div>
-                        <div class="flex items-center gap-1" title="Card mais reflexivo nesta sessão">
-                            <span class="material-symbols-rounded text-xs text-amber-500">hourglass_top</span> <span id="pace-slowest-card-label">Mais lento:</span> <span id="pace-slowest-card" class="font-bold text-amber-500">--</span>
+                        <div class="flex items-center gap-1" title="Card mais reflexivo nesta sessão" data-i18n-title="pace_slowest_card_title">
+                            <span class="material-symbols-rounded text-xs text-amber-500">hourglass_top</span> <span id="pace-slowest-card-label" data-i18n="pace_slowest_label">Mais lento:</span> <span id="pace-slowest-card" class="font-bold text-amber-500">--</span>
                         </div>
                     </div>
                 </div>
@@ -345,19 +345,19 @@
                         </div>
                     </div>
                     <div id="highlights-swatches-container" class="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                        <div class="flex items-center gap-1.5" title="Amarelo Pastel">
+                        <div class="flex items-center gap-1.5" title="Amarelo Pastel" data-i18n-title="color_pastel_yellow">
                             <span class="w-3 h-3 rounded-full bg-[#fef08a] border border-yellow-400 inline-block shadow-xs"></span>
                             <span id="hl-count-yellow" class="font-bold text-gray-700">0</span>
                         </div>
-                        <div class="flex items-center gap-1.5" title="Verde Pastel">
+                        <div class="flex items-center gap-1.5" title="Verde Pastel" data-i18n-title="color_pastel_green">
                             <span class="w-3 h-3 rounded-full bg-[#bbf7d0] border border-green-400 inline-block shadow-xs"></span>
                             <span id="hl-count-green" class="font-bold text-gray-700">0</span>
                         </div>
-                        <div class="flex items-center gap-1.5" title="Azul Pastel">
+                        <div class="flex items-center gap-1.5" title="Azul Pastel" data-i18n-title="color_pastel_blue">
                             <span class="w-3 h-3 rounded-full bg-[#bfdbfe] border border-blue-400 inline-block shadow-xs"></span>
                             <span id="hl-count-blue" class="font-bold text-gray-700">0</span>
                         </div>
-                        <div class="flex items-center gap-1.5" title="Roxo Pastel">
+                        <div class="flex items-center gap-1.5" title="Roxo Pastel" data-i18n-title="color_pastel_purple">
                             <span class="w-3 h-3 rounded-full bg-[#e9d5ff] border border-purple-400 inline-block shadow-xs"></span>
                             <span id="hl-count-purple" class="font-bold text-gray-700">0</span>
                         </div>
@@ -378,9 +378,9 @@
                         <div class="flex items-center justify-between mb-3">
                             <div>
                                 <h2 class="font-bold text-base text-gray-900" data-i18n="anki_quality">Qualidade da Lembrança (Anki)</h2>
-                                <p class="text-xs text-gray-500">Distribuição das classificações dos cards</p>
+                                <p class="text-xs text-gray-500" data-i18n="anki_distribution_desc">Distribuição das classificações dos cards</p>
                             </div>
-                            <span id="anki-total-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">0 respostas</span>
+                            <span id="anki-total-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600" data-i18n="anki_total_responses_zero">0 respostas</span>
                         </div>
 
                         <!-- Segmented progress bar -->
@@ -421,7 +421,7 @@
                 <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
                     <div>
                         <h2 class="font-bold text-base text-gray-900 mb-1" data-i18n="format_performance">Desempenho por Formato</h2>
-                        <p class="text-xs text-gray-500 mb-4">Taxa de sucesso de acordo com o tipo de card</p>
+                        <p class="text-xs text-gray-500 mb-4" data-i18n="card_type_success_desc">Taxa de sucesso de acordo com o tipo de card</p>
 
                         <div class="space-y-3" id="by-type-container">
                             <!-- Type rows injected dynamically in stats.js -->
@@ -435,15 +435,15 @@
                 <div class="flex items-center justify-between mb-3">
                     <div>
                         <h2 class="font-bold text-base text-gray-900" data-i18n="session_timeline">Linha do Tempo da Sessão</h2>
-                        <p class="text-xs text-gray-500">Últimos 10 cards respondidos nesta rodada</p>
+                        <p class="text-xs text-gray-500" data-i18n="recent_cards_round_desc">Últimos 10 cards respondidos nesta rodada</p>
                     </div>
                     <span id="timeline-counter-badge" class="text-xs text-blue-600 font-semibold flex items-center gap-1">
-                        <span>&larr; Mais recentes (últimos 10)</span>
+                        <span data-i18n="timeline_badge_recent_10">&larr; Mais recentes (últimos 10)</span>
                     </span>
                 </div>
 
                 <div id="timeline-strip" class="flex gap-2 overflow-x-auto py-2 px-1 custom-scrollbar min-h-[50px] items-center">
-                    <p class="text-xs text-gray-400 italic">Nenhum card respondido nesta sessão ainda.</p>
+                    <p class="text-xs text-gray-400 italic" data-i18n="no_cards_answered_yet">Nenhum card respondido nesta sessão ainda.</p>
                 </div>
             </div>
 
@@ -455,7 +455,7 @@
             <!-- ALL-TIME AGGREGATE SUMMARY -->
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
                 <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Total de Sessões</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block" data-i18n="alltime_total_sessions">Total de Sessões</span>
                     <span id="alltime-sessions" class="text-2xl font-extrabold text-gray-900">0</span>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
@@ -471,7 +471,7 @@
                     <span id="alltime-accuracy" class="text-2xl font-extrabold text-emerald-600">0%</span>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center col-span-2 sm:col-span-1">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Recorde de Sequência</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block" data-i18n="alltime_best_streak">Recorde de Sequência</span>
                     <span id="alltime-best-streak" class="text-2xl font-extrabold text-amber-500 inline-flex items-center justify-center gap-1">
                         <span class="material-symbols-rounded text-xl text-amber-500">local_fire_department</span>
                         <span id="alltime-best-streak-val">0</span>
@@ -486,10 +486,10 @@
                         <div class="flex items-center gap-2.5">
                             <h2 class="font-bold text-base text-gray-900" data-i18n="activity_calendar">Calendário de Atividade</h2>
                             <span id="heatmap-streak-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 inline-flex items-center gap-1">
-                                <span class="material-symbols-rounded text-sm text-amber-500">local_fire_department</span> <span id="heatmap-streak-val">0 dias</span>
+                                <span class="material-symbols-rounded text-sm text-amber-500">local_fire_department</span> <span id="heatmap-streak-val" data-i18n="zero_days">0 dias</span>
                             </span>
                         </div>
-                        <p class="text-xs text-gray-500 mt-0.5">Histórico diário de resolução e proteção de sequência</p>
+                        <p class="text-xs text-gray-500 mt-0.5" data-i18n="heatmap_desc">Histórico diário de resolução e proteção de sequência</p>
                     </div>
 
                     <!-- Streak Freeze Status Pills -->
@@ -508,22 +508,22 @@
                 <!-- Heatmap Footer with details & Legend -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-gray-500 pt-3 border-t border-gray-100 mt-2">
                     <div id="heatmap-hover-info" class="text-xs text-gray-700 font-medium min-h-[20px] flex items-center gap-2">
-                        <span class="text-gray-400">Passe o cursor ou toque nos dias para ver detalhes</span>
+                        <span class="text-gray-400" data-i18n="heatmap_hover_hint">Passe o cursor ou toque nos dias para ver detalhes</span>
                     </div>
                     <div class="flex items-center gap-2 self-end sm:self-auto text-[11px] text-gray-500">
-                        <span>Menos</span>
+                        <span data-i18n="heatmap_less">Menos</span>
                         <div class="flex gap-1 items-center">
-                            <div class="w-3.5 h-3.5 rounded-xs bg-gray-100 border border-gray-200/60" title="0 cards"></div>
-                            <div class="w-3.5 h-3.5 rounded-xs bg-emerald-100 border border-emerald-200/60" title="1 a 4 cards"></div>
-                            <div class="w-3.5 h-3.5 rounded-xs bg-emerald-300 border border-emerald-400/60" title="5 a 14 cards"></div>
-                            <div class="w-3.5 h-3.5 rounded-xs bg-emerald-500 border border-emerald-600/60" title="15 a 29 cards"></div>
-                            <div class="w-3.5 h-3.5 rounded-xs bg-emerald-700 border border-emerald-800/60" title="30+ cards"></div>
+                            <div class="w-3.5 h-3.5 rounded-xs bg-gray-100 border border-gray-200/60" title="0 cards" data-i18n-title="cards_0"></div>
+                            <div class="w-3.5 h-3.5 rounded-xs bg-emerald-100 border border-emerald-200/60" title="1 a 4 cards" data-i18n-title="cards_1_to_4"></div>
+                            <div class="w-3.5 h-3.5 rounded-xs bg-emerald-300 border border-emerald-400/60" title="5 a 14 cards" data-i18n-title="cards_5_to_14"></div>
+                            <div class="w-3.5 h-3.5 rounded-xs bg-emerald-500 border border-emerald-600/60" title="15 a 29 cards" data-i18n-title="cards_15_to_29"></div>
+                            <div class="w-3.5 h-3.5 rounded-xs bg-emerald-700 border border-emerald-800/60" title="30+ cards" data-i18n-title="cards_30_plus"></div>
                         </div>
-                        <span>Mais</span>
+                        <span data-i18n="heatmap_more">Mais</span>
                         <span class="mx-1 text-gray-300">|</span>
                         <div class="flex items-center gap-1.5 font-semibold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200/80">
                             <span class="material-symbols-rounded text-xs text-cyan-600">ac_unit</span>
-                            <span>Congelado</span>
+                            <span data-i18n="heatmap_frozen">Congelado</span>
                         </div>
                     </div>
                 </div>
@@ -537,7 +537,7 @@
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h2 class="font-bold text-base text-gray-900" data-i18n="accuracy_evolution">Evolução da Precisão (Sessão a Sessão)</h2>
-                        <p class="text-xs text-gray-500">Taxa de acertos registrada ao longo das sessões anteriores</p>
+                        <p class="text-xs text-gray-500" data-i18n="accuracy_trend_desc">Taxa de acertos registrada ao longo das sessões anteriores</p>
                     </div>
                     <span id="chart-trend-badge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 hidden">
                         <span class="material-symbols-rounded text-sm align-middle">trending_up</span> +0%
@@ -551,8 +551,8 @@
                     </div>
                 </div>
                 <div class="flex items-center justify-between text-[10px] text-gray-400 mt-2">
-                    <span>Sessões mais antigas</span>
-                    <span>Sessões mais recentes</span>
+                    <span data-i18n="oldest_sessions">Sessões mais antigas</span>
+                    <span data-i18n="newest_sessions">Sessões mais recentes</span>
                 </div>
             </div>
 
@@ -576,9 +576,9 @@
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h2 class="font-bold text-base text-gray-900" data-i18n="attention_cards">Cards que Precisam de Atenção</h2>
-                        <p class="text-xs text-gray-500">Top 20 cards com mais erros nesta sessão em ordem decrescente</p>
+                        <p class="text-xs text-gray-500" data-i18n="struggling_cards_desc">Top 20 cards com mais erros nesta sessão em ordem decrescente</p>
                     </div>
-                    <button id="add-all-to-notebook-btn" class="hidden text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm">
+                    <button id="add-all-to-notebook-btn" class="hidden text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm" data-i18n="add_all_to_notebook">
                         + Adicionar Todos ao Caderno
                     </button>
                 </div>

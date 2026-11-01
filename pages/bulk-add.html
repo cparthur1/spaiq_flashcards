@@ -104,7 +104,8 @@
                 <div class="relative">
                     <button id="lang-menu-btn" type="button"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-xs font-bold text-gray-800 shadow-xs hover:bg-gray-100 transition cursor-pointer select-none"
-                        aria-label="Idioma / Language" title="Idioma / Language">
+                        aria-label="Idioma / Language" title="Idioma / Language"
+                        data-i18n-aria-label="language_selector" data-i18n-title="language_selector">
                         <span class="material-symbols-rounded text-base text-blue-600">translate</span>
                         <span id="lang-current-label">PT</span>
                         <span class="material-symbols-rounded text-sm text-gray-500">expand_more</span>
@@ -130,9 +131,9 @@
                 </div>
 
                 <!-- Notebook Total Cards Badge (Clickable Pill) -->
-                <button type="button" id="notebook-total-badge" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100/90 active:scale-95 border border-blue-200 hover:border-blue-300 text-blue-700 font-bold text-xs shadow-2xs hover:shadow-xs transition-all cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500/30" title="Ver baralhos e cartões salvos no Caderno" aria-label="Ver baralhos e cartões salvos no Caderno">
+                <button type="button" id="notebook-total-badge" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100/90 active:scale-95 border border-blue-200 hover:border-blue-300 text-blue-700 font-bold text-xs shadow-2xs hover:shadow-xs transition-all cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500/30" title="Ver baralhos e cartões salvos no Caderno" aria-label="Ver baralhos e cartões salvos no Caderno" data-i18n-title="view_notebook_saved_title" data-i18n-aria-label="view_notebook_saved_title">
                     <img src="../assets/img/bookmark_check.svg" class="w-3.5 h-3.5 flex-shrink-0" alt="Caderno">
-                    <span id="notebook-total-count">0 no caderno</span>
+                    <span id="notebook-total-count" data-i18n="notebook_count_zero">0 no caderno</span>
                     <span class="material-symbols-rounded text-sm text-blue-500 transition-transform group-hover:translate-x-0.5">chevron_right</span>
                 </button>
 
@@ -177,8 +178,8 @@
                     <img src="../assets/img/loaded.svg" class="w-5 h-5 flex-shrink-0" alt="Baralhos carregados">
                 </div>
                 <div>
-                    <span id="summary-decks-text" class="text-sm font-bold text-gray-900 block">0 baralhos carregados</span>
-                    <span id="summary-cards-text" class="text-xs text-gray-500">0 cartões disponíveis na lista</span>
+                    <span id="summary-decks-text" class="text-sm font-bold text-gray-900 block" data-i18n="summary_decks_loaded_zero">0 baralhos carregados</span>
+                    <span id="summary-cards-text" class="text-xs text-gray-500" data-i18n="summary_cards_avail_zero">0 cartões disponíveis na lista</span>
                 </div>
             </div>
 
@@ -202,7 +203,7 @@
                     <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between gap-3 flex-shrink-0 z-10">
                         <div class="flex items-center gap-2.5">
                             <h3 class="font-bold text-sm sm:text-base text-gray-900" data-i18n="loaded_decks_col">Baralhos Carregados</h3>
-                            <span id="left-cards-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                            <span id="left-cards-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800" data-i18n="cards_remaining_zero">
                                 0 cards
                             </span>
                         </div>
@@ -240,7 +241,7 @@
                         <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center transition-transform group-hover:translate-x-1 lg:group-hover:translate-x-0 lg:group-hover:translate-y-1">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         </div>
-                        <span id="selected-pill-counter" class="hidden text-xs bg-white text-blue-700 px-2.5 py-0.5 rounded-full font-bold shadow-xs">
+                        <span id="selected-pill-counter" class="hidden text-xs bg-white text-blue-700 px-2.5 py-0.5 rounded-full font-bold shadow-xs" data-i18n="zero_selected">
                             0 selecionados
                         </span>
                     </button>
@@ -252,7 +253,7 @@
                     <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between gap-3 flex-shrink-0 z-10">
                         <div class="flex items-center gap-2.5">
                             <h3 class="font-bold text-sm sm:text-base text-gray-900" data-i18n="added_to_notebook_col">Adicionados ao Caderno</h3>
-                            <span id="right-cards-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                            <span id="right-cards-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800" data-i18n="zero_added">
                                 0 adicionados
                             </span>
                         </div>
@@ -298,7 +299,7 @@
                         <h3 id="notebook-modal-title" class="font-bold text-base sm:text-lg text-gray-900 leading-tight" data-i18n="decks_in_notebook">
                             Baralhos no Caderno
                         </h3>
-                        <p id="notebook-modal-subtitle" class="text-xs text-gray-500 truncate">
+                        <p id="notebook-modal-subtitle" class="text-xs text-gray-500 truncate" data-i18n="notebook_modal_subtitle_zero">
                             0 cartões salvos de 0 baralhos
                         </p>
                     </div>
@@ -332,7 +333,7 @@
 
             <!-- Modal Footer -->
             <div class="px-5 py-3.5 border-t border-gray-100 bg-gray-50/80 flex items-center justify-between gap-3 flex-shrink-0 text-xs">
-                <span id="notebook-modal-footer-info" class="text-gray-500 font-medium">Mostrando 0 cartões</span>
+                <span id="notebook-modal-footer-info" class="text-gray-500 font-medium" data-i18n="showing_cards_zero">Mostrando 0 cartões</span>
                 <button type="button" id="notebook-modal-done-btn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold transition shadow-xs cursor-pointer" data-i18n="done">
                     Concluído
                 </button>
@@ -392,7 +393,7 @@
     <div id="bulk-notification-pill" class="fixed bottom-6 right-6 z-50 transform translate-y-16 opacity-0 transition-all duration-300 pointer-events-none">
         <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gray-900 text-white text-xs sm:text-sm font-semibold shadow-lg">
             <span id="bulk-pill-icon" class="material-symbols-rounded text-base text-blue-400">check_circle</span>
-            <span id="bulk-pill-text">Mensagem</span>
+            <span id="bulk-pill-text" data-i18n="notification">Mensagem</span>
         </div>
     </div>
 

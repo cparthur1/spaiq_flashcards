@@ -13,7 +13,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Criar Baralho de Flashcards</title>
+    <title data-i18n="generate_page_title">Criar Baralho de Flashcards</title>
     <meta name="description" content="Crie e edite baralhos inteligentes de flashcards com IA.">
     <link rel="canonical" href="https://flashcards.camblu.org/pages/generate.html">
 
@@ -144,7 +144,7 @@
                 <div class="relative">
                     <button id="lang-menu-btn" type="button"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-[var(--md-sys-color-on-surface)] shadow-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition cursor-pointer select-none"
-                        aria-label="Idioma / Language" title="Idioma / Language">
+                        aria-label="Idioma / Language" title="Idioma / Language" data-i18n-aria-label="language_selector" data-i18n-title="language_selector">
                         <span class="material-symbols-rounded text-base text-[var(--md-sys-color-primary)]">translate</span>
                         <span id="lang-current-label">PT</span>
                         <span class="material-symbols-rounded text-sm text-[var(--md-sys-color-on-surface-variant)]">expand_more</span>
@@ -320,8 +320,8 @@
                     <div class="border-t border-blue-200/70 pt-2.5 space-y-2">
                         <div class="flex items-start gap-2 text-xs text-blue-900">
                             <span class="material-symbols-rounded text-sm text-amber-500 shrink-0 mt-0.5 select-none">lightbulb</span>
-                            <div class="min-w-0 flex-1 leading-relaxed break-words">
-                                <strong class="text-blue-950" data-i18n="special_tags">Tags especiais:</strong> Use <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(anki_like) Frente: Verso</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(open_double) Resp1;Resp2: Pergunta</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(fill) Resp1;Resp2: Frase com _ e _</code> ou <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(multiple_choice) Resposta: Pergunta</code> para definir formatos específicos por linha.
+                            <div class="min-w-0 flex-1 leading-relaxed break-words" data-i18n-html="special_tags_desc">
+                                <strong class="text-blue-950">Tags especiais:</strong> Use <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(anki_like) Frente: Verso</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(open_double) Resp1;Resp2: Pergunta</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(fill) Resp1;Resp2: Frase com _ e _</code> ou <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(multiple_choice) Resposta: Pergunta</code> para definir formatos específicos por linha.
                             </div>
                         </div>
 
@@ -466,12 +466,12 @@
                 <!-- Instructions on AI enhancements -->
                 <div class="bg-purple-50 border border-purple-200 p-4 rounded-2xl text-sm leading-relaxed text-purple-900 space-y-2">
                     <p class="font-semibold" data-i18n="enhance_instructions_title">Como estruturar para aprimoramento:</p>
-                    <p class="text-xs">• Linha padrão: <code>RESPOSTA: Pergunta</code></p>
-                    <p class="text-xs">• Anki-like: inicie com <code>(anki_like) Frente: Verso</code> (a parte antes de ":" é a frente/pergunta e depois é o verso/resposta).</p>
-                    <p class="text-xs">• Resposta dupla: inicie com <code>(open_double) Resposta1;Resposta2: Pergunta</code> (o Gemini criará os rótulos adequados).</p>
-                    <p class="text-xs">• Preencher lacunas: inicie com <code>(fill) Resposta1;Resposta2: Frase com _ e _</code> (os pontos a serem preenchidos são identificados por "_").</p>
-                    <p class="text-xs">• Múltipla escolha: inicie com <code>(multiple_choice) RespostaCorreta: Pergunta</code> (o Gemini criará distratores plausíveis).</p>
-                    <p class="text-xs">• Notas e divisores: inicie com <code># Título da Seção</code> (organizam o baralho no editor e são ignorados no jogo).</p>
+                    <p class="text-xs" data-i18n-html="gemini_tip_default_line">• Linha padrão: <code>RESPOSTA: Pergunta</code></p>
+                    <p class="text-xs" data-i18n-html="gemini_tip_anki">• Anki-like: inicie com <code>(anki_like) Frente: Verso</code> (a parte antes de ":" é a frente/pergunta e depois é o verso/resposta).</p>
+                    <p class="text-xs" data-i18n-html="gemini_tip_double">• Resposta dupla: inicie com <code>(open_double) Resposta1;Resposta2: Pergunta</code> (o Gemini criará os rótulos adequados).</p>
+                    <p class="text-xs" data-i18n-html="gemini_tip_fill">• Preencher lacunas: inicie com <code>(fill) Resposta1;Resposta2: Frase com _ e _</code> (os pontos a serem preenchidos são identificados por "_").</p>
+                    <p class="text-xs" data-i18n-html="gemini_tip_mc">• Múltipla escolha: inicie com <code>(multiple_choice) RespostaCorreta: Pergunta</code> (o Gemini criará distratores plausíveis).</p>
+                    <p class="text-xs" data-i18n-html="gemini_tip_notes">• Notas e divisores: inicie com <code># Título da Seção</code> (organizam o baralho no editor e são ignorados no jogo).</p>
                 </div>
 
                 <!-- Pro Feature Badge -->
@@ -574,7 +574,7 @@
                         <input type="hidden" id="creator-card-type" value="open">
 
                         <!-- M3 Floating Dropdown Menu (Overlays explanation text & adjacent form fields) -->
-                        <div id="creator-card-type-dropdown" class="m3-select-dropdown hidden" role="listbox" aria-label="Selecione o tipo de cartão">
+                        <div id="creator-card-type-dropdown" class="m3-select-dropdown hidden" role="listbox" aria-label="Selecione o tipo de cartão" data-i18n-aria-label="select_card_type">
                             <!-- 1. Escrever (open) -->
                             <div class="m3-select-item m3-select-item-selected" data-value="open" data-label="Escrever" data-icon="../assets/img/open.svg" role="option" aria-selected="true" tabindex="0">
                                 <div class="flex items-center gap-2.5 min-w-0">
@@ -704,7 +704,7 @@
                 <div id="creator-group-fill" class="space-y-3 hidden">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="fill_blanks_label">Respostas das Lacunas (separadas por ";")</label>
-                        <input type="text" id="creator-ans-fill" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Ex: 30; 3; 300 ou valor1; valor2">
+                        <input type="text" id="creator-ans-fill" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Ex: 30; 3; 300 ou valor1; valor2" data-i18n-placeholder="fill_ans_creator_ph">
                         <p class="text-[11px] text-gray-500 mt-1" data-i18n="fill_blanks_help">
                             Use "_" no texto acima para cada lacuna. Cada resposta preenche uma lacuna na ordem de aparição. Sinônimos para a mesma lacuna podem ser separados por "/" (ex: 30 / trinta).
                         </p>
@@ -891,7 +891,7 @@
                 <!-- Fill In The Blanks Answer -->
                 <div id="edit-card-fill-group" class="hidden space-y-1">
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="fill_blanks_label">Respostas das Lacunas (separadas por ";")</label>
-                    <input type="text" id="edit-card-fill-answer" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm" placeholder="Ex: 30; 3; 300">
+                    <input type="text" id="edit-card-fill-answer" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm" placeholder="Ex: 30; 3; 300" data-i18n-placeholder="fill_answer_placeholder">
                     <p class="text-[11px] text-gray-500" data-i18n="edit_fill_help">Na ordem das lacunas "_" do texto. Sinônimos podem ser separados por "/".</p>
                 </div>
 

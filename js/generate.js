@@ -1602,7 +1602,7 @@ modal12File.addEventListener('change', () => {
 submitModal12Btn.addEventListener('click', async () => {
     modal12Error.textContent = '';
     if (!modal12File.files || modal12File.files.length === 0) {
-        modal12Error.textContent = 'Por favor, selecione um arquivo (.txt, .doc ou .docx).';
+        modal12Error.textContent = t('select_txt_doc_error');
         return;
     }
 
@@ -1615,7 +1615,7 @@ submitModal12Btn.addEventListener('click', async () => {
 
         const playableCards = cards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
         if (playableCards.length === 0) {
-            modal12Error.textContent = 'Nenhum flashcard válido encontrado no arquivo. Certifique-se de usar ":" para separar pergunta e resposta.';
+            modal12Error.textContent = t('no_valid_cards_colon_error');
             return;
         }
 
@@ -1624,7 +1624,7 @@ submitModal12Btn.addEventListener('click', async () => {
         modal12.classList.add('hidden');
         openEditorView('creator');
     } catch (err) {
-        modal12Error.textContent = `Erro ao ler o documento: ${err.message}`;
+        modal12Error.textContent = t('error_reading_doc', { error: err.message });
     }
 });
 
@@ -1650,7 +1650,7 @@ modal21Files.addEventListener('change', () => {
     const files = Array.from(modal21Files.files);
 
     if (files.length > 10) {
-        modal21Error.textContent = 'Limite excedido: você pode enviar no máximo 10 arquivos.';
+        modal21Error.textContent = t('file_limit_10_error');
         modal21Files.value = '';
         modal21FilesCount.textContent = 'Nenhum arquivo selecionado';
         renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
@@ -1659,7 +1659,7 @@ modal21Files.addEventListener('change', () => {
 
     for (let f of files) {
         if (f.size > MAX_FILE_SIZE) {
-            modal21Error.textContent = `O arquivo "${f.name}" excede 100MB e foi rejeitado.`;
+            modal21Error.textContent = t('file_exceeds_100mb', { name: f.name });
             modal21Files.value = '';
             modal21FilesCount.textContent = 'Nenhum arquivo selecionado';
             renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
@@ -1686,11 +1686,11 @@ submitModal21Btn.addEventListener('click', async () => {
 
     const files = Array.from(modal21Files.files);
     if (files.length === 0) {
-        modal21Error.textContent = 'Selecione pelo menos um arquivo.';
+        modal21Error.textContent = t('select_at_least_one_file');
         return;
     }
     if (files.length > 10) {
-        modal21Error.textContent = 'Você pode enviar no máximo 10 arquivos.';
+        modal21Error.textContent = t('file_limit_10_error');
         return;
     }
 
@@ -1992,7 +1992,7 @@ submitModal22Btn.addEventListener('click', async () => {
     }
 
     if (!modal22File.files || modal22File.files.length === 0) {
-        modal22Error.textContent = 'Selecione um arquivo .txt ou Word.';
+        modal22Error.textContent = t('select_txt_word_error');
         return;
     }
 
@@ -2008,7 +2008,7 @@ submitModal22Btn.addEventListener('click', async () => {
 
         const playableCards = localCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
         if (playableCards.length === 0) {
-            modal22Error.textContent = 'Nenhum flashcard válido encontrado no documento. Verifique se as linhas contêm ":" para separar os campos.';
+            modal22Error.textContent = t('no_valid_cards_syntax_error');
             return;
         }
 
@@ -2421,16 +2421,16 @@ creatorCardType.addEventListener('change', () => {
     }
 
     if (t === 'divisor') {
-        creatorQuestionLabel.textContent = "Texto do Comentário (#)";
-        creatorQuestion.placeholder = "Ex: Seção 1 - Fisiologia Renal";
+        creatorQuestionLabel.textContent = t('comment_text_label');
+        creatorQuestion.placeholder = t('comment_text_ph');
     } else if (t === 'fill') {
         creatorQuestionLabel.textContent = "Frase com lacunas (use '_' para cada lacuna)";
-        creatorQuestion.placeholder = "Ex: No KDIGO, A1 é < _ mg/g, A2 é _-_ mg/g e A3 é > _ mg/g";
+        creatorQuestion.placeholder = t('fill_blank_example_ph');
     } else if (t === 'anki') {
         creatorQuestionLabel.textContent = "Pergunta / Conceito (Curto)";
         creatorQuestion.placeholder = "Escreva a pergunta ou conceito...";
     } else {
-        creatorQuestionLabel.textContent = "Pergunta / Descrição";
+        creatorQuestionLabel.textContent = t('question_desc_label');
         creatorQuestion.placeholder = "Escreva a pergunta ou conceito...";
     }
 
@@ -2457,7 +2457,7 @@ function renderCreatorMcOptions(options = ["", "", "", ""], selectedIdx = 0) {
         const textInput = document.createElement('input');
         textInput.type = 'text';
         textInput.className = 'creator-mc-opt-val flex-1 p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm';
-        textInput.placeholder = `Opção ${i + 1}`;
+        textInput.placeholder = t('option_numbered_ph', { num: i + 1 });
         textInput.value = optText || '';
 
         const removeBtn = document.createElement('button');
@@ -2696,7 +2696,7 @@ function showGeneratingAnimation(initialMessage = "Processando arquivos e gerand
         badgeStatus.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-purple-50 to-purple-100 text-purple-700 border border-purple-200/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
         badgeStatus.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse"></span> AO VIVO';
     }
-    if (titleText) titleText.textContent = "O Gemini está gerando seus flashcards";
+    if (titleText) titleText.textContent = t('gemini_generating_deck_title');
     if (progressBar) progressBar.classList.remove('hidden');
 
     deckSizeBadge.classList.add('badge-generating-pulse');
@@ -2726,11 +2726,11 @@ function updateGeneratingProgress(count) {
         if (count < 10) {
             statusText.textContent = `Identificando conceitos-chave... (${count} cards formulados)`;
         } else if (count < 25) {
-            statusText.textContent = `Aprofundando em definições técnicas... (${count} cards formulados)`;
+            statusText.textContent = t('gemini_deepening_status', { count });
         } else if (count < 50) {
             statusText.textContent = `Construindo perguntas e alternativas... (${count} cards formulados)`;
         } else {
-            statusText.textContent = `Finalizando os últimos cards do material... (${count} cards formulados)`;
+            statusText.textContent = t('gemini_finalizing_status', { count });
         }
     }
 }
@@ -2758,7 +2758,7 @@ function finishGeneratingAnimation(success = true, count = 0) {
 
     if (success && count > 0) {
         if (titleText) titleText.textContent = "Flashcards gerados com sucesso!";
-        if (statusText) statusText.textContent = `${count} cards prontos. Você já pode estudar ou pedir edições pelo Assistente de IA.`;
+        if (statusText) statusText.textContent = t('cards_ready_status', { count });
         if (badgeStatus) {
             badgeStatus.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-green-50 to-green-100/90 text-green-700 border border-green-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
             badgeStatus.innerHTML = '✓ CONCLUÍDO';
@@ -2778,8 +2778,8 @@ function finishGeneratingAnimation(success = true, count = 0) {
             }
         }, 4000);
     } else {
-        if (titleText) titleText.textContent = "Geração não concluída";
-        if (statusText) statusText.textContent = "Não foi possível extrair cards automaticamente. Verifique os arquivos enviados ou tente novamente.";
+        if (titleText) titleText.textContent = t('generation_incomplete_title');
+        if (statusText) statusText.textContent = t('generation_failed_desc');
         if (badgeStatus) {
             badgeStatus.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-red-50 to-red-100/90 text-red-700 border border-red-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
             badgeStatus.innerHTML = '<span class="material-symbols-rounded text-xs align-middle">warning</span> ATENÇÃO';
@@ -3018,7 +3018,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
 
     const labelSpan = document.createElement('span');
     labelSpan.className = "truncate";
-    labelSpan.textContent = divisor.text || divisor.description || 'Comentário';
+    labelSpan.textContent = divisor.text || divisor.description || t('comment_divisor_default');
     labelSpan.title = divisor.text || divisor.description || '';
 
     textSpan.appendChild(hashTag);
@@ -3034,7 +3034,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
     const editBtn = document.createElement('button');
     editBtn.type = "button";
     editBtn.className = "p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition";
-    editBtn.title = "Editar comentário";
+    editBtn.title = t('edit_comment_title');
     editBtn.innerHTML = '<img src="../assets/img/edit.svg" class="w-3.5 h-3.5" alt="Editar">';
     editBtn.onclick = (e) => {
         if (e) {
@@ -3065,7 +3065,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
     const delBtn = document.createElement('button');
     delBtn.type = "button";
     delBtn.className = "p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition";
-    delBtn.title = "Excluir comentário";
+    delBtn.title = t('delete_comment_title');
     delBtn.innerHTML = '<img src="../assets/img/delete.svg" class="w-3.5 h-3.5" alt="Excluir">';
     delBtn.onclick = (e) => {
         if (e) {

@@ -117,7 +117,7 @@ export function initExploreModal() {
           window.history.replaceState({}, document.title, cleanUrl.toString());
 
           if (verifyResult?.type === 'extra_deck') {
-            alert('Compra de geração extra concluída com sucesso!');
+            alert(t('purchase_extra_deck_success'));
           } else {
             triggerProUnlockCelebration();
           }
@@ -137,7 +137,7 @@ export function initExploreModal() {
     } else {
       userProStatus = null;
       if (sessionId) {
-        alert('Pagamento identificado. Faça login com sua conta Google para vincular seu plano Pro.');
+        alert(t('payment_identified_login_pro'));
         if (typeof window.flashcardsOpenAccountModal === 'function') {
           window.flashcardsOpenAccountModal();
         }
@@ -353,18 +353,18 @@ function injectModalHtml() {
         <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
           <span class="material-symbols-rounded text-2xl">add_circle</span>
         </div>
-        <h2 class="text-xl font-bold text-[var(--md-sys-color-on-surface)] mb-1">Geração de Baralho Extra</h2>
-        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4">Gere um baralho adicional usando Gemini High Thinking sem aguardar a renovação mensal.</p>
+        <h2 class="text-xl font-bold text-[var(--md-sys-color-on-surface)] mb-1" data-i18n="extra_deck_title">${t('extra_deck_title')}</h2>
+        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4" data-i18n="extra_deck_subtitle">${t('extra_deck_subtitle')}</p>
 
         <div class="mb-4">
           <span class="text-3xl font-extrabold text-[var(--md-sys-color-primary)]">R$ 0,99</span>
-          <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]">/ baralho</span>
+          <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="per_deck">${t('per_deck')}</span>
         </div>
 
         <div id="extra-deck-checkout-container" class="space-y-3">
           <div id="extra-deck-form-loading" class="flex flex-col items-center justify-center p-6 text-gray-500 text-xs gap-2">
             <span class="material-symbols-rounded text-2xl animate-spin text-blue-600">sync</span>
-            <span>Carregando formulário seguro do Stripe...</span>
+            <span>${t('loading_stripe_form')}</span>
           </div>
           <div id="extra-deck-checkout-form"></div>
         </div>
@@ -409,12 +409,12 @@ function attachModalEventListeners() {
       const parsed = JSON.parse(text);
 
       if (parsed && parsed.__flashcards_watermark__ === "notebook_backup_v1") {
-        const importAsNotebook = confirm('Este arquivo é um backup do Caderno.\n\nDeseja restaurá-lo diretamente no seu Caderno?');
+        const importAsNotebook = confirm(t('confirm_restore_notebook_backup'));
         if (importAsNotebook) {
           const importedCount = importNotebookBackupData(parsed);
           renderNotebookSlot();
           hiddenInput.value = '';
-          alert(`Backup do Caderno restaurado com sucesso! (${importedCount} cards carregados)`);
+          alert(t('notebook_backup_restored_success', { count: importedCount }));
           return;
         }
       }
@@ -449,12 +449,12 @@ function attachModalEventListeners() {
         cards = parsed.cards;
         deckTitle = parsed.deckTitle || deckName;
       } else {
-        alert('Arquivo inválido: o JSON não possui a estrutura esperada de baralho.');
+        alert(t('invalid_json_deck'));
         return;
       }
 
       if (cards.length === 0) {
-        alert('O arquivo JSON está vazio ou não contém cartões válidos.');
+        alert(t('json_empty_cards'));
         return;
       }
 
@@ -474,7 +474,7 @@ function attachModalEventListeners() {
       // Redirect to game
       window.location.href = ROUTES.GAME;
     } catch (err) {
-      alert('Erro ao ler o arquivo JSON selecionado: ' + (err.message || 'formato inválido'));
+      alert(t('error_reading_json_file', { error: err.message || 'formato inválido' }));
     }
   });
 
@@ -499,9 +499,9 @@ function attachModalEventListeners() {
       }
 
       renderNotebookSlot();
-      alert(`Backup do Caderno importado com sucesso!\n${importedCount} cards carregados no Caderno.`);
+      alert(t('notebook_backup_imported_success', { count: importedCount }));
     } catch (err) {
-      alert('Erro ao importar backup do caderno: ' + (err.message || 'Arquivo corrompido'));
+      alert(t('error_importing_notebook_backup', { error: err.message || 'Arquivo corrompido' }));
     } finally {
       if (hiddenNotebookInput) hiddenNotebookInput.value = '';
     }
@@ -548,7 +548,7 @@ async function checkPaymentStatusNow(showFeedback = false) {
       triggerProUnlockCelebration();
       return true;
     } else if (showFeedback) {
-      alert('Pagamento ainda não confirmado pelo banco. Se realizou o pagamento há poucos segundos, aguarde um instante e verifique novamente.');
+      alert(t('payment_pending_bank'));
     }
   } catch (e) {
     console.warn('Erro ao checar pagamento:', e);
@@ -614,7 +614,7 @@ function bindProCheckoutBtn() {
   btn?.addEventListener('click', async () => {
     const cleanCpf = cpfInput?.value?.replace(/\D/g, '') || '';
     if (cleanCpf.length !== 11) {
-      alert('Por favor, informe um CPF válido (11 dígitos) para emissão da assinatura.');
+      alert(t('invalid_cpf_alert'));
       cpfInput?.focus();
       return;
     }
@@ -646,9 +646,9 @@ function bindProCheckoutBtn() {
         if (copyBtn) {
           copyBtn.onclick = () => {
             navigator.clipboard.writeText(result.pix.payload);
-            copyBtn.innerHTML = '<span class="material-symbols-rounded text-base">check</span><span>Copiado!</span>';
+            copyBtn.innerHTML = `<span class="material-symbols-rounded text-base">check</span><span>${t('copied')}</span>`;
             setTimeout(() => {
-              copyBtn.innerHTML = '<span class="material-symbols-rounded text-base">content_copy</span><span>Copiar Chave Pix</span>';
+              copyBtn.innerHTML = `<span class="material-symbols-rounded text-base">content_copy</span><span>${t('copy_pix_code')}</span>`;
             }, 2000);
           };
         }
@@ -658,7 +658,7 @@ function bindProCheckoutBtn() {
         if (invoiceBtn && result.invoiceUrl) {
           invoiceBtn.href = result.invoiceUrl;
           invoiceBtn.classList.remove('hidden');
-          invoiceBtn.innerHTML = '<span class="material-symbols-rounded text-base">credit_card</span><span>Pagar com Cartão</span>';
+          invoiceBtn.innerHTML = `<span class="material-symbols-rounded text-base">credit_card</span><span>${t('pay_invoice_stripe')}</span>`;
         }
       }
 
@@ -676,7 +676,7 @@ function bindProCheckoutBtn() {
       startProPaymentPolling();
 
     } catch (e) {
-      alert(e.message || 'Erro ao gerar assinatura. Tente novamente.');
+      alert(e.message || t('error_creating_subscription'));
       btn.disabled = false;
       btn.textContent = 'Assinar agora';
     }
@@ -699,7 +699,7 @@ async function mountStripeEmbeddedForm() {
     if (loadingEl) {
       loadingEl.innerHTML = `
         <span class="material-symbols-rounded text-2xl text-red-500">error</span>
-        <span class="text-xs text-red-600 font-medium">Stripe.js não pôde ser carregado. Verifique sua conexão com a internet.</span>
+        <span class="text-xs text-red-600 font-medium">${t('stripe_load_error')}</span>
       `;
     }
     return;
@@ -816,7 +816,7 @@ export function renderProModalContent() {
     container.innerHTML = `
       <div class="p-3.5 bg-green-50 border border-green-200 rounded-2xl text-xs text-green-800 font-bold flex items-center justify-center gap-2">
         <span class="material-symbols-rounded text-lg text-green-600">verified</span>
-        <span>Você já possui o plano PRO ${lifetime ? 'VITALÍCIO' : 'ATIVO'}!</span>
+        <span>${t('already_pro_plan', { status: lifetime ? t('pro_lifetime_badge') : t('pro_active_badge') })}</span>
       </div>
       <button id="pro-dismiss-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 mt-3 font-bold text-xs bg-green-600 hover:bg-green-700 text-white shadow">
         Continuar Estudando
@@ -845,7 +845,7 @@ export function renderProModalContent() {
           renderModalContent();
         }
       } catch (e) {
-        alert('Erro ao autenticar com Google.');
+        alert(t('error_authenticating_google'));
       }
     });
     return;
@@ -856,7 +856,7 @@ export function renderProModalContent() {
     <div id="stripe-checkout-wrapper" class="space-y-3">
       <div id="checkout-form-loading" class="flex flex-col items-center justify-center p-6 text-gray-500 text-xs gap-2">
         <span class="material-symbols-rounded text-2xl animate-spin text-blue-600">sync</span>
-        <span>Carregando formulário seguro do Stripe...</span>
+        <span>${t('loading_stripe_form')}</span>
       </div>
       <div id="checkout-form"></div>
     </div>
@@ -880,7 +880,7 @@ async function mountExtraDeckEmbeddedForm() {
     if (loadingEl) {
       loadingEl.innerHTML = `
         <span class="material-symbols-rounded text-2xl text-red-500">error</span>
-        <span class="text-xs text-red-600 font-medium">Stripe.js não pôde ser carregado. Verifique sua conexão.</span>
+        <span class="text-xs text-red-600 font-medium">${t('stripe_load_error')}</span>
       `;
     }
     return;
@@ -945,7 +945,7 @@ async function mountExtraDeckEmbeddedForm() {
           }
           setTimeout(async () => {
             await refreshUserProStatus();
-            alert('Pagamento confirmado com sucesso! 1 geração extra de baralho com IA foi adicionada à sua conta.');
+            alert(t('extra_deck_payment_success'));
             closeExtraDeckModal();
           }, 2000);
         } catch (error) {
@@ -964,7 +964,7 @@ async function mountExtraDeckEmbeddedForm() {
             <span>Erro ao carregar checkout</span>
           </div>
           <p class="text-[11px] text-amber-800 leading-tight">
-            ${err.message || 'Não foi possível inicializar o checkout.'}
+            ${err.message || t('checkout_init_error')}
           </p>
         </div>
       `;
@@ -993,7 +993,7 @@ export function renderExtraDeckModalContent() {
           renderExtraDeckModalContent();
         }
       } catch (e) {
-        alert('Erro ao autenticar com Google.');
+        alert(t('error_authenticating_google'));
       }
     });
     return;
@@ -1002,7 +1002,7 @@ export function renderExtraDeckModalContent() {
   container.innerHTML = `
     <div id="extra-deck-form-loading" class="flex flex-col items-center justify-center p-6 text-gray-500 text-xs gap-2">
       <span class="material-symbols-rounded text-2xl animate-spin text-blue-600">sync</span>
-      <span>Carregando formulário seguro do Stripe...</span>
+      <span>${t('loading_stripe_form')}</span>
     </div>
     <div id="extra-deck-checkout-form"></div>
   `;
@@ -1035,20 +1035,20 @@ function renderAuthHeader() {
       <div class="relative">
         ${photo ? `<img src="${photo}" referrerpolicy="no-referrer" class="w-10 h-10 rounded-full border border-blue-200 object-cover" alt="Avatar">`
                 : `<span class="material-symbols-rounded text-4xl text-blue-600">account_circle</span>`}
-        ${isPro ? `<span class="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 text-[10px]" title="Assinante Pro"><span class="material-symbols-rounded text-xs block">star</span></span>` : ''}
+        ${isPro ? `<span class="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 text-[10px]" title="${t('pro_subscriber_title')}"><span class="material-symbols-rounded text-xs block">star</span></span>` : ''}
       </div>
       <div class="text-left min-w-0">
         <div class="flex items-center gap-1.5">
           <p class="font-bold text-sm text-[var(--md-sys-color-on-surface)] truncate max-w-[140px] sm:max-w-[200px]">${name}</p>
-          ${isPro ? `<span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded-full border border-amber-300">${lifetime ? 'PRO VITALÍCIO' : 'PRO'}</span>` : ''}
+          ${isPro ? `<span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded-full border border-amber-300">${lifetime ? t('pro_lifetime_badge') : 'PRO'}</span>` : ''}
         </div>
         <div class="flex items-center gap-3">
           <button id="modal-logout-btn" class="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer">
-            <span class="material-symbols-rounded text-sm">logout</span> Sair
+            <span class="material-symbols-rounded text-sm">logout</span> ${t('logout')}
           </button>
           ${isPro 
-            ? `<button id="modal-manage-account-btn" class="text-xs text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer">Gerenciar assinatura</button>` 
-            : `<button id="modal-upgrade-pro-btn" class="text-xs text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer">Assinar Pro</button>`}
+            ? `<button id="modal-manage-account-btn" class="text-xs text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer">${t('manage_subscription')}</button>` 
+            : `<button id="modal-upgrade-pro-btn" class="text-xs text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer">${t('subscribe_pro')}</button>`}
         </div>
       </div>
     `;
@@ -1070,9 +1070,9 @@ function renderAuthHeader() {
       <div>
         <button id="modal-login-btn" class="flex items-center gap-2.5 px-4 py-2 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-300 rounded-full shadow-sm text-xs sm:text-sm font-semibold text-gray-700 transition">
           <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-          <span>Sign in with Google</span>
+          <span>${t('sign_in_google')}</span>
         </button>
-        <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1 text-left font-medium">Salve decks e progresso na nuvem</p>
+        <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1 text-left font-medium" data-i18n="save_decks_cloud_hint">${t('save_decks_cloud_hint')}</p>
       </div>
     `;
 
@@ -1083,7 +1083,7 @@ function renderAuthHeader() {
           renderModalContent();
         }
       } catch (err) {
-        alert('Erro ao autenticar com o Google.');
+        alert(t('error_authenticating_google'));
       }
     });
   }
@@ -1107,8 +1107,8 @@ function renderDeckSlots() {
       return `
         <div class="slot-card-empty border-2 border-dashed border-gray-300 hover:border-blue-500 rounded-2xl p-4 flex flex-col items-center justify-center text-center min-h-[140px] cursor-pointer transition-colors bg-[var(--md-sys-color-surface-container-low)]" onclick="window.flashcardsUploadToSlot(${idx})">
           <span class="material-symbols-rounded text-3xl text-gray-400 mb-1">add_circle</span>
-          <span class="text-xs font-bold text-gray-600">Slot ${idx + 1} Vazio</span>
-          <span class="text-[10px] text-gray-400 mt-0.5">Clique para carregar</span>
+          <span class="text-xs font-bold text-gray-600">${t('slot_empty', { num: idx + 1 })}</span>
+          <span class="text-[10px] text-gray-400 mt-0.5">${t('click_to_load')}</span>
         </div>
       `;
     }
@@ -1123,32 +1123,32 @@ function renderDeckSlots() {
         <!-- Top Status Indicators -->
         <div class="flex items-center justify-between gap-1 mb-2">
           ${isCurrent 
-            ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isExam ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">Aberto agora</span>` 
-            : `<span class="text-[10px] ${isExam ? 'text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-full' : 'text-gray-400 font-semibold'}">Slot ${idx + 1}${isExam ? ' • Mistura' : ''}</span>`
+            ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isExam ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">${t('open_now')}</span>` 
+            : `<span class="text-[10px] ${isExam ? 'text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-full' : 'text-gray-400 font-semibold'}">Slot ${idx + 1}${isExam ? ` • ${t('mix_label')}` : ''}</span>`
           }
           <div class="flex items-center gap-1">
-            ${isExam ? `<span class="material-symbols-rounded text-sm text-purple-600" title="Semana de Provas (Mistura)">bolt</span>` : ''}
-            ${isFixed ? `<span class="material-symbols-rounded text-sm ${isExam ? 'text-purple-600' : 'text-blue-600'}" title="Fixado: protegido contra sobrescrita">lock</span>` : `<span class="text-[10px] text-gray-400" title="Sobrescritível ao abrir novos baralhos">Sobrescritível</span>`}
+            ${isExam ? `<span class="material-symbols-rounded text-sm text-purple-600" title="${t('exam_week_mix')}">bolt</span>` : ''}
+            ${isFixed ? `<span class="material-symbols-rounded text-sm ${isExam ? 'text-purple-600' : 'text-blue-600'}" title="${t('fixed_protected_hint')}">lock</span>` : `<span class="text-[10px] text-gray-400" title="${t('overwritable_hint')}">${t('overwritable')}</span>`}
           </div>
         </div>
 
         <!-- Deck Content / Title -->
         <div class="cursor-pointer flex-1 my-1" onclick="window.flashcardsOpenSlot(${idx})">
           <h4 class="text-sm font-bold text-gray-900 line-clamp-2 leading-tight" title="${deckNames ? `Mistura: ${deckNames}` : safeTitle}">${safeTitle}</h4>
-          <p class="text-xs ${isExam ? 'text-purple-700 font-medium' : 'text-gray-500'} mt-1">${slot.cardCount} cards${isExam && deckCount > 0 ? ` • ${deckCount} baralhos` : ''}</p>
+          <p class="text-xs ${isExam ? 'text-purple-700 font-medium' : 'text-gray-500'} mt-1">${slot.cardCount} cards${isExam && deckCount > 0 ? ` • ${deckCount} ${t('nav_decks').toLowerCase()}` : ''}</p>
         </div>
 
         <!-- Action Bar: Edit, Delete & Share -->
         <div class="pt-2 mt-1 border-t border-gray-100 flex items-center justify-between">
           <div class="flex items-center gap-1">
-            <button class="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="Editar Baralho" onclick="window.flashcardsEditSlot(${idx})">
+            <button class="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="${t('edit_deck_title')}" onclick="window.flashcardsEditSlot(${idx})">
               <span class="material-symbols-rounded text-lg">edit</span>
             </button>
-            <button class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 active:bg-red-100 transition cursor-pointer" title="Excluir do Slot" onclick="window.flashcardsDeleteSlot(${idx})">
+            <button class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 active:bg-red-100 transition cursor-pointer" title="${t('delete_from_slot_title')}" onclick="window.flashcardsDeleteSlot(${idx})">
               <span class="material-symbols-rounded text-lg">delete</span>
             </button>
           </div>
-          <button class="p-1.5 rounded-lg ${isExam ? 'text-purple-600 hover:bg-purple-50 active:bg-purple-100' : 'text-blue-600 hover:bg-blue-50 active:bg-blue-100'} transition cursor-pointer" title="Compartilhar & Fixar no Slot" onclick="window.flashcardsShareSlot(${idx})">
+          <button class="p-1.5 rounded-lg ${isExam ? 'text-purple-600 hover:bg-purple-50 active:bg-purple-100' : 'text-blue-600 hover:bg-blue-50 active:bg-blue-100'} transition cursor-pointer" title="${t('share_and_pin_title')}" onclick="window.flashcardsShareSlot(${idx})">
             <span class="material-symbols-rounded text-lg">share</span>
           </button>
         </div>
@@ -1176,13 +1176,13 @@ function renderNotebookSlot() {
             <span class="material-symbols-rounded text-2xl">bookmark</span>
           </div>
           <div class="text-left">
-            <p class="text-sm font-bold text-gray-800">Caderno</p>
-            <p class="text-xs text-gray-400">Nenhum card salvo no caderno ainda</p>
+            <p class="text-sm font-bold text-gray-800">${t('notebook')}</p>
+            <p class="text-xs text-gray-400">${t('notebook_empty_info')}</p>
           </div>
         </div>
-        <button id="import-notebook-btn" class="p-2 sm:px-3 sm:py-1.5 rounded-xl text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition flex items-center gap-1.5 text-xs font-semibold cursor-pointer" title="Importar Backup do Caderno" onclick="window.flashcardsImportNotebookBackup()">
+        <button id="import-notebook-btn" class="p-2 sm:px-3 sm:py-1.5 rounded-xl text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition flex items-center gap-1.5 text-xs font-semibold cursor-pointer" title="${t('import_notebook_backup_title')}" onclick="window.flashcardsImportNotebookBackup()">
           <span class="material-symbols-rounded text-lg">file_upload</span>
-          <span class="hidden sm:inline">Importar Backup</span>
+          <span class="hidden sm:inline">${t('import_backup_btn')}</span>
         </button>
       </div>
     `;
@@ -1196,20 +1196,20 @@ function renderNotebookSlot() {
           <span class="material-symbols-rounded text-2xl">bookmark</span>
         </div>
         <div class="text-left min-w-0">
-          <p class="text-sm font-bold text-gray-900 truncate">Caderno</p>
-          <p class="text-xs text-gray-500">${notebook.cardCount} cards para revisão</p>
+          <p class="text-sm font-bold text-gray-900 truncate">${t('notebook')}</p>
+          <p class="text-xs text-gray-500">${t('cards_for_review', { count: notebook.cardCount })}</p>
         </div>
       </div>
 
       <!-- Action Bar: Import, Delete, Share -->
       <div class="flex items-center gap-1 flex-shrink-0">
-        <button class="p-2 rounded-xl text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="Importar Backup do Caderno" onclick="window.flashcardsImportNotebookBackup()">
+        <button class="p-2 rounded-xl text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="${t('import_notebook_backup_title')}" onclick="window.flashcardsImportNotebookBackup()">
           <span class="material-symbols-rounded text-xl">file_upload</span>
         </button>
-        <button class="p-2 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition cursor-pointer" title="Limpar Caderno" onclick="window.flashcardsClearNotebook()">
+        <button class="p-2 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition cursor-pointer" title="${t('clear_notebook_title')}" onclick="window.flashcardsClearNotebook()">
           <span class="material-symbols-rounded text-xl">delete</span>
         </button>
-        <button class="p-2 rounded-xl text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="Compartilhar Caderno" onclick="window.flashcardsShareNotebook()">
+        <button class="p-2 rounded-xl text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="${t('share_notebook_title')}" onclick="window.flashcardsShareNotebook()">
           <span class="material-symbols-rounded text-xl">share</span>
         </button>
       </div>
@@ -1284,7 +1284,7 @@ window.flashcardsEditSlot = function(slotIdx) {
 };
 
 window.flashcardsDeleteSlot = function(slotIdx) {
-  if (confirm('Deseja realmente remover este baralho do slot?')) {
+  if (confirm(t('confirm_remove_deck_from_slot'))) {
     deleteSlot(slotIdx);
     renderDeckSlots();
   }
@@ -1303,9 +1303,9 @@ window.flashcardsShareSlot = async function(slotIdx) {
     const { shareUrl } = await shareDeckToCloud(slot.deckData, slot.title, slotIdx);
     fixSlot(slotIdx, true);
     renderDeckSlots();
-    alert(`Baralho compartilhado e fixado no slot!\n\nLink copiado para a área de transferência:\n${shareUrl}`);
+    alert(t('deck_shared_and_pinned', { url: shareUrl }));
   } catch (err) {
-    alert('Erro ao compartilhar baralho.');
+    alert(t('error_sharing_deck'));
   }
 };
 
@@ -1316,7 +1316,7 @@ window.flashcardsOpenNotebook = function() {
 };
 
 window.flashcardsClearNotebook = function() {
-  if (confirm('Tem certeza de que deseja limpar todos os cards do seu Caderno?')) {
+  if (confirm(t('confirm_clear_notebook_cards'))) {
     clearNotebookSlot();
     renderNotebookSlot();
   }
@@ -1335,8 +1335,8 @@ window.flashcardsShareNotebook = async function() {
   if (!notebook.deckData) return;
   try {
     const { shareUrl } = await shareDeckToCloud(notebook.deckData, 'Caderno', null);
-    alert(`Caderno compartilhado!\n\nLink copiado para a área de transferência:\n${shareUrl}`);
+    alert(t('notebook_shared_copied', { url: shareUrl }));
   } catch (e) {
-    alert('Erro ao compartilhar caderno.');
+    alert(t('error_sharing_notebook'));
   }
 };

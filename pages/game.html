@@ -24,7 +24,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-    <title>Estudando Flashcards</title>
+    <title data-i18n="app_title">Flashcards - Domine Qualquer Assunto</title>
     <meta name="description" content="Estude de forma eficiente com flashcards inteligentes e interativos.">
     <link rel="canonical" href="https://flashcards.camblu.org/pages/game.html">
 
@@ -100,7 +100,7 @@
     <div id="hamburger-backdrop" class="hidden fixed inset-0 z-[60] bg-transparent"></div>
 
     <!-- HAMBURGER MENU DROPDOWN / DRAWER -->
-    <nav id="hamburger-menu" aria-label="Menu de Navegação e Ações"
+    <nav id="hamburger-menu" aria-label="Menu de Navegação e Ações" data-i18n-aria-label="main_menu_aria"
         class="hidden fixed z-[70] top-14 left-4 w-72 sm:w-80 max-h-[85vh] overflow-y-auto custom-scrollbar lg:top-24 lg:left-6 md:landscape:top-24 md:landscape:left-6 m3-dialog-card p-2 sm:p-3">
         
         <!-- SECTION 1: QUICK SETTINGS (CONFIGURAÇÕES, AI & POMODORO) -->
@@ -110,7 +110,7 @@
             <!-- Configurações (Abre o Modal Completo de Configurações: Acessibilidade, Pomodoro, IA, Metas) -->
             <button type="button" id="open-settings-modal-btn"
                 class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
-                title="Abrir Configurações do Aplicativo">
+                title="Abrir Configurações do Aplicativo" data-i18n-title="open_app_settings">
                 <div class="flex items-center gap-3 min-w-0">
                     <img id="settings-menu-icon" src="../assets/img/settings.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Configurações">
                     <div class="flex-1 min-w-0">
@@ -124,7 +124,7 @@
             <!-- Account / Login Button -->
             <button type="button" id="menu-account-btn"
                 class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
-                title="Minha Conta e Sincronização">
+                title="Minha Conta e Sincronização" data-i18n-title="my_account_title">
                 <div class="flex items-center gap-3 min-w-0">
                     <span id="menu-account-icon" class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover:scale-110">account_circle</span>
                     <img id="menu-account-avatar" referrerpolicy="no-referrer" class="hidden w-7 h-7 rounded-full object-cover border border-blue-400 flex-shrink-0" alt="Avatar">
@@ -139,17 +139,17 @@
             <!-- Pomodoro Timer Toggle & Settings (Cognitive Rest & Micro-pauses) -->
             <div id="pomodoro-setting-row"
                 class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group select-none no-ripple"
-                title="Ativar Pomodoro e Micro-pausas Cognitivas">
+                title="Ativar Pomodoro e Micro-pausas Cognitivas" data-i18n-title="pomodoro_setting_title">
                 <button type="button" id="pomodoro-config-trigger"
                     class="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer bg-transparent border-0 p-0 m-0 group/trigger"
-                    title="Configurar tempos do Pomodoro">
+                    title="Configurar tempos do Pomodoro" data-i18n-title="pomodoro_config_title">
                     <span class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover/trigger:scale-110">timer</span>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="pomodoro_timer">Pomodoro</p>
-                        <p id="pomodoro-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">25 min foco • 5 min pausa</p>
+                        <p id="pomodoro-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="pomodoro_default_subtitle">25 min foco • 5 min pausa</p>
                     </div>
                 </button>
-                <md-switch id="pomodoro-switch" aria-label="Alternar timer Pomodoro"></md-switch>
+                <md-switch id="pomodoro-switch" aria-label="Alternar timer Pomodoro" data-i18n-aria-label="toggle_pomodoro"></md-switch>
             </div>
         </div>
 
@@ -162,7 +162,7 @@
             <!-- Save Deck -->
             <button id="export-btn"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Baixar JSON Atualizado">
+                title="Baixar JSON Atualizado" data-i18n-title="download_updated_json">
                 <img id="export-btn-icon" src="../assets/img/save.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Salvar">
                 <div class="flex-1 min-w-0">
                     <p id="export-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="save_deck">Salvar Baralho</p>
@@ -173,7 +173,7 @@
             <!-- Edit Deck -->
             <button id="go-to-editor-btn"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Editar com Assistente de IA">
+                title="Editar com Assistente de IA" data-i18n-title="edit_with_ai">
                 <img id="go-to-editor-btn-icon" src="../assets/img/edit.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Editar">
                 <div class="flex-1 min-w-0">
                     <p id="go-to-editor-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="edit">Editar Baralho</p>
@@ -191,11 +191,11 @@
             <!-- Stats Page Link -->
             <a href="stats.html" id="stats-btn"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-blue-50 text-blue-600 transition text-left group"
-                title="Ver Estatísticas da Sessão e Anteriores">
+                title="Ver Estatísticas da Sessão e Anteriores" data-i18n-title="view_stats_title">
                 <img src="../assets/img/stats.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Estatísticas">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold text-blue-600" data-i18n="stats_title">Estatísticas</p>
-                    <p class="text-xs text-blue-500/80">Progresso, retenção & histórico</p>
+                    <p class="text-xs text-blue-500/80" data-i18n="stats_nav_subtitle">Progresso, retenção & histórico</p>
                 </div>
                 <span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" data-i18n="view_stats">Ver</span>
             </a>
@@ -203,33 +203,33 @@
             <!-- Restart Game -->
             <button id="restart-game-btn"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Reiniciar Jogo">
+                title="Reiniciar Jogo" data-i18n-title="restart_game">
                 <img src="../assets/img/reset.svg" class="w-5 h-5 flex-shrink-0 transition-all duration-300 group-hover:rotate-[-180deg]" alt="Reiniciar">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="restart_deck">Reiniciar Jogo</p>
-                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Recomeçar cartas do início</p>
+                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="restart_game_subtitle">Recomeçar cartas do início</p>
                 </div>
             </button>
 
             <!-- Cast State (Transmitir) -->
             <button id="transfer-session-btn"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Continuar no Celular (Cast)">
+                title="Continuar no Celular (Cast)" data-i18n-title="cast_session_title">
                 <img src="../assets/img/cast.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Transmitir">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Transmitir Sessão</p>
-                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Continuar no celular via QR Code</p>
+                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="cast_session_name">Transmitir Sessão</p>
+                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="cast_session_subtitle">Continuar no celular via QR Code</p>
                 </div>
             </button>
 
             <!-- Receive State (Receber) -->
             <button id="receive-session-btn"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Receber Sessão (QR Code)">
+                title="Receber Sessão (QR Code)" data-i18n-title="receive_session_title">
                 <img src="../assets/img/download.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Receber">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Receber Sessão</p>
-                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Escanear QR Code com a câmera</p>
+                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="receive_session_name">Receber Sessão</p>
+                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="receive_session_subtitle">Escanear QR Code com a câmera</p>
                 </div>
             </button>
         </div>
@@ -241,7 +241,7 @@
             <!-- Clear Notebook (Only visible when activeMode === 'notebook') -->
             <button id="clear-notebook-btn"
                 class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
-                title="Apagar todo o conteúdo do Caderno">
+                title="Apagar todo o conteúdo do Caderno" data-i18n-title="clear_notebook_title">
                 <img src="../assets/img/delete.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Limpar">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-red-600" data-i18n="clear_notebook">Limpar caderno</p>
@@ -251,11 +251,11 @@
 
             <button id="reset-btn"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
-                title="Voltar ao início">
+                title="Voltar ao início" data-i18n-title="back_to_home_title">
                 <img id="exit-icon" src="../assets/img/exit.svg?v=3" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:translate-x-[-2px]" alt="Sair">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold" data-i18n="exit_app">Sair do Jogo</p>
-                    <p class="text-xs text-red-500/80">Encerrar e voltar ao início</p>
+                    <p class="text-xs text-red-500/80" data-i18n="back_to_home_subtitle">Encerrar e voltar ao início</p>
                 </div>
             </button>
         </div>
@@ -275,7 +275,7 @@
             <!-- HAMBURGER MENU BUTTON -->
             <button id="hamburger-btn"
                 class="cursor-pointer hover:bg-gray-100 rounded-full p-2 transition-colors flex items-center justify-center flex-shrink-0 relative z-[65]"
-                title="Abrir Menu Principal" aria-label="Menu Principal" aria-expanded="false">
+                title="Abrir Menu Principal" aria-label="Menu Principal" aria-expanded="false" data-i18n-title="open_main_menu" data-i18n-aria-label="main_menu">
                 <img src="../assets/img/menu.svg" class="w-6 h-6 pointer-events-none" alt="Menu">
             </button>
 
@@ -322,7 +322,7 @@
                             <img src="../assets/img/bookmark_check.svg" class="w-5 h-5 flex-shrink-0" alt="Caderno">
                             <span class="font-semibold text-gray-800 flex-1 truncate" data-i18n="notebook_slot_label">Caderno</span>
                             <!-- Daily Streak Badge aligned right -->
-                            <div id="notebook-streak-badge" class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 border border-gray-200/80 transition-all flex-shrink-0 ml-auto" title="Dias consecutivos estudando">
+                            <div id="notebook-streak-badge" class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 border border-gray-200/80 transition-all flex-shrink-0 ml-auto" title="Dias consecutivos estudando" data-i18n-title="consecutive_study_days">
                                 <img src="../assets/img/fire.svg" id="notebook-streak-fire" class="notebook-streak-fire is-desaturated w-3.5 h-3.5 transition-all pointer-events-none" alt="Streak">
                                 <span id="notebook-streak-count" class="font-bold text-xs text-gray-500">0</span>
                             </div>
@@ -331,15 +331,15 @@
                         <!-- Decks in Exam Week Section -->
                         <div id="dropdown-exam-decks-section" class="hidden mt-1 pt-2 border-t border-gray-100">
                             <div class="flex items-center justify-between px-2 py-1 mb-1">
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Baralhos na Mistura</span>
-                                <span id="dropdown-exam-decks-count" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">0 baralhos</span>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400" data-i18n="decks_in_mix">Baralhos na Mistura</span>
+                                <span id="dropdown-exam-decks-count" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700" data-i18n="zero_decks">0 baralhos</span>
                             </div>
                             <!-- List of individual decks with enable/disable checkbox and remove button -->
                             <div id="dropdown-exam-decks-list" class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
                             <!-- Add Deck to Mix button -->
                             <button id="dropdown-add-deck-btn" type="button" class="w-full mt-2 py-2 px-3 border border-dashed border-purple-300 hover:border-purple-500 text-xs font-bold text-purple-600 rounded-xl hover:bg-purple-50 transition flex items-center justify-center gap-1.5 cursor-pointer">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                                <span>+ Adicionar Baralho</span>
+                                <span data-i18n="add_deck_to_mix">+ Adicionar Baralho</span>
                             </button>
                             <input type="file" id="dropdown-add-deck-input" accept=".json" multiple class="hidden">
                         </div>
@@ -352,18 +352,18 @@
         <div class="relative ml-auto flex items-center" id="header-stats-component">
             <div id="header-stats-trigger" role="button" tabindex="0"
                 class="flex items-center gap-2.5 sm:gap-3.5 select-none cursor-pointer py-1 px-2 rounded-xl hover:bg-gray-100/90 active:bg-gray-200/80 transition-all duration-200 group text-right focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                aria-haspopup="true" aria-expanded="false" title="Clique para personalizar estatísticas do cabeçalho (máx. 3)">
+                aria-haspopup="true" aria-expanded="false" title="Clique para personalizar estatísticas do cabeçalho (máx. 3)" data-i18n-title="customize_header_stats_title">
                 <div id="header-pinned-stats-container" class="flex items-center gap-2.5 sm:gap-3.5">
                     <!-- Default fallback structure for initial SSR / fast layout -->
                     <div id="counter-left-wrapper" class="block select-none" data-stat-id="remaining">
-                        <p id="counter-left-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none">
+                        <p id="counter-left-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none" data-i18n="remaining">
                             Restantes</p>
                         <p id="questions-left" class="text-xs sm:text-sm font-bold text-blue-600 text-center">0</p>
                     </div>
                     <div class="h-6 sm:h-7 w-[1px] bg-gray-200/80 mx-0.5 block flex-shrink-0"></div>
                     <div id="score-wrapper" class="flex items-center min-w-[42px] justify-center" data-stat-id="score">
                         <div id="score-container" class="block">
-                            <p id="score-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none">
+                            <p id="score-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none" data-i18n="score">
                                 Score</p>
                             <p id="score" class="text-xs sm:text-sm font-bold text-gray-900 text-center">0</p>
                         </div>
@@ -378,9 +378,9 @@
                     <div>
                         <h4 class="text-xs font-bold uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
                             <span class="material-symbols-rounded text-base text-blue-600">tune</span>
-                            <span>Estatísticas no Cabeçalho</span>
+                            <span data-i18n="header_stats_title">Estatísticas no Cabeçalho</span>
                         </h4>
-                        <p class="text-[11px] text-gray-500 mt-0.5">Fixe até 3 métricas para acompanhar ao vivo</p>
+                        <p class="text-[11px] text-gray-500 mt-0.5" data-i18n="pin_stats_subtitle">Fixe até 3 métricas para acompanhar ao vivo</p>
                     </div>
                     <span id="pinned-stats-counter" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200/60 flex-shrink-0">
                         2 de 3 fixadas
@@ -390,7 +390,7 @@
                     <!-- Populated dynamically via JS -->
                 </div>
                 <div class="p-2 border-t border-gray-100 bg-gray-50/70 text-center">
-                    <p class="text-[10px] text-gray-400 font-medium">As estatísticas fixadas ficam sincronizadas durante o jogo</p>
+                    <p class="text-[10px] text-gray-400 font-medium" data-i18n="pinned_sync_info">As estatísticas fixadas ficam sincronizadas durante o jogo</p>
                 </div>
             </div>
         </div>
@@ -402,7 +402,7 @@
         <div id="streak-pill-container" class="absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 select-none flex justify-center pointer-events-none">
             <div id="streak-pill"
                 class="pointer-events-auto relative overflow-hidden flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-black shadow-md border border-gray-200 bg-gray-100 text-gray-500 transition-all duration-300"
-                title="Sequência de acertos consecutivos">
+                title="Sequência de acertos consecutivos" data-i18n-title="correct_streak_title">
                 <div id="streak-bg-color" class="absolute inset-0 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
                 <div id="streak-shimmer-sweep" class="absolute inset-0 pointer-events-none opacity-0"></div>
                 <img id="streak-fire-icon" src="../assets/img/fire.svg" class="w-3.5 h-3.5 relative z-10 transition-transform duration-300 grayscale opacity-60 select-none pointer-events-none" alt="Streak">
@@ -415,14 +415,14 @@
             <!-- Bookmark Button -->
             <button id="bookmark-card-btn"
                 class="absolute top-2 right-2 text-gray-400 hover:text-blue-500 p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] transition duration-300"
-                title="Marcar este card">
+                title="Marcar este card" data-i18n-title="bookmark_card_title">
                 <img id="bookmark-card-icon" src="../assets/img/add_bookmark.svg" class="w-6 h-6" alt="Marcar">
             </button>
 
             <!-- Delete Button (repositioned slightly left to right-12) -->
             <button id="delete-card-btn"
                 class="absolute top-2 right-12 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] transition"
-                title="Remover este card permanentemente">
+                title="Remover este card permanentemente" data-i18n-title="delete_card_title">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 6h18"></path>
@@ -438,28 +438,28 @@
                     <svg class="w-8 h-8 text-[var(--md-sys-color-on-surface-variant)] opacity-40 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
-                    <span class="text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] opacity-60">Carregando imagem...</span>
+                    <span class="text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] opacity-60" data-i18n="loading_image">Carregando imagem...</span>
                 </div>
                 <img id="question-image" src="" alt="Imagem do Flashcard"
                     class="hidden max-h-36 xs:max-h-48 sm:max-h-80 w-auto rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] card-img-zoomable object-contain transition-opacity duration-300 opacity-0">
             </div>
             <p id="question-text" class="text-center text-base sm:text-lg font-medium text-[var(--md-sys-color-on-surface)] whitespace-pre-line leading-relaxed">
                 <span id="question-source-tag" class="hidden text-xs uppercase tracking-wider text-blue-500 font-bold mb-1.5 block select-none"></span>
-                <span id="card-difficult-tag" class="hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full mb-2 inline-flex items-center gap-1 select-none bg-red-50 text-red-600 border border-red-200/80 shadow-2xs">Difícil</span>
+                <span id="card-difficult-tag" class="hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full mb-2 inline-flex items-center gap-1 select-none bg-red-50 text-red-600 border border-red-200/80 shadow-2xs" data-i18n="card_difficult_tag">Difícil</span>
                 <span id="question-body-text"></span>
                 <span id="question-feedback-text" class="hidden mt-2 block"></span>
             </p>
 
             <!-- Anki-like Answer Reveal Area (Question at top, Answer below) -->
             <div id="anki-answer-container" class="hidden w-full mt-4 pt-4 border-t border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
-                <span class="text-xs uppercase tracking-wider font-extrabold text-blue-600 mb-1">Resposta</span>
+                <span class="text-xs uppercase tracking-wider font-extrabold text-blue-600 mb-1" data-i18n="answer_heading">Resposta</span>
                 <div id="anki-answer-text" class="w-full text-center text-base sm:text-lg font-medium text-[var(--md-sys-color-on-surface)] leading-relaxed"></div>
                 <div id="anki-answer-image-container" class="hidden mt-3 w-full flex flex-col items-center justify-center">
                     <div id="anki-answer-image-placeholder" class="hidden image-loading-placeholder w-full max-w-sm sm:max-w-md h-36 xs:h-48 sm:h-60 rounded-2xl flex flex-col items-center justify-center gap-2 select-none shadow-sm">
                         <svg class="w-8 h-8 text-[var(--md-sys-color-on-surface-variant)] opacity-40 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        <span class="text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] opacity-60">Carregando imagem...</span>
+                        <span class="text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] opacity-60" data-i18n="loading_image">Carregando imagem...</span>
                     </div>
                     <img id="anki-answer-image" src="" alt="Imagem da Resposta" class="hidden max-h-48 sm:max-h-72 w-auto rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] card-img-zoomable object-contain transition-opacity duration-300 opacity-0">
                 </div>
@@ -504,7 +504,7 @@
                 <!-- Neuroscience / Time-of-day Dynamic Tip Callout -->
                 <div class="mb-5 p-3 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 max-w-sm shadow-xs" id="deck-completion-tip-banner">
                     <span class="material-symbols-rounded text-xl text-blue-600 flex-shrink-0" id="deck-completion-tip-icon">bedtime</span>
-                    <span id="deck-completion-tip-text">Agora durma! Sono REM vai fazer você salvar tudo isso ;)</span>
+                    <span id="deck-completion-tip-text" data-i18n="deck_completion_initial_tip">Agora durma! Sono REM vai fazer você salvar tudo isso ;)</span>
                 </div>
 
                 <!-- Action Buttons: "Ver estatísticas" & "Restart" -->
@@ -539,13 +539,13 @@
                     <input type="text" id="answer-input-1"
                         class="w-full px-4 py-3 text-base sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
                         placeholder="Resposta 1..." autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" name="study_card_answer_1" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+                        spellcheck="false" name="study_card_answer_1" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_1_placeholder">
                 </div>
                 <div class="relative">
                     <input type="text" id="answer-input-2"
                         class="w-full px-4 py-3 text-base sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
                         placeholder="Resposta 2..." autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" name="study_card_answer_2" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+                        spellcheck="false" name="study_card_answer_2" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_2_placeholder">
                 </div>
             </div>
             <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
@@ -563,7 +563,7 @@
                 <button id="anki-flip-btn"
                     class="m3-btn-expressive m3-btn-filled w-full py-4 px-4 text-base font-bold flex items-center justify-center gap-2 cursor-pointer select-none shadow-md">
                     <span class="material-symbols-rounded text-xl">sync</span>
-                    <span data-i18n="flip_card">Virar Cartão</span> <span class="text-xs opacity-80 font-normal ml-1">(Espaço)</span>
+                    <span data-i18n="flip_card">Virar Cartão</span> <span class="text-xs opacity-80 font-normal ml-1" data-i18n="space_shortcut">(Espaço)</span>
                 </button>
             </div>
 
@@ -623,7 +623,7 @@
                 class="m3-btn-expressive w-full mt-4 btn-skip-tactile font-bold py-4 px-4 text-base flex items-center justify-center gap-2 hidden cursor-pointer select-none shadow-md">
                 <span class="material-symbols-rounded text-xl">skip_next</span>
                 <span data-i18n="next_question">Pular Questão</span>
-                <span class="text-xs opacity-80 font-normal ml-1 hidden sm:inline">(Espaço)</span>
+                <span class="text-xs opacity-80 font-normal ml-1 hidden sm:inline" data-i18n="space_shortcut">(Espaço)</span>
             </button>
         </div>
     </div>
@@ -634,7 +634,7 @@
             class="m3-dialog-card w-full max-w-lg overflow-hidden transform transition-all">
             <div
                 class="px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex justify-between items-center">
-                <h3 class="text-lg font-bold text-[var(--md-sys-color-on-surface)]">Editar Flashcard</h3>
+                <h3 class="text-lg font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="edit_flashcard">Editar Flashcard</h3>
                 <button id="close-modal-btn"
                     class="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition">
                     <span class="material-symbols-rounded text-xl">close</span>
@@ -643,75 +643,75 @@
 
             <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">Pergunta / Conceito</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="question_concept_label">Pergunta / Conceito</label>
                     <textarea id="edit-question-input" rows="3"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none resize-none text-sm text-[var(--md-sys-color-on-surface)]"></textarea>
                 </div>
                 <div id="edit-answer-1-group">
-                    <label id="edit-answer-1-label" class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">Resposta Principal</label>
+                    <label id="edit-answer-1-label" class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="main_answer_concept">Resposta Principal</label>
                     <input type="text" id="edit-answer-input"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-sm text-[var(--md-sys-color-on-surface)]">
                 </div>
                 <div id="edit-answer-2-group" class="hidden">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">Resposta 2</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="edit_answer2_label">Resposta 2</label>
                     <input type="text" id="edit-answer-2-input"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-sm text-[var(--md-sys-color-on-surface)]">
                 </div>
                 <div id="edit-anki-answer-group" class="hidden">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">Resposta Detalhada</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="detailed_answer_label">Resposta Detalhada</label>
                     <textarea id="edit-anki-answer-input" rows="5"
-                        class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none resize-y text-sm text-[var(--md-sys-color-on-surface)]" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)"></textarea>
+                        class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none resize-y text-sm text-[var(--md-sys-color-on-surface)]" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="anki_answer_placeholder"></textarea>
                 </div>
                 <div id="edit-fill-answer-group" class="hidden space-y-1">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">Respostas das Lacunas (separadas por ponto e vírgula ";")</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="fill_answers_label">Respostas das Lacunas (separadas por ponto e vírgula ";")</label>
                     <input type="text" id="edit-fill-answer-input"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-sm text-[var(--md-sys-color-on-surface)]"
-                        placeholder="Ex: 30; 3; 300">
-                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Cada resposta preenche um "_" na ordem em que aparecem no texto. Sinônimos podem ser separados por "/".</p>
+                        placeholder="Ex: 30; 3; 300" data-i18n-placeholder="fill_answer_placeholder">
+                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="fill_hint_text">Cada resposta preenche um "_" na ordem em que aparecem no texto. Sinônimos podem ser separados por "/".</p>
                 </div>
                 <div id="edit-mc-options-group" class="hidden space-y-2">
                     <div class="flex items-center justify-between">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Alternativas (2 a 6)</label>
-                        <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Marque a correta</span>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="mc_options_label">Alternativas (2 a 6)</label>
+                        <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="mc_correct_badge">Marque a correta</span>
                     </div>
                     <div id="edit-mc-options-list" class="space-y-2"></div>
-                    <button type="button" id="edit-add-mc-opt-btn" class="w-full py-2 border border-dashed border-blue-400 text-xs font-bold text-blue-600 rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-1">
+                    <button type="button" id="edit-add-mc-opt-btn" class="w-full py-2 border border-dashed border-blue-400 text-xs font-bold text-blue-600 rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-1" data-i18n="add_mc_option">
                         + Adicionar Alternativa
                     </button>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">Link da Imagem da Pergunta (Opcional)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="question_image_label">Link da Imagem da Pergunta (Opcional)</label>
                     <div class="space-y-2">
                         <div id="edit-image-preview-container" class="hidden relative group w-full max-h-48 overflow-hidden rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex items-center justify-center p-2">
                             <img id="edit-image-preview" src="" alt="Preview" class="max-h-40 w-auto object-contain rounded-xl">
-                            <button type="button" id="edit-remove-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem">
+                            <button type="button" id="edit-remove-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem" data-i18n-title="remove_image" data-i18n="remove_image">
                                 <span class="material-symbols-rounded text-sm">close</span>
                             </button>
                         </div>
-                        <input type="url" id="edit-image-url-input" placeholder="Cole o link da imagem (https://...)" class="w-full p-3 text-sm bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-[var(--md-sys-color-on-surface)]">
+                        <input type="url" id="edit-image-url-input" placeholder="Cole o link da imagem (https://...)" class="w-full p-3 text-sm bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-[var(--md-sys-color-on-surface)]" data-i18n-placeholder="image_url_placeholder">
                     </div>
                 </div>
                 <div id="edit-ans-image-group" class="hidden">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">Link da Imagem da Resposta (Anki)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="answer_image_label">Link da Imagem da Resposta (Anki)</label>
                     <div class="space-y-2">
                         <div id="edit-ans-image-preview-container" class="hidden relative group w-full max-h-48 overflow-hidden rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex items-center justify-center p-2">
                             <img id="edit-ans-image-preview" src="" alt="Preview" class="max-h-40 w-auto object-contain rounded-xl">
-                            <button type="button" id="edit-remove-ans-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem">
+                            <button type="button" id="edit-remove-ans-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem" data-i18n-title="remove_image" data-i18n="remove_image">
                                 <span class="material-symbols-rounded text-sm">close</span>
                             </button>
                         </div>
-                        <input type="url" id="edit-ans-image-url-input" placeholder="Cole o link da imagem (https://...)" class="w-full p-3 text-sm bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-[var(--md-sys-color-on-surface)]">
+                        <input type="url" id="edit-ans-image-url-input" placeholder="Cole o link da imagem (https://...)" class="w-full p-3 text-sm bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-[var(--md-sys-color-on-surface)]" data-i18n-placeholder="image_url_placeholder">
                     </div>
                 </div>
             </div>
 
             <div class="px-6 py-4 bg-[var(--md-sys-color-surface-container-low)] border-t border-[var(--md-sys-color-outline-variant)] flex justify-end gap-3">
                 <button id="cancel-edit-btn"
-                    class="m3-btn-expressive m3-btn-text text-sm">
+                    class="m3-btn-expressive m3-btn-text text-sm" data-i18n="cancel">
                     Cancelar
                 </button>
                 <button id="save-edit-btn"
-                    class="m3-btn-expressive m3-btn-filled text-sm font-bold shadow-md">
+                    class="m3-btn-expressive m3-btn-filled text-sm font-bold shadow-md" data-i18n="save_changes">
                     Salvar Alterações
                 </button>
             </div>
@@ -728,51 +728,51 @@
                 class="px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
                     <span class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)]">timer</span>
-                    <h3 class="font-extrabold text-xl text-[var(--md-sys-color-on-surface)] tracking-tight">Configurar Pomodoro</h3>
+                    <h3 class="font-extrabold text-xl text-[var(--md-sys-color-on-surface)] tracking-tight" data-i18n="pomodoro_config_header">Configurar Pomodoro</h3>
                 </div>
                 <button id="close-pomodoro-modal-btn" type="button" class="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition">
                     <span class="material-symbols-rounded text-xl">close</span>
                 </button>
             </div>
             <div class="p-6 space-y-4">
-                <p class="text-sm text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+                <p class="text-sm text-[var(--md-sys-color-on-surface-variant)] leading-relaxed" data-i18n="pomodoro_config_desc">
                     Ajuste os intervalos para combater a fadiga sináptica e maximizar a retenção com micro-pausas estratégicas.
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="pomodoro-focus-select" class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5">
+                        <label for="pomodoro-focus-select" class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5" data-i18n="pomodoro_focus_label">
                             Tempo de Foco (Estudo)
                         </label>
                         <select id="pomodoro-focus-select" class="w-full px-3 py-2.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="15">15 minutos</option>
-                            <option value="20">20 minutos</option>
-                            <option value="25" selected>25 minutos (Padrão)</option>
-                            <option value="30">30 minutos</option>
-                            <option value="45">45 minutos</option>
-                            <option value="50">50 minutos</option>
+                            <option value="15" data-i18n="min_15">15 minutos</option>
+                            <option value="20" data-i18n="min_20">20 minutos</option>
+                            <option value="25" selected data-i18n="min_25_default">25 minutos (Padrão)</option>
+                            <option value="30" data-i18n="min_30">30 minutos</option>
+                            <option value="45" data-i18n="min_45">45 minutos</option>
+                            <option value="50" data-i18n="min_50">50 minutos</option>
                         </select>
                     </div>
                     <div>
-                        <label for="pomodoro-break-select" class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5">
+                        <label for="pomodoro-break-select" class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5" data-i18n="pomodoro_break_label">
                             Micro-pausa (Descanso)
                         </label>
                         <select id="pomodoro-break-select" class="w-full px-3 py-2.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="3">3 minutos</option>
-                            <option value="5" selected>5 minutos (Padrão)</option>
-                            <option value="10">10 minutos</option>
-                            <option value="15">15 minutos</option>
+                            <option value="3" data-i18n="min_3">3 minutos</option>
+                            <option value="5" selected data-i18n="min_5_default">5 minutos (Padrão)</option>
+                            <option value="10" data-i18n="min_10">10 minutos</option>
+                            <option value="15" data-i18n="min_15">15 minutos</option>
                         </select>
                     </div>
                 </div>
                 <div class="bg-blue-50 p-3.5 rounded-2xl border border-blue-200">
                     <p class="text-xs text-blue-700 leading-relaxed">
-                        <strong>Por que funciona?</strong> Micro-pausas permitem que o cérebro ative a rede neural em modo difuso (DMN), reorganizando traços sinápticos e aliviando a memória de trabalho.
+                        <strong data-i18n="pomodoro_why_title">Por que funciona?</strong> <span data-i18n="pomodoro_why_desc">Micro-pausas permitem que o cérebro ative a rede neural em modo difuso (DMN), reorganizando traços sinápticos e aliviando a memória de trabalho.</span>
                     </p>
                 </div>
             </div>
             <div class="px-6 py-4 bg-[var(--md-sys-color-surface-container-low)] border-t border-[var(--md-sys-color-outline-variant)] flex gap-3">
                 <button type="button" id="save-pomodoro-settings-btn"
-                    class="m3-btn-expressive m3-btn-filled w-full font-bold shadow-md">Salvar Configurações</button>
+                    class="m3-btn-expressive m3-btn-filled w-full font-bold shadow-md" data-i18n="save_settings">Salvar Configurações</button>
             </div>
         </div>
     </div>
@@ -843,7 +843,7 @@
                                     <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="haptic_vibration_desc">Feedback ao virar cards, acertos e erros</p>
                                 </div>
                             </div>
-                            <md-switch id="setting-haptic-switch" aria-label="Alternar vibração tátil"></md-switch>
+                            <md-switch id="setting-haptic-switch" aria-label="Alternar vibração tátil" data-i18n-aria-label="toggle_haptic"></md-switch>
                         </div>
 
                         <!-- Som -->
@@ -856,7 +856,7 @@
                                     <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="sound_effects_desc">Sinais sonoros em respostas e Pomodoro</p>
                                 </div>
                             </div>
-                            <md-switch id="setting-sound-switch" aria-label="Alternar efeitos sonoros"></md-switch>
+                            <md-switch id="setting-sound-switch" aria-label="Alternar efeitos sonoros" data-i18n-aria-label="toggle_sound"></md-switch>
                         </div>
 
                         <!-- Animações -->
@@ -869,7 +869,7 @@
                                     <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="animations_transitions_desc">Efeitos de partículas, ondas de choque e física</p>
                                 </div>
                             </div>
-                            <md-switch id="setting-animations-switch" aria-label="Alternar animações"></md-switch>
+                            <md-switch id="setting-animations-switch" aria-label="Alternar animações" data-i18n-aria-label="toggle_animations"></md-switch>
                         </div>
                     </div>
                 </section>
@@ -886,7 +886,7 @@
                                 <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_notifications_desc">Lembretes para praticar cards e salvar o streak</p>
                             </div>
                         </div>
-                        <md-switch id="setting-notif-master-switch" aria-label="Ativar todas as notificações"></md-switch>
+                        <md-switch id="setting-notif-master-switch" aria-label="Ativar todas as notificações" data-i18n-aria-label="toggle_notifications_master"></md-switch>
                     </div>
 
                     <!-- Bloco de Períodos Agendados -->
@@ -903,8 +903,8 @@
                             <div class="flex items-center gap-2 flex-shrink-0">
                                 <input type="time" id="setting-notif-morning-time" value="09:00"
                                     class="px-2 py-1 text-xs font-bold rounded-lg border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] outline-none focus:ring-2 focus:ring-blue-500"
-                                    title="Horário do lembrete da manhã">
-                                <md-switch id="setting-notif-morning-switch" aria-label="Lembrete da manhã"></md-switch>
+                                    title="Horário do lembrete da manhã" data-i18n-title="notif_morning_time_title">
+                                <md-switch id="setting-notif-morning-switch" aria-label="Lembrete da manhã" data-i18n-aria-label="toggle_notif_morning"></md-switch>
                             </div>
                         </div>
 
@@ -920,8 +920,8 @@
                             <div class="flex items-center gap-2 flex-shrink-0">
                                 <input type="time" id="setting-notif-noon-time" value="13:00"
                                     class="px-2 py-1 text-xs font-bold rounded-lg border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] outline-none focus:ring-2 focus:ring-blue-500"
-                                    title="Horário do lembrete do meio-dia">
-                                <md-switch id="setting-notif-noon-switch" aria-label="Lembrete do meio-dia"></md-switch>
+                                    title="Horário do lembrete do meio-dia" data-i18n-title="notif_noon_time_title">
+                                <md-switch id="setting-notif-noon-switch" aria-label="Lembrete do meio-dia" data-i18n-aria-label="toggle_notif_noon"></md-switch>
                             </div>
                         </div>
 
@@ -940,8 +940,8 @@
                             <div class="flex items-center gap-2 flex-shrink-0">
                                 <input type="time" id="setting-notif-night-time" value="21:00"
                                     class="px-2 py-1 text-xs font-bold rounded-lg border border-red-200 bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] outline-none focus:ring-2 focus:ring-red-500"
-                                    title="Horário do lembrete da noite">
-                                <md-switch id="setting-notif-night-switch" aria-label="Lembrete urgente da noite"></md-switch>
+                                    title="Horário do lembrete da noite" data-i18n-title="notif_night_time_title">
+                                <md-switch id="setting-notif-night-switch" aria-label="Lembrete urgente da noite" data-i18n-aria-label="toggle_notif_night"></md-switch>
                             </div>
                         </div>
 
@@ -1009,7 +1009,7 @@
                                 <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="pomodoro_switch_title">Timer Pomodoro</p>
                                 <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="pomodoro_switch_desc">Micro-pausas para combate à fadiga sináptica</p>
                             </div>
-                            <md-switch id="setting-pomodoro-switch" aria-label="Alternar Pomodoro"></md-switch>
+                            <md-switch id="setting-pomodoro-switch" aria-label="Alternar Pomodoro" data-i18n-aria-label="toggle_pomodoro"></md-switch>
                         </div>
 
                         <!-- Intervalos -->
@@ -1059,7 +1059,7 @@
                                 <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="gemini_assistant">Assistente Gemini</p>
                                 <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="gemini_assistant_desc">Correção semântica e explicação de respostas</p>
                             </div>
-                            <md-switch id="setting-ai-switch" aria-label="Alternar assistente de IA"></md-switch>
+                            <md-switch id="setting-ai-switch" aria-label="Alternar assistente de IA" data-i18n-aria-label="toggle_ai_assistant"></md-switch>
                         </div>
 
                         <!-- Botão Gerenciar Chave de API -->
@@ -1099,7 +1099,7 @@
                                 <option value="30">30 cards</option>
                                 <option value="50">50 cards</option>
                             </select>
-                            <p id="setting-notebook-goal-info" class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5">
+                            <p id="setting-notebook-goal-info" class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5" data-i18n="notebook_goal_info_auto">
                                 Progresso de hoje calculado automaticamente.
                             </p>
                         </div>
@@ -1140,17 +1140,17 @@
             </div>
             <!-- Text info -->
             <div class="flex-1 min-w-0 pr-1">
-                <h4 class="text-xs sm:text-sm font-black text-[var(--md-sys-color-on-surface)] tracking-tight truncate">Pausa do pomodoro</h4>
+                <h4 class="text-xs sm:text-sm font-black text-[var(--md-sys-color-on-surface)] tracking-tight truncate" data-i18n="pomodoro_break_pill_title">Pausa do pomodoro</h4>
             </div>
             <!-- Actions -->
             <div class="flex items-center gap-1.5 flex-shrink-0">
                 <button type="button" id="pomodoro-accept-break-btn"
                     class="m3-btn-expressive py-2 px-3 sm:px-4 text-xs font-bold rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs flex items-center gap-1 cursor-pointer transition-all">
-                    <span>Aceitar</span>
+                    <span data-i18n="accept">Aceitar</span>
                 </button>
                 <button type="button" id="pomodoro-snooze-break-btn"
                     class="m3-btn-expressive py-2 px-2.5 sm:px-3 text-xs font-semibold rounded-full bg-blue-100/80 hover:bg-blue-200/80 active:scale-95 text-blue-700 cursor-pointer transition-all">
-                    <span>+5 min</span>
+                    <span data-i18n="plus_5_min">+5 min</span>
                 </button>
             </div>
         </div>
@@ -1176,11 +1176,11 @@
 
             <!-- Title & Subtitle -->
             <h3 id="pomodoro-break-title"
-                class="text-xl sm:text-2xl font-black text-[var(--md-sys-color-on-surface)] tracking-tight mb-2 transition-all duration-300">
+                class="text-xl sm:text-2xl font-black text-[var(--md-sys-color-on-surface)] tracking-tight mb-2 transition-all duration-300" data-i18n="pomodoro_break_title">
                 Pausa Pomodoro
             </h3>
             <p id="pomodoro-break-desc"
-                class="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] mb-6 max-w-xs sm:max-w-sm leading-relaxed transition-all duration-300">
+                class="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] mb-6 max-w-xs sm:max-w-sm leading-relaxed transition-all duration-300" data-i18n="pomodoro_break_desc">
                 Feche os olhos, beba água ou respire fundo. O cérebro consolida novas conexões durante o descanso.
             </p>
 
@@ -1188,7 +1188,7 @@
             <div id="pomodoro-break-timer-box"
                 class="w-full py-4 sm:py-5 mb-6 rounded-2xl sm:rounded-3xl border flex flex-col items-center justify-center transition-all duration-500">
                 <span id="pomodoro-break-timer-label"
-                    class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">
+                    class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="pomodoro_remaining_break_time">
                     Tempo Restante de Pausa
                 </span>
                 <span id="pomodoro-break-countdown"
@@ -1201,7 +1201,7 @@
             <button type="button" id="pomodoro-resume-btn"
                 class="m3-btn-expressive w-full text-sm sm:text-base font-bold flex items-center justify-center gap-2.5 transition-all duration-500 cursor-pointer">
                 <span id="pomodoro-resume-icon" class="material-symbols-rounded text-xl sm:text-2xl">fast_forward</span>
-                <span id="pomodoro-resume-text">Pular Pausa e Voltar</span>
+                <span id="pomodoro-resume-text" data-i18n="skip_break_and_return">Pular Pausa e Voltar</span>
             </button>
         </div>
     </div>
@@ -1213,18 +1213,18 @@
         class="fixed bottom-0 right-0 w-full md:w-96 md:h-2/3 bg-[var(--md-sys-color-surface-container-lowest)] shadow-2xl rounded-t-3xl md:rounded-l-3xl md:rounded-tr-none z-50 flex flex-col transition-all duration-300 transform translate-y-full md:translate-y-0 md:translate-x-full border border-[var(--md-sys-color-outline-variant)]">
         <div
             class="p-4 border-b border-[var(--md-sys-color-outline-variant)] flex justify-between items-center bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-t-3xl md:rounded-tl-3xl md:rounded-tr-none shadow-sm">
-            <h3 class="font-bold flex items-center gap-2"><span class="material-symbols-rounded text-xl">psychology</span> Explicação da IA </h3>
+            <h3 class="font-bold flex items-center gap-2"><span class="material-symbols-rounded text-xl">psychology</span> <span data-i18n="ai_tutor_title">Explicação da IA</span></h3>
             <button id="close-chat-btn" class="p-1.5 rounded-full hover:bg-white/20 text-white transition">
                 <span class="material-symbols-rounded text-xl">close</span>
             </button>
         </div>
         <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
-            <div class="chat-message-ai">
+            <div class="chat-message-ai" data-i18n="ai_tutor_greeting">
                 Olá! Como posso ajudar você a entender melhor esta questão?
             </div>
         </div>
         <div class="p-4 border-t border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex gap-2">
-            <input type="text" id="chat-input" placeholder="Escreva sua dúvida..."
+            <input type="text" id="chat-input" placeholder="Escreva sua dúvida..." data-i18n-placeholder="ai_tutor_input_placeholder"
                 class="flex-1 p-2.5 border border-[var(--md-sys-color-outline-variant)] rounded-full bg-[var(--md-sys-color-surface-container-lowest)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-purple-500 text-sm">
             <button id="send-chat-btn"
                 class="p-2.5 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition shadow flex items-center justify-center">
@@ -1240,7 +1240,7 @@
         <div class="m3-dialog-card w-full max-w-sm overflow-hidden flex flex-col transform transition-all duration-300"
             id="transfer-modal-content">
             <div class="px-6 py-4 flex justify-between items-center border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)]">
-                <h3 class="font-extrabold text-xl text-[var(--md-sys-color-on-surface)] tracking-tight">Continuar no Celular</h3>
+                <h3 class="font-extrabold text-xl text-[var(--md-sys-color-on-surface)] tracking-tight" data-i18n="cast_modal_title">Continuar no Celular</h3>
                 <button id="close-transfer-modal" class="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition">
                     <span class="material-symbols-rounded text-xl">close</span>
                 </button>
@@ -1250,10 +1250,10 @@
                     class="bg-white p-3 rounded-2xl shadow-inner w-48 h-48 border border-[var(--md-sys-color-outline-variant)]"></canvas>
 
                 <div class="text-center space-y-3">
-                    <p id="transfer-status" class="text-sm font-semibold text-blue-600">Aguardando conexão...</p>
+                    <p id="transfer-status" class="text-sm font-semibold text-blue-600" data-i18n="cast_waiting_connection">Aguardando conexão...</p>
                     <button id="force-sync-btn"
-                        class="mx-auto text-xs bg-[var(--md-sys-color-surface-container-low)] px-3.5 py-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition border border-[var(--md-sys-color-outline-variant)]">Não sincronizou? Tente reenviar</button>
-                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] px-4 leading-relaxed">
+                        class="mx-auto text-xs bg-[var(--md-sys-color-surface-container-low)] px-3.5 py-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition border border-[var(--md-sys-color-outline-variant)]" data-i18n="cast_resend_btn">Não sincronizou? Tente reenviar</button>
+                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] px-4 leading-relaxed" data-i18n="cast_instructions">
                         Abra o mesmo arquivo de flashcards no seu celular, clique em "Receber Sessão" e aponte para o QR code acima.
                     </p>
                 </div>
@@ -1268,7 +1268,7 @@
         class="fixed inset-0 z-[60] hidden bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-md">
         <div class="w-full max-w-md m3-dialog-card overflow-hidden relative">
             <div class="px-6 py-4 flex justify-between items-center border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)]">
-                <h3 class="font-bold text-[var(--md-sys-color-on-surface)]">Escanear QR Code</h3>
+                <h3 class="font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="receive_modal_title">Escanear QR Code</h3>
                 <button id="close-scanner-modal"
                     class="p-2 hover:bg-[var(--md-sys-color-surface-container-high)] rounded-full transition">
                     <span class="material-symbols-rounded text-xl">close</span>
@@ -1276,7 +1276,7 @@
             </div>
             <div id="reader" class="w-full aspect-square bg-black"></div>
             <div class="p-6 text-center">
-                <p class="text-sm text-[var(--md-sys-color-on-surface-variant)]">Aponte para o QR Code no seu PC</p>
+                <p class="text-sm text-[var(--md-sys-color-on-surface-variant)]" data-i18n="receive_instructions">Aponte para o QR Code no seu PC</p>
             </div>
         </div>
     </div>
@@ -1286,10 +1286,10 @@
         class="hidden fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center p-6 space-y-6">
         <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         <div class="text-center">
-            <h2 class="text-2xl font-bold mb-2">Sincronizando Sessão</h2>
-            <p class="text-gray-500 mb-4">Recebendo seus flashcards e progresso...</p>
+            <h2 class="text-2xl font-bold mb-2" data-i18n="syncing_session_title">Sincronizando Sessão</h2>
+            <p class="text-gray-500 mb-4" data-i18n="syncing_session_desc">Recebendo seus flashcards e progresso...</p>
             <div id="sync-debug-log"
-                class="text-[10px] font-mono bg-gray-100 p-4 rounded-lg w-full max-w-xs text-left overflow-y-auto max-h-32 opacity-70">
+                class="text-[10px] font-mono bg-gray-100 p-4 rounded-lg w-full max-w-xs text-left overflow-y-auto max-h-32 opacity-70" data-i18n="sync_connecting_server">
                 > Conectando ao servidor de dados...
             </div>
         </div>
@@ -1309,7 +1309,7 @@
     <div id="text-highlight-popup" class="hidden fixed z-[80] select-none -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-1.5">
         <div id="hl-actions-bar" class="flex items-center gap-1.5 p-1 bg-white/95 backdrop-blur-md rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.8)] border border-gray-200/80">
             <!-- Main Trigger Button (Only highlight.svg, no text) -->
-            <button id="hl-trigger-btn" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-95 transition-all text-gray-700" title="Marca-texto (1-4)" aria-label="Marca-texto (1-4)">
+            <button id="hl-trigger-btn" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-95 transition-all text-gray-700" title="Marca-texto (1-4)" aria-label="Marca-texto (1-4)" data-i18n-title="hl_trigger_title" data-i18n-aria-label="hl_trigger_title">
                 <img src="../assets/img/highlight.svg" class="w-4 h-4 pointer-events-none" alt="Marca-texto">
             </button>
 
@@ -1317,17 +1317,17 @@
             <div id="hl-palette" class="hidden items-center gap-1.5 pl-0.5 pr-1">
                 <div class="h-4 w-[1px] bg-gray-200"></div>
                 <!-- Yellow (1) -->
-                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#fef08a] border border-[#facc15]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-amber-900/80 select-none" data-color="yellow" title="Amarelo (1)" aria-label="Marca-texto Amarelo (1)">1</button>
+                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#fef08a] border border-[#facc15]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-amber-900/80 select-none" data-color="yellow" title="Amarelo (1)" aria-label="Marca-texto Amarelo (1)" data-i18n-title="hl_yellow" data-i18n-aria-label="hl_yellow">1</button>
                 <!-- Green (2) -->
-                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#bbf7d0] border border-[#86efac]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-emerald-900/80 select-none" data-color="green" title="Verde (2)" aria-label="Marca-texto Verde (2)">2</button>
+                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#bbf7d0] border border-[#86efac]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-emerald-900/80 select-none" data-color="green" title="Verde (2)" aria-label="Marca-texto Verde (2)" data-i18n-title="hl_green" data-i18n-aria-label="hl_green">2</button>
                 <!-- Blue (3) -->
-                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#bfdbfe] border border-[#93c5fd]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-blue-900/80 select-none" data-color="blue" title="Azul (3)" aria-label="Marca-texto Azul (3)">3</button>
+                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#bfdbfe] border border-[#93c5fd]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-blue-900/80 select-none" data-color="blue" title="Azul (3)" aria-label="Marca-texto Azul (3)" data-i18n-title="hl_blue" data-i18n-aria-label="hl_blue">3</button>
                 <!-- Purple (4) -->
-                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#e9d5ff] border border-[#d8b4fe]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-purple-900/80 select-none" data-color="purple" title="Roxo (4)" aria-label="Marca-texto Roxo (4)">4</button>
+                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#e9d5ff] border border-[#d8b4fe]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-purple-900/80 select-none" data-color="purple" title="Roxo (4)" aria-label="Marca-texto Roxo (4)" data-i18n-title="hl_purple" data-i18n-aria-label="hl_purple">4</button>
             </div>
 
             <!-- Peça ajuda Button (AI Tutor quick definition) -->
-            <button id="hl-ai-btn" class="w-8 h-8 flex items-center justify-center rounded-full bg-white hover:bg-gray-50 active:scale-95 transition-all text-gray-700 relative overflow-hidden" title="Peça ajuda" aria-label="Peça ajuda">
+            <button id="hl-ai-btn" class="w-8 h-8 flex items-center justify-center rounded-full bg-white hover:bg-gray-50 active:scale-95 transition-all text-gray-700 relative overflow-hidden" title="Peça ajuda" aria-label="Peça ajuda" data-i18n-title="hl_ai_help" data-i18n-aria-label="hl_ai_help">
                 <img src="../assets/img/tutor.svg" class="w-4 h-4 pointer-events-none relative z-10" alt="Peça ajuda">
             </button>
         </div>
@@ -1337,9 +1337,9 @@
             <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
                 <div class="flex items-center gap-1.5 min-w-0 pr-2">
                     <img src="../assets/img/tutor.svg" class="w-4 h-4 shrink-0 pointer-events-none" alt="Tutor">
-                    <span id="hl-ai-term-title" class="text-xs font-semibold text-purple-900 truncate">Definição</span>
+                    <span id="hl-ai-term-title" class="text-xs font-semibold text-purple-900 truncate" data-i18n="definition">Definição</span>
                 </div>
-                <button id="hl-ai-open-chat-btn" class="p-1.5 rounded-full hover:bg-purple-50 active:scale-95 transition text-purple-600 shrink-0" title="Continuar no chat do tutor" aria-label="Continuar no chat do tutor">
+                <button id="hl-ai-open-chat-btn" class="p-1.5 rounded-full hover:bg-purple-50 active:scale-95 transition text-purple-600 shrink-0" title="Continuar no chat do tutor" aria-label="Continuar no chat do tutor" data-i18n-title="hl_ai_continue_chat" data-i18n-aria-label="hl_ai_continue_chat">
                     <img src="../assets/img/open_chat.svg" class="w-4 h-4 pointer-events-none" alt="Abrir no chat">
                 </button>
             </div>
@@ -1369,8 +1369,8 @@
                         <span class="material-symbols-rounded text-lg">track_changes</span>
                     </div>
                     <div>
-                        <h3 class="text-base font-bold text-[var(--md-sys-color-on-surface)] leading-tight">Meta Diária de Cards</h3>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Defina quantos cards revisar por dia no Caderno</p>
+                        <h3 class="text-base font-bold text-[var(--md-sys-color-on-surface)] leading-tight" data-i18n="daily_goal_modal_title">Meta Diária de Cards</h3>
+                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="daily_goal_modal_subtitle">Defina quantos cards revisar por dia no Caderno</p>
                     </div>
                 </div>
                 <button id="close-daily-goal-modal-btn" type="button"
@@ -1384,8 +1384,8 @@
                 <!-- Current Progress Box -->
                 <div class="p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] flex items-center justify-between">
                     <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] block">Progresso de Hoje</span>
-                        <span id="daily-goal-progress-text" class="text-sm font-bold text-[var(--md-sys-color-on-surface)]">0 revisados hoje</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] block" data-i18n="daily_goal_today_progress">Progresso de Hoje</span>
+                        <span id="daily-goal-progress-text" class="text-sm font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="daily_goal_initial_progress">0 revisados hoje</span>
                     </div>
                     <span id="daily-goal-due-text" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
                         0 vencidos
@@ -1394,20 +1394,20 @@
 
                 <!-- Goal Input & Presets -->
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5">Meta Diária (Cards/dia)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5" data-i18n="daily_goal_input_label">Meta Diária (Cards/dia)</label>
                     <div class="relative">
                         <input type="number" id="daily-goal-input" min="0" max="999" placeholder="Ex: 20"
-                            class="w-full p-3.5 text-lg font-black text-center bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none text-[var(--md-sys-color-on-surface)]">
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 pointer-events-none">cards</span>
+                            class="w-full p-3.5 text-lg font-black text-center bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none text-[var(--md-sys-color-on-surface)]" data-i18n-placeholder="daily_goal_placeholder">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 pointer-events-none" data-i18n="cards_unit">cards</span>
                     </div>
-                    <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5">
+                    <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5" data-i18n="daily_goal_zero_hint">
                         Defina 0 ou deixe em branco para estudar todos os cards vencidos sem limite fixo.
                     </p>
                 </div>
 
                 <!-- Quick Presets -->
                 <div>
-                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5">Sugestões Rápidas</span>
+                    <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5" data-i18n="quick_suggestions">Sugestões Rápidas</span>
                     <div class="grid grid-cols-4 gap-2">
                         <button type="button" class="daily-goal-preset-btn px-3 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] hover:border-blue-500 hover:bg-blue-50 text-xs font-bold transition text-center" data-val="10">10</button>
                         <button type="button" class="daily-goal-preset-btn px-3 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] hover:border-blue-500 hover:bg-blue-50 text-xs font-bold transition text-center" data-val="20">20</button>
@@ -1420,12 +1420,12 @@
             <!-- Footer Buttons -->
             <div class="px-6 py-4 border-t border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex justify-end gap-2.5">
                 <button type="button" id="cancel-daily-goal-btn"
-                    class="px-4 py-2 rounded-xl text-xs font-bold text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] transition">
+                    class="px-4 py-2 rounded-xl text-xs font-bold text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] transition" data-i18n="cancel">
                     Cancelar
                 </button>
                 <button type="button" id="save-daily-goal-btn"
                     class="px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition shadow-sm flex items-center gap-1.5">
-                    <span>Salvar Meta</span>
+                    <span data-i18n="save_goal">Salvar Meta</span>
                 </button>
             </div>
         </div>
