@@ -1,3 +1,15 @@
+CHANGELOG: FIX DECK HOLDER PREMATURE DISPLAY ON GENERATE PAGE (v14.8)
+Date: 2026-11-01
+
+OVERVIEW:
+1. Resolved premature rendering of deck preview / deck holder in `pages/generate.html`:
+   - Identified and removed duplicate leftover button markup and stray closing `</div>` tags inside the Card Creator panel (`#card-creator-panel`).
+   - Restored proper DOM hierarchy so that `#editor-view` encompasses both the left creation column (`#editor-left-sidebar`) and the right deck holder/preview column (`#cards-list`, `#deck-size-badge`, action buttons).
+   - Ensured the deck holder remains hidden inside `#editor-view` when landing on `pages/generate.html` until a generation mode or deck is explicitly selected.
+2. Bumped Service Worker cache version to `flashcards-v14.8`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: INTERNATIONALIZATION (I18N), ENGLISH (US) TRANSLATION & BROWSER DETECTION (v14.7)
 Date: 2026-11-01
 
