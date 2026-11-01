@@ -5,7 +5,7 @@ import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken, signInWithGoogle } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
-import { t } from './i18n.js';
+import { t, getCurrentLanguage } from './i18n.js';
 
 function compressPDFWithWorker(file) {
     return new Promise((resolve, reject) => {
@@ -60,6 +60,67 @@ const modal21Prompt = document.getElementById('modal-2-1-prompt');
 const modal21Error = document.getElementById('modal-2-1-error');
 const modal21LoadingMsg = document.getElementById('modal-2-1-loading-msg');
 const modal21Spinner = document.getElementById('modal-2-1-spinner');
+const modal21LangContainer = document.getElementById('modal-2-1-language-container');
+const modal21LangChips = document.getElementById('modal-2-1-lang-chips');
+const modal21CustomLangContainer = document.getElementById('modal-2-1-custom-language-container');
+const modal21CustomLangInput = document.getElementById('modal-2-1-custom-language-input');
+let modal21SelectedLanguage = 'Inglês';
+
+function updateModal21LanguageUI() {
+    if (!modal21LangContainer) return;
+    if (getCurrentLanguage() !== 'pt-BR') {
+        modal21LangContainer.classList.remove('hidden');
+    } else {
+        modal21LangContainer.classList.add('hidden');
+    }
+}
+
+function resetModal21LanguageSelection() {
+    modal21SelectedLanguage = 'Inglês';
+    if (modal21LangChips) {
+        const langButtons = modal21LangChips.querySelectorAll('.modal-2-1-lang-btn');
+        langButtons.forEach(btn => {
+            if (btn.dataset.value === 'Inglês') {
+                btn.classList.remove('bg-white', 'text-gray-700', 'border-gray-300', 'font-semibold');
+                btn.classList.add('bg-purple-600', 'text-white', 'border-purple-600', 'font-bold', 'shadow-xs');
+            } else {
+                btn.classList.remove('bg-purple-600', 'text-white', 'border-purple-600', 'font-bold', 'shadow-xs');
+                btn.classList.add('bg-white', 'text-gray-700', 'border-gray-300', 'font-semibold');
+            }
+        });
+    }
+    if (modal21CustomLangContainer) modal21CustomLangContainer.classList.add('hidden');
+    if (modal21CustomLangInput) modal21CustomLangInput.value = '';
+}
+
+if (modal21LangChips) {
+    const langButtons = modal21LangChips.querySelectorAll('.modal-2-1-lang-btn');
+    langButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = btn.dataset.value;
+            modal21SelectedLanguage = val;
+            langButtons.forEach(b => {
+                b.classList.remove('bg-purple-600', 'text-white', 'border-purple-600', 'font-bold', 'shadow-xs');
+                b.classList.add('bg-white', 'text-gray-700', 'border-gray-300', 'font-semibold');
+            });
+            btn.classList.remove('bg-white', 'text-gray-700', 'border-gray-300', 'font-semibold');
+            btn.classList.add('bg-purple-600', 'text-white', 'border-purple-600', 'font-bold', 'shadow-xs');
+
+            if (val === 'custom') {
+                modal21CustomLangContainer?.classList.remove('hidden');
+                modal21CustomLangInput?.focus();
+            } else {
+                modal21CustomLangContainer?.classList.add('hidden');
+            }
+        });
+    });
+}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === 'flashcards_language' || e.key === 'flashcards_settings_updated_at') {
+        updateModal21LanguageUI();
+    }
+});
 
 // Modal 2.2 Elements (AI Enhance Doc)
 const modal22 = document.getElementById('modal-2-2');
@@ -1636,9 +1697,11 @@ cardMode21.addEventListener('click', () => {
     }
     modal21Error.textContent = '';
     modal21Files.value = '';
-    modal21FilesCount.textContent = 'Nenhum arquivo selecionado';
+    modal21FilesCount.textContent = t('no_file_selected');
     modal21FilesText.classList.remove('hidden');
     renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
+    updateModal21LanguageUI();
+    resetModal21LanguageSelection();
     modal21.classList.remove('hidden');
 });
 
@@ -1652,7 +1715,7 @@ modal21Files.addEventListener('change', () => {
     if (files.length > 10) {
         modal21Error.textContent = t('file_limit_10_error');
         modal21Files.value = '';
-        modal21FilesCount.textContent = 'Nenhum arquivo selecionado';
+        modal21FilesCount.textContent = t('no_file_selected');
         renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
         return;
     }
@@ -1661,17 +1724,17 @@ modal21Files.addEventListener('change', () => {
         if (f.size > MAX_FILE_SIZE) {
             modal21Error.textContent = t('file_exceeds_100mb', { name: f.name });
             modal21Files.value = '';
-            modal21FilesCount.textContent = 'Nenhum arquivo selecionado';
+            modal21FilesCount.textContent = t('no_file_selected');
             renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
             return;
         }
     }
 
     if (files.length > 0) {
-        modal21FilesCount.textContent = `${files.length} de 10 arquivo(s) selecionado(s)`;
+        modal21FilesCount.textContent = t('files_selected_count', { count: files.length });
         modal21FilesText.classList.add('hidden');
     } else {
-        modal21FilesCount.textContent = 'Nenhum arquivo selecionado';
+        modal21FilesCount.textContent = t('no_file_selected');
         modal21FilesText.classList.remove('hidden');
     }
     renderFileIcons(files, modal21IconsContainer, FILES_DEFAULT_SVG);
@@ -1718,6 +1781,14 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
         const customText = modal21Prompt.value.trim();
         if (customText) {
             userTaskPrompt += `\n\nDemandas adicionais do usuário (prioridade máxima sobre os padrões quando conflitarem):\n${customText}`;
+        }
+
+        if (getCurrentLanguage() !== 'pt-BR') {
+            let targetDeckLanguage = modal21SelectedLanguage || 'Inglês';
+            if (targetDeckLanguage === 'custom') {
+                targetDeckLanguage = modal21CustomLangInput?.value.trim() || 'Inglês';
+            }
+            userTaskPrompt += `\n\nGere em ${targetDeckLanguage}`;
         }
 
         const parts = [userTaskPrompt];
@@ -2229,6 +2300,7 @@ if (retryGeminiBtn) {
     retryGeminiBtn.addEventListener('click', () => {
         closeGeminiDownModal();
         if (lastFailedSourceType === 'files') {
+            updateModal21LanguageUI();
             modal21.classList.remove('hidden');
         } else if (lastFailedSourceType === 'txt') {
             modal22.classList.remove('hidden');

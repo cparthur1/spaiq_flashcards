@@ -395,6 +395,32 @@
                     </div>
                 </div>
 
+                <!-- Deck Generation Language Selection (Shown when app language != pt-BR) -->
+                <div id="modal-2-1-language-container" class="hidden">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="deck_generation_language_label">Idioma do Baralho</label>
+                        <span class="inline-flex items-center gap-1 text-[11px] font-medium text-purple-600">
+                            <span class="material-symbols-rounded text-sm">translate</span>
+                            <span data-i18n="deck_generation_language_hint">Idioma final dos cartões</span>
+                        </span>
+                    </div>
+
+                    <!-- Quick Language Pill Buttons -->
+                    <div class="flex flex-wrap gap-2 mb-2" id="modal-2-1-lang-chips">
+                        <button type="button" class="modal-2-1-lang-btn px-3 py-1.5 rounded-full text-xs font-bold border transition-colors cursor-pointer bg-purple-600 text-white border-purple-600 shadow-xs" data-value="Inglês" data-i18n="lang_opt_english">English</button>
+                        <button type="button" class="modal-2-1-lang-btn px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer bg-white text-gray-700 border-gray-300 hover:bg-gray-50" data-value="Espanhol" data-i18n="lang_opt_spanish">Spanish</button>
+                        <button type="button" class="modal-2-1-lang-btn px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer bg-white text-gray-700 border-gray-300 hover:bg-gray-50" data-value="Português" data-i18n="lang_opt_portuguese">Portuguese</button>
+                        <button type="button" class="modal-2-1-lang-btn px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer bg-white text-gray-700 border-gray-300 hover:bg-gray-50" data-value="Francês" data-i18n="lang_opt_french">French</button>
+                        <button type="button" class="modal-2-1-lang-btn px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer bg-white text-gray-700 border-gray-300 hover:bg-gray-50" data-value="Alemão" data-i18n="lang_opt_german">German</button>
+                        <button type="button" class="modal-2-1-lang-btn px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer bg-white text-gray-700 border-gray-300 hover:bg-gray-50" data-value="custom" data-i18n="lang_opt_other">Other...</button>
+                    </div>
+
+                    <!-- Custom Language Input (Shown when "Other..." is clicked) -->
+                    <div id="modal-2-1-custom-language-container" class="hidden">
+                        <input type="text" id="modal-2-1-custom-language-input" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 text-sm font-medium text-gray-800 outline-none" placeholder="Digite o idioma desejado (ex: Italiano, Japonês)..." data-i18n-placeholder="custom_language_placeholder">
+                    </div>
+                </div>
+
                 <!-- Custom Prompt -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5" data-i18n="specific_demands">Demandas Específicas (Opcional)</label>

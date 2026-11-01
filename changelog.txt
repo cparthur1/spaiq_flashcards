@@ -1,3 +1,16 @@
+CHANGELOG: TARGET DECK GENERATION LANGUAGE SELECTION (v15.2)
+Date: 2026-11-01
+
+OVERVIEW:
+1. Target Deck Generation Language Selector (Modal 2.1 - "Generate from Materials"):
+   - Added language selection pill buttons (`English`, `Spanish`, `Portuguese`, `French`, `German`, `Other...`) inside Modal 2.1 in `pages/generate.html`.
+   - Selector is dynamically displayed only when the application language is set to any language other than Brazilian Portuguese (`getCurrentLanguage() !== 'pt-BR'`); remains cleanly hidden when set to `pt-BR`.
+   - When generating from materials with AI, appends `\n\nGere em IDIOMA` (e.g., `Gere em Inglês`, `Gere em Espanhol`, etc.) to the end of the prompt.
+   - Retained the Gemini system prompts (`systemInstruction`, `generationSystemInstruction`, and base `userTaskPrompt`) in their exact original Portuguese form.
+2. Bumped Service Worker cache version to `flashcards-v15.2`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: FIX DECK HOLDER PREMATURE DISPLAY ON GENERATE PAGE (v14.8)
 Date: 2026-11-01
 
