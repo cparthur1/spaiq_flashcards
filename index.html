@@ -75,19 +75,50 @@
 
     <canvas id="background-canvas" class="fixed top-0 left-0 w-full h-full" style="z-index: -1;"></canvas>
 
+    <!-- TOP-RIGHT LANGUAGE SELECTOR -->
+    <div class="fixed top-4 right-4 z-40 flex items-center gap-2">
+        <div class="relative">
+            <button id="lang-menu-btn" type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-[var(--md-sys-color-on-surface)] shadow-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition cursor-pointer select-none"
+                aria-label="Idioma / Language" title="Idioma / Language">
+                <span class="material-symbols-rounded text-base text-[var(--md-sys-color-primary)]">translate</span>
+                <span id="lang-current-label">PT</span>
+                <span class="material-symbols-rounded text-sm text-[var(--md-sys-color-on-surface-variant)]">expand_more</span>
+            </button>
+            <div id="lang-dropdown-menu"
+                class="hidden absolute right-0 mt-2 w-48 m3-dialog-card rounded-2xl shadow-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-lowest)] p-1.5 z-50 text-left">
+                <button type="button" data-lang="auto"
+                    class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                    <span data-i18n="lang_auto">Automático (Navegador)</span>
+                    <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                </button>
+                <button type="button" data-lang="pt-BR"
+                    class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                    <span>Português (Brasil)</span>
+                    <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                </button>
+                <button type="button" data-lang="en-US"
+                    class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                    <span>English (US)</span>
+                    <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- TELA PRINCIPAL (INICIAL) -->
     <div id="upload-screen"
         class="w-full max-w-md mx-auto m3-card-expressive p-8 text-center transition-all duration-300">
-        <h1 class="brand-page-title text-3xl font-extrabold mb-1 tracking-tight">Spaiq Flashcards</h1>
-        <p class="text-[var(--md-sys-color-on-surface-variant)] mb-6 text-sm">Abra um arquivo ou crie um novo baralho agora mesmo.</p>
+        <h1 class="brand-page-title text-3xl font-extrabold mb-1 tracking-tight" data-i18n="app_name">Spaiq Flashcards</h1>
+        <p class="text-[var(--md-sys-color-on-surface-variant)] mb-6 text-sm" data-i18n="app_subtitle">Abra um arquivo ou crie um novo baralho agora mesmo.</p>
 
         <!-- Streak Diário (Em cima de Explorar arquivos) -->
         <div id="home-daily-streak-container" class="mb-5 flex items-center justify-center">
-            <div id="home-daily-streak-badge" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 shadow-2xs transition-all select-none" title="Sequência diária de estudos">
+            <div id="home-daily-streak-badge" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 shadow-2xs transition-all select-none" title="Sequência diária de estudos" data-i18n-title="daily_study_streak">
                 <img src="assets/img/fire.svg" id="home-streak-fire-icon" class="w-4 h-4 flex-shrink-0" alt="" aria-hidden="true" width="16" height="16">
                 <span class="text-xs font-bold leading-none flex items-center gap-1">
                     <span id="home-streak-count" class="font-black text-amber-700">0</span>
-                    <span id="home-streak-label" class="text-amber-900/90 font-semibold">dias seguidos</span>
+                    <span id="home-streak-label" class="text-amber-900/90 font-semibold" data-i18n="streak_label_plural">dias seguidos</span>
                 </span>
             </div>
         </div>
@@ -97,12 +128,12 @@
             <button id="open-explore-btn"
                 class="m3-btn-expressive m3-btn-filled w-full py-4 px-4 text-base font-bold shadow-md flex items-center justify-center gap-2.5">
                 <img src="assets/img/open_folder.svg" class="w-6 h-6 flex-shrink-0" alt="" aria-hidden="true" width="24" height="24">
-                <span>Explorar arquivos</span>
+                <span data-i18n="explore_files">Explorar arquivos</span>
             </button>
 
             <div class="relative flex py-1 items-center">
                 <div class="flex-grow border-t border-[var(--md-sys-color-outline-variant)]"></div>
-                <span class="flex-shrink-0 mx-4 text-gray-400 text-xs font-semibold">OU</span>
+                <span class="flex-shrink-0 mx-4 text-gray-400 text-xs font-semibold" data-i18n="or">OU</span>
                 <div class="flex-grow border-t border-[var(--md-sys-color-outline-variant)]"></div>
             </div>
 
@@ -110,14 +141,14 @@
             <a href="pages/generate.html" id="open-create-btn"
                 class="m3-btn-expressive m3-btn-tonal w-full py-3.5 px-4 text-base font-bold shadow-sm flex items-center justify-center gap-2">
                 <img src="assets/img/criar_novo.svg" class="w-5 h-5 flex-shrink-0" alt="" aria-hidden="true" width="20" height="20">
-                <span>Criar Baralho</span>
+                <span data-i18n="create_deck">Criar Baralho</span>
             </a>
 
             <!-- Continuar Sessão em Aberto (visível dinamicamente se houver deck ativo) -->
             <button id="continue-session-btn"
                 class="hidden m3-btn-expressive m3-btn-outlined w-full py-3 px-4 text-sm font-semibold flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50">
                 <span class="material-symbols-rounded text-lg">play_arrow</span>
-                <span>Continuar Sessão Atual</span>
+                <span data-i18n="continue_session">Continuar Sessão Atual</span>
             </button>
         </div>
         <p id="upload-error" class="text-red-500 mt-4 text-sm font-medium"></p>
@@ -132,11 +163,11 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     </div>
                     <div class="text-left">
-                        <h3 class="text-lg font-bold text-[var(--md-sys-color-on-surface)] leading-tight">Semana de Provas</h3>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Misture múltiplos baralhos para estudar</p>
+                        <h3 class="text-lg font-bold text-[var(--md-sys-color-on-surface)] leading-tight" data-i18n="exam_week">Semana de Provas</h3>
+                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="exam_week_subtitle">Misture múltiplos baralhos para estudar</p>
                     </div>
                 </div>
-                <button id="close-exam-modal-btn" class="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition">
+                <button id="close-exam-modal-btn" class="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition cursor-pointer" aria-label="Fechar" data-i18n-aria-label="close">
                     <span class="material-symbols-rounded text-xl">close</span>
                 </button>
             </div>
@@ -145,18 +176,18 @@
                 <!-- Banner de Sessão Salva (se existir) -->
                 <div id="exam-saved-session-box" class="hidden p-4 bg-purple-50 rounded-2xl border border-purple-200 text-left">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold text-purple-700 uppercase tracking-wide">Sessão em Andamento</span>
+                        <span class="text-xs font-bold text-purple-700 uppercase tracking-wide" data-i18n="exam_saved_title">Sessão em Andamento</span>
                         <span id="exam-saved-cards-count" class="text-xs px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-800 font-semibold">0 cards restantes</span>
                     </div>
-                    <p class="text-xs text-purple-600 mb-3" id="exam-saved-decks-text">Você já tem uma mistura salva.</p>
-                    <button id="exam-continue-btn" class="m3-btn-expressive w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow">
-                        <span class="material-symbols-rounded text-base">play_arrow</span> Continuar Sessão Salva
+                    <p class="text-xs text-purple-600 mb-3" id="exam-saved-decks-text" data-i18n="exam_saved_desc">Você já tem uma mistura salva.</p>
+                    <button id="exam-continue-btn" class="m3-btn-expressive w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow cursor-pointer">
+                        <span class="material-symbols-rounded text-base">play_arrow</span> <span data-i18n="exam_continue_btn">Continuar Sessão Salva</span>
                     </button>
                 </div>
 
                 <!-- Área de upload / seleção de múltiplos baralhos -->
                 <div>
-                    <label class="block text-left text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5">Carregar Baralhos (.json)</label>
+                    <label class="block text-left text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5" data-i18n="exam_upload_label">Carregar Baralhos (.json)</label>
                     <div id="exam-drop-zone" class="border-2 border-dashed border-[var(--md-sys-color-outline-variant)] hover:border-purple-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-[var(--md-sys-color-surface-container-low)]">
                         <input type="file" id="exam-file-input" accept=".json" multiple class="hidden">
                         <div class="flex flex-col items-center gap-2">
@@ -164,8 +195,8 @@
                                 <span class="material-symbols-rounded text-2xl">upload_file</span>
                             </div>
                             <div>
-                                <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Clique para selecionar arquivos .json</p>
-                                <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Você pode selecionar múltiplos baralhos de uma vez</p>
+                                <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="exam_drop_title">Clique para selecionar arquivos .json</p>
+                                <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="exam_drop_subtitle">Você pode selecionar múltiplos baralhos de uma vez</p>
                             </div>
                         </div>
                     </div>
@@ -174,11 +205,11 @@
                 <!-- Lista de baralhos carregados -->
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Baralhos Selecionados (<span id="exam-decks-count">0</span>)</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]"><span data-i18n="exam_selected_decks">Baralhos Selecionados</span> (<span id="exam-decks-count">0</span>)</span>
                         <span id="exam-total-cards" class="text-xs text-[var(--md-sys-color-on-surface-variant)]">0 cards no total</span>
                     </div>
                     <div id="exam-deck-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                        <p id="exam-empty-msg" class="text-xs text-gray-400 text-center py-4 italic">Nenhum baralho adicionado ainda.</p>
+                        <p id="exam-empty-msg" class="text-xs text-gray-400 text-center py-4 italic" data-i18n="exam_empty_msg">Nenhum baralho adicionado ainda.</p>
                     </div>
                 </div>
 
@@ -186,11 +217,11 @@
             </div>
 
             <div class="px-6 py-4 bg-[var(--md-sys-color-surface-container-low)] border-t border-[var(--md-sys-color-outline-variant)] flex justify-end gap-3">
-                <button id="cancel-exam-modal-btn" class="m3-btn-expressive m3-btn-text text-sm">
+                <button id="cancel-exam-modal-btn" class="m3-btn-expressive m3-btn-text text-sm cursor-pointer" data-i18n="cancel">
                     Cancelar
                 </button>
-                <button id="start-exam-btn" disabled class="m3-btn-expressive m3-btn-filled bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="material-symbols-rounded text-base">bolt</span> Iniciar Mistura
+                <button id="start-exam-btn" disabled class="m3-btn-expressive m3-btn-filled bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+                    <span class="material-symbols-rounded text-base">bolt</span> <span data-i18n="exam_start_btn">Iniciar Mistura</span>
                 </button>
             </div>
         </div>
@@ -198,7 +229,7 @@
 
     <!-- Rodapé OpenSource -->
     <footer class="mt-8 text-center text-xs text-gray-500 max-w-md mx-auto px-4 leading-relaxed">
-        <div>Esse app é OpenSource, verifique o código e contribua em <a href="https://github.com/cparthur1/Flashcards" target="_blank" rel="noopener noreferrer" class="underline hover:text-blue-600 transition-colors">https://github.com/cparthur1/Flashcards</a></div>
+        <div><span data-i18n="open_source_footer">Esse app é OpenSource, verifique o código e contribua em</span> <a href="https://github.com/cparthur1/Flashcards" target="_blank" rel="noopener noreferrer" class="underline hover:text-blue-600 transition-colors">https://github.com/cparthur1/Flashcards</a></div>
         <div class="mt-1">Instagram: <a href="https://instagram.com/rthur_pc" target="_blank" rel="noopener noreferrer" class="underline hover:text-blue-600 transition-colors">@rthur_pc</a></div>
     </footer>
 

@@ -1,3 +1,35 @@
+CHANGELOG: INTERNATIONALIZATION (I18N), ENGLISH (US) TRANSLATION & BROWSER DETECTION (v14.7)
+Date: 2026-11-01
+
+OVERVIEW:
+1. Complete English (US) Translation & Internationalization Engine:
+   - Created core i18n module (`js/i18n.js`) with 499 mirrored keys covering 100% of the application UI across all 4 pages and sub-modules:
+     - Home / Landing (`index.html`, `js/index.js`)
+     - Study / Game Mode (`pages/game.html`, `js/game.js`)
+     - Statistics & Progress (`pages/stats.html`, `js/stats.js`)
+     - Flashcard Deck Generator & AI Assistant (`pages/generate.html`, `js/generate.js`)
+     - Bulk Add to Notebook (`pages/bulk-add.html`, `js/bulk-add.js`)
+     - Explore Files & Pro Modals (`js/explore-modal.js`)
+     - Account / Profile Modal (`js/account-modal.js`)
+     - Pomodoro Timer Engine (`js/engine/pomodoro.js`)
+     - Daily Notifications Engine (`js/engine/notifications.js`)
+2. Browser Language Detection & Fallback Rules:
+   - Fallback when browser language cannot be determined: Portuguese (BR) (`pt-BR`).
+   - Browser set to Spanish (`es*`), Portuguese (PT) (`pt-PT*`), or Portuguese (BR) (`pt*`): sets app language to Portuguese (BR) (`pt-BR`).
+   - All other browser languages (e.g. `en-US`, `en-GB`, `fr`, `de`, `ja`, etc.): sets app language to English (US) (`en-US`).
+3. Language Settings & Persistence:
+   - Added Language Category under Game Settings modal (`pages/game.html`, `js/game.js`) with options: Automatic (Browser default), Português (Brasil), and English (US).
+   - Added Top-Right M3 Language Selector Dropdown Menu on every screen (`index.html`, `pages/stats.html`, `pages/generate.html`, `pages/bulk-add.html`) with instant switching, smooth dropdown animation, and active state indicators.
+   - Synchronized language preference (`flashcards_language`) with Pro Cloud Settings via `js/slot-manager.js`.
+   - Event-driven reactive UI (`flashcards:language-change`) ensuring immediate translation updates across DOM elements without requiring page reload.
+4. UI/UX & Compliance:
+   - Adheres to Material Design 3 (M3) design guidelines with strictly light-theme aesthetics.
+   - Replaced all leftover emojis with official Google Fonts Material Symbols (`local_fire_department`, `ac_unit`, `shield`, `bar_chart`).
+5. Offline-First PWA:
+   - Bumped Service Worker cache version to `flashcards-v14.7` and registered `/js/i18n.js` in `RAW_ASSETS`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: REAL-TIME DECK EDITING SYNC FOR REGULAR DECKS & EXAM WEEK MIXES (v14.6)
 Date: 2026-10-30
 

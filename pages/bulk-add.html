@@ -12,7 +12,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adicionar Vários ao Caderno | Flashcards</title>
+    <title data-i18n="page_title_bulk_add">Adicionar Vários ao Caderno | Flashcards</title>
     <meta name="description" content="Importe múltiplos baralhos para o seu Caderno com repetição espaçada.">
     <link rel="icon" type="image/png" href="../assets/img/favicon.png">
 
@@ -84,7 +84,7 @@
     <header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-gray-200/80 px-4 sm:px-6 py-3 transition-shadow shadow-xs">
         <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <a href="game.html" id="back-to-game-btn" class="p-2 -ml-2 rounded-xl hover:bg-gray-100 text-gray-700 transition" title="Voltar ao Jogo">
+                <a href="game.html" id="back-to-game-btn" class="p-2 -ml-2 rounded-xl hover:bg-gray-100 text-gray-700 transition" title="Voltar ao Jogo" data-i18n-title="back_to_game">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 </a>
                 <div class="flex items-center gap-2">
@@ -92,14 +92,43 @@
                         <img src="../assets/img/bulk_add.svg" class="w-5 h-5" alt="Adicionar vários">
                     </div>
                     <div>
-                        <h1 class="text-base sm:text-lg font-bold text-gray-900 leading-tight">Adicionar Vários ao Caderno</h1>
-                        <p class="text-xs text-gray-500 hidden sm:block">Importe cartões de múltiplos baralhos para revisão espaçada contínua</p>
+                        <h1 class="text-base sm:text-lg font-bold text-gray-900 leading-tight" data-i18n="bulk_add_header_title">Adicionar Vários ao Caderno</h1>
+                        <p class="text-xs text-gray-500 hidden sm:block" data-i18n="bulk_add_header_sub">Importe cartões de múltiplos baralhos para revisão espaçada contínua</p>
                     </div>
                 </div>
             </div>
 
             <!-- Header Actions -->
             <div class="flex items-center gap-2.5">
+                <!-- Language Selector -->
+                <div class="relative">
+                    <button id="lang-menu-btn" type="button"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-xs font-bold text-gray-800 shadow-xs hover:bg-gray-100 transition cursor-pointer select-none"
+                        aria-label="Idioma / Language" title="Idioma / Language">
+                        <span class="material-symbols-rounded text-base text-blue-600">translate</span>
+                        <span id="lang-current-label">PT</span>
+                        <span class="material-symbols-rounded text-sm text-gray-500">expand_more</span>
+                    </button>
+                    <div id="lang-dropdown-menu"
+                        class="hidden absolute right-0 mt-2 w-48 m3-dialog-card rounded-2xl shadow-xl border border-gray-200 bg-white p-1.5 z-50 text-left">
+                        <button type="button" data-lang="auto"
+                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-100 text-gray-800 flex items-center justify-between cursor-pointer">
+                            <span data-i18n="lang_auto">Automático (Navegador)</span>
+                            <span class="lang-check-icon material-symbols-rounded text-sm text-blue-600 hidden">check</span>
+                        </button>
+                        <button type="button" data-lang="pt-BR"
+                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-100 text-gray-800 flex items-center justify-between cursor-pointer">
+                            <span>Português (Brasil)</span>
+                            <span class="lang-check-icon material-symbols-rounded text-sm text-blue-600 hidden">check</span>
+                        </button>
+                        <button type="button" data-lang="en-US"
+                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-100 text-gray-800 flex items-center justify-between cursor-pointer">
+                            <span>English (US)</span>
+                            <span class="lang-check-icon material-symbols-rounded text-sm text-blue-600 hidden">check</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Notebook Total Cards Badge (Clickable Pill) -->
                 <button type="button" id="notebook-total-badge" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100/90 active:scale-95 border border-blue-200 hover:border-blue-300 text-blue-700 font-bold text-xs shadow-2xs hover:shadow-xs transition-all cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500/30" title="Ver baralhos e cartões salvos no Caderno" aria-label="Ver baralhos e cartões salvos no Caderno">
                     <img src="../assets/img/bookmark_check.svg" class="w-3.5 h-3.5 flex-shrink-0" alt="Caderno">
@@ -111,7 +140,7 @@
                 <a href="game.html" class="group px-3.5 py-1.5 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-semibold text-xs sm:text-sm transition flex items-center gap-1.5 shadow-xs hover:shadow-sm">
                     <img src="../assets/img/rocket.svg" class="w-4 h-4 brightness-0 invert group-hover:hidden transition-transform" alt="Foguete">
                     <img src="../assets/img/rocket_launch.svg" class="w-4 h-4 brightness-0 invert hidden group-hover:block transition-transform" alt="Foguete">
-                    <span>Concluído</span>
+                    <span data-i18n="done">Concluído</span>
                 </a>
             </div>
         </div>
@@ -129,14 +158,14 @@
                     <img src="../assets/img/bulk_add.svg" class="w-8 h-8" alt="Upload">
                 </div>
                 <div>
-                    <h2 class="text-lg sm:text-xl font-bold text-gray-900">Faça upload de baralhos para o Caderno</h2>
-                    <p class="text-xs sm:text-sm text-gray-500 mt-1 max-w-md mx-auto">
+                    <h2 class="text-lg sm:text-xl font-bold text-gray-900" data-i18n="bulk_drop_title">Faça upload de baralhos para o Caderno</h2>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-1 max-w-md mx-auto" data-i18n-html="bulk_drop_sub">
                         Arraste ou clique para selecionar um ou múltiplos arquivos <strong>.json</strong>. Você poderá escolher exatamente quais cartões deseja adicionar.
                     </p>
                 </div>
                 <button type="button" id="trigger-upload-btn" class="mt-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition active:scale-95 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    <span>Selecionar Baralhos</span>
+                    <span data-i18n="select_decks_btn">Selecionar Baralhos</span>
                 </button>
             </div>
         </section>
@@ -156,7 +185,7 @@
             <div class="flex items-center gap-2">
                 <button type="button" id="btn-load-more" class="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs transition flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    <span>Carregar Mais Decks</span>
+                    <span data-i18n="load_more_decks">Carregar Mais Decks</span>
                 </button>
             </div>
         </section>
@@ -172,17 +201,17 @@
                     <!-- Left Header (Unblurred) -->
                     <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between gap-3 flex-shrink-0 z-10">
                         <div class="flex items-center gap-2.5">
-                            <h3 class="font-bold text-sm sm:text-base text-gray-900">Baralhos Carregados</h3>
+                            <h3 class="font-bold text-sm sm:text-base text-gray-900" data-i18n="loaded_decks_col">Baralhos Carregados</h3>
                             <span id="left-cards-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
                                 0 cards
                             </span>
                         </div>
                         <div class="flex items-center gap-1.5 text-xs">
-                            <button type="button" id="btn-select-all" class="px-2.5 py-1 rounded-lg text-blue-600 hover:bg-blue-50 font-semibold transition">
+                            <button type="button" id="btn-select-all" class="px-2.5 py-1 rounded-lg text-blue-600 hover:bg-blue-50 font-semibold transition" data-i18n="select_all_btn">
                                 Selecionar todos
                             </button>
                             <span id="select-actions-separator" class="text-gray-300 hidden">|</span>
-                            <button type="button" id="btn-deselect-all" class="hidden px-2.5 py-1 rounded-lg text-gray-500 hover:bg-gray-100 font-semibold transition">
+                            <button type="button" id="btn-deselect-all" class="hidden px-2.5 py-1 rounded-lg text-gray-500 hover:bg-gray-100 font-semibold transition" data-i18n="clear">
                                 Limpar
                             </button>
                         </div>
@@ -205,8 +234,8 @@
                     <button id="btn-add-to-notebook"
                         disabled
                         class="group flex lg:flex-col items-center justify-center gap-2 px-6 py-3.5 lg:py-5 lg:px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none text-white font-extrabold text-sm sm:text-base shadow-lg shadow-blue-500/25 transition-all duration-300"
-                        title="Mover cartões selecionados para o Caderno">
-                        <span class="truncate">Adicionar ao Caderno</span>
+                        title="Mover cartões selecionados para o Caderno" data-i18n-title="add_to_notebook_btn">
+                        <span class="truncate" data-i18n="add_to_notebook_btn">Adicionar ao Caderno</span>
                         <!-- Right Arrow -->
                         <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center transition-transform group-hover:translate-x-1 lg:group-hover:translate-x-0 lg:group-hover:translate-y-1">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
@@ -222,12 +251,12 @@
                     <!-- Right Header (Unblurred) -->
                     <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between gap-3 flex-shrink-0 z-10">
                         <div class="flex items-center gap-2.5">
-                            <h3 class="font-bold text-sm sm:text-base text-gray-900">Adicionados ao Caderno</h3>
+                            <h3 class="font-bold text-sm sm:text-base text-gray-900" data-i18n="added_to_notebook_col">Adicionados ao Caderno</h3>
                             <span id="right-cards-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                                 0 adicionados
                             </span>
                         </div>
-                        <span class="text-[11px] text-gray-400 font-medium">Nesta sessão</span>
+                        <span class="text-[11px] text-gray-400 font-medium" data-i18n="added_this_session">Nesta sessão</span>
                     </div>
 
                     <!-- Right Deck Preview Area (Blur applied only here) -->
@@ -242,8 +271,8 @@
                                 <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center mb-3 shadow-2xs">
                                     <img src="../assets/img/bulk_add.svg" class="w-7 h-7 opacity-60" alt="Mova cartões para cá">
                                 </div>
-                                <h4 class="text-base font-bold text-gray-700">Mova cartões para cá</h4>
-                                <p class="text-xs text-gray-400 max-w-xs mt-1 leading-relaxed">
+                                <h4 class="text-base font-bold text-gray-700" data-i18n="move_cards_here_title">Mova cartões para cá</h4>
+                                <p class="text-xs text-gray-400 max-w-xs mt-1 leading-relaxed" data-i18n="move_cards_here_sub">
                                     Selecione cartões na lista da esquerda e clique no botão com a flecha para adicioná-los ao seu Caderno.
                                 </p>
                             </div>
@@ -266,7 +295,7 @@
                         <span class="material-symbols-rounded text-xl">collections_bookmark</span>
                     </div>
                     <div class="min-w-0">
-                        <h3 id="notebook-modal-title" class="font-bold text-base sm:text-lg text-gray-900 leading-tight">
+                        <h3 id="notebook-modal-title" class="font-bold text-base sm:text-lg text-gray-900 leading-tight" data-i18n="decks_in_notebook">
                             Baralhos no Caderno
                         </h3>
                         <p id="notebook-modal-subtitle" class="text-xs text-gray-500 truncate">
@@ -274,7 +303,7 @@
                         </p>
                     </div>
                 </div>
-                <button type="button" id="close-notebook-modal-btn" class="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition active:scale-90 flex-shrink-0 cursor-pointer" title="Fechar" aria-label="Fechar">
+                <button type="button" id="close-notebook-modal-btn" class="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition active:scale-90 flex-shrink-0 cursor-pointer" title="Fechar" aria-label="Fechar" data-i18n-title="close" data-i18n-aria-label="close">
                     <span class="material-symbols-rounded text-xl leading-none">close</span>
                 </button>
             </div>
@@ -284,8 +313,8 @@
                 <!-- Search Input -->
                 <div class="relative w-full">
                     <span class="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none">search</span>
-                    <input type="text" id="notebook-modal-search" placeholder="Buscar por pergunta, resposta ou baralho..." class="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 bg-gray-50/60 hover:bg-gray-50 focus:bg-white text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition">
-                    <button type="button" id="clear-notebook-search-btn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100 transition" aria-label="Limpar busca">
+                    <input type="text" id="notebook-modal-search" placeholder="Buscar por pergunta, resposta ou baralho..." data-i18n-placeholder="search_notebook_cards_placeholder" class="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 bg-gray-50/60 hover:bg-gray-50 focus:bg-white text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition">
+                    <button type="button" id="clear-notebook-search-btn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100 transition" aria-label="Limpar busca" data-i18n-aria-label="clear_search">
                         <span class="material-symbols-rounded text-base">close</span>
                     </button>
                 </div>
@@ -304,7 +333,7 @@
             <!-- Modal Footer -->
             <div class="px-5 py-3.5 border-t border-gray-100 bg-gray-50/80 flex items-center justify-between gap-3 flex-shrink-0 text-xs">
                 <span id="notebook-modal-footer-info" class="text-gray-500 font-medium">Mostrando 0 cartões</span>
-                <button type="button" id="notebook-modal-done-btn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold transition shadow-xs cursor-pointer">
+                <button type="button" id="notebook-modal-done-btn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold transition shadow-xs cursor-pointer" data-i18n="done">
                     Concluído
                 </button>
             </div>
@@ -317,29 +346,29 @@
             <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 class="font-bold text-base text-gray-900 flex items-center gap-2">
                     <img src="../assets/img/edit.svg" class="w-4 h-4" alt="Editar">
-                    <span>Editar Cartão do Caderno</span>
+                    <span data-i18n="edit_notebook_card">Editar Cartão do Caderno</span>
                 </h3>
-                <button type="button" id="close-edit-modal-btn" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition">
+                <button type="button" id="close-edit-modal-btn" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition" title="Fechar" aria-label="Fechar" data-i18n-title="close" data-i18n-aria-label="close">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
             <div class="space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">Frente / Pergunta</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-1" data-i18n="front_question">Frente / Pergunta</label>
                     <textarea id="edit-modal-front" rows="3" class="w-full p-3 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"></textarea>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">Verso / Resposta</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-1" data-i18n="back_answer">Verso / Resposta</label>
                     <textarea id="edit-modal-back" rows="3" class="w-full p-3 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"></textarea>
                 </div>
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                <button type="button" id="cancel-edit-btn" class="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition">
+                <button type="button" id="cancel-edit-btn" class="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition" data-i18n="cancel">
                     Cancelar
                 </button>
-                <button type="button" id="save-edit-btn" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm">
+                <button type="button" id="save-edit-btn" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm" data-i18n="save_changes">
                     Salvar Alterações
                 </button>
             </div>

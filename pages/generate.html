@@ -131,7 +131,7 @@
         <div class="flex items-center justify-between w-full mb-8 pb-4 border-b border-[var(--md-sys-color-outline-variant)]">
             <a href="../index.html" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--md-sys-color-on-surface-variant)] hover:text-blue-600 transition">
                 <span class="material-symbols-rounded text-xl">arrow_back</span>
-                Voltar ao início
+                <span data-i18n="back_to_home">Voltar ao início</span>
             </a>
 
             <div class="flex items-center gap-3">
@@ -139,21 +139,50 @@
                     <img src="../assets/img/PRO.svg" class="w-4 h-4" alt="Pro">
                     <span id="dashboard-pro-status">Flashcards Pro</span>
                 </button>
+
+                <!-- Language Selector -->
+                <div class="relative">
+                    <button id="lang-menu-btn" type="button"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-[var(--md-sys-color-on-surface)] shadow-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition cursor-pointer select-none"
+                        aria-label="Idioma / Language" title="Idioma / Language">
+                        <span class="material-symbols-rounded text-base text-[var(--md-sys-color-primary)]">translate</span>
+                        <span id="lang-current-label">PT</span>
+                        <span class="material-symbols-rounded text-sm text-[var(--md-sys-color-on-surface-variant)]">expand_more</span>
+                    </button>
+                    <div id="lang-dropdown-menu"
+                        class="hidden absolute right-0 mt-2 w-48 m3-dialog-card rounded-2xl shadow-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-lowest)] p-1.5 z-50 text-left">
+                        <button type="button" data-lang="auto"
+                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                            <span data-i18n="lang_auto">Automático (Navegador)</span>
+                            <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                        </button>
+                        <button type="button" data-lang="pt-BR"
+                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                            <span>Português (Brasil)</span>
+                            <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                        </button>
+                        <button type="button" data-lang="en-US"
+                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                            <span>English (US)</span>
+                            <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Header Titles -->
         <div class="mb-10 text-left">
-            <h1 class="brand-page-title text-3xl sm:text-4xl font-extrabold tracking-tight">Criar Baralho</h1>
-            <p class="text-gray-500 text-base sm:text-lg mt-1">Selecione o modo de criação para os seus flashcards</p>
+            <h1 class="brand-page-title text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="generate_page_title">Criar Baralho</h1>
+            <p class="text-gray-500 text-base sm:text-lg mt-1" data-i18n="choose_creation_mode">Selecione o modo de criação para os seus flashcards</p>
         </div>
 
         <!-- SECTION 1: TRADICIONAL -->
         <section class="mb-12">
             <div class="flex items-center gap-3 mb-6">
                 <div class="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-600 text-white font-bold text-sm shadow">1</div>
-                <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">Tradicional</h2>
-                <span class="text-xs font-medium text-gray-500 bg-gray-200/70 px-2.5 py-0.5 rounded-full ml-auto">Manual & Direto</span>
+                <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900" data-i18n="traditional_section">Tradicional</h2>
+                <span class="text-xs font-medium text-gray-500 bg-gray-200/70 px-2.5 py-0.5 rounded-full ml-auto" data-i18n="manual_and_direct">Manual & Direto</span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -166,13 +195,13 @@
                                 <img src="../assets/img/new_deck_manual.svg" class="w-6 h-6" alt="Criar">
                             </div>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">Crie agora</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="create_now_title">Crie agora</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed" data-i18n="create_now_desc">
                             Escreva cada cartão direto no aplicativo. Suporte para Tradicional, Resposta Dupla, Anki-like e Múltipla Escolha.
                         </p>
                     </div>
                     <div class="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
-                        <span class="text-sm font-bold text-blue-600 group-hover:underline">Abrir editor direto</span>
+                        <span class="text-sm font-bold text-blue-600 group-hover:underline" data-i18n="open_direct_editor">Abrir editor direto</span>
                         <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:translate-x-1 transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </div>
@@ -188,13 +217,13 @@
                                 <img src="../assets/img/convert_deck_manual.svg" class="w-6 h-6" alt="Importar">
                             </div>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">Converta um doc</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="convert_doc_title">Converta um doc</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed" data-i18n="convert_doc_desc">
                             Importe um txt ou word já feito (.txt, .doc, .docx). Escolha entre conversão tradicional ou no novo formato Anki-like.
                         </p>
                     </div>
                     <div class="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
-                        <span class="text-sm font-bold text-blue-600 group-hover:underline">Importar documento</span>
+                        <span class="text-sm font-bold text-blue-600 group-hover:underline" data-i18n="import_document">Importar documento</span>
                         <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:translate-x-1 transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </div>
@@ -208,7 +237,7 @@
             <div class="flex items-center gap-3 mb-6">
                 <div class="flex items-center justify-center w-7 h-7 rounded-lg bg-purple-600 text-white font-bold text-sm shadow">2</div>
                 <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-                    AI Powered
+                    <span data-i18n="ai_powered">AI Powered</span>
                     <img src="../assets/img/ai.svg" class="w-5 h-5 inline" alt="IA">
                 </h2>
                 <span class="text-xs font-medium text-purple-600 bg-purple-100 px-2.5 py-0.5 rounded-full ml-auto">Gemini Flash</span>
@@ -223,15 +252,15 @@
                             <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center transition-transform group-hover:scale-110">
                                 <img src="../assets/img/new_deck_ai.svg" class="w-6 h-6" alt="Materiais">
                             </div>
-                            <span class="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">Até 10 arquivos</span>
+                            <span class="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full" data-i18n="up_to_10_files">Até 10 arquivos</span>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">Crie de materiais</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="create_materials_title">Crie de materiais</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed" data-i18n="create_materials_desc">
                             Transforme slides, pdf, fotos... em cards. Carregue até 10 arquivos (PDF, PPTX, Imagens) e o Gemini criará os cartões técnicos automaticamente.
                         </p>
                     </div>
                     <div class="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
-                        <span class="text-sm font-bold text-purple-600 group-hover:underline">Enviar slides & materiais</span>
+                        <span class="text-sm font-bold text-purple-600 group-hover:underline" data-i18n="upload_materials_btn">Enviar slides & materiais</span>
                         <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 group-hover:translate-x-1 transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </div>
@@ -247,13 +276,13 @@
                                 <img src="../assets/img/upgrade_deck.svg" class="w-6 h-6" alt="Aprimorar">
                             </div>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">Aprimore um doc</h3>
-                        <p class="text-gray-600 text-sm leading-relaxed">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="improve_doc_title">Aprimore um doc</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed" data-i18n="improve_doc_desc">
                             A partir de um txt ou word, aprimore cartões de múltipla escolha ou resposta dupla. A IA completa alternativas plausíveis e rótulos contextuais.
                         </p>
                     </div>
                     <div class="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
-                        <span class="text-sm font-bold text-purple-600 group-hover:underline">Aprimorar com Gemini</span>
+                        <span class="text-sm font-bold text-purple-600 group-hover:underline" data-i18n="enhance_with_gemini">Aprimorar com Gemini</span>
                         <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 group-hover:translate-x-1 transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </div>
@@ -271,10 +300,10 @@
             <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="w-6 h-6 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center">1.2</span>
-                    <h3 class="font-bold text-lg text-gray-900">Converta um documento</h3>
+                    <h3 class="font-bold text-lg text-gray-900" data-i18n="convert_doc_title">Converta um documento</h3>
                 </div>
                 <button id="close-modal-1-2-btn" class="text-gray-500 hover:text-gray-700">
-                    <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar">
+                    <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar" data-i18n-alt="close">
                 </button>
             </div>
 
@@ -282,8 +311,8 @@
                 <!-- Explanation -->
                 <div class="bg-blue-50 border border-blue-200 p-4 rounded-2xl text-sm leading-relaxed text-blue-900 space-y-3">
                     <div>
-                        <p class="font-semibold mb-1 text-blue-950">Como funciona a formatação:</p>
-                        <p class="text-xs text-blue-900/90 leading-relaxed">
+                        <p class="font-semibold mb-1 text-blue-950" data-i18n="format_explanation_title">Como funciona a formatação:</p>
+                        <p class="text-xs text-blue-900/90 leading-relaxed" data-i18n-html="format_explanation_text">
                             Cada linha do documento vai ser um card. No modo <strong>Tradicional</strong>, o que vem antes do <strong>":"</strong> é a resposta e o que vem depois é a pergunta. No modo <strong>Anki-like</strong>, o que vem antes do <strong>":"</strong> é a frente e o que vem depois é o verso. Se quiser digitar a resposta, selecione tradicional, se não, anki-like.
                         </p>
                     </div>
@@ -292,14 +321,14 @@
                         <div class="flex items-start gap-2 text-xs text-blue-900">
                             <span class="material-symbols-rounded text-sm text-amber-500 shrink-0 mt-0.5 select-none">lightbulb</span>
                             <div class="min-w-0 flex-1 leading-relaxed break-words">
-                                <strong class="text-blue-950">Tags especiais:</strong> Use <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(anki_like) Frente: Verso</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(open_double) Resp1;Resp2: Pergunta</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(fill) Resp1;Resp2: Frase com _ e _</code> ou <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(multiple_choice) Resposta: Pergunta</code> para definir formatos específicos por linha.
+                                <strong class="text-blue-950" data-i18n="special_tags">Tags especiais:</strong> Use <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(anki_like) Frente: Verso</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(open_double) Resp1;Resp2: Pergunta</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(fill) Resp1;Resp2: Frase com _ e _</code> ou <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(multiple_choice) Resposta: Pergunta</code> para definir formatos específicos por linha.
                             </div>
                         </div>
 
                         <div class="flex items-start gap-2 text-xs text-blue-900">
                             <span class="material-symbols-rounded text-sm text-amber-500 shrink-0 mt-0.5 select-none">lightbulb</span>
                             <div class="min-w-0 flex-1 leading-relaxed break-words">
-                                <strong class="text-blue-950">Notas e Divisores:</strong> Linhas iniciadas com <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60">#</code> viram divisores de seção no editor (não aparecem durante o jogo).
+                                <strong class="text-blue-950" data-i18n="notes_and_dividers">Notas e Divisores:</strong> <span data-i18n="notes_and_dividers_desc">Linhas iniciadas com # viram divisores de seção no editor (não aparecem durante o jogo).</span>
                             </div>
                         </div>
                     </div>
@@ -307,34 +336,34 @@
 
                 <!-- Format Selection (Radio Cards) -->
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Selecione o Formato dos Cards</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2" data-i18n="select_card_format">Selecione o Formato dos Cards</label>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <label class="cursor-pointer border-2 border-gray-200 rounded-2xl p-4 flex flex-col gap-1 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50">
                             <div class="flex items-center justify-between">
-                                <span class="font-bold text-gray-900 text-sm">Tradicional</span>
+                                <span class="font-bold text-gray-900 text-sm" data-i18n="card_type_write">Tradicional</span>
                                 <input type="radio" name="modal-1-2-type" value="traditional" class="text-blue-600 focus:ring-blue-500">
                             </div>
-                            <span class="text-xs text-gray-500">Você digita a resposta ao estudar no jogo.</span>
+                            <span class="text-xs text-gray-500" data-i18n="format_traditional_desc">Você digita a resposta ao estudar no jogo.</span>
                         </label>
                         <label class="cursor-pointer border-2 border-gray-200 rounded-2xl p-4 flex flex-col gap-1 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50">
                             <div class="flex items-center justify-between">
                                 <span class="font-bold text-gray-900 text-sm">Anki-like</span>
                                 <input type="radio" name="modal-1-2-type" value="anki" checked class="text-blue-600 focus:ring-blue-500">
                             </div>
-                            <span class="text-xs text-gray-500">Apenas virar e avaliar dificuldade (Errei/Fácil).</span>
+                            <span class="text-xs text-gray-500" data-i18n="format_anki_desc">Apenas virar e avaliar dificuldade (Errei/Fácil).</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- File Upload -->
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Arquivo (.txt, .doc, .docx)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2" data-i18n="file_types_txt_doc">Arquivo (.txt, .doc, .docx)</label>
                     <div class="relative border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-blue-500 transition cursor-pointer bg-gray-50" id="modal-1-2-dropzone">
                         <input type="file" id="modal-1-2-file" accept=".txt,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
                         <div class="flex flex-col items-center justify-center">
                             <img src="../assets/img/folder.svg" class="w-8 h-8 mb-2 text-gray-400" alt="Arquivo">
-                            <p class="font-medium text-sm text-gray-700" id="modal-1-2-file-name">Clique ou arraste o arquivo aqui</p>
-                            <p class="text-xs text-gray-500 mt-1">Suporta arquivos .txt, .doc ou .docx</p>
+                            <p class="font-medium text-sm text-gray-700" id="modal-1-2-file-name" data-i18n="drop_file_here">Clique ou arraste o arquivo aqui</p>
+                            <p class="text-xs text-gray-500 mt-1" data-i18n="supports_txt_doc">Suporta arquivos .txt, .doc ou .docx</p>
                         </div>
                     </div>
                 </div>
@@ -343,8 +372,8 @@
             </div>
 
             <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                <button id="cancel-modal-1-2-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition">Cancelar</button>
-                <button id="submit-modal-1-2-btn" class="px-6 py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition">Converter e Abrir Editor</button>
+                <button id="cancel-modal-1-2-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition" data-i18n="cancel">Cancelar</button>
+                <button id="submit-modal-1-2-btn" class="px-6 py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition" data-i18n="convert_and_open_editor">Converter e Abrir Editor</button>
             </div>
         </div>
     </div>
@@ -355,10 +384,10 @@
             <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="w-6 h-6 rounded-lg bg-purple-600 text-white font-bold text-xs flex items-center justify-center">2.1</span>
-                    <h3 class="font-bold text-lg text-gray-900">Crie de materiais com IA</h3>
+                    <h3 class="font-bold text-lg text-gray-900" data-i18n="create_materials_with_ai">Crie de materiais com IA</h3>
                 </div>
                 <button id="close-modal-2-1-btn" class="text-gray-500 hover:text-gray-700">
-                    <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar">
+                    <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar" data-i18n-alt="close">
                 </button>
             </div>
 
@@ -368,35 +397,35 @@
                     <div class="flex items-center gap-2.5">
                         <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                         <div>
-                            <span class="text-xs font-bold text-purple-900 block">Recurso Flashcards Pro</span>
-                            <span class="text-[11px] text-purple-700">Geração de IA com Gemini integrada ao seu plano</span>
+                            <span class="text-xs font-bold text-purple-900 block" data-i18n="flashcards_pro_plan">Recurso Flashcards Pro</span>
+                            <span class="text-[11px] text-purple-700" data-i18n="pro_feature_gemini_integrated">Geração de IA com Gemini integrada ao seu plano</span>
                         </div>
                     </div>
                     <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
-                        <span class="material-symbols-rounded text-xs">check_circle</span> Ativo
+                        <span class="material-symbols-rounded text-xs">check_circle</span> <span data-i18n="active_status">Ativo</span>
                     </span>
                 </div>
 
                 <!-- Files Upload (Up to 10 files) -->
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500">Materiais de Estudo</label>
-                        <span class="text-xs font-semibold text-purple-600">Até 10 arquivos</span>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="study_materials">Materiais de Estudo</label>
+                        <span class="text-xs font-semibold text-purple-600" data-i18n="up_to_10_files">Até 10 arquivos</span>
                     </div>
                     <div class="relative border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-purple-500 transition cursor-pointer bg-gray-50" id="modal-2-1-dropzone">
                         <input type="file" id="modal-2-1-files" multiple accept=".pdf,.pptx,.ppt,.txt,image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
                         <div id="modal-2-1-icons-container" class="flex flex-wrap justify-center gap-2 mb-2">
                             <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                         </div>
-                        <p class="font-medium text-sm text-gray-700" id="modal-2-1-files-text">Upload de slides, PDFs, textos ou fotos</p>
-                        <p class="text-xs text-gray-500 mt-1" id="modal-2-1-files-count">Nenhum arquivo selecionado</p>
+                        <p class="font-medium text-sm text-gray-700" id="modal-2-1-files-text" data-i18n="upload_slides_pdfs_photos">Upload de slides, PDFs, textos ou fotos</p>
+                        <p class="text-xs text-gray-500 mt-1" id="modal-2-1-files-count" data-i18n="no_file_selected">Nenhum arquivo selecionado</p>
                     </div>
                 </div>
 
                 <!-- Custom Prompt -->
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Demandas Específicas (Opcional)</label>
-                    <textarea id="modal-2-1-prompt" rows="2" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 text-sm resize-none" placeholder="Ex: Priorize mecanismos de ação e diagnósticos diferenciais..."></textarea>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5" data-i18n="specific_demands">Demandas Específicas (Opcional)</label>
+                    <textarea id="modal-2-1-prompt" rows="2" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 text-sm resize-none" placeholder="Ex: Priorize mecanismos de ação e diagnósticos diferenciais..." data-i18n-placeholder="specific_demands_placeholder"></textarea>
                 </div>
 
                 <p id="modal-2-1-error" class="text-xs text-red-500 font-medium"></p>
@@ -405,15 +434,15 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>Processando arquivos e gerando flashcards com o Gemini...</span>
+                    <span data-i18n="generating_with_gemini_msg">Processando arquivos e gerando flashcards com o Gemini...</span>
                 </p>
             </div>
 
             <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                <button id="cancel-modal-2-1-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition">Cancelar</button>
+                <button id="cancel-modal-2-1-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition" data-i18n="cancel">Cancelar</button>
                 <button id="submit-modal-2-1-btn" class="px-6 py-2.5 text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg transition flex items-center gap-2">
                     <img src="../assets/img/ai.svg" class="w-5 h-5" alt="IA">
-                    <span>Gerar com IA</span>
+                    <span data-i18n="generate_with_ai">Gerar com IA</span>
                     <div id="modal-2-1-spinner" class="spinner hidden"></div>
                 </button>
             </div>
@@ -426,17 +455,17 @@
             <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="w-6 h-6 rounded-lg bg-purple-600 text-white font-bold text-xs flex items-center justify-center">2.2</span>
-                    <h3 class="font-bold text-lg text-gray-900">Aprimore um documento com IA</h3>
+                    <h3 class="font-bold text-lg text-gray-900" data-i18n="enhance_doc_with_ai">Aprimore um documento com IA</h3>
                 </div>
                 <button id="close-modal-2-2-btn" class="text-gray-500 hover:text-gray-700">
-                    <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar">
+                    <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar" data-i18n-alt="close">
                 </button>
             </div>
 
             <div class="p-6 overflow-y-auto space-y-6">
                 <!-- Instructions on AI enhancements -->
                 <div class="bg-purple-50 border border-purple-200 p-4 rounded-2xl text-sm leading-relaxed text-purple-900 space-y-2">
-                    <p class="font-semibold">Como estruturar para aprimoramento:</p>
+                    <p class="font-semibold" data-i18n="enhance_instructions_title">Como estruturar para aprimoramento:</p>
                     <p class="text-xs">• Linha padrão: <code>RESPOSTA: Pergunta</code></p>
                     <p class="text-xs">• Anki-like: inicie com <code>(anki_like) Frente: Verso</code> (a parte antes de ":" é a frente/pergunta e depois é o verso/resposta).</p>
                     <p class="text-xs">• Resposta dupla: inicie com <code>(open_double) Resposta1;Resposta2: Pergunta</code> (o Gemini criará os rótulos adequados).</p>
@@ -450,24 +479,24 @@
                     <div class="flex items-center gap-2.5">
                         <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                         <div>
-                            <span class="text-xs font-bold text-purple-900 block">Recurso Flashcards Pro</span>
-                            <span class="text-[11px] text-purple-700">Aprimoramento de IA com Gemini integrado ao seu plano</span>
+                            <span class="text-xs font-bold text-purple-900 block" data-i18n="flashcards_pro_plan">Recurso Flashcards Pro</span>
+                            <span class="text-[11px] text-purple-700" data-i18n="pro_feature_enhance_integrated">Aprimoramento de IA com Gemini integrado ao seu plano</span>
                         </div>
                     </div>
                     <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
-                        <span class="material-symbols-rounded text-xs">check_circle</span> Ativo
+                        <span class="material-symbols-rounded text-xs">check_circle</span> <span data-i18n="active_status">Ativo</span>
                     </span>
                 </div>
 
                 <!-- File Upload -->
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Documento (.txt, .doc, .docx)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5" data-i18n="file_types_txt_doc">Documento (.txt, .doc, .docx)</label>
                     <div class="relative border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-purple-500 transition cursor-pointer bg-gray-50" id="modal-2-2-dropzone">
                         <input type="file" id="modal-2-2-file" accept=".txt,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
                         <div class="flex flex-col items-center justify-center">
                             <img src="../assets/img/ai.svg" class="w-8 h-8 mb-2 text-purple-500" alt="IA">
-                            <p class="font-medium text-sm text-gray-700" id="modal-2-2-file-name">Clique ou arraste o arquivo .txt ou Word</p>
-                            <p class="text-xs text-gray-500 mt-1">O Gemini completará distratores e rótulos automaticamente</p>
+                            <p class="font-medium text-sm text-gray-700" id="modal-2-2-file-name" data-i18n="drop_txt_word_here">Clique ou arraste o arquivo .txt ou Word</p>
+                            <p class="text-xs text-gray-500 mt-1" data-i18n="gemini_will_complete">O Gemini completará distratores e rótulos automaticamente</p>
                         </div>
                     </div>
                 </div>
@@ -478,15 +507,15 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span>O Gemini está aprimorando e preenchendo as alternativas...</span>
+                    <span data-i18n="gemini_enhancing_msg">O Gemini está aprimorando e preenchendo as alternativas...</span>
                 </p>
             </div>
 
             <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                <button id="cancel-modal-2-2-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition">Cancelar</button>
+                <button id="cancel-modal-2-2-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition" data-i18n="cancel">Cancelar</button>
                 <button id="submit-modal-2-2-btn" class="px-6 py-2.5 text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg transition flex items-center gap-2">
                     <img src="../assets/img/ai.svg" class="w-5 h-5" alt="IA">
-                    <span>Aprimorar com IA</span>
+                    <span data-i18n="enhance_with_gemini">Aprimorar com IA</span>
                     <div id="modal-2-2-spinner" class="spinner hidden"></div>
                 </button>
             </div>
@@ -504,11 +533,11 @@
             <div class="p-2 border-b border-gray-200 bg-gray-50 flex items-center gap-2">
                 <button id="tab-creator-btn" class="flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition bg-blue-600 text-white shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Criador de Cards
+                    <span data-i18n="card_creator_tab">Criador de Cards</span>
                 </button>
                 <button id="tab-ai-chat-btn" class="flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition text-gray-600 hover:bg-gray-200">
                     <img id="tab-ai-chat-icon" src="../assets/img/robot.svg" class="w-4 h-4 light-invert" alt="Robô">
-                    Assistente IA
+                    <span data-i18n="ai_assistant_tab">Assistente IA</span>
                 </button>
             </div>
 
@@ -518,7 +547,7 @@
                 <div class="w-full" id="creator-card-type-wrapper">
                     <!-- Relative anchor for button and dropdown -->
                     <div class="relative w-full" id="creator-card-type-box">
-                        <label class="m3-select-label" for="creator-card-type-btn">Tipo de Cartão</label>
+                        <label class="m3-select-label" for="creator-card-type-btn" data-i18n="card_type_label">Tipo de Cartão</label>
                         
                         <!-- Trigger Button -->
                         <button type="button" 
@@ -526,10 +555,11 @@
                                 class="m3-select-trigger group"
                                 aria-haspopup="listbox" 
                                 aria-expanded="false" 
-                                aria-label="Tipo de Cartão">
+                                aria-label="Tipo de Cartão"
+                                data-i18n-aria-label="card_type_label">
                             <div class="flex items-center gap-2.5 min-w-0">
                                 <img id="creator-type-selected-icon" src="../assets/img/open.svg" alt="Escrever" class="w-5 h-5 flex-shrink-0">
-                                <span id="creator-type-selected-label" class="text-sm font-semibold text-gray-900 truncate">
+                                <span id="creator-type-selected-label" class="text-sm font-semibold text-gray-900 truncate" data-i18n="card_type_write">
                                     Escrever
                                 </span>
                             </div>
@@ -549,7 +579,7 @@
                             <div class="m3-select-item m3-select-item-selected" data-value="open" data-label="Escrever" data-icon="../assets/img/open.svg" role="option" aria-selected="true" tabindex="0">
                                 <div class="flex items-center gap-2.5 min-w-0">
                                     <img src="../assets/img/open.svg" class="w-5 h-5 flex-shrink-0" alt="Escrever">
-                                    <span class="truncate">Escrever</span>
+                                    <span class="truncate" data-i18n="card_type_write">Escrever</span>
                                 </div>
                                 <div class="m3-select-check">
                                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -562,7 +592,7 @@
                             <div class="m3-select-item" data-value="open_double" data-label="Escrever duplo" data-icon="../assets/img/open_double.svg" role="option" aria-selected="false" tabindex="0">
                                 <div class="flex items-center gap-2.5 min-w-0">
                                     <img src="../assets/img/open_double.svg" class="w-5 h-5 flex-shrink-0" alt="Escrever duplo">
-                                    <span class="truncate">Escrever duplo</span>
+                                    <span class="truncate" data-i18n="card_type_write_double">Escrever duplo</span>
                                 </div>
                                 <div class="m3-select-check">
                                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -575,7 +605,7 @@
                             <div class="m3-select-item" data-value="fill" data-label="Preencher" data-icon="../assets/img/fill.svg" role="option" aria-selected="false" tabindex="0">
                                 <div class="flex items-center gap-2.5 min-w-0">
                                     <img src="../assets/img/fill.svg" class="w-5 h-5 flex-shrink-0" alt="Preencher">
-                                    <span class="truncate">Preencher</span>
+                                    <span class="truncate" data-i18n="card_type_fill">Preencher</span>
                                 </div>
                                 <div class="m3-select-check">
                                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -588,7 +618,7 @@
                             <div class="m3-select-item" data-value="anki" data-label="Anki" data-icon="../assets/img/anki.svg" role="option" aria-selected="false" tabindex="0">
                                 <div class="flex items-center gap-2.5 min-w-0">
                                     <img src="../assets/img/anki.svg" class="w-5 h-5 flex-shrink-0" alt="Anki">
-                                    <span class="truncate">Anki</span>
+                                    <span class="truncate" data-i18n="card_type_anki">Anki</span>
                                 </div>
                                 <div class="m3-select-check">
                                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -601,7 +631,7 @@
                             <div class="m3-select-item" data-value="multiple_choice" data-label="Multipla escolha" data-icon="../assets/img/multiple choice.svg" role="option" aria-selected="false" tabindex="0">
                                 <div class="flex items-center gap-2.5 min-w-0">
                                     <img src="../assets/img/multiple choice.svg" class="w-5 h-5 flex-shrink-0" alt="Multipla escolha">
-                                    <span class="truncate">Multipla escolha</span>
+                                    <span class="truncate" data-i18n="card_type_mc">Multipla escolha</span>
                                 </div>
                                 <div class="m3-select-check">
                                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -614,7 +644,7 @@
                             <div class="m3-select-item" data-value="divisor" data-label="Comentário" data-icon="../assets/img/comment.svg" role="option" aria-selected="false" tabindex="0">
                                 <div class="flex items-center gap-2.5 min-w-0">
                                     <img src="../assets/img/comment.svg" class="w-5 h-5 flex-shrink-0" alt="Comentário">
-                                    <span class="truncate">Comentário</span>
+                                    <span class="truncate" data-i18n="card_type_comment">Comentário</span>
                                 </div>
                                 <div class="m3-select-check">
                                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -625,57 +655,57 @@
                         </div>
                     </div>
 
-                    <p id="creator-type-hint" class="text-xs text-blue-600 mt-1.5 font-medium px-1">
+                    <p id="creator-type-hint" class="text-xs text-blue-600 mt-1.5 font-medium px-1" data-i18n="creator_hint_open">
                         Pergunta é uma descrição e você digita o nome do conceito.
                     </p>
                 </div>
 
                 <!-- Field: Question / Description -->
                 <div>
-                    <label id="creator-question-label" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Pergunta / Descrição</label>
-                    <textarea id="creator-question" rows="2" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Escreva a pergunta ou conceito..."></textarea>
+                    <label id="creator-question-label" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="question_concept_label">Pergunta / Descrição</label>
+                    <textarea id="creator-question" rows="2" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Escreva a pergunta ou conceito..." data-i18n-placeholder="question_placeholder"></textarea>
                 </div>
 
                 <!-- Field: Question Image (Optional) -->
                 <div>
                     <div class="flex items-center justify-between mb-1">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500">Link da Imagem da Pergunta (Opcional)</label>
-                        <button type="button" id="creator-remove-q-img" class="text-[11px] text-red-500 hidden hover:underline">Remover</button>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="question_image_label">Link da Imagem da Pergunta (Opcional)</label>
+                        <button type="button" id="creator-remove-q-img" class="text-[11px] text-red-500 hidden hover:underline" data-i18n="remove_image">Remover</button>
                     </div>
                     <div id="creator-q-img-preview-container" class="hidden mb-2 max-h-32 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center p-1">
                         <img id="creator-q-img-preview" src="" class="max-h-28 w-auto object-contain rounded" alt="Preview">
                     </div>
                     <div>
-                        <input type="url" id="creator-q-img-url" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Cole o link da imagem (https://...)">
+                        <input type="url" id="creator-q-img-url" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Cole o link da imagem (https://...)" data-i18n-placeholder="image_url_placeholder">
                     </div>
                 </div>
 
                 <!-- GROUP: TRADITIONAL (OPEN) -->
                 <div id="creator-group-open" class="space-y-3">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Resposta Principal (Conceito)</label>
-                        <input type="text" id="creator-ans-open" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nome do conceito...">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="main_answer_concept">Resposta Principal (Conceito)</label>
+                        <input type="text" id="creator-ans-open" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nome do conceito..." data-i18n-placeholder="main_answer_placeholder">
                     </div>
                 </div>
 
                 <!-- GROUP: TRADITIONAL DOUBLE (OPEN_DOUBLE) -->
                 <div id="creator-group-open-double" class="space-y-3 hidden">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Resposta 1</label>
-                        <input type="text" id="creator-ans-double-1" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Primeira resposta...">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="edit_answer_label">Resposta 1</label>
+                        <input type="text" id="creator-ans-double-1" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Primeira resposta..." data-i18n-placeholder="first_answer_placeholder">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Resposta 2</label>
-                        <input type="text" id="creator-ans-double-2" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Segunda resposta...">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="edit_answer2_label">Resposta 2</label>
+                        <input type="text" id="creator-ans-double-2" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Segunda resposta..." data-i18n-placeholder="second_answer_placeholder">
                     </div>
                 </div>
 
                 <!-- GROUP: FILL IN THE BLANKS (FILL) -->
                 <div id="creator-group-fill" class="space-y-3 hidden">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Respostas das Lacunas (separadas por ";")</label>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="fill_blanks_label">Respostas das Lacunas (separadas por ";")</label>
                         <input type="text" id="creator-ans-fill" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Ex: 30; 3; 300 ou valor1; valor2">
-                        <p class="text-[11px] text-gray-500 mt-1">
+                        <p class="text-[11px] text-gray-500 mt-1" data-i18n="fill_blanks_help">
                             Use "_" no texto acima para cada lacuna. Cada resposta preenche uma lacuna na ordem de aparição. Sinônimos para a mesma lacuna podem ser separados por "/" (ex: 30 / trinta).
                         </p>
                     </div>
@@ -684,31 +714,44 @@
                 <!-- GROUP: ANKI LIKE -->
                 <div id="creator-group-anki" class="space-y-3 hidden">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Resposta / Descrição Longa</label>
-                        <textarea id="creator-ans-anki" rows="5" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm resize-y" placeholder="Explicação detalhada revelada ao virar o cartão... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)"></textarea>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="anki_desc_label">Resposta / Descrição Longa</label>
+                        <textarea id="creator-ans-anki" rows="5" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm resize-y" placeholder="Explicação detalhada revelada ao virar o cartão... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="anki_desc_placeholder"></textarea>
                     </div>
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-gray-500">Link da Imagem da Resposta (Opcional)</label>
-                            <button type="button" id="creator-remove-ans-img" class="text-[11px] text-red-500 hidden hover:underline">Remover</button>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="answer_image_label">Link da Imagem da Resposta (Opcional)</label>
+                            <button type="button" id="creator-remove-ans-img" class="text-[11px] text-red-500 hidden hover:underline" data-i18n="remove_image">Remover</button>
                         </div>
                         <div id="creator-ans-img-preview-container" class="hidden mb-2 max-h-32 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center p-1">
                             <img id="creator-ans-img-preview" src="" class="max-h-28 w-auto object-contain rounded" alt="Preview">
                         </div>
-                        <input type="url" id="creator-ans-img-url" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Cole o link da imagem (https://...)">
+                        <input type="url" id="creator-ans-img-url" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Cole o link da imagem (https://...)" data-i18n-placeholder="image_url_placeholder">
                     </div>
                 </div>
 
                 <!-- GROUP: MULTIPLE CHOICE (2 TO 6 OPTIONS) -->
                 <div id="creator-group-mc" class="space-y-3 hidden">
                     <div class="flex items-center justify-between">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500">Alternativas (2 a 6)</label>
-                        <span class="text-xs text-gray-500">Marque a correta</span>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="mc_options_label">Alternativas (2 a 6)</label>
+                        <span class="text-xs text-gray-500" data-i18n="mc_correct_badge">Marque a correta</span>
                     </div>
                     <div id="creator-mc-options-list" class="space-y-2">
                         <!-- Dynamically populated options -->
                     </div>
                     <button type="button" id="creator-add-mc-opt-btn" class="w-full py-1.5 border border-dashed border-gray-300 hover:border-blue-500 text-xs font-bold text-blue-600 rounded-xl transition flex items-center justify-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span data-i18n="add_mc_option">Adicionar Alternativa</span>
+                    </button>
+                </div>
+
+                <p id="creator-feedback" class="text-xs font-bold text-green-600 hidden"></p>
+
+                <!-- Add Card Button -->
+                <button type="button" id="creator-submit-card-btn" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 mt-auto">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span data-i18n="add_card_to_deck">Adicionar Card ao Baralho</span>
+                </button>
+            </div>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         Adicionar Alternativa
                     </button>
@@ -728,12 +771,12 @@
                 <div id="chat-header" class="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between select-none">
                     <div class="flex items-center gap-2">
                         <img src="../assets/img/robot.svg" class="w-5 h-5 light-invert" alt="Robô">
-                        <h3 class="font-bold text-sm">Assistente de IA</h3>
+                        <h3 class="font-bold text-sm" data-i18n="ai_assistant">Assistente de IA</h3>
                     </div>
                 </div>
 
                 <div id="chat-history" class="flex-grow p-4 overflow-y-auto flex flex-col gap-3">
-                    <div class="self-start bg-gray-200 text-gray-800 py-2.5 px-4 rounded-xl rounded-tl-sm max-w-[88%] text-sm chat-markdown-content break-words shadow-sm">
+                    <div class="self-start bg-gray-200 text-gray-800 py-2.5 px-4 rounded-xl rounded-tl-sm max-w-[88%] text-sm chat-markdown-content break-words shadow-sm" data-i18n="ai_chat_greeting">
                         Olá! Quer que eu ajuste algo? Diga, por exemplo: "Adicione 3 questões de múltipla escolha" ou "Reescreva a pergunta 2".
                     </div>
                 </div>
@@ -744,7 +787,7 @@
 
                 <div class="p-4 border-t border-gray-200 bg-gray-50">
                     <div class="relative flex items-center">
-                        <input type="text" id="chat-input" class="w-full pl-4 pr-12 py-3 bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 text-sm" placeholder="Peça um ajuste ao baralho...">
+                        <input type="text" id="chat-input" class="w-full pl-4 pr-12 py-3 bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-50 text-sm" placeholder="Peça um ajuste ao baralho..." data-i18n-placeholder="ai_chat_placeholder">
                         <button id="chat-send-btn" class="absolute right-2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition disabled:bg-gray-400">
                             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                         </button>
@@ -760,20 +803,20 @@
             <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap xl:flex-nowrap justify-between items-center gap-2.5 min-w-0">
                 <h3 class="font-bold flex items-center gap-2 min-w-0 flex-1">
                     <span id="deck-size-badge" class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full flex-shrink-0">0</span>
-                    <input type="text" id="deck-title-display" class="bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 focus:outline-none font-bold text-gray-800 px-1 py-0.5 rounded min-w-[90px] max-w-[180px] sm:max-w-[240px] truncate" value="Meu Baralho" title="Clique para editar o título do baralho">
-                    <button id="add-card-btn" title="Adicionar flashcard manualmente" class="p-1 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition flex items-center justify-center w-6 h-6 flex-shrink-0">
+                    <input type="text" id="deck-title-display" class="bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 focus:outline-none font-bold text-gray-800 px-1 py-0.5 rounded min-w-[90px] max-w-[180px] sm:max-w-[240px] truncate" value="Meu Baralho" title="Clique para editar o título do baralho" data-i18n-title="deck_title_placeholder">
+                    <button id="add-card-btn" title="Adicionar flashcard manualmente" data-i18n-title="add_card" class="p-1 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition flex items-center justify-center w-6 h-6 flex-shrink-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     </button>
                 </h3>
                 <div class="flex items-center gap-2 text-sm z-30 flex-shrink-0">
                     <button id="download-deck-btn" class="justify-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition text-xs sm:text-sm whitespace-nowrap">
-                        <img src="../assets/img/save.svg" class="w-4 h-4 sm:w-5 sm:h-5" alt="Salvar">
-                        <span>Salvar Arquivo</span>
+                        <img src="../assets/img/save.svg" class="w-4 h-4 sm:w-5 sm:h-5" alt="Salvar" data-i18n-alt="save">
+                        <span data-i18n="save_file_btn">Salvar Arquivo</span>
                     </button>
                     <button id="play-deck-btn" class="justify-center group bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-3 rounded-lg transition shadow flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
                         <img src="../assets/img/rocket.svg" class="w-4 h-4 sm:w-5 sm:h-5 group-hover:hidden" alt="Foguete">
                         <img src="../assets/img/rocket_launch.svg" class="w-4 h-4 sm:w-5 sm:h-5 hidden group-hover:block" alt="Foguete Lançando">
-                        <span>Jogar Agora</span>
+                        <span data-i18n="play_now_btn">Jogar Agora</span>
                     </button>
                 </div>
             </div>
@@ -794,15 +837,15 @@
                             </div>
                             <div class="min-w-0">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <h4 id="generation-title-text" class="font-bold text-sm sm:text-base text-gray-900">
+                                    <h4 id="generation-title-text" class="font-bold text-sm sm:text-base text-gray-900" data-i18n="gemini_generating_title">
                                         O Gemini está gerando seus flashcards
                                     </h4>
                                     <span id="generation-badge-status" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-purple-50 to-purple-100 text-purple-700 border border-purple-200/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
                                         <span class="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse"></span>
-                                        AO VIVO
+                                        <span data-i18n="live_badge">AO VIVO</span>
                                     </span>
                                 </div>
-                                <p id="generation-status-text" class="text-xs text-gray-600 mt-0.5 font-medium truncate">
+                                <p id="generation-status-text" class="text-xs text-gray-600 mt-0.5 font-medium truncate" data-i18n="analyzing_docs_status">
                                     Analisando documentos e estruturando questões técnicas...
                                 </p>
                             </div>
@@ -810,7 +853,7 @@
                         <div class="flex flex-col items-end flex-shrink-0">
                             <span id="generation-counter-badge" class="text-xs font-semibold text-purple-700 bg-gradient-to-b from-purple-50 to-purple-100/80 px-3 py-1 rounded-full border border-purple-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] flex items-center gap-1.5">
                                 <md-circular-progress four-color indeterminate style="--md-circular-progress-size: 14px;"></md-circular-progress>
-                                <span id="generation-counter-num">0</span> cards
+                                <span id="generation-counter-num">0</span> <span data-i18n="cards_unit">cards</span>
                             </span>
                         </div>
                     </div>
@@ -832,9 +875,9 @@
     <div id="inline-edit-modal" class="hidden fixed inset-0 modal-overlay bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                <h3 class="font-bold text-gray-800">Editar Flashcard</h3>
+                <h3 class="font-bold text-gray-800" data-i18n="edit_flashcard">Editar Flashcard</h3>
                 <button id="close-inline-edit-btn" class="text-gray-500 hover:text-gray-700">
-                    <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar">
+                    <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar" data-i18n-alt="close">
                 </button>
             </div>
             <div class="p-6 space-y-4 overflow-y-auto">
@@ -842,80 +885,80 @@
                 <input type="hidden" id="edit-card-type">
 
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Pergunta / Conceito</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="question_concept_label">Pergunta / Conceito</label>
                     <textarea id="edit-card-desc" rows="3" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm"></textarea>
                 </div>
 
                 <!-- Traditional Open Answer -->
                 <div id="edit-card-ans1-group">
-                    <label id="edit-card-ans1-label" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Resposta Principal</label>
+                    <label id="edit-card-ans1-label" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="main_answer_concept">Resposta Principal</label>
                     <input type="text" id="edit-card-ans1" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm">
                 </div>
 
                 <!-- Traditional Double Second Answer -->
                 <div id="edit-card-ans2-group" class="hidden">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Resposta 2</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="edit_answer2_label">Resposta 2</label>
                     <input type="text" id="edit-card-ans2" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm">
                 </div>
 
                 <!-- Fill In The Blanks Answer -->
                 <div id="edit-card-fill-group" class="hidden space-y-1">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Respostas das Lacunas (separadas por ";")</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="fill_blanks_label">Respostas das Lacunas (separadas por ";")</label>
                     <input type="text" id="edit-card-fill-answer" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm" placeholder="Ex: 30; 3; 300">
-                    <p class="text-[11px] text-gray-500">Na ordem das lacunas "_" do texto. Sinônimos podem ser separados por "/".</p>
+                    <p class="text-[11px] text-gray-500" data-i18n="edit_fill_help">Na ordem das lacunas "_" do texto. Sinônimos podem ser separados por "/".</p>
                 </div>
 
                 <!-- Anki Answer -->
                 <div id="edit-card-anki-group" class="hidden space-y-3">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Resposta Detalhada</label>
-                        <textarea id="edit-card-anki-answer" rows="5" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm resize-y" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)"></textarea>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="edit_detailed_answer_label">Resposta Detalhada</label>
+                        <textarea id="edit-card-anki-answer" rows="5" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm resize-y" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="edit_anki_placeholder"></textarea>
                     </div>
                 </div>
 
                 <!-- Multiple Choice Options Editor -->
                 <div id="edit-card-mc-group" class="hidden space-y-3">
                     <div class="flex items-center justify-between">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500">Alternativas (2 a 6)</label>
-                        <span class="text-xs text-gray-500">Marque a correta</span>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="mc_options_label">Alternativas (2 a 6)</label>
+                        <span class="text-xs text-gray-500" data-i18n="mc_correct_badge">Marque a correta</span>
                     </div>
                     <div id="edit-card-mc-list" class="space-y-2"></div>
                     <button type="button" id="edit-card-add-mc-opt-btn" class="w-full py-1.5 border border-dashed border-gray-300 text-xs font-bold text-blue-600 rounded-xl transition flex items-center justify-center gap-1">
-                        + Adicionar Alternativa
+                        <span data-i18n="add_mc_option">+ Adicionar Alternativa</span>
                     </button>
                 </div>
 
                 <!-- Card Image -->
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Link da Imagem da Pergunta (Opcional)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="question_image_label">Link da Imagem da Pergunta (Opcional)</label>
                     <div class="space-y-2">
                         <div id="inline-edit-image-preview-container" class="hidden relative group w-full max-h-40 overflow-hidden rounded-xl border border-gray-300 bg-gray-100 flex items-center justify-center p-2">
                             <img id="inline-edit-image-preview" src="" alt="Preview" class="max-h-36 w-auto object-contain rounded">
-                            <button type="button" id="inline-edit-remove-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem">
+                            <button type="button" id="inline-edit-remove-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem" data-i18n-title="remove_image">
                                 <img src="../assets/img/close.svg" class="w-4 h-4 invert" alt="Remover">
                             </button>
                         </div>
-                        <input type="url" id="inline-edit-image-url" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Cole o link da imagem (https://...)">
+                        <input type="url" id="inline-edit-image-url" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Cole o link da imagem (https://...)" data-i18n-placeholder="image_url_placeholder">
                     </div>
                 </div>
 
                 <!-- Anki Answer Image (if applicable) -->
                 <div id="inline-edit-ans-image-group" class="hidden">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Link da Imagem da Resposta (Anki Opcional)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="edit_ans_image_url_label">Link da Imagem da Resposta (Anki Opcional)</label>
                     <div class="space-y-2">
                         <div id="inline-edit-ans-image-preview-container" class="hidden relative group w-full max-h-40 overflow-hidden rounded-xl border border-gray-300 bg-gray-100 flex items-center justify-center p-2">
                             <img id="inline-edit-ans-image-preview" src="" alt="Preview" class="max-h-36 w-auto object-contain rounded">
-                            <button type="button" id="inline-edit-remove-ans-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem">
+                            <button type="button" id="inline-edit-remove-ans-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem" data-i18n-title="remove_image">
                                 <img src="../assets/img/close.svg" class="w-4 h-4 invert" alt="Remover">
                             </button>
                         </div>
-                        <input type="url" id="inline-edit-ans-image-url" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Cole o link da imagem (https://...)">
+                        <input type="url" id="inline-edit-ans-image-url" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Cole o link da imagem (https://...)" data-i18n-placeholder="image_url_placeholder">
                     </div>
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
-                <button id="cancel-inline-edit-btn" class="px-4 py-2 bg-gray-300 rounded-xl text-sm font-semibold hover:bg-gray-400">Cancelar</button>
-                <button id="save-inline-edit-btn" class="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700">Salvar Alterações</button>
+                <button id="cancel-inline-edit-btn" class="px-4 py-2 bg-gray-300 rounded-xl text-sm font-semibold hover:bg-gray-400" data-i18n="cancel">Cancelar</button>
+                <button id="save-inline-edit-btn" class="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700" data-i18n="save_changes">Salvar Alterações</button>
             </div>
         </div>
     </div>
@@ -928,21 +971,21 @@
             <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
                 <img src="../assets/img/cloud_alert.svg" class="w-10 h-10" alt="Alerta de Conexão">
             </div>
-            <h3 class="font-bold text-xl text-gray-800 mb-2">API do Gemini Indisponível</h3>
-            <p class="text-sm text-gray-600 mb-6" id="gemini-down-modal-msg">
+            <h3 class="font-bold text-xl text-gray-800 mb-2" data-i18n="gemini_down_title">API do Gemini Indisponível</h3>
+            <p class="text-sm text-gray-600 mb-6" id="gemini-down-modal-msg" data-i18n="gemini_down_desc">
                 A API do Gemini está temporariamente fora do ar ou enfrentando alta demanda. Como você prefere prosseguir?
             </p>
             <div class="flex flex-col gap-3">
                 <button id="use-traditional-txt-btn" class="w-full py-3 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-xl text-sm transition flex items-center justify-center gap-2">
                     <img src="../assets/img/edit.svg" class="w-4 h-4 opacity-70" alt="Texto">
-                    Usar apenas conversão tradicional (TXT)
+                    <span data-i18n="use_traditional_txt_btn">Usar apenas conversão tradicional (TXT)</span>
                 </button>
                 <button id="retry-gemini-btn" class="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2">
                     <img src="../assets/img/ai.svg" class="w-4 h-4" alt="IA">
-                    Tentar Novamente
+                    <span data-i18n="retry_gemini_btn">Tentar Novamente</span>
                 </button>
             </div>
-            <button id="close-gemini-down-modal-btn" class="mt-4 text-xs text-gray-500 hover:underline">
+            <button id="close-gemini-down-modal-btn" class="mt-4 text-xs text-gray-500 hover:underline" data-i18n="cancel">
                 Cancelar
             </button>
         </div>

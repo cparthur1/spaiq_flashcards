@@ -12,6 +12,7 @@ import { getApiKeyAsync, getCachedApiKey, saveApiKey, clearApiKey, isKeyRemember
 import { getDailyStreak, getHeatmapActivityMap, getTodayDateString } from './engine/notebook-scheduler.js';
 import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { onAuthChange } from './firebase-client.js';
+import { t, setupHeaderLanguageMenu, getCurrentLanguage } from './i18n.js';
 
 // DOM Elements
 const backToGameBtn = document.getElementById('back-to-game-btn');
@@ -342,10 +343,10 @@ function renderCurrentSession(sess, gameState, history) {
             if (bannerStatStreak) {
                 bannerStatStreak.replaceChildren();
                 const fire = document.createElement('span');
-                fire.className = 'text-sm select-none';
-                fire.textContent = '🔥';
+                fire.className = 'material-symbols-rounded text-sm text-amber-500 select-none';
+                fire.textContent = 'local_fire_department';
                 const text = document.createElement('span');
-                text.textContent = ` ${maxStreak} seguidos`;
+                text.textContent = ` ${maxStreak} ${t('in_a_row')}`;
                 bannerStatStreak.append(fire, text);
             }
             const aiCount = Number(sess ? (sess.aiCorrectionsCount || (sess.answersLog || []).filter(e => e.rating === 'ai_corrected').length) : 0) || 0;
@@ -356,7 +357,7 @@ function renderCurrentSession(sess, gameState, history) {
                     icon.className = 'material-symbols-rounded text-sm';
                     icon.textContent = 'auto_awesome';
                     const text = document.createElement('span');
-                    text.textContent = ` ${aiCount} com IA`;
+                    text.textContent = ` ${aiCount} ${t('with_ai')}`;
                     bannerStatAi.append(icon, text);
                     bannerStatAi.classList.remove('hidden');
                 } else {
@@ -437,11 +438,11 @@ function renderPerformanceByType(sess) {
     const byType = sess && sess.byType ? sess.byType : {};
 
     const typeLabels = {
-        'multiple_choice': { name: 'Múltipla Escolha', icon: 'edit_note', color: 'bg-blue-500' },
-        'open': { name: 'Resposta Aberta (Texto)', icon: 'keyboard', color: 'bg-emerald-500' },
-        'open_double': { name: 'Resposta Dupla', icon: 'bolt', color: 'bg-purple-500' },
-        'fill': { name: 'Preencher Lacunas', icon: 'draw', color: 'bg-teal-500' },
-        'anki': { name: 'Conceito / Anki', icon: 'psychology', color: 'bg-indigo-500' }
+        'multiple_choice': { name: t('card_type_mc'), icon: 'edit_note', color: 'bg-blue-500' },
+        'open': { name: t('card_type_open'), icon: 'keyboard', color: 'bg-emerald-500' },
+        'open_double': { name: t('card_type_open_double'), icon: 'bolt', color: 'bg-purple-500' },
+        'fill': { name: t('card_type_fill'), icon: 'draw', color: 'bg-teal-500' },
+        'anki': { name: t('card_type_anki'), icon: 'psychology', color: 'bg-indigo-500' }
     };
 
     let hasAnyData = false;
@@ -1300,9 +1301,9 @@ function renderActivityHeatmap(statsData) {
         `;
         if (streakData.streakProtectedByFreeze) {
             freezeHtml += `
-                <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold animate-pulse" title="Sua sequência foi protegida pelo congelador recentemente!">
-                    <span>🛡️</span>
-                    <span>Streak protegido recentemente!</span>
+                <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold animate-pulse" title="${t('streak_protected_title')}">
+                    <span class="material-symbols-rounded text-sm">shield</span>
+                    <span>${t('streak_protected_recently')}</span>
                 </div>
             `;
         }
@@ -1446,7 +1447,9 @@ function renderActivityHeatmap(statsData) {
     activityHeatmap.innerHTML = html;
 
     // 6. Resumo inicial na barra de detalhes
-    const defaultSummary = `<span class="text-gray-500">📊 <strong>${totalActiveDays}</strong> ${totalActiveDays === 1 ? 'dia ativo' : 'dias ativos'} • <strong>${totalPeriodCards}</strong> ${totalPeriodCards === 1 ? 'card revisado' : 'cards revisados'} nos últimos 5 meses</span>`;
+    const daysUnit = totalActiveDays === 1 ? t('active_day_singular') : t('active_days_plural');
+    const cardsUnit = totalPeriodCards === 1 ? t('card_reviewed_singular') : t('cards_reviewed_plural');
+    const defaultSummary = `<span class="text-gray-500"><span class="material-symbols-rounded text-sm align-middle mr-0.5">bar_chart</span> ${t('heatmap_summary_days', { days: totalActiveDays, daysUnit, cards: totalPeriodCards, cardsUnit })}</span>`;
     if (heatmapHoverInfo) {
         heatmapHoverInfo.innerHTML = defaultSummary;
     }
@@ -1519,7 +1522,7 @@ function renderHistory(statsData) {
         if (valElem) {
             valElem.textContent = bestStreak;
         } else {
-            alltimeBestStreak.innerHTML = `<span class="text-xl select-none">🔥</span> <span>${bestStreak}</span>`;
+            alltimeBestStreak.innerHTML = `<span class="material-symbols-rounded text-xl text-amber-500 select-none">local_fire_department</span> <span>${bestStreak}</span>`;
         }
     }
 
@@ -1535,15 +1538,16 @@ function renderHistory(statsData) {
     if (history.length === 0) {
         historyList.innerHTML = `
             <div class="text-center py-8 text-gray-400">
-                <p class="text-sm">Nenhuma sessão anterior concluída ainda.</p>
-                <p class="text-xs mt-1">Conclua ou reinicie uma rodada para registrar seu histórico aqui!</p>
+                <p class="text-sm">${t('no_past_sessions')}</p>
+                <p class="text-xs mt-1">${t('complete_round_hint')}</p>
             </div>
         `;
         return;
     }
 
+    const currentLang = getCurrentLanguage();
     history.forEach((sess, idx) => {
-        const dateStr = new Date(sess.startTime).toLocaleDateString('pt-BR', {
+        const dateStr = new Date(sess.startTime).toLocaleDateString(currentLang, {
             day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
         });
 
@@ -1571,15 +1575,15 @@ function renderHistory(statsData) {
                     <div class="flex items-center gap-2">
                         <h3 class="font-bold text-sm text-gray-900 truncate">${safeTitle}</h3>
                         <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${sess.completed ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-700'}">
-                            ${sess.completed ? 'Concluída' : 'Parcial'}
+                            ${sess.completed ? t('session_completed') : t('session_partial')}
                         </span>
                     </div>
-                    <p class="text-xs text-gray-500 mt-0.5">${safeDate} • Duração: ${safeDuration} • ${safeCards} cards</p>
+                    <p class="text-xs text-gray-500 mt-0.5">${safeDate} • ${t('duration')}: ${safeDuration} • ${safeCards} ${safeCards === 1 ? t('card_unit_singular') : t('cards_unit')}</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                ${safeStreak > 0 ? `<span class="text-xs text-amber-600 font-semibold flex items-center gap-1"><span class="text-sm select-none">🔥</span> <span>${safeStreak}</span></span>` : ''}
+                ${safeStreak > 0 ? `<span class="text-xs text-amber-600 font-semibold flex items-center gap-1"><span class="material-symbols-rounded text-sm text-amber-500 select-none">local_fire_department</span> <span>${safeStreak}</span></span>` : ''}
                 <div class="px-3 py-1 rounded-xl border ${accColor} text-sm font-extrabold">
                     ${safeAcc}%
                 </div>
@@ -1843,7 +1847,7 @@ addAllToNotebookBtn?.addEventListener('click', () => {
 });
 
 clearStatsBtn?.addEventListener('click', () => {
-    if (confirm("Deseja realmente limpar todo o histórico de estatísticas? Essa ação não pode ser desfeita.")) {
+    if (confirm(t('clear_stats_confirm'))) {
         resetAllStats();
         showStatsPill("Estatísticas zeradas com sucesso!", true);
         renderAllStats();
@@ -1863,8 +1867,13 @@ exportStatsBtn?.addEventListener('click', () => {
 
 // INITIALIZATION
 document.addEventListener('DOMContentLoaded', async () => {
+    setupHeaderLanguageMenu();
     initExploreModal();
     await getApiKeyAsync();
+    renderAllStats();
+});
+
+window.addEventListener('flashcards:language-change', () => {
     renderAllStats();
 });
 

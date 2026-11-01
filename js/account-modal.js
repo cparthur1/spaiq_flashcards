@@ -8,6 +8,7 @@ import { auth, signInWithGoogle, signOutUser, onAuthChange } from './firebase-cl
 import { isLifetime, isUserPro, openProModal, refreshUserProStatus } from './explore-modal.js';
 import { getSubscriptionDetails, cancelSubscriptionOnly, reactivateSubscription, deleteAccountAndCancelSubscription } from './backend-api.js';
 import { escapeHtml, sanitizeImageUrl } from './utils.js';
+import { t, applyTranslations } from './i18n.js';
 
 let accountModalInitialized = false;
 let subDetailsCache = null;
@@ -35,11 +36,11 @@ function injectAccountModalHtml() {
             <span class="material-symbols-rounded text-xl">manage_accounts</span>
           </div>
           <div>
-            <h3 id="account-modal-title" class="font-bold text-base sm:text-lg text-[var(--md-sys-color-on-surface)] leading-tight">Minha Conta & Assinatura</h3>
-            <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Gerencie seu perfil, plano e pagamentos</p>
+            <h3 id="account-modal-title" class="font-bold text-base sm:text-lg text-[var(--md-sys-color-on-surface)] leading-tight" data-i18n="account_subscription_title">Minha Conta & Assinatura</h3>
+            <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="account_subscription_subtitle">Gerencie seu perfil, plano e pagamentos</p>
           </div>
         </div>
-        <button id="close-account-modal-btn" type="button" class="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition cursor-pointer" aria-label="Fechar">
+        <button id="close-account-modal-btn" type="button" class="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition cursor-pointer" aria-label="Fechar" data-i18n-aria-label="close">
           <span class="material-symbols-rounded text-xl">close</span>
         </button>
       </div>
@@ -52,6 +53,7 @@ function injectAccountModalHtml() {
   `;
 
   document.body.appendChild(modalEl);
+  applyTranslations(modalEl);
 
   // Close handlers
   modalEl.addEventListener('click', (e) => {

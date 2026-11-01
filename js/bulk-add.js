@@ -9,6 +9,7 @@ import { renderMathAndMarkdown, escapeHtml, sanitizeImageUrl, generateSecureId, 
 import { triggerHaptic } from './engine/effects.js';
 import { isPlayableCard } from './engine/scheduler.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
+import { t, setupHeaderLanguageMenu, applyTranslations } from './i18n.js';
 
 // --- DOM ELEMENTS ---
 const bulkFileInput = document.getElementById('bulk-file-input');
@@ -83,12 +84,34 @@ const collapsedDecks = new Set();
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
+    setupHeaderLanguageMenu('header-lang-btn', 'header-lang-dropdown', 'header-lang-label');
     updateNotebookHeaderBadge();
     setupUploadHandlers();
     setupSelectionHandlers();
     setupTransferHandlers();
     setupEditModalHandlers();
     setupNotebookOverviewHandlers();
+});
+
+window.addEventListener('flashcards:language-change', () => {
+    applyTranslations(document);
+    updateNotebookHeaderBadge();
+    updateLeftCardsCountBadge();
+    updateSelectAllButtonState();
+    updateTransferButtonState();
+    if (rightCardsCountBadge) {
+        const count = sessionAddedCards.length;
+        rightCardsCountBadge.textContent = `${count} ${count === 1 ? t('added_singular') : t('added_plural')}`;
+    }
+    if (summaryDecksText) {
+        summaryDecksText.textContent = `${loadedDecksCount} ${loadedDecksCount === 1 ? t('loaded_deck_singular') : t('loaded_decks_plural')}`;
+    }
+    if (summaryCardsText) {
+        summaryCardsText.textContent = `${uploadedCards.length} ${t('cards_available_in_list')}`;
+    }
+    if (notebookOverviewModal && !notebookOverviewModal.classList.contains('hidden')) {
+        renderNotebookOverviewModalContent();
+    }
 });
 
 function getNotebookDataFromStorage() {
@@ -116,7 +139,7 @@ function saveNotebookDataToStorage(data) {
         debouncedSyncSlotsToCloud(1200);
     } catch (e) {
         console.error("[BulkAdd] Erro ao salvar flashcardsNotebook:", e);
-        showNotification("Erro ao salvar no armazenamento local", "warning");
+        showNotification(t('error_saving_storage'), "warning");
     }
 }
 
@@ -124,7 +147,7 @@ function updateNotebookHeaderBadge() {
     const data = getNotebookDataFromStorage();
     const count = data.allQuestions ? data.allQuestions.filter(isPlayableCard).length : 0;
     if (notebookTotalCount) {
-        notebookTotalCount.textContent = `${count} ${count === 1 ? 'no caderno' : 'no caderno'}`;
+        notebookTotalCount.textContent = t('notebook_total_count', { count });
     }
 }
 
@@ -247,7 +270,7 @@ async function processFilesList(files) {
     }
 
     if (newCardsLoaded.length === 0) {
-        showNotification("Nenhum cartão válido encontrado nos arquivos.", "warning");
+        showNotification(t('no_valid_cards_found'), "warning");
         return;
     }
 
@@ -263,24 +286,24 @@ async function processFilesList(files) {
     deckPreviewsWorkspace?.classList.remove('hidden');
 
     if (summaryDecksText) {
-        summaryDecksText.textContent = `${loadedDecksCount} ${loadedDecksCount === 1 ? 'baralho carregado' : 'baralhos carregados'}`;
+        summaryDecksText.textContent = `${loadedDecksCount} ${loadedDecksCount === 1 ? t('loaded_deck_singular') : t('loaded_decks_plural')}`;
     }
     if (summaryCardsText) {
-        summaryCardsText.textContent = `${uploadedCards.length} cartões disponíveis na lista`;
+        summaryCardsText.textContent = `${uploadedCards.length} ${t('cards_available_in_list')}`;
     }
 
     triggerHaptic('snap');
     renderLeftCardsList();
     updateSelectAllButtonState();
     updateTransferButtonState();
-    showNotification(`${newCardsLoaded.length} cartões carregados com sucesso!`, "collections_bookmark");
+    showNotification(t('cards_loaded_success', { count: newCardsLoaded.length }), "collections_bookmark");
 }
 
 // --- NATIVE HARDWARE-ACCELERATED CARD RENDERING ---
 function updateLeftCardsCountBadge() {
     if (leftCardsCountBadge) {
         const totalCards = uploadedCards.length;
-        leftCardsCountBadge.textContent = `${totalCards} ${totalCards === 1 ? 'card' : 'cards'}`;
+        leftCardsCountBadge.textContent = `${totalCards} ${totalCards === 1 ? t('card_unit_singular') : t('cards_unit')}`;
     }
 }
 
@@ -289,8 +312,8 @@ function showLeftEmptyState() {
     leftCardsList.innerHTML = `
         <div class="h-64 flex flex-col items-center justify-center text-center p-6 text-gray-400 select-none">
             <svg class="w-12 h-12 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <p class="font-bold text-sm text-gray-600">Todos os cartões foram transferidos!</p>
-            <p class="text-xs mt-1">Carregue mais baralhos se desejar adicionar outros cartões.</p>
+            <p class="font-bold text-sm text-gray-600">${t('all_cards_transferred')}</p>
+            <p class="text-xs mt-1">${t('load_more_to_add')}</p>
         </div>
     `;
     updateSelectAllButtonState();
@@ -321,13 +344,13 @@ function getTypeBadgeInfo(type) {
     if (type === 'anki') {
         return { label: "Anki", classes: "bg-indigo-100 text-indigo-800" };
     } else if (type === 'multiple_choice') {
-        return { label: "Múltipla escolha", classes: "bg-cyan-100 text-cyan-800" };
+        return { label: t('multiple_choice'), classes: "bg-cyan-100 text-cyan-800" };
     } else if (type === 'open_double') {
-        return { label: "Escrever duplo", classes: "bg-amber-100 text-amber-800" };
+        return { label: t('open_double'), classes: "bg-amber-100 text-amber-800" };
     } else if (type === 'fill') {
-        return { label: "Preencher", classes: "bg-teal-100 text-teal-800" };
+        return { label: t('fill_in_the_blank'), classes: "bg-teal-100 text-teal-800" };
     } else {
-        return { label: "Escrever", classes: "bg-gray-100 text-gray-700" };
+        return { label: t('write_direct'), classes: "bg-gray-100 text-gray-700" };
     }
 }
 
@@ -343,7 +366,7 @@ function createLeftCardElement(card, idx) {
 
     const sourceTag = document.createElement('span');
     sourceTag.className = "text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full truncate max-w-[180px]";
-    sourceTag.textContent = card.sourceDeck || 'Baralho';
+    sourceTag.textContent = card.sourceDeck || t('deck_default');
     sourceTag.title = card.sourceDeck || '';
 
     const typeBadge = document.createElement('span');
@@ -363,7 +386,7 @@ function createLeftCardElement(card, idx) {
     checkbox.className = "bulk-card-checkbox";
     checkbox.touchTarget = "wrapper";
     checkbox.checked = isSelected;
-    checkbox.setAttribute('aria-label', 'Selecionar cartão');
+    checkbox.setAttribute('aria-label', t('select_card_aria'));
 
     checkbox.addEventListener('change', (e) => {
         e.stopPropagation();
@@ -374,8 +397,8 @@ function createLeftCardElement(card, idx) {
     const instantMoveBtn = document.createElement('button');
     instantMoveBtn.type = "button";
     instantMoveBtn.className = "btn-instant-move w-6 h-6 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-200/90 hover:border-blue-600 flex items-center justify-center transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-90 group/instant cursor-pointer";
-    instantMoveBtn.title = "Mover instantaneamente para o Caderno";
-    instantMoveBtn.setAttribute('aria-label', 'Mover instantaneamente para o Caderno');
+    instantMoveBtn.title = t('move_instant_to_notebook');
+    instantMoveBtn.setAttribute('aria-label', t('move_instant_to_notebook'));
     instantMoveBtn.innerHTML = `
         <svg class="w-3.5 h-3.5 transition-transform group-hover/instant:translate-x-0.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
@@ -398,19 +421,19 @@ function createLeftCardElement(card, idx) {
     const descHtml = renderMathAndMarkdown(card.description || '(Sem texto)');
     const frontEl = document.createElement('div');
     frontEl.className = "text-xs text-gray-900 font-medium leading-snug line-clamp-2";
-    frontEl.innerHTML = `<strong>Frente:</strong> <span class="text-gray-800">${descHtml}</span>`;
+    frontEl.innerHTML = `<strong>${t('front_label')}:</strong> <span class="text-gray-800">${descHtml}</span>`;
     contentBox.appendChild(frontEl);
 
     const ansHtml = renderMathAndMarkdown(card.answer || '');
     const backEl = document.createElement('div');
     backEl.className = "text-xs text-emerald-700 leading-snug line-clamp-2";
-    backEl.innerHTML = `<strong>Verso:</strong> <span class="text-emerald-800">${ansHtml}</span>`;
+    backEl.innerHTML = `<strong>${t('back_label')}:</strong> <span class="text-emerald-800">${ansHtml}</span>`;
     contentBox.appendChild(backEl);
 
     if (card.image) {
         const imgChip = document.createElement('span');
         imgChip.className = "inline-flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-medium w-fit";
-        imgChip.innerHTML = `<img src="../assets/img/image.svg" class="w-3 h-3 flex-shrink-0" alt="Imagem"><span>Imagem</span>`;
+        imgChip.innerHTML = `<img src="../assets/img/image.svg" class="w-3 h-3 flex-shrink-0" alt="${t('image')}"><span>${t('image')}</span>`;
         contentBox.appendChild(imgChip);
     }
 
@@ -467,7 +490,7 @@ function updateSelectAllButtonState() {
     const selectedCount = selectedCardIds.size;
 
     if (totalCards === 0) {
-        btnSelectAll.textContent = "Selecionar todos";
+        btnSelectAll.textContent = t('select_all_btn');
         btnSelectAll.disabled = true;
         btnSelectAll.classList.add('opacity-50', 'pointer-events-none');
         selectActionsSeparator?.classList.add('hidden');
@@ -480,15 +503,15 @@ function updateSelectAllButtonState() {
 
     // Quando todos os cards estiverem selecionados, o botão "Selecionar todos" automaticamente vira "Limpar seleção"
     if (selectedCount === totalCards) {
-        btnSelectAll.textContent = "Limpar seleção";
+        btnSelectAll.textContent = t('clear_selection');
         selectActionsSeparator?.classList.add('hidden');
         btnDeselectAll?.classList.add('hidden');
     } else if (selectedCount > 0) {
-        btnSelectAll.textContent = "Selecionar todos";
+        btnSelectAll.textContent = t('select_all_btn');
         selectActionsSeparator?.classList.remove('hidden');
         btnDeselectAll?.classList.remove('hidden');
     } else {
-        btnSelectAll.textContent = "Selecionar todos";
+        btnSelectAll.textContent = t('select_all_btn');
         selectActionsSeparator?.classList.add('hidden');
         btnDeselectAll?.classList.add('hidden');
     }
@@ -543,7 +566,7 @@ function updateTransferButtonState() {
     }
     if (selectedPillCounter) {
         if (count > 0) {
-            selectedPillCounter.textContent = `${count} ${count === 1 ? 'selecionado' : 'selecionados'}`;
+            selectedPillCounter.textContent = `${count} ${count === 1 ? t('selected_singular') : t('selected_plural')}`;
             selectedPillCounter.classList.remove('hidden');
         } else {
             selectedPillCounter.classList.add('hidden');
@@ -592,7 +615,7 @@ function handleInstantMoveCard(card, cardEl) {
         rightCardsList.insertBefore(rightEl, rightCardsList.firstChild);
 
         if (rightCardsCountBadge) {
-            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? 'adicionado' : 'adicionados'}`;
+            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? t('added_singular') : t('added_plural')}`;
         }
     }, 180);
 
@@ -601,7 +624,7 @@ function handleInstantMoveCard(card, cardEl) {
         uploadedCards = uploadedCards.filter(c => c.id !== card.id);
 
         if (summaryCardsText) {
-            summaryCardsText.textContent = `${uploadedCards.length} cartões disponíveis na lista`;
+            summaryCardsText.textContent = `${uploadedCards.length} ${t('cards_available_in_list')}`;
         }
 
         cardEl.remove();
@@ -612,7 +635,7 @@ function handleInstantMoveCard(card, cardEl) {
         updateLeftCardsCountBadge();
         updateSelectAllButtonState();
         updateTransferButtonState();
-        showNotification("Cartão movido para o Caderno!", "check_circle");
+        showNotification(t('card_moved_to_notebook'), "check_circle");
     }, 300);
 }
 
@@ -755,7 +778,7 @@ function handleTransferSelectedCards() {
         rightCardsList.appendChild(fragment);
 
         if (rightCardsCountBadge) {
-            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? 'adicionado' : 'adicionados'}`;
+            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? t('added_singular') : t('added_plural')}`;
         }
 
         if (uploadedCards.length === 0) {
@@ -767,7 +790,7 @@ function handleTransferSelectedCards() {
         updateTransferButtonState();
 
         if (summaryCardsText) {
-            summaryCardsText.textContent = `${uploadedCards.length} cartões disponíveis na lista`;
+            summaryCardsText.textContent = `${uploadedCards.length} ${t('cards_available_in_list')}`;
         }
     }, 400);
 
@@ -792,7 +815,7 @@ function handleTransferSelectedCards() {
             transferSquircle.classList.remove('flex');
         }
         isTransferring = false;
-        showNotification(`${preparedCards.length} ${preparedCards.length === 1 ? 'cartão adicionado' : 'cartões adicionados'} ao Caderno!`, "check_circle");
+        showNotification(preparedCards.length === 1 ? t('card_added_toast', { count: 1 }) : t('cards_added_toast', { count: preparedCards.length }), "check_circle");
     }, 850);
 }
 
@@ -808,7 +831,7 @@ function createRightCardElement(card) {
 
     const sourceTag = document.createElement('span');
     sourceTag.className = "text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full truncate max-w-[180px]";
-    sourceTag.textContent = card.sourceDeck || 'Caderno';
+    sourceTag.textContent = card.sourceDeck || t('notebook_slot_label');
     sourceTag.title = card.sourceDeck || '';
 
     const typeBadge = document.createElement('span');
@@ -827,13 +850,13 @@ function createRightCardElement(card) {
     const descHtml = renderMathAndMarkdown(card.description || '(Sem texto)');
     const frontEl = document.createElement('div');
     frontEl.className = "text-sm text-gray-900 font-medium leading-relaxed card-desc-view";
-    frontEl.innerHTML = `<strong>Frente:</strong> <div class="mt-0.5 text-gray-800">${descHtml}</div>`;
+    frontEl.innerHTML = `<strong>${t('front_label')}:</strong> <div class="mt-0.5 text-gray-800">${descHtml}</div>`;
     contentBox.appendChild(frontEl);
 
     const ansHtml = renderMathAndMarkdown(card.answer || '');
     const backEl = document.createElement('div');
     backEl.className = "text-sm text-emerald-700 mt-1 card-ans-view";
-    backEl.innerHTML = `<strong>Verso:</strong> <div class="mt-0.5 text-emerald-800">${ansHtml}</div>`;
+    backEl.innerHTML = `<strong>${t('back_label')}:</strong> <div class="mt-0.5 text-emerald-800">${ansHtml}</div>`;
     contentBox.appendChild(backEl);
 
     // Images if present
@@ -841,7 +864,7 @@ function createRightCardElement(card) {
     if (safeImg) {
         const imgCont = document.createElement('div');
         imgCont.className = "mt-2 max-h-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center p-1";
-        imgCont.innerHTML = `<img src="${safeImg}" class="max-h-20 w-auto object-contain rounded" alt="Imagem">`;
+        imgCont.innerHTML = `<img src="${safeImg}" class="max-h-20 w-auto object-contain rounded" alt="${t('image')}">`;
         contentBox.appendChild(imgCont);
     }
 
@@ -855,7 +878,7 @@ function createRightCardElement(card) {
     const editBtn = document.createElement('button');
     editBtn.type = "button";
     editBtn.className = "p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-600 transition flex items-center justify-center shadow-2xs";
-    editBtn.title = "Editar este cartão";
+    editBtn.title = t('edit_this_card');
     editBtn.innerHTML = `<img src="../assets/img/edit.svg" class="w-4 h-4 pointer-events-none" alt="Editar">`;
     editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -866,7 +889,7 @@ function createRightCardElement(card) {
     const delBtn = document.createElement('button');
     delBtn.type = "button";
     delBtn.className = "p-1.5 rounded-xl bg-red-50 hover:bg-red-100 active:scale-95 text-red-600 transition flex items-center justify-center shadow-2xs";
-    delBtn.title = "Remover do Caderno";
+    delBtn.title = t('remove_from_notebook');
     delBtn.innerHTML = `<img src="../assets/img/delete.svg" class="w-4 h-4 pointer-events-none" alt="Excluir">`;
     delBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -901,7 +924,7 @@ function handleDeleteCardFromNotebook(cardId, cardEl) {
         cardEl.remove();
 
         if (rightCardsCountBadge) {
-            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? 'adicionado' : 'adicionados'}`;
+            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? t('added_singular') : t('added_plural')}`;
         }
 
         // Se a lista da direita ficou vazia, reexibe a dica no fundo
@@ -913,7 +936,7 @@ function handleDeleteCardFromNotebook(cardId, cardEl) {
             renderNotebookOverviewModalContent();
         }
 
-        showNotification("Cartão removido do Caderno", "delete");
+        showNotification(t('card_removed_from_notebook'), "delete");
     }, 320);
 }
 
@@ -953,7 +976,7 @@ function handleSaveCardEdit() {
     const newBack = editModalBack?.value.trim() || '';
 
     if (!newFront) {
-        alert("A pergunta/frente não pode ficar vazia.");
+        alert(t('alert_question_empty_bulk'));
         return;
     }
 
@@ -984,10 +1007,10 @@ function handleSaveCardEdit() {
         const descView = cardEl.querySelector('.card-desc-view');
         const ansView = cardEl.querySelector('.card-ans-view');
         if (descView) {
-            descView.innerHTML = `<strong>Frente:</strong> <div class="mt-0.5 text-gray-800">${renderMathAndMarkdown(newFront)}</div>`;
+            descView.innerHTML = `<strong>${t('front_label')}:</strong> <div class="mt-0.5 text-gray-800">${renderMathAndMarkdown(newFront)}</div>`;
         }
         if (ansView) {
-            ansView.innerHTML = `<strong>Verso:</strong> <div class="mt-0.5 text-emerald-800">${renderMathAndMarkdown(newBack)}</div>`;
+            ansView.innerHTML = `<strong>${t('back_label')}:</strong> <div class="mt-0.5 text-emerald-800">${renderMathAndMarkdown(newBack)}</div>`;
         }
     }
 
@@ -998,7 +1021,7 @@ function handleSaveCardEdit() {
 
     closeEditModal();
     triggerHaptic('snap');
-    showNotification("Cartão atualizado com sucesso!", "edit");
+    showNotification(t('card_updated_success'), "edit");
 }
 
 // --- NOTEBOOK OVERVIEW MODAL (DECKS & CARDS SAVED IN NOTEBOOK) ---
@@ -1093,7 +1116,14 @@ function renderNotebookOverviewModalContent() {
 
     // Update Subtitle
     if (notebookModalSubtitle) {
-        notebookModalSubtitle.textContent = `${totalCardsCount} ${totalCardsCount === 1 ? 'cartão salvo' : 'cartões salvos'} de ${totalDecksCount} ${totalDecksCount === 1 ? 'baralho' : 'baralhos'}`;
+        const cardsUnit = totalCardsCount === 1 ? t('cartao_salvo_singular') : t('cartoes_salvos_plural');
+        const decksUnit = totalDecksCount === 1 ? t('deck_singular') : t('decks_plural');
+        notebookModalSubtitle.textContent = t('notebook_subtitle_count', {
+            cardsCount: totalCardsCount,
+            cardsUnit,
+            decksCount: totalDecksCount,
+            decksUnit
+        });
     }
 
     // Empty state if Caderno has no cards
@@ -1104,14 +1134,14 @@ function renderNotebookOverviewModalContent() {
                 <div class="w-16 h-16 rounded-3xl bg-blue-50 text-blue-500 flex items-center justify-center mb-3 shadow-2xs">
                     <span class="material-symbols-rounded text-3xl opacity-80">bookmark_border</span>
                 </div>
-                <h4 class="text-base font-bold text-gray-800">Seu Caderno está vazio</h4>
+                <h4 class="text-base font-bold text-gray-800">${t('notebook_empty_title')}</h4>
                 <p class="text-xs text-gray-500 max-w-sm mt-1.5 leading-relaxed">
-                    Nenhum cartão salvo ainda. Faça upload de baralhos e clique em "Adicionar ao Caderno" para começar suas revisões espaçadas contínuas.
+                    ${t('notebook_empty_sub')}
                 </p>
             </div>
         `;
         if (notebookModalFooterInfo) {
-            notebookModalFooterInfo.textContent = "0 cartões salvos";
+            notebookModalFooterInfo.textContent = t('zero_cards_saved');
         }
         return;
     }
@@ -1130,7 +1160,7 @@ function renderNotebookOverviewModalContent() {
                 ? 'bg-blue-600 text-white shadow-xs' 
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
         }`;
-        allChip.innerHTML = `<span>Todos</span> <span class="px-1.5 py-0.2 rounded-full text-[10px] ${isAllActive ? 'bg-white/25 text-white' : 'bg-gray-200 text-gray-700'}">${totalCardsCount}</span>`;
+        allChip.innerHTML = `<span>${t('all_decks_filter')}</span> <span class="px-1.5 py-0.2 rounded-full text-[10px] ${isAllActive ? 'bg-white/25 text-white' : 'bg-gray-200 text-gray-700'}">${totalCardsCount}</span>`;
         allChip.addEventListener('click', () => {
             activeDeckFilter = 'ALL';
             triggerHaptic('tick');
@@ -1199,12 +1229,12 @@ function renderNotebookOverviewModalContent() {
         notebookModalCardsContainer.innerHTML = `
             <div class="py-12 flex flex-col items-center justify-center text-center p-6 text-gray-400 select-none">
                 <span class="material-symbols-rounded text-3xl mb-2 opacity-50">search_off</span>
-                <p class="font-bold text-sm text-gray-700">Nenhum cartão encontrado</p>
-                <p class="text-xs mt-1 text-gray-500">Tente buscar por outro termo ou selecione outro baralho no filtro acima.</p>
+                <p class="font-bold text-sm text-gray-700">${t('no_cards_found')}</p>
+                <p class="text-xs mt-1 text-gray-500">${t('try_another_search_or_deck')}</p>
             </div>
         `;
         if (notebookModalFooterInfo) {
-            notebookModalFooterInfo.textContent = `Mostrando 0 de ${totalCardsCount} cartões`;
+            notebookModalFooterInfo.textContent = t('showing_cards_footer', { visible: 0, total: totalCardsCount, unit: t('cartoes_plural') });
         }
         return;
     }
@@ -1223,20 +1253,20 @@ function renderNotebookOverviewModalContent() {
         // Header
         const header = document.createElement('div');
         header.className = "px-4 py-3 bg-gradient-to-r from-blue-50/70 via-blue-50/30 to-white hover:from-blue-50 hover:to-blue-50/50 border-b border-gray-100 flex items-center justify-between gap-3 cursor-pointer select-none group/deck transition-colors";
-        header.title = isCollapsed ? "Clique para expandir os cartões deste baralho" : "Clique para recolher os cartões deste baralho";
+        header.title = isCollapsed ? t('click_to_expand_deck') : t('click_to_collapse_deck');
         header.innerHTML = `
             <div class="flex items-center gap-2 min-w-0">
                 <span class="material-symbols-rounded text-blue-600 text-lg transition-transform duration-200 deck-chevron ${isCollapsed ? '-rotate-90' : ''}">expand_more</span>
                 <span class="material-symbols-rounded text-blue-500 text-lg flex-shrink-0">style</span>
                 <h4 class="font-bold text-sm text-gray-900 truncate" title="${escapeHtml(deckObj.name)}">${escapeHtml(deckObj.name)}</h4>
                 <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 flex-shrink-0">
-                    ${deckObj.cards.length}${deckObj.cards.length !== deckObj.totalDeckCards ? ` de ${deckObj.totalDeckCards}` : ''} ${deckObj.totalDeckCards === 1 ? 'card' : 'cards'}
+                    ${deckObj.cards.length}${deckObj.cards.length !== deckObj.totalDeckCards ? ` de ${deckObj.totalDeckCards}` : ''} ${deckObj.totalDeckCards === 1 ? t('card_unit_singular') : t('cards_unit')}
                 </span>
             </div>
             <div class="flex items-center gap-1">
-                <button type="button" class="btn-remove-deck text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer" title="Remover todos os cartões deste baralho do Caderno">
+                <button type="button" class="btn-remove-deck text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer" title="${t('remove_deck_cards_title')}">
                     <span class="material-symbols-rounded text-sm">delete</span>
-                    <span class="hidden sm:inline">Remover baralho</span>
+                    <span class="hidden sm:inline">${t('remove_deck_btn')}</span>
                 </button>
             </div>
         `;
@@ -1277,14 +1307,14 @@ function renderNotebookOverviewModalContent() {
                 populateCards();
                 cardsList.classList.remove('hidden');
                 chevron?.classList.remove('-rotate-90');
-                header.title = "Clique para recolher os cartões deste baralho";
+                header.title = t('click_to_collapse_deck');
                 triggerHaptic('tick');
             } else {
                 // Collapse
                 collapsedDecks.add(deckObj.name);
                 cardsList.classList.add('hidden');
                 chevron?.classList.add('-rotate-90');
-                header.title = "Clique para expandir os cartões deste baralho";
+                header.title = t('click_to_expand_deck');
                 triggerHaptic('tick');
             }
         });
@@ -1311,7 +1341,8 @@ function renderNotebookOverviewModalContent() {
     });
 
     if (notebookModalFooterInfo) {
-        notebookModalFooterInfo.textContent = `Mostrando ${visibleCardsCount} de ${totalCardsCount} ${totalCardsCount === 1 ? 'cartão' : 'cartões'}`;
+        const unit = totalCardsCount === 1 ? t('cartao_singular') : t('cartoes_plural');
+        notebookModalFooterInfo.textContent = t('showing_cards_footer', { visible: visibleCardsCount, total: totalCardsCount, unit });
     }
 }
 
@@ -1325,7 +1356,7 @@ function createModalCardElement(card, idx) {
     const srsBadgeHtml = (card.repetitions && card.repetitions > 0)
         ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
              <span class="material-symbols-rounded text-[11px]">history</span>
-             <span>Revisado ${card.repetitions}x</span>
+             <span>${t('reviewed_times', { count: card.repetitions })}</span>
            </span>`
         : '';
 
@@ -1349,7 +1380,7 @@ function createModalCardElement(card, idx) {
     const editBtn = document.createElement('button');
     editBtn.type = "button";
     editBtn.className = "p-1 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer";
-    editBtn.title = "Editar este cartão";
+    editBtn.title = t('edit_this_card');
     editBtn.innerHTML = `<span class="material-symbols-rounded text-base">edit</span>`;
     editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1359,7 +1390,7 @@ function createModalCardElement(card, idx) {
     const delBtn = document.createElement('button');
     delBtn.type = "button";
     delBtn.className = "p-1 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer";
-    delBtn.title = "Remover do Caderno";
+    delBtn.title = t('remove_from_notebook');
     delBtn.innerHTML = `<span class="material-symbols-rounded text-base">delete</span>`;
     delBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1376,13 +1407,13 @@ function createModalCardElement(card, idx) {
     // Front (Question)
     const frontEl = document.createElement('div');
     frontEl.className = "text-xs sm:text-sm text-gray-900 leading-snug card-desc-view";
-    frontEl.innerHTML = `<strong class="text-gray-900 font-semibold">Frente:</strong> <div class="text-gray-800 mt-0.5">${renderMathAndMarkdown(card.description || '(Sem texto)')}</div>`;
+    frontEl.innerHTML = `<strong class="text-gray-900 font-semibold">${t('front_label')}:</strong> <div class="text-gray-800 mt-0.5">${renderMathAndMarkdown(card.description || '(Sem texto)')}</div>`;
     cardEl.appendChild(frontEl);
 
     // Back (Answer)
     const backEl = document.createElement('div');
     backEl.className = "text-xs sm:text-sm text-emerald-800 leading-snug border-t border-gray-100 pt-1.5 mt-0.5 card-ans-view";
-    backEl.innerHTML = `<strong class="text-emerald-900 font-semibold">Verso:</strong> <div class="text-emerald-800 mt-0.5">${renderMathAndMarkdown(card.answer || '')}</div>`;
+    backEl.innerHTML = `<strong class="text-emerald-900 font-semibold">${t('back_label')}:</strong> <div class="text-emerald-800 mt-0.5">${renderMathAndMarkdown(card.answer || '')}</div>`;
     cardEl.appendChild(backEl);
 
     // Image if present
@@ -1390,7 +1421,7 @@ function createModalCardElement(card, idx) {
     if (safeImg) {
         const imgCont = document.createElement('div');
         imgCont.className = "mt-1 max-h-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center p-1";
-        imgCont.innerHTML = `<img src="${safeImg}" class="max-h-20 w-auto object-contain rounded" alt="Imagem">`;
+        imgCont.innerHTML = `<img src="${safeImg}" class="max-h-20 w-auto object-contain rounded" alt="${t('image')}">`;
         cardEl.appendChild(imgCont);
     }
 
@@ -1414,7 +1445,7 @@ function handleModalDeleteCard(cardId, cardEl) {
     if (rightEl) {
         rightEl.remove();
         if (rightCardsCountBadge) {
-            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? 'adicionado' : 'adicionados'}`;
+            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? t('added_singular') : t('added_plural')}`;
         }
         if (sessionAddedCards.length === 0 && rightEmptyHint) {
             rightEmptyHint.classList.remove('hidden');
@@ -1434,13 +1465,13 @@ function handleModalDeleteCard(cardId, cardEl) {
         renderNotebookOverviewModalContent();
     }
 
-    showNotification("Cartão removido do Caderno", "delete");
+    showNotification(t('card_removed_from_notebook'), "delete");
 }
 
 function handleModalDeleteDeck(deckName) {
     if (!deckName) return;
 
-    if (!confirm(`Remover todos os cartões do baralho "${deckName}" do seu Caderno?`)) {
+    if (!confirm(t('confirm_remove_deck_from_notebook', { deckName }))) {
         return;
     }
 
@@ -1463,7 +1494,7 @@ function handleModalDeleteDeck(deckName) {
             }
         });
         if (rightCardsCountBadge) {
-            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? 'adicionado' : 'adicionados'}`;
+            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? t('added_singular') : t('added_plural')}`;
         }
         if (sessionAddedCards.length === 0 && rightEmptyHint) {
             rightEmptyHint.classList.remove('hidden');
@@ -1476,7 +1507,8 @@ function handleModalDeleteDeck(deckName) {
 
     triggerHaptic('delete');
     renderNotebookOverviewModalContent();
-    showNotification(`${removedCount} ${removedCount === 1 ? 'cartão removido' : 'cartões removidos'} do Caderno`, "delete");
+    const unit = removedCount === 1 ? t('card_removed_singular') : t('cards_removed_plural');
+    showNotification(t('deck_cards_removed_toast', { count: removedCount, unit }), "delete");
 }
 
 // --- NOTIFICATION PILL ---

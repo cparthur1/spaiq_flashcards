@@ -330,6 +330,7 @@ export function getLocalSettings() {
   } catch (e) {}
 
   return {
+    language: localStorage.getItem('flashcards_language') || 'auto',
     aiEnabled: localStorage.getItem('flashcards_ai_enabled') !== 'false',
     hapticEnabled: localStorage.getItem('flashcardsHapticEnabled') !== 'false',
     soundEnabled: localStorage.getItem('flashcardsSoundEnabled') !== 'false',
@@ -354,6 +355,12 @@ export function applyCloudSettings(cloudSettings) {
 
   let changed = false;
 
+  if (cloudSettings.language && typeof cloudSettings.language === 'string') {
+    if (localStorage.getItem('flashcards_language') !== cloudSettings.language) {
+      localStorage.setItem('flashcards_language', cloudSettings.language);
+      changed = true;
+    }
+  }
   if (cloudSettings.aiEnabled !== undefined) {
     const val = cloudSettings.aiEnabled ? 'true' : 'false';
     if (localStorage.getItem('flashcards_ai_enabled') !== val) {

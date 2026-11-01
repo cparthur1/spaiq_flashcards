@@ -94,12 +94,12 @@
             <a href="game.html" id="back-to-game-btn"
                 class="p-2 sm:px-3 sm:py-2 rounded-xl border border-gray-200 hover:bg-gray-100 transition flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-white shadow-sm flex-shrink-0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                <span>Voltar ao Jogo</span>
+                <span data-i18n="back_to_game">Voltar ao Jogo</span>
             </a>
 
             <div class="min-w-0">
                 <div class="flex items-center gap-2">
-                    <h1 class="brand-page-title text-xl sm:text-2xl font-extrabold truncate tracking-tight">Estatísticas</h1>
+                    <h1 class="brand-page-title text-xl sm:text-2xl font-extrabold truncate tracking-tight" data-i18n="stats_title">Estatísticas</h1>
                     <span id="deck-badge" class="hidden sm:inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 truncate max-w-[180px]">
                         Flashcards
                     </span>
@@ -108,20 +108,49 @@
         </div>
 
         <div class="flex items-center gap-2 flex-shrink-0">
+            <!-- Language Selector -->
+            <div class="relative">
+                <button id="lang-menu-btn" type="button"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-[var(--md-sys-color-outline-variant)] text-xs font-bold text-[var(--md-sys-color-on-surface)] shadow-xs hover:bg-[var(--md-sys-color-surface-container-high)] transition cursor-pointer select-none"
+                    aria-label="Idioma / Language" title="Idioma / Language">
+                    <span class="material-symbols-rounded text-base text-[var(--md-sys-color-primary)]">translate</span>
+                    <span id="lang-current-label">PT</span>
+                    <span class="material-symbols-rounded text-sm text-[var(--md-sys-color-on-surface-variant)]">expand_more</span>
+                </button>
+                <div id="lang-dropdown-menu"
+                    class="hidden absolute right-0 mt-2 w-48 m3-dialog-card rounded-2xl shadow-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-lowest)] p-1.5 z-50 text-left">
+                    <button type="button" data-lang="auto"
+                        class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                        <span data-i18n="lang_auto">Automático (Navegador)</span>
+                        <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                    </button>
+                    <button type="button" data-lang="pt-BR"
+                        class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                        <span>Português (Brasil)</span>
+                        <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                    </button>
+                    <button type="button" data-lang="en-US"
+                        class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] flex items-center justify-between cursor-pointer">
+                        <span>English (US)</span>
+                        <span class="lang-check-icon material-symbols-rounded text-sm text-[var(--md-sys-color-primary)] hidden">check</span>
+                    </button>
+                </div>
+            </div>
+
             <button id="export-stats-btn"
                 class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 transition text-xs font-semibold shadow-sm text-gray-700"
-                title="Exportar dados estatísticos em JSON">
+                title="Exportar dados estatísticos em JSON" data-i18n-title="export_data">
                 <img src="../assets/img/download.svg" class="w-4 h-4" alt="Exportar">
-                <span>Exportar Dados</span>
+                <span data-i18n="export_data">Exportar Dados</span>
             </button>
 
             <button id="clear-stats-btn"
                 class="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 transition"
-                title="Limpar histórico de sessões">
+                title="Limpar histórico de sessões" data-i18n-title="clear_stats_history">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                <span class="hidden sm:inline">Limpar</span>
+                <span class="hidden sm:inline" data-i18n="clear">Limpar</span>
             </button>
         </div>
     </header>
@@ -136,20 +165,20 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    Sessão Atual
+                    <span data-i18n="tab_current_session">Sessão Atual</span>
                 </button>
                 <button id="tab-btn-history" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap flex items-center gap-2 text-gray-600 hover:text-gray-900 cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Sessões Anteriores
+                    <span data-i18n="tab_past_sessions">Sessões Anteriores</span>
                     <span id="history-badge-count" class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-300 font-semibold">0</span>
                 </button>
                 <button id="tab-btn-struggling" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap flex items-center gap-2 text-gray-600 hover:text-gray-900 cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    Foco de Revisão
+                    <span data-i18n="tab_struggling">Foco de Revisão</span>
                     <span id="struggling-badge-count" class="hidden text-[10px] px-1.5 py-0.5 rounded-full bg-orange-200 text-orange-800 font-bold">0</span>
                 </button>
             </nav>
@@ -167,10 +196,10 @@
                         </div>
                         <div>
                             <div class="flex items-center gap-2 flex-wrap">
-                                <h2 class="text-base sm:text-lg font-black text-emerald-950">Deck zerado</h2>
+                                <h2 class="text-base sm:text-lg font-black text-emerald-950" data-i18n="deck_cleared">Deck zerado</h2>
                                 <span class="material-symbols-rounded text-lg text-emerald-600">celebration</span>
                             </div>
-                            <p class="text-xs text-emerald-800 mt-0.5">Todos os cards deste baralho foram respondidos.</p>
+                            <p class="text-xs text-emerald-800 mt-0.5" data-i18n="deck_cleared_sub">Todos os cards deste baralho foram respondidos.</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
@@ -187,7 +216,7 @@
                 <!-- KPI 1: Progresso -->
                 <div class="m3-card-expressive p-4 sm:p-5 flex flex-col justify-between">
                     <div class="flex items-center justify-between text-gray-500 mb-2">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Progresso</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="progress">Progresso</span>
                         <div class="p-1.5 bg-blue-100 text-blue-600 rounded-xl">
                             <span class="material-symbols-rounded text-base">trending_up</span>
                         </div>
@@ -206,7 +235,7 @@
                 <!-- KPI 2: Taxa de Acerto -->
                 <div class="m3-card-expressive p-4 sm:p-5 flex flex-col justify-between">
                     <div class="flex items-center justify-between text-gray-500 mb-2">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Precisão</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="accuracy">Precisão</span>
                         <div class="p-1.5 bg-emerald-100 text-emerald-600 rounded-xl">
                             <span class="material-symbols-rounded text-base">check_circle</span>
                         </div>
@@ -214,40 +243,40 @@
                     <div>
                         <div class="flex items-baseline gap-2">
                             <span id="kpi-accuracy-percent" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">100%</span>
-                            <span id="kpi-accuracy-feedback" class="text-xs font-medium text-emerald-700">Excelente</span>
+                            <span id="kpi-accuracy-feedback" class="text-xs font-medium text-emerald-700" data-i18n="excellent">Excelente</span>
                         </div>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-2"><span id="kpi-correct-count">0</span> acertos • <span id="kpi-incorrect-count">0</span> erros</p>
+                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-2"><span id="kpi-correct-count">0</span> <span data-i18n="correct">acertos</span> • <span id="kpi-incorrect-count">0</span> <span data-i18n="errors">erros</span></p>
                     </div>
                 </div>
 
                 <!-- KPI 3: Tempo de Estudo -->
                 <div class="m3-card-expressive p-4 sm:p-5 flex flex-col justify-between">
                     <div class="flex items-center justify-between text-gray-500 mb-2">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Tempo Total</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="total_time">Tempo Total</span>
                         <div class="p-1.5 bg-purple-100 text-purple-600 rounded-xl">
                             <span class="material-symbols-rounded text-base">timer</span>
                         </div>
                     </div>
                     <div>
                         <span id="kpi-duration" class="text-2xl sm:text-3xl font-extrabold text-[var(--md-sys-color-on-surface)]">00:00</span>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-2">Média: <span id="kpi-time-per-card" class="font-semibold text-[var(--md-sys-color-on-surface)]">0s</span> / card</p>
+                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-2"><span id="kpi-time-per-card-wrapper">Média: <span id="kpi-time-per-card" class="font-semibold text-[var(--md-sys-color-on-surface)]">0s</span> / card</span></p>
                     </div>
                 </div>
 
                 <!-- KPI 4: Sequência (Streak) -->
                 <div class="m3-card-expressive p-4 sm:p-5 flex flex-col justify-between">
                     <div class="flex items-center justify-between text-gray-500 mb-2">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Sequência</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="streak">Sequência</span>
                         <div class="p-1.5 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center text-sm select-none">
-                            🔥
+                            <span class="material-symbols-rounded text-base text-amber-500">local_fire_department</span>
                         </div>
                     </div>
                     <div>
                         <div class="flex items-baseline gap-2">
                             <span id="kpi-current-streak" class="text-2xl sm:text-3xl font-extrabold text-amber-500">0</span>
-                            <span class="text-xs text-gray-500">acertos seguidos</span>
+                            <span class="text-xs text-gray-500" data-i18n="consecutive_correct">acertos seguidos</span>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2">Maior recorde: <span id="kpi-best-streak" class="font-bold text-gray-800">0</span></p>
+                        <p class="text-xs text-gray-400 mt-2"><span id="kpi-best-streak-wrapper">Maior recorde: <span id="kpi-best-streak" class="font-bold text-gray-800">0</span></span></p>
                     </div>
                 </div>
             </div>
@@ -259,22 +288,22 @@
                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Previsão & Ritmo</span>
-                            <span id="pace-estimate-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500" data-i18n="estimate_pace">Previsão & Ritmo</span>
+                            <span id="pace-estimate-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700" data-i18n="calculating">
                                 Calculando...
                             </span>
                         </div>
                         <div class="mt-1">
                             <span id="pace-estimate-time" class="text-xl sm:text-2xl font-extrabold text-gray-900">--</span>
-                            <p id="pace-estimate-sub" class="text-xs text-gray-500 mt-0.5">para concluir os cards restantes</p>
+                            <p id="pace-estimate-sub" class="text-xs text-gray-500 mt-0.5" data-i18n="to_finish_remaining">para concluir os cards restantes</p>
                         </div>
                     </div>
                     <div class="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
                         <div class="flex items-center gap-1" title="Card respondido mais rápido nesta sessão">
-                            <span class="material-symbols-rounded text-xs text-amber-500">bolt</span> Mais rápido: <span id="pace-fastest-card" class="font-bold text-emerald-600">--</span>
+                            <span class="material-symbols-rounded text-xs text-amber-500">bolt</span> <span id="pace-fastest-card-label">Mais rápido:</span> <span id="pace-fastest-card" class="font-bold text-emerald-600">--</span>
                         </div>
                         <div class="flex items-center gap-1" title="Card mais reflexivo nesta sessão">
-                            <span class="material-symbols-rounded text-xs text-amber-500">hourglass_top</span> Mais lento: <span id="pace-slowest-card" class="font-bold text-amber-500">--</span>
+                            <span class="material-symbols-rounded text-xs text-amber-500">hourglass_top</span> <span id="pace-slowest-card-label">Mais lento:</span> <span id="pace-slowest-card" class="font-bold text-amber-500">--</span>
                         </div>
                     </div>
                 </div>
@@ -283,20 +312,20 @@
                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Domínio do Baralho</span>
-                            <span id="mastery-level-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500" data-i18n="deck_mastery">Domínio do Baralho</span>
+                            <span id="mastery-level-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700" data-i18n="starting">
                                 Iniciando
                             </span>
                         </div>
                         <div class="flex items-baseline gap-2 mt-1">
                             <span id="mastery-score" class="text-xl sm:text-2xl font-extrabold text-purple-600">0 pts</span>
-                            <span class="text-xs text-gray-400">de 100</span>
+                            <span class="text-xs text-gray-400" data-i18n="of_100">de 100</span>
                         </div>
                         <div class="w-full bg-gray-100 h-2 rounded-full mt-2.5 overflow-hidden">
                             <div id="mastery-progress-bar" class="bg-purple-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
                         </div>
                     </div>
-                    <p id="mastery-description" class="text-xs text-gray-400 mt-2.5 pt-2 border-t border-gray-100 truncate">
+                    <p id="mastery-description" class="text-xs text-gray-400 mt-2.5 pt-2 border-t border-gray-100 truncate" data-i18n="mastery_advancing">
                         Avançando na memorização ativa
                     </p>
                 </div>
@@ -305,14 +334,14 @@
                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Grifos & Destaques</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500" data-i18n="highlights_title">Grifos & Destaques</span>
                             <span id="highlights-total-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                                 0 cards
                             </span>
                         </div>
                         <div class="mt-1">
                             <span id="highlights-summary-text" class="text-xl sm:text-2xl font-extrabold text-gray-900">0</span>
-                            <span class="text-xs font-medium text-gray-500 ml-1">trechos marcados</span>
+                            <span class="text-xs font-medium text-gray-500 ml-1" data-i18n="marked_snippets">trechos marcados</span>
                         </div>
                     </div>
                     <div id="highlights-swatches-container" class="pt-3 mt-3 border-t border-gray-100 flex items-center justify-between text-xs">
@@ -348,7 +377,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-3">
                             <div>
-                                <h2 class="font-bold text-base text-gray-900">Qualidade da Lembrança (Anki)</h2>
+                                <h2 class="font-bold text-base text-gray-900" data-i18n="anki_quality">Qualidade da Lembrança (Anki)</h2>
                                 <p class="text-xs text-gray-500">Distribuição das classificações dos cards</p>
                             </div>
                             <span id="anki-total-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">0 respostas</span>
@@ -356,31 +385,31 @@
 
                         <!-- Segmented progress bar -->
                         <div class="w-full h-4 bg-gray-100 rounded-full overflow-hidden flex mb-4 shadow-inner">
-                            <div id="anki-bar-again" class="bg-red-500 transition-all duration-500" style="width: 0%" title="Errei"></div>
-                            <div id="anki-bar-hard" class="bg-orange-500 transition-all duration-500" style="width: 0%" title="Difícil"></div>
-                            <div id="anki-bar-good" class="bg-emerald-500 transition-all duration-500" style="width: 0%" title="Médio"></div>
-                            <div id="anki-bar-easy" class="bg-blue-500 transition-all duration-500" style="width: 0%" title="Fácil"></div>
+                            <div id="anki-bar-again" class="bg-red-500 transition-all duration-500" style="width: 0%" title="Errei" data-i18n-title="anki_again"></div>
+                            <div id="anki-bar-hard" class="bg-orange-500 transition-all duration-500" style="width: 0%" title="Difícil" data-i18n-title="anki_hard"></div>
+                            <div id="anki-bar-good" class="bg-emerald-500 transition-all duration-500" style="width: 0%" title="Bom" data-i18n-title="anki_good"></div>
+                            <div id="anki-bar-easy" class="bg-blue-500 transition-all duration-500" style="width: 0%" title="Fácil" data-i18n-title="anki_easy"></div>
                         </div>
 
                         <!-- 4 Breakdown Boxes -->
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <div class="p-2 rounded-xl bg-red-50 border border-red-100 text-center">
-                                <span class="text-[10px] uppercase font-bold text-red-600 block">Errei</span>
+                                <span class="text-[10px] uppercase font-bold text-red-600 block" data-i18n="anki_again">Errei</span>
                                 <span id="anki-count-again" class="text-lg font-extrabold text-red-700">0</span>
                                 <span id="anki-pct-again" class="text-[10px] text-red-500 block">0%</span>
                             </div>
                             <div class="p-2 rounded-xl bg-orange-50 border border-orange-100 text-center">
-                                <span class="text-[10px] uppercase font-bold text-orange-600 block">Difícil</span>
+                                <span class="text-[10px] uppercase font-bold text-orange-600 block" data-i18n="anki_hard">Difícil</span>
                                 <span id="anki-count-hard" class="text-lg font-extrabold text-orange-700">0</span>
                                 <span id="anki-pct-hard" class="text-[10px] text-orange-500 block">0%</span>
                             </div>
                             <div class="p-2 rounded-xl bg-emerald-50 border border-emerald-100 text-center">
-                                <span class="text-[10px] uppercase font-bold text-emerald-600 block">Médio</span>
+                                <span class="text-[10px] uppercase font-bold text-emerald-600 block" data-i18n="anki_good">Bom</span>
                                 <span id="anki-count-good" class="text-lg font-extrabold text-emerald-700">0</span>
                                 <span id="anki-pct-good" class="text-[10px] text-emerald-500 block">0%</span>
                             </div>
                             <div class="p-2 rounded-xl bg-blue-50 border border-blue-100 text-center">
-                                <span class="text-[10px] uppercase font-bold text-blue-600 block">Fácil</span>
+                                <span class="text-[10px] uppercase font-bold text-blue-600 block" data-i18n="anki_easy">Fácil</span>
                                 <span id="anki-count-easy" class="text-lg font-extrabold text-blue-700">0</span>
                                 <span id="anki-pct-easy" class="text-[10px] text-blue-500 block">0%</span>
                             </div>
@@ -391,7 +420,7 @@
                 <!-- Panel 2: Performance by Question Type -->
                 <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
                     <div>
-                        <h2 class="font-bold text-base text-gray-900 mb-1">Desempenho por Formato</h2>
+                        <h2 class="font-bold text-base text-gray-900 mb-1" data-i18n="format_performance">Desempenho por Formato</h2>
                         <p class="text-xs text-gray-500 mb-4">Taxa de sucesso de acordo com o tipo de card</p>
 
                         <div class="space-y-3" id="by-type-container">
@@ -405,7 +434,7 @@
             <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
                 <div class="flex items-center justify-between mb-3">
                     <div>
-                        <h2 class="font-bold text-base text-gray-900">Linha do Tempo da Sessão</h2>
+                        <h2 class="font-bold text-base text-gray-900" data-i18n="session_timeline">Linha do Tempo da Sessão</h2>
                         <p class="text-xs text-gray-500">Últimos 10 cards respondidos nesta rodada</p>
                     </div>
                     <span id="timeline-counter-badge" class="text-xs text-blue-600 font-semibold flex items-center gap-1">
@@ -430,21 +459,21 @@
                     <span id="alltime-sessions" class="text-2xl font-extrabold text-gray-900">0</span>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Tempo Acumulado</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block" data-i18n="study_time">Tempo de Estudo</span>
                     <span id="alltime-time" class="text-2xl font-extrabold text-purple-600">0h 0m</span>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Cards Revisados</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block" data-i18n="total_cards_studied">Total de Cards Estudados</span>
                     <span id="alltime-cards" class="text-2xl font-extrabold text-blue-600">0</span>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Precisão Histórica</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block" data-i18n="average_accuracy">Precisão Média</span>
                     <span id="alltime-accuracy" class="text-2xl font-extrabold text-emerald-600">0%</span>
                 </div>
                 <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center col-span-2 sm:col-span-1">
                     <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">Recorde de Sequência</span>
                     <span id="alltime-best-streak" class="text-2xl font-extrabold text-amber-500 inline-flex items-center justify-center gap-1">
-                        <span class="text-xl select-none">🔥</span>
+                        <span class="material-symbols-rounded text-xl text-amber-500">local_fire_department</span>
                         <span id="alltime-best-streak-val">0</span>
                     </span>
                 </div>
@@ -455,9 +484,9 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
                         <div class="flex items-center gap-2.5">
-                            <h2 class="font-bold text-base text-gray-900">Calendário de Atividade</h2>
+                            <h2 class="font-bold text-base text-gray-900" data-i18n="activity_calendar">Calendário de Atividade</h2>
                             <span id="heatmap-streak-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 inline-flex items-center gap-1">
-                                <span>🔥</span> <span id="heatmap-streak-val">0 dias</span>
+                                <span class="material-symbols-rounded text-sm text-amber-500">local_fire_department</span> <span id="heatmap-streak-val">0 dias</span>
                             </span>
                         </div>
                         <p class="text-xs text-gray-500 mt-0.5">Histórico diário de resolução e proteção de sequência</p>
@@ -493,7 +522,7 @@
                         <span>Mais</span>
                         <span class="mx-1 text-gray-300">|</span>
                         <div class="flex items-center gap-1.5 font-semibold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200/80">
-                            <span class="text-xs">❄️</span>
+                            <span class="material-symbols-rounded text-xs text-cyan-600">ac_unit</span>
                             <span>Congelado</span>
                         </div>
                     </div>
@@ -507,7 +536,7 @@
             <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h2 class="font-bold text-base text-gray-900">Evolução da Precisão (Sessão a Sessão)</h2>
+                        <h2 class="font-bold text-base text-gray-900" data-i18n="accuracy_evolution">Evolução da Precisão (Sessão a Sessão)</h2>
                         <p class="text-xs text-gray-500">Taxa de acertos registrada ao longo das sessões anteriores</p>
                     </div>
                     <span id="chart-trend-badge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 hidden">
@@ -530,7 +559,7 @@
             <!-- PAST SESSIONS LIST -->
             <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="font-bold text-base text-gray-900">Histórico Detalhado de Sessões</h2>
+                    <h2 class="font-bold text-base text-gray-900" data-i18n="detailed_history">Histórico Detalhado de Sessões</h2>
                 </div>
 
                 <div id="history-list" class="space-y-3">
@@ -546,7 +575,7 @@
             <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h2 class="font-bold text-base text-gray-900">Cards que Precisam de Atenção</h2>
+                        <h2 class="font-bold text-base text-gray-900" data-i18n="attention_cards">Cards que Precisam de Atenção</h2>
                         <p class="text-xs text-gray-500">Top 20 cards com mais erros nesta sessão em ordem decrescente</p>
                     </div>
                     <button id="add-all-to-notebook-btn" class="hidden text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm">

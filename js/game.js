@@ -26,6 +26,7 @@ import { onAuthChange, auth } from './firebase-client.js';
 import { checkAndLoadSharedDeck } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
+import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
 
 // --- DOM ELEMENTS ---
 const deckTitle = document.getElementById('deck-title');
@@ -4456,6 +4457,9 @@ const appSettingsModal = document.getElementById('app-settings-modal');
 const closeAppSettingsModalBtn = document.getElementById('close-app-settings-modal-btn');
 const doneAppSettingsModalBtn = document.getElementById('done-app-settings-modal-btn');
 
+// Language select in settings modal
+const settingLanguageSelect = document.getElementById('setting-language-select');
+
 // Accessibility switches & rows
 const settingHapticRow = document.getElementById('setting-haptic-row');
 const settingHapticSwitch = document.getElementById('setting-haptic-switch');
@@ -4503,6 +4507,11 @@ const hapticSettingRow = document.getElementById('haptic-setting-row');
 const hapticToggleBtn = document.getElementById('haptic-toggle-btn');
 
 async function updateSettingsModalState() {
+    // 0. Language selection
+    if (settingLanguageSelect) {
+        settingLanguageSelect.value = getLanguagePreference();
+    }
+
     // 1. Accessibility switches
     updateAccessibilityUI();
 
@@ -4517,10 +4526,10 @@ async function updateSettingsModalState() {
     const settingProStatus = document.getElementById('setting-pro-status');
     if (settingProStatus) {
         if (isUserPro()) {
-            settingProStatus.textContent = 'Plano Flashcards Pro Ativo ✓';
+            settingProStatus.textContent = t('pro_plan_active');
             settingProStatus.className = 'text-[11px] font-semibold text-emerald-600';
         } else {
-            settingProStatus.textContent = 'Disponível no Flashcards Pro';
+            settingProStatus.textContent = t('pro_plan_available');
             settingProStatus.className = 'text-[11px] text-[var(--md-sys-color-on-surface-variant)]';
         }
     }
@@ -4533,7 +4542,7 @@ async function updateSettingsModalState() {
     if (settingNotebookGoalInfo) {
         const dueInfo = getNotebookDueCounts(allQuestions || []);
         const reviewedToday = dueInfo.reviewedToday || 0;
-        settingNotebookGoalInfo.textContent = `${reviewedToday} ${reviewedToday === 1 ? 'card revisado hoje' : 'cards revisados hoje'} • ${dueInfo.dueToday} vencidos`;
+        settingNotebookGoalInfo.textContent = t('goal_progress_today', { reviewed: reviewedToday, due: dueInfo.dueToday });
     }
 
     // 5. Header pinned stats tab & list
@@ -4678,13 +4687,29 @@ appSettingsModal?.addEventListener('click', (e) => {
     if (e.target === appSettingsModal) closeAppSettingsModal();
 });
 
+// App Language selector in Settings Modal
+settingLanguageSelect?.addEventListener('change', () => {
+    const val = settingLanguageSelect.value;
+    setLanguage(val);
+    updateSettingsModalState();
+});
+
+window.addEventListener('flashcards:language-change', () => {
+    applyTranslations();
+    renderHeaderPinnedStats();
+    if (settingLanguageSelect) {
+        settingLanguageSelect.value = getLanguagePreference();
+    }
+    updateSettingsModalState();
+});
+
 // Accessibility: Haptic Switch
 if (settingHapticSwitch) {
     settingHapticSwitch.addEventListener('change', () => {
         const enabled = Boolean(settingHapticSwitch.selected);
         setHapticEnabled(enabled);
         showNotificationPill(
-            enabled ? "Vibração tátil ativada" : "Vibração tátil desativada",
+            enabled ? t('haptic_enabled_toast') : t('haptic_disabled_toast'),
             "vibrate.svg"
         );
     });
@@ -4705,7 +4730,7 @@ if (settingSoundSwitch) {
         const enabled = Boolean(settingSoundSwitch.selected);
         setSoundEnabled(enabled);
         showNotificationPill(
-            enabled ? "Efeitos sonoros ativados" : "Efeitos sonoros desativados",
+            enabled ? t('sound_enabled_toast') : t('sound_disabled_toast'),
             "stats.svg"
         );
     });
@@ -4725,7 +4750,7 @@ if (settingAnimationsSwitch) {
         const enabled = Boolean(settingAnimationsSwitch.selected);
         setAnimationsEnabled(enabled);
         showNotificationPill(
-            enabled ? "Animações ativadas" : "Animações reduzidas",
+            enabled ? t('animations_enabled_toast') : t('animations_disabled_toast'),
             "stats.svg"
         );
     });

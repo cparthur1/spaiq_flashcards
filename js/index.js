@@ -4,8 +4,12 @@ import { getDailyStreak } from './engine/notebook-scheduler.js';
 import { initExploreModal, openExploreModal } from './explore-modal.js';
 import { checkAndLoadSharedDeck } from './share-manager.js';
 import { openDeckInSlots, syncSlotsToCloud } from './slot-manager.js';
+import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference } from './i18n.js';
 
 async function init() {
+    // 0. Initialize language menu
+    setupLanguageMenu();
+
     // 1. Check for shared deck via deep-link (?share=...)
     const sharedLoaded = await checkAndLoadSharedDeck();
     if (sharedLoaded) return;
@@ -522,7 +526,7 @@ export function updateHomeDailyStreak() {
 
         streakCount.textContent = count;
         if (streakLabel) {
-            streakLabel.textContent = count === 1 ? 'dia seguido' : 'dias seguidos';
+            streakLabel.textContent = count === 1 ? t('streak_label_singular') : t('streak_label_plural');
         }
 
         if (count > 0) {
@@ -543,6 +547,65 @@ export function updateHomeDailyStreak() {
     } catch (e) {
         console.warn('Erro ao atualizar streak na tela inicial:', e);
     }
+}
+
+/**
+ * Sets up the top-right language menu on the landing page
+ */
+function setupLanguageMenu() {
+    const langBtn = document.getElementById('lang-menu-btn');
+    const langDropdown = document.getElementById('lang-dropdown-menu');
+    const currentLabel = document.getElementById('lang-current-label');
+    const optionBtns = document.querySelectorAll('.lang-option-btn');
+
+    function updateLanguageUI() {
+        const cur = getCurrentLanguage();
+        const pref = getLanguagePreference();
+        if (currentLabel) {
+            currentLabel.textContent = cur === 'pt-BR' ? 'PT' : 'EN';
+        }
+        optionBtns.forEach(btn => {
+            const lang = btn.getAttribute('data-lang');
+            const check = btn.querySelector('.lang-check-icon');
+            if (check) {
+                if (lang === pref) {
+                    check.classList.remove('hidden');
+                } else {
+                    check.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    if (langBtn && langDropdown) {
+        langBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            langDropdown.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!langDropdown.contains(e.target) && !langBtn.contains(e.target)) {
+                langDropdown.classList.add('hidden');
+            }
+        });
+
+        optionBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selected = btn.getAttribute('data-lang');
+                setLanguage(selected);
+                updateLanguageUI();
+                updateHomeDailyStreak();
+                langDropdown.classList.add('hidden');
+            });
+        });
+    }
+
+    window.addEventListener('flashcards:language-change', () => {
+        updateLanguageUI();
+        updateHomeDailyStreak();
+    });
+
+    updateLanguageUI();
 }
 
 if (document.readyState === 'loading') {

@@ -6,6 +6,7 @@
 
 import { triggerHaptic, isSoundEnabled } from './effects.js';
 import { debouncedSyncSlotsToCloud } from '../slot-manager.js';
+import { t } from '../i18n.js';
 
 const POMODORO_STORAGE_KEY = 'flashcards_pomodoro_enabled';
 const POMODORO_SETTINGS_KEY = 'flashcards_pomodoro_settings';
@@ -247,7 +248,7 @@ function onBreakTimeElapsed() {
         if (statusTextEl) statusTextEl.textContent = '';
 
         const titleEl = document.getElementById('pomodoro-break-title');
-        if (titleEl) titleEl.textContent = 'Acabou a pausa!';
+        if (titleEl) titleEl.textContent = t('pomodoro_break_over_title');
 
         const descEl = document.getElementById('pomodoro-break-desc');
         if (descEl) {
@@ -256,7 +257,7 @@ function onBreakTimeElapsed() {
         }
 
         const timerLabelEl = document.getElementById('pomodoro-break-timer-label');
-        if (timerLabelEl) timerLabelEl.textContent = 'Tempo Restante de Pausa';
+        if (timerLabelEl) timerLabelEl.textContent = t('pomodoro_break_timer_label');
 
         if (!pomodoroBreakCountdownEl) pomodoroBreakCountdownEl = document.getElementById('pomodoro-break-countdown');
         if (pomodoroBreakCountdownEl) {
@@ -267,7 +268,7 @@ function onBreakTimeElapsed() {
         if (resumeIconEl) resumeIconEl.textContent = 'play_arrow';
 
         const resumeTextEl = document.getElementById('pomodoro-resume-text');
-        if (resumeTextEl) resumeTextEl.textContent = 'Continuar';
+        if (resumeTextEl) resumeTextEl.textContent = t('pomodoro_continue');
     }
 }
 
@@ -291,22 +292,22 @@ function showBreakOverlay() {
         if (statusTextEl) statusTextEl.textContent = '';
 
         const titleEl = document.getElementById('pomodoro-break-title');
-        if (titleEl) titleEl.textContent = 'Pausa Pomodoro';
+        if (titleEl) titleEl.textContent = t('pomodoro_break_title');
 
         const descEl = document.getElementById('pomodoro-break-desc');
         if (descEl) {
-            descEl.textContent = 'Feche os olhos, beba água ou respire fundo. O cérebro consolida novas conexões durante o descanso.';
+            descEl.textContent = t('pomodoro_break_desc');
             descEl.classList.remove('hidden');
         }
 
         const timerLabelEl = document.getElementById('pomodoro-break-timer-label');
-        if (timerLabelEl) timerLabelEl.textContent = 'Tempo Restante de Pausa';
+        if (timerLabelEl) timerLabelEl.textContent = t('pomodoro_break_timer_label');
 
         const resumeIconEl = document.getElementById('pomodoro-resume-icon');
         if (resumeIconEl) resumeIconEl.textContent = 'fast_forward';
 
         const resumeTextEl = document.getElementById('pomodoro-resume-text');
-        if (resumeTextEl) resumeTextEl.textContent = 'Pular Pausa e Voltar';
+        if (resumeTextEl) resumeTextEl.textContent = t('pomodoro_skip_break');
 
         pomodoroBreakOverlayEl.classList.remove('hidden');
     }
@@ -382,7 +383,7 @@ export function updatePomodoroUI() {
     }
 
     if (pomodoroSubtitleEl) {
-        pomodoroSubtitleEl.textContent = `${settings.focusMinutes} min foco • ${settings.breakMinutes} min pausa`;
+        pomodoroSubtitleEl.textContent = `${settings.focusMinutes} min ${t('focus_time').toLowerCase()} • ${settings.breakMinutes} min ${t('micro_break').toLowerCase()}`;
     }
 }
 
@@ -395,6 +396,10 @@ if (typeof window !== 'undefined') {
         } else if (!enabled && isRunning) {
             stopPomodoro();
         }
+    });
+
+    window.addEventListener('flashcards:language-change', () => {
+        updatePomodoroUI();
     });
 }
 

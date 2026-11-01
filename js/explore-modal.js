@@ -20,6 +20,7 @@ import { shareDeckToCloud } from './share-manager.js';
 import { getUserStatus, createProSubscription, createCheckoutSession, buyExtraGeneration, deleteAccountAndCancelSubscription, verifyPaymentStatus, BACKEND_URL } from './backend-api.js';
 import { triggerProUnlockCelebration } from './engine/pro-unlock-celebration.js';
 import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl } from './utils.js';
+import { t, applyTranslations } from './i18n.js';
 
 let modalInitialized = false;
 let currentUser = null;
@@ -80,6 +81,14 @@ export function initExploreModal() {
 
   // Listen to cross-device sync updates
   window.addEventListener('flashcards:sync-updated', () => {
+    renderDeckSlots();
+    renderNotebookSlot();
+  });
+
+  // Listen to language changes
+  window.addEventListener('flashcards:language-change', () => {
+    const wrapper = document.getElementById('explore-modal-wrapper');
+    if (wrapper) applyTranslations(wrapper);
     renderDeckSlots();
     renderNotebookSlot();
   });
@@ -255,8 +264,8 @@ function injectModalHtml() {
           <!-- ROW 1: 3 LATEST DECKS -->
           <div>
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Baralhos Recentes (3 Slots)</span>
-              <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Slot aberto é sobrescritível</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="recent_decks_slots">Baralhos Recentes (3 Slots)</span>
+              <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="slot_overwritable_info">Slot aberto é sobrescritível</span>
             </div>
             <div id="deck-slots-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               <!-- Rendered dynamically -->
@@ -266,8 +275,8 @@ function injectModalHtml() {
           <!-- ROW 2: NOTEBOOK (CADERNO) -->
           <div>
             <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Caderno</span>
-              <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Slot permanente</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="notebook_slot_label">Caderno</span>
+              <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="permanent_slot_info">Slot permanente</span>
             </div>
             <div id="notebook-slot-container">
               <!-- Rendered dynamically -->
@@ -278,14 +287,14 @@ function injectModalHtml() {
           <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex flex-wrap gap-2.5">
             <button id="modal-upload-btn" class="m3-btn-expressive m3-btn-tonal text-xs py-2.5 px-4 font-bold flex items-center gap-2">
               <span class="material-symbols-rounded text-lg">upload_file</span>
-              <span>Carregar Arquivo (.json)</span>
+              <span data-i18n="load_json_file">Carregar Arquivo (.json)</span>
             </button>
             <input type="file" id="modal-hidden-file-input" accept=".json" class="hidden" />
             <input type="file" id="modal-hidden-notebook-file-input" accept=".json" class="hidden" />
 
             <button id="modal-exam-btn" class="m3-btn-expressive m3-btn-outlined text-xs py-2.5 px-4 font-bold flex items-center gap-2 text-purple-700 border-purple-300 hover:bg-purple-50">
               <span class="material-symbols-rounded text-lg text-purple-600">bolt</span>
-              <span>Semana de Provas (Misturar)</span>
+              <span data-i18n="exam_week_mix">Semana de Provas (Misturar)</span>
             </button>
           </div>
 
@@ -300,33 +309,25 @@ function injectModalHtml() {
         <div class="w-12 h-12 rounded-2xl bg-blue-100 text-[var(--md-sys-color-primary)] flex items-center justify-center mx-auto mb-3">
           <span class="material-symbols-rounded text-2xl">workspace_premium</span>
         </div>
-        <h2 class="text-xl font-bold text-[var(--md-sys-color-on-surface)] mb-1">Flashcards Pro</h2>
-        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4">Sincronização em nuvem e recursos de Inteligência Artificial sem chave de API.</p>
+        <h2 class="text-xl font-bold text-[var(--md-sys-color-on-surface)] mb-1" data-i18n="flashcards_pro_title">Flashcards Pro</h2>
+        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4" data-i18n="flashcards_pro_subtitle">Sincronização em nuvem e recursos de Inteligência Artificial sem chave de API.</p>
 
         <div class="bg-[var(--md-sys-color-surface-container-low)] p-4 rounded-2xl text-left space-y-2 mb-4 text-xs">
           <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
             <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span><strong>Gerar flashcards com IA</strong> usando seus materiais</span>
+            <span data-i18n="pro_feat_ai_gen"><strong>Gerar flashcards com IA</strong> usando seus materiais</span>
           </div>
           <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
             <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span><strong>Tutor de IA</strong> que explica seu card</span>
+            <span data-i18n="pro_feat_semantic"><strong>Tutor de IA</strong> que explica seu card</span>
           </div>
           <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
             <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span><strong>Corretor</strong> de respostas com sinônimos</span>
+            <span data-i18n="pro_feat_cloud_sync"><strong>Sincronização</strong> entre dispositivos</span>
           </div>
           <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
             <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span><strong>Estatísticas</strong> aprimoradas</span>
-          </div>
-          <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
-            <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span><strong>Sincronização</strong> entre dispositivos</span>
-          </div>
-          <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
-            <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span><strong>Compartilhar</strong> decks por link</span>
+            <span data-i18n="pro_feat_unlimited">Estude em qualquer lugar sem limites</span>
           </div>
         </div>
 
@@ -375,6 +376,7 @@ function injectModalHtml() {
     </div>
   `;
   document.body.appendChild(container);
+  applyTranslations(container);
 }
 
 /**

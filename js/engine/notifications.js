@@ -11,6 +11,7 @@
 
 import { getTodayDateString, getDailyStreak } from './notebook-scheduler.js';
 import { debouncedSyncSlotsToCloud } from '../slot-manager.js';
+import { t } from '../i18n.js';
 
 export const NOTIFICATIONS_STORAGE_KEY = 'flashcards_notifications_settings';
 
@@ -113,22 +114,22 @@ export async function sendDailyNotification(period, forced = false) {
     const streakDays = streakInfo.streak || 0;
     const isTodayStudied = streakInfo.isTodayStudied || false;
 
-    let title = 'Hora dos Flashcards';
-    let body = 'Reserve alguns minutos para revisar seus cards e acelerar seu aprendizado.';
+    let title = t('notif_default_title');
+    let body = t('notif_default_body');
     let requireInteraction = false;
     let vibrate = [100, 50, 100];
     let tag = `flashcards-${period}`;
 
     if (period === 'morning') {
-        title = 'Flashcards: Comece o dia com foco!';
+        title = t('notif_morning_title');
         body = isTodayStudied 
-            ? 'Otimo comeco! Deseja avancar ainda mais na sua meta de hoje?' 
-            : 'Revise alguns cards agora pela manha para ativar sua memoria de longo prazo.';
+            ? t('notif_morning_body_studied') 
+            : t('notif_morning_body_unstudied');
     } else if (period === 'noon') {
-        title = 'Flashcards: Pausa do Meio-dia';
+        title = t('notif_noon_title');
         body = isTodayStudied
-            ? 'Sua meta esta em andamento! Que tal uma revisao rapida de consolidacao?'
-            : 'Aproveite o intervalo do almoco para adiantar seus cards e manter a mente afiada.';
+            ? t('notif_noon_body_studied')
+            : t('notif_noon_body_unstudied');
     } else if (period === 'night') {
         // Alerta Agressivo Noturno: Salvar Sequência antes da meia-noite!
         requireInteraction = true;
@@ -136,13 +137,13 @@ export async function sendDailyNotification(period, forced = false) {
         tag = 'flashcards-streak-danger';
 
         if (!isTodayStudied) {
-            title = 'ATENCAO: Sua sequencia vai ser perdida!';
+            title = t('notif_night_title_danger');
             body = streakDays > 0 
-                ? `Resta pouco tempo antes da meia-noite! Voce ainda nao estudou hoje e vai perder seu streak de ${streakDays} dias. Entre agora para salvar sua sequencia!`
-                : 'O dia esta acabando e voce ainda nao praticou hoje! Faca seus cards antes da meia-noite para manter o ritmo de estudos.';
+                ? t('notif_night_body_danger_streak', { streak: streakDays })
+                : t('notif_night_body_danger_no_streak');
         } else {
-            title = 'Revisao Noturna de Consolidacao';
-            body = 'Sua sequencia de hoje ja esta salva, mas revisar antes de dormir ajuda a fixar conexoes neurais durante o sono.';
+            title = t('notif_night_title_review');
+            body = t('notif_night_body_review');
             requireInteraction = false;
         }
     }

@@ -105,7 +105,7 @@
         
         <!-- SECTION 1: QUICK SETTINGS (CONFIGURAÇÕES, AI & POMODORO) -->
         <div class="px-1 py-1 space-y-0.5" role="group" aria-label="Quick settings">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1">Quick settings</span>
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1" data-i18n="quick_settings">Quick settings</span>
 
             <!-- Configurações (Abre o Modal Completo de Configurações: Acessibilidade, Pomodoro, IA, Metas) -->
             <button type="button" id="open-settings-modal-btn"
@@ -114,8 +114,8 @@
                 <div class="flex items-center gap-3 min-w-0">
                     <img id="settings-menu-icon" src="../assets/img/settings.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Configurações">
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Configurações</p>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">Acessibilidade, Pomodoro, IA e metas</p>
+                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="settings">Configurações</p>
+                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="settings_subtitle">Acessibilidade, Pomodoro, IA e metas</p>
                     </div>
                 </div>
                 <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
@@ -129,8 +129,8 @@
                     <span id="menu-account-icon" class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover:scale-110">account_circle</span>
                     <img id="menu-account-avatar" referrerpolicy="no-referrer" class="hidden w-7 h-7 rounded-full object-cover border border-blue-400 flex-shrink-0" alt="Avatar">
                     <div class="flex-1 min-w-0">
-                        <p id="menu-account-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Minha Conta</p>
-                        <p id="menu-account-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">Sincronização e Plano Pro</p>
+                        <p id="menu-account-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="my_account">Minha Conta</p>
+                        <p id="menu-account-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="my_account_subtitle">Sincronização e Plano Pro</p>
                     </div>
                 </div>
                 <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
@@ -145,7 +145,7 @@
                     title="Configurar tempos do Pomodoro">
                     <span class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover/trigger:scale-110">timer</span>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Pomodoro</p>
+                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="pomodoro_timer">Pomodoro</p>
                         <p id="pomodoro-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate">25 min foco • 5 min pausa</p>
                     </div>
                 </button>
@@ -157,7 +157,7 @@
 
         <!-- SECTION 2: BARALHO (SAVE & EDIT DECK) -->
         <div class="px-1 py-1 space-y-0.5">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1">Baralho</span>
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1" data-i18n="page_title_game">Baralho</span>
             
             <!-- Save Deck -->
             <button id="export-btn"
@@ -165,8 +165,8 @@
                 title="Baixar JSON Atualizado">
                 <img id="export-btn-icon" src="../assets/img/save.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Salvar">
                 <div class="flex-1 min-w-0">
-                    <p id="export-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Salvar Baralho</p>
-                    <p id="export-btn-desc" class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Exportar cópia em .json</p>
+                    <p id="export-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="save_deck">Salvar Baralho</p>
+                    <p id="export-btn-desc" class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="export_deck">Exportar cópia em .json</p>
                 </div>
             </button>
 
@@ -176,8 +176,8 @@
                 title="Editar com Assistente de IA">
                 <img id="go-to-editor-btn-icon" src="../assets/img/edit.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Editar">
                 <div class="flex-1 min-w-0">
-                    <p id="go-to-editor-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Editar Baralho</p>
-                    <p id="go-to-editor-btn-desc" class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Abrir editor e gerador IA</p>
+                    <p id="go-to-editor-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="edit">Editar Baralho</p>
+                    <p id="go-to-editor-btn-desc" class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="ai_assistant">Abrir editor e gerador IA</p>
                 </div>
             </button>
         </div>
@@ -186,7 +186,7 @@
 
         <!-- SECTION 3: ESTUDO, REINICIAR & SINCRONIZAÇÃO -->
         <div class="px-1 py-1 space-y-0.5">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1">Estudo & Sessão</span>
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1" data-i18n="stats_overview">Estudo & Sessão</span>
 
             <!-- Stats Page Link -->
             <a href="stats.html" id="stats-btn"
@@ -194,10 +194,10 @@
                 title="Ver Estatísticas da Sessão e Anteriores">
                 <img src="../assets/img/stats.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Estatísticas">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold text-blue-600">Estatísticas</p>
+                    <p class="text-sm font-bold text-blue-600" data-i18n="stats_title">Estatísticas</p>
                     <p class="text-xs text-blue-500/80">Progresso, retenção & histórico</p>
                 </div>
-                <span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Ver</span>
+                <span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" data-i18n="view_stats">Ver</span>
             </a>
 
             <!-- Restart Game -->
@@ -206,7 +206,7 @@
                 title="Reiniciar Jogo">
                 <img src="../assets/img/reset.svg" class="w-5 h-5 flex-shrink-0 transition-all duration-300 group-hover:rotate-[-180deg]" alt="Reiniciar">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Reiniciar Jogo</p>
+                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="restart_deck">Reiniciar Jogo</p>
                     <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Recomeçar cartas do início</p>
                 </div>
             </button>
@@ -244,8 +244,8 @@
                 title="Apagar todo o conteúdo do Caderno">
                 <img src="../assets/img/delete.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Limpar">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-red-600">Limpar caderno</p>
-                    <p class="text-xs text-red-500/80">Apagar todos os cards do caderno</p>
+                    <p class="text-sm font-semibold text-red-600" data-i18n="clear_notebook">Limpar caderno</p>
+                    <p class="text-xs text-red-500/80" data-i18n="clear_notebook_desc">Apagar todos os cards do caderno</p>
                 </div>
             </button>
 
@@ -254,7 +254,7 @@
                 title="Voltar ao início">
                 <img id="exit-icon" src="../assets/img/exit.svg?v=3" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:translate-x-[-2px]" alt="Sair">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold">Sair do Jogo</p>
+                    <p class="text-sm font-bold" data-i18n="exit_app">Sair do Jogo</p>
                     <p class="text-xs text-red-500/80">Encerrar e voltar ao início</p>
                 </div>
             </button>
@@ -292,12 +292,12 @@
                 <div id="deck-select-dropdown" class="hidden absolute top-full left-0 mt-2.5 w-64 sm:w-72 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-[100]">
                     <div class="p-1.5 flex flex-col gap-1">
                         <!-- Modes Section Header -->
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 py-1 select-none">Modos de Estudo</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 py-1 select-none" data-i18n="study_modes">Modos de Estudo</span>
 
                         <!-- Explorar Arquivos Item -->
                         <button id="deck-item-explore" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left hover:bg-blue-50 text-[var(--md-sys-color-primary)] font-semibold transition border-b border-gray-100">
                             <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)] flex-shrink-0">folder_open</span>
-                            <span class="truncate flex-1">Explorar arquivos</span>
+                            <span class="truncate flex-1" data-i18n="explore_files">Explorar arquivos</span>
                         </button>
 
                         <!-- Exam Week Item -->
@@ -306,21 +306,21 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                             </svg>
                             <div class="flex-1 min-w-0">
-                                <span class="font-semibold text-gray-800 block truncate">Semana de Provas</span>
-                                <span class="text-[11px] text-gray-500 block truncate" id="deck-item-exam-sub">Mistura de Baralhos</span>
+                                <span class="font-semibold text-gray-800 block truncate" data-i18n="exam_week">Semana de Provas</span>
+                                <span class="text-[11px] text-gray-500 block truncate" id="deck-item-exam-sub" data-i18n="exam_week_subtitle">Mistura de Baralhos</span>
                             </div>
                         </button>
 
                         <!-- Main Deck Item -->
                         <button id="deck-item-normal" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left hover:bg-gray-100 transition">
                             <img src="../assets/img/uploaded.svg" class="w-5 h-5 flex-shrink-0" id="deck-item-normal-icon" alt="Deck">
-                            <span class="font-semibold text-gray-800 truncate flex-1" id="deck-item-normal-name">Baralho</span>
+                            <span class="font-semibold text-gray-800 truncate flex-1" id="deck-item-normal-name" data-i18n="page_title_game">Baralho</span>
                         </button>
 
                         <!-- Notebook Item -->
                         <button id="deck-item-notebook" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left hover:bg-gray-100 transition">
                             <img src="../assets/img/bookmark_check.svg" class="w-5 h-5 flex-shrink-0" alt="Caderno">
-                            <span class="font-semibold text-gray-800 flex-1 truncate">Caderno</span>
+                            <span class="font-semibold text-gray-800 flex-1 truncate" data-i18n="notebook_slot_label">Caderno</span>
                             <!-- Daily Streak Badge aligned right -->
                             <div id="notebook-streak-badge" class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 border border-gray-200/80 transition-all flex-shrink-0 ml-auto" title="Dias consecutivos estudando">
                                 <img src="../assets/img/fire.svg" id="notebook-streak-fire" class="notebook-streak-fire is-desaturated w-3.5 h-3.5 transition-all pointer-events-none" alt="Streak">
@@ -471,29 +471,29 @@
                     <span class="material-symbols-rounded text-4xl sm:text-5xl text-amber-950">emoji_events</span>
                 </div>
                 <h2 class="text-xl sm:text-2xl font-black text-[var(--md-sys-color-on-surface)] tracking-tight mb-1 flex items-center justify-center gap-1.5">
-                    <span>Parabéns! Deck Concluído!</span>
+                    <span data-i18n="deck_completed_title">Parabéns! Deck Concluído!</span>
                     <span class="material-symbols-rounded text-2xl text-amber-500">celebration</span>
                 </h2>
-                <p id="deck-completion-subtitle" class="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] mb-4 max-w-sm">
+                <p id="deck-completion-subtitle" class="text-xs sm:text-sm text-[var(--md-sys-color-on-surface-variant)] mb-4 max-w-sm" data-i18n="deck_completed_subtitle">
                     Todos os cards deste baralho foram respondidos com sucesso nesta rodada!
                 </p>
 
                 <!-- Mini Session Stats Grid -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-md mb-6">
                     <div class="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Cards</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="completed_cards">Cards</span>
                         <span id="completion-stat-cards" class="text-base sm:text-lg font-extrabold text-[var(--md-sys-color-on-surface)]">0</span>
                     </div>
                     <div class="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Precisão</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="accuracy">Precisão</span>
                         <span id="completion-stat-acc" class="text-base sm:text-lg font-extrabold text-emerald-600">100%</span>
                     </div>
                     <div class="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Tempo</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="duration">Tempo</span>
                         <span id="completion-stat-time" class="text-base sm:text-lg font-extrabold text-purple-600">00:00</span>
                     </div>
                     <div class="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Sequência</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="streak">Sequência</span>
                         <span class="inline-flex items-center gap-1 text-amber-500">
                             <span id="completion-stat-streak" class="text-base sm:text-lg font-extrabold">0</span>
                             <img src="../assets/img/fire.svg" class="w-4 h-4 select-none pointer-events-none inline-block" alt="Fogo">
@@ -512,12 +512,12 @@
                     <a href="stats.html" id="completion-stats-btn"
                         class="m3-btn-expressive m3-btn-filled w-full sm:flex-1 py-3 px-4 font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
                         <span class="material-symbols-rounded text-xl">bar_chart</span>
-                        <span>Ver estatísticas</span>
+                        <span data-i18n="view_stats">Ver estatísticas</span>
                     </a>
                     <button type="button" id="completion-restart-btn"
                         class="m3-btn-expressive m3-btn-tonal w-full sm:flex-1 py-3 px-4 font-bold text-sm sm:text-base flex items-center justify-center gap-2 border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-highest)]">
                         <span class="material-symbols-rounded text-xl">restart_alt</span>
-                        <span>Restart</span>
+                        <span data-i18n="restart_deck">Restart</span>
                     </button>
                 </div>
             </div>
@@ -529,7 +529,7 @@
                 <div class="relative">
                     <input type="text" id="answer-input"
                         class="w-full px-4 py-3 text-base sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
-                        placeholder="Digite sua resposta aqui..." autocomplete="off" autocorrect="off" autocapitalize="off"
+                        placeholder="Digite sua resposta aqui..." data-i18n-placeholder="type_answer_placeholder" autocomplete="off" autocorrect="off" autocapitalize="off"
                         spellcheck="false" name="study_card_answer" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
                 </div>
             </div>
@@ -563,32 +563,32 @@
                 <button id="anki-flip-btn"
                     class="m3-btn-expressive m3-btn-filled w-full py-4 px-4 text-base font-bold flex items-center justify-center gap-2 cursor-pointer select-none shadow-md">
                     <span class="material-symbols-rounded text-xl">sync</span>
-                    Virar Cartão <span class="text-xs opacity-80 font-normal ml-1">(Espaço)</span>
+                    <span data-i18n="flip_card">Virar Cartão</span> <span class="text-xs opacity-80 font-normal ml-1">(Espaço)</span>
                 </button>
             </div>
 
             <!-- Flipped: Gamepad Rating Buttons (Errei, Difícil, Médio, Fácil) -->
             <div id="anki-flipped-controls" class="hidden flex flex-col gap-2">
-                <p class="text-xs text-center text-[var(--md-sys-color-on-surface-variant)] font-medium mb-1">Como foi lembrar este cartão?</p>
+                <p class="text-xs text-center text-[var(--md-sys-color-on-surface-variant)] font-medium mb-1" data-i18n="anki_quality">Como foi lembrar este cartão?</p>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                     <!-- 1. Errei (Left button, red) -->
                     <button id="anki-btn-again" class="anki-rating-btn anki-btn-again">
-                        <span>Errei</span>
+                        <span data-i18n="anki_again">Errei</span>
                         <span class="shortcut-badge">[1]</span>
                     </button>
                     <!-- 2. Difícil (Orange) -->
                     <button id="anki-btn-hard" class="anki-rating-btn anki-btn-hard">
-                        <span>Difícil</span>
+                        <span data-i18n="anki_hard">Difícil</span>
                         <span class="shortcut-badge">[2]</span>
                     </button>
                     <!-- 3. Médio (Green) -->
                     <button id="anki-btn-good" class="anki-rating-btn anki-btn-good">
-                        <span>Médio</span>
+                        <span data-i18n="anki_good">Médio</span>
                         <span class="shortcut-badge">[3]</span>
                     </button>
                     <!-- 4. Fácil (Blue) -->
                     <button id="anki-btn-easy" class="anki-rating-btn anki-btn-easy">
-                        <span>Fácil</span>
+                        <span data-i18n="anki_easy">Fácil</span>
                         <span class="shortcut-badge">[4]</span>
                     </button>
                 </div>
@@ -598,23 +598,23 @@
         <div id="action-buttons-area" class="mt-6 relative z-10 hidden">
             <button id="submit-btn"
                 class="m3-btn-expressive m3-btn-filled w-full py-4 px-4 text-base font-bold flex items-center justify-center gap-2 cursor-pointer select-none shadow-md">
-                Verificar Resposta
+                <span data-i18n="submit_answer">Verificar Resposta</span>
             </button>
 
             <div id="correction-options" class="hidden flex-col gap-3 mt-4">
                 <button id="ask-ai-btn"
                     class="hidden m3-btn-expressive m3-btn-tertiary-tonal w-full py-3.5 px-4 flex items-center justify-center gap-2 font-bold shadow-sm">
                     <span class="material-symbols-rounded text-xl">psychology</span>
-                    Perguntar à IA
+                    <span data-i18n="ai_assistant">Perguntar à IA</span>
                 </button>
                 <div class="flex gap-2.5 justify-center">
                     <button id="edit-btn"
                         class="m3-btn-expressive m3-btn-tonal flex-1 py-3 px-4 font-bold">
-                        <span class="material-symbols-rounded text-lg">edit</span> Editar
+                        <span class="material-symbols-rounded text-lg">edit</span> <span data-i18n="edit">Editar</span>
                     </button>
                     <button id="delete-correction-btn"
                         class="m3-btn-expressive flex-1 py-3 px-4 font-bold bg-red-100 hover:bg-red-200 text-red-700">
-                        <span class="material-symbols-rounded text-lg">delete</span> Excluir
+                        <span class="material-symbols-rounded text-lg">delete</span> <span data-i18n="delete">Excluir</span>
                     </button>
                 </div>
             </div>
@@ -622,7 +622,7 @@
             <button id="next-question-btn"
                 class="m3-btn-expressive w-full mt-4 btn-skip-tactile font-bold py-4 px-4 text-base flex items-center justify-center gap-2 hidden cursor-pointer select-none shadow-md">
                 <span class="material-symbols-rounded text-xl">skip_next</span>
-                <span>Pular Questão</span>
+                <span data-i18n="next_question">Pular Questão</span>
                 <span class="text-xs opacity-80 font-normal ml-1 hidden sm:inline">(Espaço)</span>
             </button>
         </div>
@@ -787,11 +787,11 @@
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/settings.svg" class="w-6 h-6 flex-shrink-0" alt="Configurações">
                     <div>
-                        <h3 id="settings-modal-title" class="font-extrabold text-xl text-[var(--md-sys-color-on-surface)] tracking-tight leading-tight">Configurações</h3>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Acessibilidade, Pomodoro, IA e metas</p>
+                        <h3 id="settings-modal-title" class="font-extrabold text-xl text-[var(--md-sys-color-on-surface)] tracking-tight leading-tight" data-i18n="settings_modal_title">Configurações</h3>
+                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_modal_subtitle">Idioma, Acessibilidade, Pomodoro, IA e metas</p>
                     </div>
                 </div>
-                <button id="close-app-settings-modal-btn" type="button" class="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition cursor-pointer" aria-label="Fechar">
+                <button id="close-app-settings-modal-btn" type="button" class="p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition cursor-pointer" aria-label="Fechar" data-i18n-aria-label="close">
                     <span class="material-symbols-rounded text-xl">close</span>
                 </button>
             </div>
@@ -799,11 +799,37 @@
             <!-- Body -->
             <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
 
+                <!-- CATEGORIA: IDIOMA DO APLICATIVO -->
+                <section class="space-y-3" aria-labelledby="settings-language-heading">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">translate</span>
+                        <h4 id="settings-language-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_language_heading">Idioma do Aplicativo</h4>
+                    </div>
+
+                    <div class="space-y-2 bg-[var(--md-sys-color-surface-container-low)] rounded-2xl p-3 border border-[var(--md-sys-color-outline-variant)]">
+                        <div>
+                            <label for="setting-language-select" class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="settings_language_label">
+                                Idioma de exibição
+                            </label>
+                            <select id="setting-language-select" class="w-full px-3 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                                <option value="auto" data-i18n="lang_auto">Automático (Navegador)</option>
+                                <option value="pt-BR">Português (Brasil)</option>
+                                <option value="en-US">English (US)</option>
+                            </select>
+                            <p id="setting-language-info" class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5" data-i18n="settings_language_info">
+                                Detectado automaticamente com base no navegador.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="h-[1px] bg-[var(--md-sys-color-outline-variant)]"></div>
+
                 <!-- CATEGORIA 1: ACESSIBILIDADE -->
                 <section class="space-y-3" aria-labelledby="settings-accessibility-heading">
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">tune</span>
-                        <h4 id="settings-accessibility-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Acessibilidade</h4>
+                        <h4 id="settings-accessibility-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_accessibility_heading">Acessibilidade</h4>
                     </div>
 
                     <div class="space-y-1 bg-[var(--md-sys-color-surface-container-low)] rounded-2xl p-1.5 border border-[var(--md-sys-color-outline-variant)]">
@@ -813,8 +839,8 @@
                             <div class="flex items-center gap-3 min-w-0">
                                 <img src="../assets/img/vibrate.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Vibração">
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Vibração tátil</p>
-                                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Feedback ao virar cards, acertos e erros</p>
+                                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="haptic_vibration">Vibração tátil</p>
+                                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="haptic_vibration_desc">Feedback ao virar cards, acertos e erros</p>
                                 </div>
                             </div>
                             <md-switch id="setting-haptic-switch" aria-label="Alternar vibração tátil"></md-switch>
@@ -826,8 +852,8 @@
                             <div class="flex items-center gap-3 min-w-0">
                                 <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)] flex-shrink-0">volume_up</span>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Efeitos sonoros</p>
-                                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Sinais sonoros em respostas e Pomodoro</p>
+                                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="sound_effects">Efeitos sonoros</p>
+                                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="sound_effects_desc">Sinais sonoros em respostas e Pomodoro</p>
                                 </div>
                             </div>
                             <md-switch id="setting-sound-switch" aria-label="Alternar efeitos sonoros"></md-switch>
@@ -839,8 +865,8 @@
                             <div class="flex items-center gap-3 min-w-0">
                                 <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)] flex-shrink-0">motion_photos_on</span>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Animações e transições</p>
-                                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Efeitos de partículas, ondas de choque e física</p>
+                                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="animations_transitions">Animações e transições</p>
+                                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="animations_transitions_desc">Efeitos de partículas, ondas de choque e física</p>
                                 </div>
                             </div>
                             <md-switch id="setting-animations-switch" aria-label="Alternar animações"></md-switch>
@@ -856,8 +882,8 @@
                         <div class="flex items-center gap-2">
                             <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">notifications</span>
                             <div>
-                                <h4 id="settings-notifications-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Notificações Diárias</h4>
-                                <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Lembretes para praticar cards e salvar o streak</p>
+                                <h4 id="settings-notifications-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_notifications_heading">Notificações Diárias</h4>
+                                <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_notifications_desc">Lembretes para praticar cards e salvar o streak</p>
                             </div>
                         </div>
                         <md-switch id="setting-notif-master-switch" aria-label="Ativar todas as notificações"></md-switch>
@@ -870,8 +896,8 @@
                             <div class="flex items-center gap-2.5 min-w-0 flex-1">
                                 <span class="material-symbols-rounded text-lg text-amber-500 flex-shrink-0">wb_sunny</span>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-xs font-bold text-[var(--md-sys-color-on-surface)]">Manhã</p>
-                                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate">Inicie o dia revisando</p>
+                                    <p class="text-xs font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="notif_morning">Manhã</p>
+                                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="notif_morning_desc">Inicie o dia revisando</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 flex-shrink-0">
@@ -887,8 +913,8 @@
                             <div class="flex items-center gap-2.5 min-w-0 flex-1">
                                 <span class="material-symbols-rounded text-lg text-orange-500 flex-shrink-0">light_mode</span>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-xs font-bold text-[var(--md-sys-color-on-surface)]">Meio-dia</p>
-                                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate">Pausa do almoço e metas</p>
+                                    <p class="text-xs font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="notif_noon">Meio-dia</p>
+                                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="notif_noon_desc">Pausa do almoço e metas</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 flex-shrink-0">
@@ -905,10 +931,10 @@
                                 <span class="material-symbols-rounded text-lg text-red-600 flex-shrink-0">warning</span>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-1.5">
-                                        <p class="text-xs font-bold text-red-600">Noite (Salvar Streak)</p>
-                                        <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-red-100 text-red-700">Urgente</span>
+                                        <p class="text-xs font-bold text-red-600" data-i18n="notif_night">Noite (Salvar Streak)</p>
+                                        <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-red-100 text-red-700" data-i18n="urgent_tag">Urgente</span>
                                     </div>
-                                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate">Aviso antes da meia-noite se streak não salvo</p>
+                                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="notif_night_desc">Aviso antes da meia-noite se streak não salvo</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 flex-shrink-0">
@@ -921,11 +947,11 @@
 
                         <!-- Botão Testar Lembrete -->
                         <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)]/60 flex items-center justify-between gap-3">
-                            <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Teste como a notificação aparece no seu dispositivo:</span>
+                            <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="test_notif_prompt">Teste como a notificação aparece no seu dispositivo:</span>
                             <button type="button" id="setting-notif-test-btn"
                                 class="px-3 py-1 rounded-xl border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] text-xs font-bold text-[var(--md-sys-color-primary)] transition cursor-pointer flex items-center gap-1">
                                 <span class="material-symbols-rounded text-sm">notifications_active</span>
-                                <span>Testar</span>
+                                <span data-i18n="test">Testar</span>
                             </button>
                         </div>
                     </div>
@@ -939,8 +965,8 @@
                         <div class="flex items-center gap-2">
                             <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">tune</span>
                             <div>
-                                <h4 id="settings-pinned-stats-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Estatísticas no Cabeçalho</h4>
-                                <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Escolha quais métricas aparecem fixadas no topo</p>
+                                <h4 id="settings-pinned-stats-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_pinned_stats_heading">Estatísticas no Cabeçalho</h4>
+                                <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_pinned_stats_desc">Escolha quais métricas aparecem fixadas no topo</p>
                             </div>
                         </div>
                         <span id="setting-stats-pinned-count" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 flex-shrink-0">
@@ -951,11 +977,11 @@
                     <!-- Segmented Buttons: Jogo Normal vs Caderno -->
                     <div class="flex p-1 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]/60 text-xs font-bold gap-1">
                         <button type="button" id="setting-stats-tab-deck"
-                            class="flex-1 py-1.5 px-3 rounded-xl transition-all text-center cursor-pointer bg-white text-[var(--md-sys-color-primary)] shadow-xs">
+                            class="flex-1 py-1.5 px-3 rounded-xl transition-all text-center cursor-pointer bg-white text-[var(--md-sys-color-primary)] shadow-xs" data-i18n="pinned_tab_deck">
                             Jogo Normal (Baralho)
                         </button>
                         <button type="button" id="setting-stats-tab-notebook"
-                            class="flex-1 py-1.5 px-3 rounded-xl transition-all text-center cursor-pointer text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]">
+                            class="flex-1 py-1.5 px-3 rounded-xl transition-all text-center cursor-pointer text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]" data-i18n="pinned_tab_notebook">
                             Caderno
                         </button>
                     </div>
@@ -972,7 +998,7 @@
                 <section class="space-y-3" aria-labelledby="settings-pomodoro-heading">
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">timer</span>
-                        <h4 id="settings-pomodoro-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Pomodoro & Pausas</h4>
+                        <h4 id="settings-pomodoro-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_pomodoro_heading">Pomodoro & Pausas</h4>
                     </div>
 
                     <div class="space-y-3 bg-[var(--md-sys-color-surface-container-low)] rounded-2xl p-3 border border-[var(--md-sys-color-outline-variant)]">
@@ -980,8 +1006,8 @@
                         <div id="setting-pomodoro-row"
                             class="w-full flex items-center justify-between gap-3 px-2 py-1 text-left cursor-pointer group select-none">
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Timer Pomodoro</p>
-                                <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Micro-pausas para combate à fadiga sináptica</p>
+                                <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="pomodoro_switch_title">Timer Pomodoro</p>
+                                <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="pomodoro_switch_desc">Micro-pausas para combate à fadiga sináptica</p>
                             </div>
                             <md-switch id="setting-pomodoro-switch" aria-label="Alternar Pomodoro"></md-switch>
                         </div>
@@ -989,27 +1015,27 @@
                         <!-- Intervalos -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[var(--md-sys-color-outline-variant)]/60">
                             <div>
-                                <label for="setting-pomodoro-focus-select" class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">
+                                <label for="setting-pomodoro-focus-select" class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="focus_time">
                                     Tempo de Foco
                                 </label>
                                 <select id="setting-pomodoro-focus-select" class="w-full px-3 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
-                                    <option value="15">15 minutos</option>
-                                    <option value="20">20 minutos</option>
-                                    <option value="25" selected>25 minutos (Padrão)</option>
-                                    <option value="30">30 minutos</option>
-                                    <option value="45">45 minutos</option>
-                                    <option value="50">50 minutos</option>
+                                    <option value="15">15 min</option>
+                                    <option value="20">20 min</option>
+                                    <option value="25" selected>25 min</option>
+                                    <option value="30">30 min</option>
+                                    <option value="45">45 min</option>
+                                    <option value="50">50 min</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="setting-pomodoro-break-select" class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">
+                                <label for="setting-pomodoro-break-select" class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="micro_break">
                                     Micro-pausa
                                 </label>
                                 <select id="setting-pomodoro-break-select" class="w-full px-3 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
-                                    <option value="3">3 minutos</option>
-                                    <option value="5" selected>5 minutos (Padrão)</option>
-                                    <option value="10">10 minutos</option>
-                                    <option value="15">15 minutos</option>
+                                    <option value="3">3 min</option>
+                                    <option value="5" selected>5 min</option>
+                                    <option value="10">10 min</option>
+                                    <option value="15">15 min</option>
                                 </select>
                             </div>
                         </div>
@@ -1022,7 +1048,7 @@
                 <section class="space-y-3" aria-labelledby="settings-ai-heading">
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">auto_awesome</span>
-                        <h4 id="settings-ai-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Recursos de IA</h4>
+                        <h4 id="settings-ai-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_ai_heading">Recursos de IA</h4>
                     </div>
 
                     <div class="space-y-2 bg-[var(--md-sys-color-surface-container-low)] rounded-2xl p-3 border border-[var(--md-sys-color-outline-variant)]">
@@ -1030,8 +1056,8 @@
                         <div id="setting-ai-row"
                             class="w-full flex items-center justify-between gap-3 px-2 py-1 text-left cursor-pointer group select-none">
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Assistente Gemini</p>
-                                <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]">Correção semântica e explicação de respostas</p>
+                                <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="gemini_assistant">Assistente Gemini</p>
+                                <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="gemini_assistant_desc">Correção semântica e explicação de respostas</p>
                             </div>
                             <md-switch id="setting-ai-switch" aria-label="Alternar assistente de IA"></md-switch>
                         </div>
@@ -1039,13 +1065,13 @@
                         <!-- Botão Gerenciar Chave de API -->
                         <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)]/60 flex items-center justify-between gap-3">
                             <div>
-                                <span class="text-xs font-semibold text-[var(--md-sys-color-on-surface)] block">Plano Flashcards Pro</span>
-                                <span id="setting-pro-status" class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">IA inclusa no plano</span>
+                                <span class="text-xs font-semibold text-[var(--md-sys-color-on-surface)] block" data-i18n="flashcards_pro_plan">Plano Flashcards Pro</span>
+                                <span id="setting-pro-status" class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="pro_ai_included">IA inclusa no plano</span>
                             </div>
                             <button type="button" id="setting-pro-btn"
                                 class="px-3 py-1.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] text-xs font-bold text-[var(--md-sys-color-primary)] transition cursor-pointer flex items-center gap-1.5">
                                 <img src="../assets/img/paywall.svg" class="w-3.5 h-3.5" alt="Pro">
-                                <span>Gerenciar</span>
+                                <span data-i18n="manage">Gerenciar</span>
                             </button>
                         </div>
                     </div>
@@ -1057,21 +1083,21 @@
                 <section class="space-y-3" aria-labelledby="settings-notebook-heading">
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">collections_bookmark</span>
-                        <h4 id="settings-notebook-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">Meta do Caderno & Dados</h4>
+                        <h4 id="settings-notebook-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_notebook_heading">Meta do Caderno & Dados</h4>
                     </div>
 
                     <div class="space-y-3 bg-[var(--md-sys-color-surface-container-low)] rounded-2xl p-3 border border-[var(--md-sys-color-outline-variant)]">
                         <!-- Meta diária -->
                         <div>
-                            <label for="setting-notebook-goal-select" class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1">
+                            <label for="setting-notebook-goal-select" class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="daily_review_goal">
                                 Meta Diária de Revisão
                             </label>
                             <select id="setting-notebook-goal-select" class="w-full px-3 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
-                                <option value="0">Sem limite (Estudar todos os cards vencidos)</option>
-                                <option value="10">10 cards por dia</option>
-                                <option value="20">20 cards por dia</option>
-                                <option value="30">30 cards por dia</option>
-                                <option value="50">50 cards por dia</option>
+                                <option value="0" data-i18n="no_limit_goal">Sem limite (Estudar todos os cards vencidos)</option>
+                                <option value="10">10 cards</option>
+                                <option value="20">20 cards</option>
+                                <option value="30">30 cards</option>
+                                <option value="50">50 cards</option>
                             </select>
                             <p id="setting-notebook-goal-info" class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5">
                                 Progresso de hoje calculado automaticamente.
@@ -1081,13 +1107,13 @@
                         <!-- Limpar caderno -->
                         <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)]/60 flex items-center justify-between gap-3">
                             <div>
-                                <span class="text-xs font-semibold text-red-600 block">Limpar Caderno</span>
-                                <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Apaga todos os cartões e históricos</span>
+                                <span class="text-xs font-semibold text-red-600 block" data-i18n="clear_notebook">Limpar Caderno</span>
+                                <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="clear_notebook_desc">Apaga todos os cartões e históricos</span>
                             </div>
                             <button type="button" id="setting-clear-notebook-btn"
                                 class="px-3 py-1.5 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-100 text-xs font-bold text-red-600 transition cursor-pointer flex items-center gap-1.5">
                                 <span class="material-symbols-rounded text-sm">delete</span>
-                                <span>Limpar</span>
+                                <span data-i18n="clear">Limpar</span>
                             </button>
                         </div>
                     </div>
@@ -1097,7 +1123,7 @@
             <!-- Footer -->
             <div class="px-6 py-4 bg-[var(--md-sys-color-surface-container-low)] border-t border-[var(--md-sys-color-outline-variant)] flex justify-end flex-shrink-0">
                 <button type="button" id="done-app-settings-modal-btn"
-                    class="m3-btn-expressive m3-btn-filled px-6 py-2.5 font-bold shadow-md cursor-pointer">
+                    class="m3-btn-expressive m3-btn-filled px-6 py-2.5 font-bold shadow-md cursor-pointer" data-i18n="done">
                     Concluído
                 </button>
             </div>

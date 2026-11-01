@@ -5,6 +5,7 @@ import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken, signInWithGoogle } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
+import { t, setupHeaderLanguageMenu } from './i18n.js';
 
 function compressPDFWithWorker(file) {
     return new Promise((resolve, reject) => {
@@ -1803,7 +1804,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
                 if (errData.error === 'quota_exceeded') {
-                    if (confirm("Você atingiu o limite mensal de baralhos incluídos no Pro.\n\nDeseja adquirir 1 geração de baralho extra por R$ 0,99 agora?")) {
+                    if (confirm(t('alert_pro_monthly_limit'))) {
                         if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
                             window.flashcardsOpenExtraDeckModal();
                         }
@@ -2088,7 +2089,7 @@ ${JSON.stringify(localCards, null, 2)}`;
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
                 if (errData.error === 'quota_exceeded') {
-                    if (confirm("Você atingiu o limite mensal de baralhos incluídos no Pro.\n\nDeseja adquirir 1 geração de baralho extra por R$ 0,99 agora?")) {
+                    if (confirm(t('alert_pro_monthly_limit'))) {
                         if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
                             window.flashcardsOpenExtraDeckModal();
                         }
@@ -2468,7 +2469,7 @@ function renderCreatorMcOptions(options = ["", "", "", ""], selectedIdx = 0) {
         removeBtn.addEventListener('click', () => {
             const currentVals = Array.from(document.querySelectorAll('.creator-mc-opt-val')).map(inp => inp.value);
             if (currentVals.length <= 2) {
-                alert("A questão de múltipla escolha deve ter pelo menos 2 alternativas.");
+                alert(t('alert_mc_min_options'));
                 return;
             }
             currentVals.splice(i, 1);
@@ -2552,7 +2553,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
 
     if (type === 'divisor') {
         if (!desc) {
-            alert("Por favor, digite o texto do comentário.");
+            alert(t('alert_comment_empty'));
             creatorQuestion.focus();
             return;
         }
@@ -2567,7 +2568,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     }
 
     if (!desc && !pendingCreatorQImage) {
-        alert("Por favor, informe a pergunta ou selecione uma imagem.");
+        alert(t('alert_question_empty'));
         creatorQuestion.focus();
         return;
     }
@@ -2582,7 +2583,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     if (type === 'open') {
         const ans = creatorAnsOpen.value.trim();
         if (!ans) {
-            alert("Por favor, digite a resposta principal.");
+            alert(t('alert_main_ans_empty'));
             creatorAnsOpen.focus();
             return;
         }
@@ -2591,7 +2592,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         const a1 = creatorAnsDouble1.value.trim();
         const a2 = creatorAnsDouble2.value.trim();
         if (!a1 || !a2) {
-            alert("Por favor, preencha as duas respostas.");
+            alert(t('alert_both_ans_empty'));
             return;
         }
         newCard.answer = a1;
@@ -2601,7 +2602,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     } else if (type === 'anki') {
         const ans = creatorAnsAnki.value.trim();
         if (!ans && !pendingCreatorAnsImage) {
-            alert("Por favor, informe a resposta ou uma imagem de resposta para o cartão Anki.");
+            alert(t('alert_anki_ans_empty'));
             creatorAnsAnki.focus();
             return;
         }
@@ -2611,14 +2612,14 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         const optInputs = Array.from(document.querySelectorAll('.creator-mc-opt-val'));
         const options = optInputs.map(inp => inp.value.trim()).filter(Boolean);
         if (options.length < 2 || options.length > 6) {
-            alert("A questão de múltipla escolha deve conter entre 2 e 6 alternativas válidas.");
+            alert(t('alert_mc_valid_range'));
             return;
         }
         const checkedRadio = document.querySelector('input[name="creator-mc-correct"]:checked');
         const correctIdx = checkedRadio ? parseInt(checkedRadio.value) : 0;
         const correctText = optInputs[correctIdx]?.value.trim();
         if (!correctText) {
-            alert("A alternativa correta selecionada não pode estar vazia.");
+            alert(t('alert_mc_correct_empty'));
             return;
         }
         newCard.answer = correctText;
@@ -2627,14 +2628,14 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/g;
         const blanksCount = (desc.match(blankRegex) || []).length;
         if (blanksCount === 0) {
-            alert("A frase deve conter pelo menos uma lacuna '_' para preenchimento.");
+            alert(t('alert_fill_missing_blank'));
             creatorQuestion.focus();
             return;
         }
         const ansRaw = creatorAnsFill ? creatorAnsFill.value.trim() : '';
         const answers = ansRaw.split(';').map(a => a.trim()).filter(Boolean);
         if (answers.length === 0) {
-            alert("Por favor, informe a(s) resposta(s) esperada(s), separadas por ';' se houver mais de uma.");
+            alert(t('alert_fill_missing_answers'));
             if (creatorAnsFill) creatorAnsFill.focus();
             return;
         }
@@ -3225,7 +3226,7 @@ function createCardElement(card, index, withAnimation = true) {
         }
         const currentScroll = cardsList ? cardsList.scrollTop : 0;
         const currentWindowY = window.scrollY || document.documentElement.scrollTop || 0;
-        if (confirm('Excluir este flashcard permanentemente?')) {
+        if (confirm(t('confirm_delete_card'))) {
             if (document.activeElement && typeof document.activeElement.blur === 'function') {
                 document.activeElement.blur();
             }
@@ -3345,7 +3346,7 @@ function renderInlineEditMcOptions(options, correctAnswer) {
         removeBtn.addEventListener('click', () => {
             const currentVals = Array.from(document.querySelectorAll('.inline-edit-mc-opt-val')).map(inp => inp.value);
             if (currentVals.length <= 2) {
-                alert("Mínimo de 2 alternativas.");
+                alert(t('alert_mc_min_options'));
                 return;
             }
             currentVals.splice(i, 1);
@@ -3877,7 +3878,7 @@ downloadDeckBtn.addEventListener('click', () => {
         localStorage.getItem('editing_deck_is_free_trial') === 'true'
     );
     if (!isUserPro() && isFreeTrial) {
-        alert("Baralhos gerados no teste gratuito com IA não podem ser exportados como arquivo JSON.\n\nAssine o Spaiq Pro para exportar seus baralhos e ter acesso ilimitado!");
+        alert(t('alert_free_trial_no_export'));
         openProModal();
         return;
     }
@@ -3898,7 +3899,7 @@ downloadDeckBtn.addEventListener('click', () => {
 playDeckBtn.addEventListener('click', () => {
     const playableCards = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
     if (playableCards.length === 0) {
-        alert("Adicione pelo menos um cartão antes de jogar.");
+        alert(t('alert_add_card_before_play'));
         return;
     }
 
@@ -3966,15 +3967,16 @@ playDeckBtn.addEventListener('click', () => {
         window.location.href = 'game.html';
     } catch (err) {
         if (err.name === 'QuotaExceededError') {
-            alert("Erro de espaço: o baralho é grande demais para salvar no navegador (provavelmente contém imagens locais antigas). Por favor, use links de imagem da web.");
+            alert(t('alert_storage_quota_exceeded'));
         } else {
-            alert("Erro ao iniciar jogo: " + err.message);
+            alert(t('exam_error_start', { message: err.message }));
         }
     }
 });
 
 // --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
+    setupHeaderLanguageMenu();
     checkAndResetModelFallback();
     await getApiKeyAsync();
     updateApiKeyStatusUI();
