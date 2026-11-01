@@ -5,7 +5,7 @@ import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken, signInWithGoogle } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
-import { t, setupHeaderLanguageMenu } from './i18n.js';
+import { t } from './i18n.js';
 
 function compressPDFWithWorker(file) {
     return new Promise((resolve, reject) => {
@@ -3976,7 +3976,6 @@ playDeckBtn.addEventListener('click', () => {
 
 // --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
-    setupHeaderLanguageMenu();
     checkAndResetModelFallback();
     await getApiKeyAsync();
     updateApiKeyStatusUI();

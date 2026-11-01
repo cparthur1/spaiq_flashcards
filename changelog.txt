@@ -754,3 +754,13 @@ Date: 2026-11-01
 - Updated css/style.css to ensure #text-highlight-popup is unconditionally centered horizontally at left: 50% !important with transform: translateX(-50%) on mobile viewports (< 768px), regardless of selection location or whether the definition card is open or closed.
 - Updated js/game.js in showHighlightPopup and toggle listeners to set left to 50% and origLeft to 50% on mobile devices, ensuring the popup never drifts off-center towards viewport edges.
 - Bumped cache version to 'flashcards-v15.0' in sw.js.
+
+CHANGELOG: CONSOLIDATE LANGUAGE SELECTION TO INDEX & GAME SETTINGS
+Date: 2026-11-01
+
+1. SCOPED LANGUAGE SELECTION UI
+- Maintained the primary interactive language selector dropdown on index.html.
+- Maintained the dedicated App Language select option inside the Settings modal on pages/game.html.
+- Removed redundant language selector buttons from secondary pages (pages/stats.html, pages/generate.html, pages/bulk-add.html).
+- Secondary pages automatically inherit the active language preference from localStorage on load and update via cross-tab storage synchronization.
+- Bumped cache version to 'flashcards-v15.1' in sw.js.

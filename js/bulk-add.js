@@ -9,7 +9,7 @@ import { renderMathAndMarkdown, escapeHtml, sanitizeImageUrl, generateSecureId, 
 import { triggerHaptic } from './engine/effects.js';
 import { isPlayableCard } from './engine/scheduler.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
-import { t, setupHeaderLanguageMenu, applyTranslations } from './i18n.js';
+import { t, applyTranslations } from './i18n.js';
 
 // --- DOM ELEMENTS ---
 const bulkFileInput = document.getElementById('bulk-file-input');
@@ -84,7 +84,6 @@ const collapsedDecks = new Set();
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
-    setupHeaderLanguageMenu('header-lang-btn', 'header-lang-dropdown', 'header-lang-label');
     updateNotebookHeaderBadge();
     setupUploadHandlers();
     setupSelectionHandlers();

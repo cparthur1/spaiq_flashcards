@@ -100,36 +100,6 @@
 
             <!-- Header Actions -->
             <div class="flex items-center gap-2.5">
-                <!-- Language Selector -->
-                <div class="relative">
-                    <button id="lang-menu-btn" type="button"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-xs font-bold text-gray-800 shadow-xs hover:bg-gray-100 transition cursor-pointer select-none"
-                        aria-label="Idioma / Language" title="Idioma / Language"
-                        data-i18n-aria-label="language_selector" data-i18n-title="language_selector">
-                        <span class="material-symbols-rounded text-base text-blue-600">translate</span>
-                        <span id="lang-current-label">PT</span>
-                        <span class="material-symbols-rounded text-sm text-gray-500">expand_more</span>
-                    </button>
-                    <div id="lang-dropdown-menu"
-                        class="hidden absolute right-0 mt-2 w-48 m3-dialog-card rounded-2xl shadow-xl border border-gray-200 bg-white p-1.5 z-50 text-left">
-                        <button type="button" data-lang="auto"
-                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-100 text-gray-800 flex items-center justify-between cursor-pointer">
-                            <span data-i18n="lang_auto">Automático (Navegador)</span>
-                            <span class="lang-check-icon material-symbols-rounded text-sm text-blue-600 hidden">check</span>
-                        </button>
-                        <button type="button" data-lang="pt-BR"
-                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-100 text-gray-800 flex items-center justify-between cursor-pointer">
-                            <span>Português (Brasil)</span>
-                            <span class="lang-check-icon material-symbols-rounded text-sm text-blue-600 hidden">check</span>
-                        </button>
-                        <button type="button" data-lang="en-US"
-                            class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-100 text-gray-800 flex items-center justify-between cursor-pointer">
-                            <span>English (US)</span>
-                            <span class="lang-check-icon material-symbols-rounded text-sm text-blue-600 hidden">check</span>
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Notebook Total Cards Badge (Clickable Pill) -->
                 <button type="button" id="notebook-total-badge" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100/90 active:scale-95 border border-blue-200 hover:border-blue-300 text-blue-700 font-bold text-xs shadow-2xs hover:shadow-xs transition-all cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500/30" title="Ver baralhos e cartões salvos no Caderno" aria-label="Ver baralhos e cartões salvos no Caderno" data-i18n-title="view_notebook_saved_title" data-i18n-aria-label="view_notebook_saved_title">
                     <img src="../assets/img/bookmark_check.svg" class="w-3.5 h-3.5 flex-shrink-0" alt="Caderno">

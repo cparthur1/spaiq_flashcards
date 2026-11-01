@@ -12,7 +12,7 @@ import { getApiKeyAsync, getCachedApiKey, saveApiKey, clearApiKey, isKeyRemember
 import { getDailyStreak, getHeatmapActivityMap, getTodayDateString } from './engine/notebook-scheduler.js';
 import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { onAuthChange } from './firebase-client.js';
-import { t, setupHeaderLanguageMenu, getCurrentLanguage } from './i18n.js';
+import { t, getCurrentLanguage } from './i18n.js';
 
 // DOM Elements
 const backToGameBtn = document.getElementById('back-to-game-btn');
@@ -1866,7 +1866,6 @@ exportStatsBtn?.addEventListener('click', () => {
 
 // INITIALIZATION
 document.addEventListener('DOMContentLoaded', async () => {
-    setupHeaderLanguageMenu();
     initExploreModal();
     await getApiKeyAsync();
     renderAllStats();
