@@ -1754,9 +1754,9 @@ mark.card-hl-purple {
     animation: popupEnter 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Ensure AI definition popup is always centered horizontally on mobile */
+/* Ensure text selection popup (AI define & highlight) is always centered horizontally on mobile */
 @media (max-width: 767px) {
-    #text-highlight-popup:has(#hl-ai-card:not(.hidden)) {
+    #text-highlight-popup {
         left: 50% !important;
     }
 }

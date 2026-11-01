@@ -3381,15 +3381,20 @@ function showHighlightPopup(range, isMarked) {
     // Account for potential open palette or action buttons width (~220px) so popup never cuts off on mobile edges
     const estimatedPopupWidth = 220;
 
-    let left = rect.left + rect.width / 2;
+    const isMobile = window.innerWidth < 768;
+    let left = isMobile ? window.innerWidth / 2 : (rect.left + rect.width / 2);
     // Move both circle buttons (highlight and ai) to the bottom of the selected text
     let top = rect.bottom + 8;
 
-    // Keep within horizontal screen bounds accounting for full palette width
-    const minLeft = estimatedPopupWidth / 2 + 10;
-    const maxLeft = window.innerWidth - (estimatedPopupWidth / 2 + 10);
-    if (maxLeft >= minLeft) {
-        left = Math.max(minLeft, Math.min(maxLeft, left));
+    if (!isMobile) {
+        // Keep within horizontal screen bounds accounting for full palette width
+        const minLeft = estimatedPopupWidth / 2 + 10;
+        const maxLeft = window.innerWidth - (estimatedPopupWidth / 2 + 10);
+        if (maxLeft >= minLeft) {
+            left = Math.max(minLeft, Math.min(maxLeft, left));
+        } else {
+            left = window.innerWidth / 2;
+        }
     } else {
         left = window.innerWidth / 2;
     }
@@ -3400,8 +3405,8 @@ function showHighlightPopup(range, isMarked) {
     }
 
     textHighlightPopup.style.top = `${top}px`;
-    textHighlightPopup.style.left = `${left}px`;
-    textHighlightPopup.dataset.origLeft = `${left}px`;
+    textHighlightPopup.style.left = isMobile ? '50%' : `${left}px`;
+    textHighlightPopup.dataset.origLeft = isMobile ? '50%' : `${left}px`;
     textHighlightPopup.dataset.origTop = `${top}px`;
 }
 
@@ -3713,11 +3718,12 @@ if (hlTriggerBtn) {
         if (hlAiBtn) {
             hlAiBtn.classList.remove('hl-ai-shimmering');
         }
-        if (textHighlightPopup && textHighlightPopup.dataset.origLeft) {
-            textHighlightPopup.style.left = textHighlightPopup.dataset.origLeft;
-        }
-        if (textHighlightPopup && textHighlightPopup.dataset.origTop) {
-            textHighlightPopup.style.top = textHighlightPopup.dataset.origTop;
+        const isMobile = window.innerWidth < 768;
+        if (textHighlightPopup) {
+            textHighlightPopup.style.left = isMobile ? '50%' : (textHighlightPopup.dataset.origLeft || '50%');
+            if (textHighlightPopup.dataset.origTop) {
+                textHighlightPopup.style.top = textHighlightPopup.dataset.origTop;
+            }
         }
 
         if (hlTriggerBtn.classList.contains('is-marked')) {
@@ -3771,11 +3777,12 @@ if (hlAiBtn) {
         if (hlAiCard && !hlAiCard.classList.contains('hidden') && hlAiTermTitle?.dataset.term === selectedText) {
             hlAiCard.classList.add('hidden');
             hlAiBtn.classList.remove('hl-ai-shimmering');
-            if (textHighlightPopup && textHighlightPopup.dataset.origLeft) {
-                textHighlightPopup.style.left = textHighlightPopup.dataset.origLeft;
-            }
-            if (textHighlightPopup && textHighlightPopup.dataset.origTop) {
-                textHighlightPopup.style.top = textHighlightPopup.dataset.origTop;
+            const isMobile = window.innerWidth < 768;
+            if (textHighlightPopup) {
+                textHighlightPopup.style.left = isMobile ? '50%' : (textHighlightPopup.dataset.origLeft || '50%');
+                if (textHighlightPopup.dataset.origTop) {
+                    textHighlightPopup.style.top = textHighlightPopup.dataset.origTop;
+                }
             }
             return;
         }

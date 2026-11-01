@@ -746,3 +746,11 @@ Date: 2026-11-01
 4. SERVICE WORKER & ASSETS
 - Bumped PWA cache version to 'flashcards-v14.9' in sw.js to ensure immediate client updates.
 
+
+CHANGELOG: MOBILE TEXT SELECTION & AI DEFINE POPUP CENTERING
+Date: 2026-11-01
+
+1. MOBILE X-AXIS POPUP CENTERING
+- Updated css/style.css to ensure #text-highlight-popup is unconditionally centered horizontally at left: 50% !important with transform: translateX(-50%) on mobile viewports (< 768px), regardless of selection location or whether the definition card is open or closed.
+- Updated js/game.js in showHighlightPopup and toggle listeners to set left to 50% and origLeft to 50% on mobile devices, ensuring the popup never drifts off-center towards viewport edges.
+- Bumped cache version to 'flashcards-v15.0' in sw.js.
