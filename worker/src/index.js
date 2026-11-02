@@ -11,7 +11,15 @@
 import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail } from './google-auth.js';
 import { callGemini } from './gemini.js';
 import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData } from './firestore.js';
-import Stripe from 'stripe';
+import {
+  getStripeClient,
+  createSubscription,
+  createExtraGenerationPayment,
+  checkCustomerProStatusInStripe,
+  getSubscriptionDetails,
+  cancelSubscription,
+  reactivateSubscription
+} from './stripe.js';
 
 const ALLOWED_ORIGINS = [
   'https://flashcards.camblu.org',
@@ -122,74 +130,17 @@ export default {
           // Authentication is optional for initial checkout session creation, but links user if logged in
         }
 
-        // Mode is set to "subscription" for recurring billing (Flashcards Pro R$ 4,99 / mês)
-        const mode = "subscription";
-
-        // Checkout Session parameters configured per Field Intents
-        const sessionParams = {
-          ui_mode: "form",
-          mode,
-          billing_address_collection: "auto",
-          phone_number_collection: {
-            enabled: false
-          },
-          automatic_tax: {
-            enabled: false
-          },
-          submit_type: "auto",
-          saved_payment_method_options: {
-            payment_method_save: "enabled"
-          },
-          integration_identifier: "custom_embedded_web_0001",
-          return_url: `${request.headers.get('Origin') || 'https://flashcards.camblu.org'}/?session_id={CHECKOUT_SESSION_ID}`,
-          line_items: [
-            {
-              price: env.STRIPE_PRICE_ID || "price_1UWEb0Rynl9tIFFYF2cvZ3RB",
-              quantity: 1
-            }
-          ]
-        };
-
-        if (mode === "subscription") {
-          sessionParams.payment_method_collection = "always";
-        }
-
-        if (user) {
-          sessionParams.customer_email = user.email;
-          sessionParams.client_reference_id = user.uid;
-          sessionParams.metadata = { uid: user.uid };
-          sessionParams.subscription_data = {
-            metadata: { uid: user.uid }
-          };
-        }
-
-        if (!env.STRIPE_SECRET_KEY) {
+        const returnUrl = `${request.headers.get('Origin') || 'https://flashcards.camblu.org'}/?session_id={CHECKOUT_SESSION_ID}`;
+        try {
+          const session = await createSubscription({ env, user, returnUrl });
+          return jsonResponse({ client_secret: session.client_secret }, 200, corsHeaders);
+        } catch (err) {
+          console.error('[Stripe] Erro ao criar checkout session:', err.message);
           return jsonResponse({
-            error: 'configuration_error',
-            message: 'STRIPE_SECRET_KEY não configurada no servidor. Consulte STRIPE_INTEGRATION_TODO.md.'
+            error: 'stripe_error',
+            message: err.message
           }, 500, corsHeaders);
         }
-
-        const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
-        const session = await stripe.checkout.sessions.create(sessionParams);
-
-        if (user) {
-          try {
-            const serviceAccount = getServiceAccount(env);
-            await updateUserDocument(serviceAccount, user.uid, {
-              subscription: {
-                id: session.id,
-                provider: 'stripe',
-                status: 'pending',
-                updatedAt: new Date().toISOString()
-              }
-            });
-          } catch (dbErr) {
-            console.warn('[Stripe] Falha ao persistir sessão pendente no Firestore:', dbErr.message);
-          }
-        }
-
-        return jsonResponse({ client_secret: session.client_secret }, 200, corsHeaders);
       }
 
       // 2.3 Create Stripe Embedded Checkout Session for Deck Generation (R$ 0,99 for Pro, R$ 1,49 for Non-Pro)
@@ -209,75 +160,17 @@ export default {
           // Authentication is optional for initial checkout session creation, but links user if logged in
         }
 
-        const mode = "payment";
-
-        // Pro users pay R$ 0,99 (99 centavos), Non-Pro users pay R$ 1,49 (149 centavos)
-        // Supports Stripe Price IDs (price_...) and Stripe Product IDs (prod_...)
-        function resolveStripeLineItem(targetId, isProUser) {
-          const unitAmount = isProUser ? 99 : 149;
-          const cleanId = (targetId && typeof targetId === 'string') ? targetId.trim() : '';
-
-          if (cleanId.startsWith('price_') || cleanId.startsWith('plan_')) {
-            return { price: cleanId, quantity: 1 };
-          }
-
-          if (cleanId.startsWith('prod_')) {
-            return {
-              price_data: {
-                currency: 'brl',
-                unit_amount: unitAmount,
-                product: cleanId
-              },
-              quantity: 1
-            };
-          }
-
-          return {
-            price_data: {
-              currency: 'brl',
-              unit_amount: unitAmount,
-              product_data: {
-                name: isProUser ? 'Geração Extra de Baralho Pro (IA)' : 'Geração de Baralho com IA (Avulsa)',
-                description: isProUser
-                  ? '1 geração adicional de baralho com IA para assinante Pro'
-                  : '1 geração avulsa de baralho com IA de alta precisão (Gemini Flash Thinking)'
-              }
-            },
-            quantity: 1
-          };
-        }
-
-        const proId = env.STRIPE_EXTRA_PRICE_ID_PRO || env.STRIPE_EXTRA_PRICE_ID || "prod_VXJEx9xIR4hKWR";
-        const nonProId = env.STRIPE_EXTRA_PRICE_ID_NON_PRO || env.STRIPE_PRICE_NON_PRO || "prod_VYSOFAreE9zDHt";
-        const lineItem = resolveStripeLineItem(isPro ? proId : nonProId, isPro);
-
-        const sessionParams = {
-          mode,
-          ui_mode: "form",
-          line_items: [lineItem],
-          billing_address_collection: "auto",
-          submit_type: "auto",
-          integration_identifier: "custom_embedded_web_0002",
-          return_url: `${request.headers.get('Origin') || 'https://flashcards.camblu.org'}/?session_id={CHECKOUT_SESSION_ID}`,
-        };
-
-        if (user) {
-          sessionParams.customer_email = user.email;
-          sessionParams.client_reference_id = user.uid;
-          sessionParams.metadata = { uid: user.uid, type: "extra_deck" };
-        }
-
-        if (!env.STRIPE_SECRET_KEY) {
+        const returnUrl = `${request.headers.get('Origin') || 'https://flashcards.camblu.org'}/?session_id={CHECKOUT_SESSION_ID}`;
+        try {
+          const session = await createExtraGenerationPayment({ env, user, isPro, returnUrl });
+          return jsonResponse({ client_secret: session.client_secret }, 200, corsHeaders);
+        } catch (err) {
+          console.error('[Stripe] Erro ao criar extra deck checkout session:', err.message);
           return jsonResponse({
-            error: 'configuration_error',
-            message: 'STRIPE_SECRET_KEY não configurada no servidor.'
+            error: 'stripe_error',
+            message: err.message
           }, 500, corsHeaders);
         }
-
-        const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
-        const session = await stripe.checkout.sessions.create(sessionParams);
-
-        return jsonResponse({ client_secret: session.client_secret }, 200, corsHeaders);
       }
 
       // 3. User Pro Status & Quota
