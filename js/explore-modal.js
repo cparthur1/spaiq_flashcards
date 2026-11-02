@@ -17,7 +17,7 @@ import {
   loadSlotsFromCloud
 } from './slot-manager.js';
 import { shareDeckToCloud, subscribeToAllSharedSlots } from './share-manager.js';
-import { getUserStatus, createCheckoutSession, deleteAccountAndCancelSubscription, verifyPaymentStatus, BACKEND_URL } from './backend-api.js';
+import { getUserStatus, createCheckoutSession, deleteAccountAndCancelSubscription, verifyPaymentStatus, createExtraDeckCheckoutSession, BACKEND_URL } from './backend-api.js';
 import { triggerProUnlockCelebration } from './engine/pro-unlock-celebration.js';
 import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl } from './utils.js';
 import { t, applyTranslations } from './i18n.js';
@@ -109,30 +109,44 @@ export function initExploreModal() {
     const urlParams = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search) : null;
     const sessionId = urlParams ? urlParams.get('session_id') : null;
 
+    if (sessionId && !handlingSessionId) {
+      handlingSessionId = true;
+      try {
+        const verifyResult = await verifyPaymentStatus(sessionId);
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('session_id');
+        window.history.replaceState({}, document.title, cleanUrl.toString());
+
+        if (verifyResult?.type === 'extra_deck' || verifyResult?.extraGenerations) {
+          const currentExtras = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+          localStorage.setItem('spaiq_extra_generations', String(currentExtras + 1));
+          if (user) {
+            await refreshUserProStatus(user, true);
+          }
+          alert(t('extra_deck_payment_success'));
+          try {
+            window.dispatchEvent(new CustomEvent('flashcards:pro-updated', { detail: { extraGenerations: currentExtras + 1 } }));
+          } catch (e) {}
+        } else if (verifyResult?.isPro) {
+          if (user) {
+            await refreshUserProStatus(user, true);
+            triggerProUnlockCelebration();
+          } else {
+            alert(t('payment_identified_login_pro'));
+            if (typeof window.flashcardsOpenAccountModal === 'function') {
+              window.flashcardsOpenAccountModal();
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Stripe Return] Erro ao verificar pagamento após retorno:', err);
+      }
+    }
+
     if (user) {
       if (prevUid !== user.uid) {
         userProStatus = isLifetime(user) ? { uid: user.uid, isPro: true, isLifetimePro: true } : null;
       }
-
-      if (sessionId && !handlingSessionId) {
-        handlingSessionId = true;
-        try {
-          const verifyResult = await verifyPaymentStatus(sessionId);
-          await refreshUserProStatus(user, true);
-          const cleanUrl = new URL(window.location.href);
-          cleanUrl.searchParams.delete('session_id');
-          window.history.replaceState({}, document.title, cleanUrl.toString());
-
-          if (verifyResult?.type === 'extra_deck') {
-            alert(t('purchase_extra_deck_success'));
-          } else {
-            triggerProUnlockCelebration();
-          }
-        } catch (err) {
-          console.warn('[Stripe Return] Erro ao verificar pagamento após retorno:', err);
-        }
-      }
-
       try {
         await refreshUserProStatus(user);
         if (isUserPro(user)) {
@@ -143,12 +157,6 @@ export function initExploreModal() {
       }
     } else {
       userProStatus = null;
-      if (sessionId) {
-        alert(t('payment_identified_login_pro'));
-        if (typeof window.flashcardsOpenAccountModal === 'function') {
-          window.flashcardsOpenAccountModal();
-        }
-      }
     }
     renderModalContent();
   });
@@ -376,19 +384,34 @@ function injectModalHtml() {
           <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="per_deck">${t('per_deck')}</span>
         </div>
 
-        <div id="extra-deck-checkout-container" class="space-y-3">
-          <div id="extra-deck-form-loading" class="flex flex-col items-center justify-center p-6 text-gray-500 text-xs gap-2">
-            <span class="material-symbols-rounded text-2xl animate-spin text-blue-600">sync</span>
-            <span>${t('loading_stripe_form')}</span>
+        <!-- Pay and generate button with Google/Apple pay logo directly below pricetag -->
+        <div id="extra-deck-pay-container" class="mb-4">
+          <button type="button" id="pay-and-generate-btn" class="w-full py-3.5 px-4 rounded-2xl bg-[#3b82f7] hover:bg-blue-600 active:bg-blue-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-3 cursor-pointer select-none">
+            <span data-i18n="pay_and_generate_btn">${t('pay_and_generate_btn')}</span>
+            <div class="inline-flex items-center gap-2 bg-white px-2.5 py-1 rounded-xl shadow-2xs">
+              <img src="/assets/img/Google_Pay_Logo.svg" alt="Google Pay" class="h-3.5 w-auto object-contain">
+              <span class="text-gray-300 text-xs">|</span>
+              <img src="/assets/img/Apple_Pay_logo.svg" alt="Apple Pay" class="h-3.5 w-auto object-contain">
+            </div>
+          </button>
+          <div id="pay-and-generate-loading" class="hidden flex items-center justify-center gap-2 py-3 text-xs font-semibold text-[#3b82f7]">
+            <span class="material-symbols-rounded animate-spin text-lg">sync</span>
+            <span data-i18n="loading_stripe_checkout">${t('loading_stripe_checkout')}</span>
           </div>
-          <div id="extra-deck-checkout-form"></div>
         </div>
 
-        <div id="extra-deck-switch-pro-container" class="mt-4 pt-3 border-t border-[var(--md-sys-color-outline-variant)] text-center text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1">
-          <div><span data-i18n="prefer_pro_plan">${t('prefer_pro_plan')}</span></div>
-          <button type="button" id="switch-to-pro-from-extra-btn" class="font-bold text-[var(--md-sys-color-primary)] hover:underline cursor-pointer">
-            Flashcards Pro (R$ 4,99 / mês)
+        <!-- When non-pro user: below this increase size of "Want 4 decks per month, AI tutor and save sync? [...]" text and move the Login with google button there -->
+        <div id="extra-deck-switch-pro-container" class="mt-4 pt-4 border-t border-[var(--md-sys-color-outline-variant)] text-center space-y-3">
+          <div>
+            <p class="text-sm sm:text-base font-bold text-[var(--md-sys-color-on-surface)] leading-snug">
+              <span data-i18n="prefer_pro_plan">${t('prefer_pro_plan')}</span>
+            </p>
+          </div>
+          <button type="button" id="switch-to-pro-from-extra-btn" class="w-full py-2.5 px-4 rounded-2xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
+            <span class="material-symbols-rounded text-base text-purple-600">workspace_premium</span>
+            <span>Flashcards Pro (R$ 4,99 / mês)</span>
           </button>
+          <div id="extra-deck-google-login-wrapper"></div>
         </div>
 
         <button id="close-extra-deck-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto cursor-pointer">
@@ -843,14 +866,14 @@ async function mountExtraDeckEmbeddedForm() {
 }
 
 export function renderExtraDeckModalContent() {
-  const container = document.getElementById('extra-deck-checkout-container');
-  if (!container) return;
-
   const pro = isUserPro(currentUser, userProStatus);
   const priceEl = document.getElementById('extra-deck-modal-price');
   const titleEl = document.getElementById('extra-deck-modal-title');
   const subtitleEl = document.getElementById('extra-deck-modal-subtitle');
   const switchContainer = document.getElementById('extra-deck-switch-pro-container');
+  const loginWrapper = document.getElementById('extra-deck-google-login-wrapper');
+  const payBtn = document.getElementById('pay-and-generate-btn');
+  const loadingIndicator = document.getElementById('pay-and-generate-loading');
 
   if (priceEl) {
     priceEl.textContent = pro ? 'R$ 0,99' : 'R$ 1,49';
@@ -865,37 +888,57 @@ export function renderExtraDeckModalContent() {
     switchContainer.style.display = pro ? 'none' : 'block';
   }
 
-  if (!currentUser) {
-    container.innerHTML = `
-      <div class="space-y-3">
-        <button id="extra-google-login-btn" class="m3-btn-expressive m3-btn-filled w-full py-3.5 px-4 font-bold text-sm flex items-center justify-center gap-2.5 shadow bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition">
-          <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="#ffffff"><path fill="#ffffff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#ffffff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#ffffff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#ffffff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-          <span>Fazer Login com Google</span>
+  // Move Login with Google button below the Pro teaser for non-pro users who are not logged in
+  if (loginWrapper) {
+    if (!pro && !currentUser) {
+      loginWrapper.innerHTML = `
+        <button type="button" id="extra-google-login-btn" class="w-full py-2.5 px-4 rounded-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] hover:bg-[var(--md-sys-color-surface-container-high,#f1f5f9)] text-[var(--md-sys-color-on-surface,#0f172a)] dark:text-white font-semibold text-xs flex items-center justify-center gap-2.5 shadow-2xs transition-colors cursor-pointer bg-white dark:bg-gray-800">
+          <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+          <span data-i18n="login_with_google">${t('login_with_google')}</span>
         </button>
-        <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Faça login com sua conta Google para comprar a geração extra.</p>
-      </div>
-    `;
-    document.getElementById('extra-google-login-btn')?.addEventListener('click', async () => {
-      try {
-        const user = await signInWithGoogle();
-        if (user) {
-          renderExtraDeckModalContent();
+      `;
+      document.getElementById('extra-google-login-btn')?.addEventListener('click', async () => {
+        try {
+          const user = await signInWithGoogle();
+          if (user) {
+            renderExtraDeckModalContent();
+          }
+        } catch (e) {
+          alert(t('error_authenticating_google'));
         }
-      } catch (e) {
-        alert(t('error_authenticating_google'));
-      }
-    });
-    return;
+      });
+    } else {
+      loginWrapper.innerHTML = '';
+    }
   }
 
-  container.innerHTML = `
-    <div id="extra-deck-form-loading" class="flex flex-col items-center justify-center p-6 text-gray-500 text-xs gap-2">
-      <span class="material-symbols-rounded text-2xl animate-spin text-blue-600">sync</span>
-      <span>${t('loading_stripe_form')}</span>
-    </div>
-    <div id="extra-deck-checkout-form"></div>
-  `;
-  mountExtraDeckEmbeddedForm();
+  // Setup "Pay and generate" button to open standard Stripe checkout without requiring login
+  if (payBtn) {
+    const newPayBtn = payBtn.cloneNode(true);
+    payBtn.parentNode.replaceChild(newPayBtn, payBtn);
+
+    newPayBtn.addEventListener('click', async () => {
+      newPayBtn.disabled = true;
+      newPayBtn.classList.add('opacity-50', 'pointer-events-none');
+      if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+
+      try {
+        const returnUrl = window.location.href;
+        const res = await createExtraDeckCheckoutSession(returnUrl);
+        if (res && res.url) {
+          window.location.href = res.url;
+        } else {
+          throw new Error('URL de checkout não recebida do Stripe.');
+        }
+      } catch (err) {
+        console.error('[Stripe Checkout Error]:', err);
+        alert(err.message || t('checkout_init_error'));
+        newPayBtn.disabled = false;
+        newPayBtn.classList.remove('opacity-50', 'pointer-events-none');
+        if (loadingIndicator) loadingIndicator.classList.add('hidden');
+      }
+    });
+  }
 }
 
 /**

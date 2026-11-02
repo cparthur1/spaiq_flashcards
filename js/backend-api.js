@@ -73,10 +73,14 @@ export async function verifyPaymentStatus(sessionId = null) {
 /**
  * Create Stripe Checkout Session for Deck Generation (R$ 1,49 single payment)
  */
-export async function createExtraDeckCheckoutSession() {
-  const res = await fetchWithAuth('/api/create-extra-deck-session', {
+export async function createExtraDeckCheckoutSession(returnUrl = null) {
+  const options = {
     method: 'POST'
-  });
+  };
+  if (returnUrl) {
+    options.body = JSON.stringify({ returnUrl });
+  }
+  const res = await fetchWithAuth('/api/create-extra-deck-session', options);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || 'Erro ao criar sessão para deck extra no Stripe');

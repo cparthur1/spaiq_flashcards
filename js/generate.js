@@ -1501,7 +1501,8 @@ export function canGenerateWithAi() {
     if (isUserPro()) return true;
     if (!hasUsedFreeAiDeck()) return true;
     const status = getUserProStatus();
-    return Boolean(status && status.extraGenerations > 0);
+    const localExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+    return Boolean((status && status.extraGenerations > 0) || localExtra > 0);
 }
 
 function updateProPaywalledUI() {
@@ -1509,7 +1510,8 @@ function updateProPaywalledUI() {
     const isPro = isUserPro();
     const usedTrial = hasUsedFreeAiDeck();
     const userStatus = getUserProStatus();
-    const extraGens = Number(userStatus?.extraGenerations || 0);
+    const localExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+    const extraGens = Number(userStatus?.extraGenerations || 0) + localExtra;
     const hasExtra = extraGens > 0;
 
     [cardMode21, cardMode22].forEach(card => {
@@ -1981,6 +1983,11 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
                 markFreeAiDeckUsed();
                 deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
                 localStorage.setItem('editing_deck_is_free_trial', 'true');
+            } else if (!isUserPro() && hasUsedFreeAiDeck()) {
+                const localExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+                if (localExtra > 0) {
+                    localStorage.setItem('spaiq_extra_generations', String(Math.max(0, localExtra - 1)));
+                }
             }
             refreshUserProStatus().then(() => updateProPaywalledUI());
             finishGeneratingAnimation(true, deckCards.length);
@@ -2148,6 +2155,11 @@ ${JSON.stringify(localCards, null, 2)}`;
             markFreeAiDeckUsed();
             deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
             localStorage.setItem('editing_deck_is_free_trial', 'true');
+        } else if (!isUserPro() && hasUsedFreeAiDeck()) {
+            const localExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+            if (localExtra > 0) {
+                localStorage.setItem('spaiq_extra_generations', String(Math.max(0, localExtra - 1)));
+            }
         }
         refreshUserProStatus().then(() => updateProPaywalledUI());
         finishGeneratingAnimation(true, deckCards.length);
@@ -3929,6 +3941,10 @@ playDeckBtn.addEventListener('click', async () => {
 });
 
 // --- INITIALIZATION ---
+window.addEventListener('flashcards:pro-updated', () => {
+    updateProPaywalledUI();
+});
+
 window.addEventListener('DOMContentLoaded', async () => {
     checkAndResetModelFallback();
     updateApiKeyStatusUI();

@@ -160,10 +160,11 @@ export default {
           // Authentication is optional for initial checkout session creation, but links user if logged in
         }
 
-        const returnUrl = `${request.headers.get('Origin') || 'https://flashcards.camblu.org'}/?session_id={CHECKOUT_SESSION_ID}`;
+        const body = await request.json().catch(() => ({}));
+        const returnUrl = body.returnUrl || `${request.headers.get('Origin') || 'https://flashcards.camblu.org'}/?session_id={CHECKOUT_SESSION_ID}`;
         try {
           const session = await createExtraGenerationPayment({ env, user, isPro, returnUrl });
-          return jsonResponse({ client_secret: session.client_secret }, 200, corsHeaders);
+          return jsonResponse({ url: session.url, client_secret: session.client_secret, sessionId: session.sessionId }, 200, corsHeaders);
         } catch (err) {
           console.error('[Stripe] Erro ao criar extra deck checkout session:', err.message);
           return jsonResponse({
@@ -439,18 +440,26 @@ export default {
 
       // 4. Verify Payment Status & Activate Pro immediately
       if (path === '/api/payment/verify' && request.method === 'POST') {
-        const user = await authenticateUser();
-        const serviceAccount = getServiceAccount(env);
-        const userDoc = await getUserDocument(serviceAccount, user.uid).catch(() => null);
-
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        if (isLifetime) {
-          await setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {});
-          return jsonResponse({ isPro: true, status: 'active', plan: 'pro_lifetime' }, 200, corsHeaders);
+        let user = null;
+        try {
+          user = await authenticateUser();
+        } catch (e) {
+          // Unauthenticated user payment verification (e.g. single generation bought without login)
         }
 
         const body = await request.json().catch(() => ({}));
-        const sessionId = body.session_id || url.searchParams.get('session_id') || userDoc?.subscription?.id;
+        const sessionId = body.session_id || url.searchParams.get('session_id');
+
+        if (user) {
+          const serviceAccount = getServiceAccount(env);
+          const userDoc = await getUserDocument(serviceAccount, user.uid).catch(() => null);
+
+          const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+          if (isLifetime) {
+            await setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {});
+            return jsonResponse({ isPro: true, status: 'active', plan: 'pro_lifetime' }, 200, corsHeaders);
+          }
+        }
 
         // Check Stripe subscription / session if applicable
         if (env.STRIPE_SECRET_KEY) {
@@ -462,19 +471,26 @@ export default {
               const session = await stripe.checkout.sessions.retrieve(sessionId);
               if (session && (session.status === 'complete' || session.payment_status === 'paid')) {
                 if (session.mode === 'payment' || session.metadata?.type === 'extra_deck') {
-                  const paidSessions = Array.isArray(userDoc?.paidSessionIds) ? [...userDoc.paidSessionIds] : [];
-                  let currentExtras = userDoc?.extraGenerations || 0;
-                  if (!paidSessions.includes(sessionId)) {
-                    currentExtras += 1;
-                    paidSessions.push(sessionId);
-                    await updateUserDocument(serviceAccount, user.uid, {
-                      extraGenerations: currentExtras,
-                      paidSessionIds: paidSessions,
-                      updatedAt: new Date().toISOString()
-                    });
+                  if (user) {
+                    const serviceAccount = getServiceAccount(env);
+                    const userDoc = await getUserDocument(serviceAccount, user.uid).catch(() => null);
+                    const paidSessions = Array.isArray(userDoc?.paidSessionIds) ? [...userDoc.paidSessionIds] : [];
+                    let currentExtras = userDoc?.extraGenerations || 0;
+                    if (!paidSessions.includes(sessionId)) {
+                      currentExtras += 1;
+                      paidSessions.push(sessionId);
+                      await updateUserDocument(serviceAccount, user.uid, {
+                        extraGenerations: currentExtras,
+                        paidSessionIds: paidSessions,
+                        updatedAt: new Date().toISOString()
+                      });
+                    }
+                    return jsonResponse({ isPro: Boolean(user.pro || userDoc?.subscription?.status === 'active'), extraGenerations: currentExtras, type: 'extra_deck' }, 200, corsHeaders);
+                  } else {
+                    return jsonResponse({ isPro: false, extraGenerations: 1, type: 'extra_deck', sessionId: session.id, paid: true }, 200, corsHeaders);
                   }
-                  return jsonResponse({ isPro: Boolean(user.pro || userDoc?.subscription?.status === 'active'), extraGenerations: currentExtras, type: 'extra_deck' }, 200, corsHeaders);
-                } else {
+                } else if (user) {
+                  const serviceAccount = getServiceAccount(env);
                   await Promise.all([
                     setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
                     updateUserDocument(serviceAccount, user.uid, {

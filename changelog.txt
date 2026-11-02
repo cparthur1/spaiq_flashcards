@@ -1,3 +1,24 @@
+CHANGELOG: LOGIN-FREE STRIPE CHECKOUT & PRO UPGRADE FLOW (v15.11)
+Date: 2026-11-02
+
+OVERVIEW:
+1. "Pay and Generate" with Google Pay & Apple Pay Logos:
+   - Added a prominent Material Design 3 button ("Pagar e gerar" / "Pay and generate") directly below the pricetag in the deck generation purchase modal (`js/explore-modal.js`).
+   - Integrated official Google Pay (`/assets/img/Google_Pay_Logo.svg`) and Apple Pay (`/assets/img/Apple_Pay_logo.svg`) vector marks inside the button.
+   - Wired to standard hosted Stripe Checkout (`session.url`), allowing both anonymous and logged-in users to purchase single deck generations without requiring a Google login.
+2. Unauthenticated Checkout Verification & Credit Delivery:
+   - Updated Cloudflare Worker backend proxy in `worker/src/stripe.js` and `worker/src/index.js` (`/api/create-extra-deck-session` and `/api/payment/verify`) to support unauthenticated checkout sessions with automated Stripe session verification on return.
+   - Non-pro anonymous buyers receive their paid generation credit in `localStorage` (`spaiq_extra_generations`), immediately unlocking AI generation without login.
+   - Authenticated buyers continue to have their credit registered in their Firestore user record.
+3. Repositioned Google Login & Enlarged Pro Teaser:
+   - For non-pro users, enlarged the Pro subscription teaser text ("Quer 4 baralhos por mês, tutor de IA e sincronização na nuvem? Assine o Flashcards Pro" / "Want 4 decks per month, AI tutor and save sync? Upgrade to Flashcards Pro") with bold, high-contrast M3 typography.
+   - Relocated the "Login com Google" button directly below this Pro section, keeping the primary generation checkout unblocked while facilitating Google sign-in for users desiring the monthly Pro subscription.
+4. Cache & Localization:
+   - Added translations in `js/i18n.js` with full parity between pt-BR and en-US.
+   - Bumped service worker cache to `flashcards-v15.11` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: 3 DECK LIMIT ENFORCEMENT & INTERACTIVE REPLACEMENT PROMPT (v15.10)
 Date: 2026-11-02
 

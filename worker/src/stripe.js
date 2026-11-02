@@ -118,24 +118,29 @@ export async function createExtraGenerationPayment({ env, user, isPro, returnUrl
   const nonProId = env.STRIPE_EXTRA_PRICE_ID_NON_PRO || env.STRIPE_PRICE_NON_PRO || "prod_VYSOFAreE9zDHt";
   const lineItem = resolveStripeLineItem(isPro ? proId : nonProId, isPro);
 
+  const rawBase = (returnUrl && typeof returnUrl === 'string') ? returnUrl : 'https://flashcards.camblu.org';
+  const cleanBase = rawBase.split('?')[0];
+  const sep = cleanBase.includes('?') ? '&' : '?';
+
   const sessionParams = {
     mode,
-    ui_mode: "form",
     line_items: [lineItem],
     billing_address_collection: "auto",
     submit_type: "auto",
-    integration_identifier: "custom_embedded_web_0002",
-    return_url: returnUrl,
+    success_url: `${cleanBase}${sep}session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${cleanBase}${sep}canceled=true`,
   };
 
   if (user) {
     sessionParams.customer_email = user.email;
     sessionParams.client_reference_id = user.uid;
     sessionParams.metadata = { uid: user.uid, type: "extra_deck" };
+  } else {
+    sessionParams.metadata = { type: "extra_deck" };
   }
 
   const session = await stripe.checkout.sessions.create(sessionParams);
-  return { client_secret: session.client_secret, sessionId: session.id };
+  return { url: session.url, client_secret: session.client_secret, sessionId: session.id };
 }
 
 /**
