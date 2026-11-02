@@ -1,3 +1,16 @@
+CHANGELOG: COMPLETE I18N KEY LINKING AND TEXT LOCALIZATION (v15.3)
+Date: 2026-11-01
+
+OVERVIEW:
+1. Resolved all unlinked i18n keys and untranslated text across the application:
+   - Added 246 missing translation keys to both `TRANSLATIONS['pt-BR']` and `TRANSLATIONS['en-US']` in `js/i18n.js` (total dictionary now reaches 977 keys with 100% parity).
+   - Resolved all raw key fallbacks in the DOM (e.g. `cards_remaining_zero`, `score`, `save_settings`, `accuracy_trend_desc`, `card_type_success_desc`, `anki_distribution_desc`, `timeline_badge_recent_10`, `zero_days`, etc.).
+   - Localized dynamic runtime text in `js/stats.js` (mastery levels, pace badge status, Anki response count) and `js/game.js` (pinned header statistics titles/labels/descriptions, daily goal due counts).
+   - Added missing `data-i18n` and `data-i18n-alt` attributes in `pages/game.html`, `pages/generate.html`, and `pages/bulk-add.html`.
+2. Bumped Service Worker cache version to `flashcards-v15.3`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: TARGET DECK GENERATION LANGUAGE SELECTION (v15.2)
 Date: 2026-11-01
 

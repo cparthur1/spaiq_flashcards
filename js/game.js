@@ -2364,6 +2364,26 @@ const DEFAULT_PINNED_STATS = ['remaining', 'score'];
 const MAX_PINNED_STATS = 3;
 const MIN_PINNED_STATS = 1;
 
+const STAT_I18N_KEYS = {
+    remaining: { title: 'stat_remaining_title', label: 'stat_remaining_label', notebookLabel: 'stat_remaining_notebook_label', desc: 'stat_remaining_desc' },
+    score: { title: 'stat_score_title', label: 'stat_score_label', notebookLabel: 'stat_score_notebook_label', desc: 'stat_score_desc' },
+    estRemainingTime: { title: 'stat_estRemainingTime_title', label: 'stat_estRemainingTime_label', notebookLabel: 'stat_estRemainingTime_notebook_label', desc: 'stat_estRemainingTime_desc' },
+    pomodoro: { title: 'stat_pomodoro_title', label: 'stat_pomodoro_label', notebookLabel: 'stat_pomodoro_notebook_label', desc: 'stat_pomodoro_desc' },
+    accuracy: { title: 'stat_accuracy_title', label: 'stat_accuracy_label', notebookLabel: 'stat_accuracy_notebook_label', desc: 'stat_accuracy_desc' },
+    totalTime: { title: 'stat_totalTime_title', label: 'stat_totalTime_label', notebookLabel: 'stat_totalTime_notebook_label', desc: 'stat_totalTime_desc' },
+    avgTimePerCard: { title: 'stat_avgTimePerCard_title', label: 'stat_avgTimePerCard_label', notebookLabel: 'stat_avgTimePerCard_notebook_label', desc: 'stat_avgTimePerCard_desc' },
+};
+
+function getStatI18n(statId) {
+    const keys = STAT_I18N_KEYS[statId] || {};
+    return {
+        title: keys.title ? t(keys.title) : '',
+        label: keys.label ? t(keys.label) : '',
+        notebookLabel: keys.notebookLabel ? t(keys.notebookLabel) : '',
+        desc: keys.desc ? t(keys.desc) : ''
+    };
+}
+
 const AVAILABLE_HEADER_STATS = [
     {
         id: 'remaining',
@@ -2674,10 +2694,12 @@ function renderHeaderPinnedStats() {
                     </div>
                 `;
             } else {
+                const statI18n = getStatI18n(statId);
+                const statLabel = activeMode === 'notebook' ? (statI18n.notebookLabel || statDef.notebookLabel) : (statI18n.label || statDef.label);
                 statWrapper.className = 'block select-none min-w-[38px]';
                 statWrapper.innerHTML = `
                     <p id="stat-label-${statId}" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none text-center">
-                        ${activeMode === 'notebook' ? statDef.notebookLabel : statDef.label}
+                        ${statLabel}
                     </p>
                     <p id="stat-val-${statId}" class="text-xs sm:text-sm font-bold ${statDef.colorClass} text-center">
                         ${statDef.getValue()}
@@ -2781,7 +2803,7 @@ function renderHeaderStatsDropdown() {
     const pinnedIds = getPinnedHeaderStats();
 
     if (pinnedStatsCounter) {
-        pinnedStatsCounter.textContent = `${pinnedIds.length} de ${MAX_PINNED_STATS} fixadas`;
+        pinnedStatsCounter.textContent = t('pinned_stats_count', { count: pinnedIds.length, max: MAX_PINNED_STATS });
         if (pinnedIds.length >= MAX_PINNED_STATS) {
             pinnedStatsCounter.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 flex-shrink-0';
         } else {
@@ -2795,7 +2817,11 @@ function renderHeaderStatsDropdown() {
         const isPinned = pinnedIds.includes(stat.id);
         const liveVal = stat.getValue();
         const subtitle = stat.getSubtitle();
-        const displayLabel = activeMode === 'notebook' ? stat.notebookLabel : stat.label;
+        const statI18n = getStatI18n(stat.id);
+        const statTitle = statI18n.title || stat.title;
+        const displayLabel = activeMode === 'notebook' 
+            ? (statI18n.notebookLabel || stat.notebookLabel) 
+            : (statI18n.label || stat.label);
 
         const itemRow = document.createElement('div');
         itemRow.className = `group/opt flex items-center justify-between p-2.5 rounded-xl border transition-all duration-150 cursor-pointer ${
@@ -2811,7 +2837,7 @@ function renderHeaderStatsDropdown() {
                 </div>
                 <div class="min-w-0 flex-1 text-left">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-xs font-semibold text-gray-800 truncate">${stat.title}</span>
+                        <span class="text-xs font-semibold text-gray-800 truncate">${statTitle}</span>
                         <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono flex-shrink-0">${displayLabel}</span>
                     </div>
                     <div class="flex items-center gap-2 mt-0.5">
@@ -2831,10 +2857,10 @@ function renderHeaderStatsDropdown() {
                     isPinned
                         ? 'bg-blue-100/70 hover:bg-blue-200/80 border border-blue-300/80 text-blue-700 shadow-xs'
                         : 'bg-gray-100 hover:bg-gray-200/80 border border-transparent text-gray-400 hover:text-gray-600'
-                }" title="${isPinned ? 'Desafixar do cabeçalho' : (pinnedIds.length >= MAX_PINNED_STATS ? 'Limite de 3 fixadas atingido' : 'Fixar no cabeçalho')}">
+                }" title="${isPinned ? t('unpin_from_header') : (pinnedIds.length >= MAX_PINNED_STATS ? t('pinned_stat_max_toast') : t('pin_to_header'))}">
                     <img src="${isPinned ? '../assets/img/pinned.svg' : '../assets/img/unpinned.svg'}" 
                          class="w-5 h-5 flex-shrink-0 pointer-events-none transition-transform active:scale-90 ${isPinned ? '' : 'opacity-60'}" 
-                         alt="${isPinned ? 'Fixado' : 'Não fixado'}">
+                         alt="${isPinned ? t('pinned') : t('not_pinned')}">
                 </button>
             </div>
         `;
@@ -4352,7 +4378,7 @@ function openDailyGoalModal() {
         dailyGoalProgressText.textContent = t('reviewed_today_count', { count: reviewedToday, unit: reviewedToday === 1 ? t('card_unit_singular') : t('card_unit_plural') });
     }
     if (dailyGoalDueText) {
-        dailyGoalDueText.textContent = `${dueInfo.dueToday} vencidos`;
+        dailyGoalDueText.textContent = t('due_count', { count: dueInfo.dueToday });
     }
 
     dailyGoalModal.classList.remove('hidden');
@@ -4582,7 +4608,7 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
     const pinnedIds = getPinnedHeaderStats(targetMode);
 
     if (settingStatsPinnedCount) {
-        settingStatsPinnedCount.textContent = `${pinnedIds.length} de ${MAX_PINNED_STATS} fixadas`;
+        settingStatsPinnedCount.textContent = t('pinned_stats_count', { count: pinnedIds.length, max: MAX_PINNED_STATS });
         if (pinnedIds.length >= MAX_PINNED_STATS) {
             settingStatsPinnedCount.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60 flex-shrink-0';
         } else {
@@ -4594,8 +4620,12 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
 
     AVAILABLE_HEADER_STATS.forEach(stat => {
         const isPinned = pinnedIds.includes(stat.id);
-        const displayLabel = targetMode === 'notebook' ? stat.notebookLabel : stat.label;
-        const statTitle = stat.title;
+        const statI18n = getStatI18n(stat.id);
+        const displayLabel = targetMode === 'notebook' 
+            ? (statI18n.notebookLabel || stat.notebookLabel) 
+            : (statI18n.label || stat.label);
+        const statTitle = statI18n.title || stat.title;
+        const statDesc = statI18n.desc || stat.description;
 
         const row = document.createElement('div');
         row.className = `group/stat flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
@@ -4614,17 +4644,17 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
                         <span class="text-xs font-bold text-[var(--md-sys-color-on-surface)] truncate">${statTitle}</span>
                         <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono flex-shrink-0">${displayLabel}</span>
                     </div>
-                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">${stat.description}</p>
+                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">${statDesc}</p>
                 </div>
             </div>
             <button type="button" class="pin-stat-btn p-1.5 rounded-xl transition-all cursor-pointer ${
                 isPinned 
                     ? 'bg-blue-100/80 border border-blue-300 text-blue-700 shadow-xs' 
                     : 'bg-gray-100 border border-transparent text-gray-400 hover:text-gray-600'
-            }" title="${isPinned ? 'Desafixar do cabeçalho' : (pinnedIds.length >= MAX_PINNED_STATS ? 'Limite atingido' : 'Fixar no cabeçalho')}">
+            }" title="${isPinned ? t('unpin_from_header') : (pinnedIds.length >= MAX_PINNED_STATS ? t('pinned_stat_max_toast') : t('pin_to_header'))}">
                 <img src="${isPinned ? '../assets/img/pinned.svg' : '../assets/img/unpinned.svg'}" 
                      class="w-5 h-5 flex-shrink-0 pointer-events-none transition-transform active:scale-90 ${isPinned ? '' : 'opacity-60'}" 
-                     alt="${isPinned ? 'Fixado' : 'Não fixado'}">
+                     alt="${isPinned ? t('pinned') : t('not_pinned')}">
             </button>
         `;
 

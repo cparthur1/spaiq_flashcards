@@ -89,7 +89,7 @@
                 </a>
                 <div class="flex items-center gap-2">
                     <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 shadow-2xs">
-                        <img src="../assets/img/bulk_add.svg" class="w-5 h-5" alt="Adicionar vários">
+                        <img src="../assets/img/bulk_add.svg" class="w-5 h-5" alt="Adicionar vários" data-i18n-alt="bulk_add_title">
                     </div>
                     <div>
                         <h1 class="text-base sm:text-lg font-bold text-gray-900 leading-tight" data-i18n="bulk_add_header_title">Adicionar Vários ao Caderno</h1>
@@ -102,7 +102,7 @@
             <div class="flex items-center gap-2.5">
                 <!-- Notebook Total Cards Badge (Clickable Pill) -->
                 <button type="button" id="notebook-total-badge" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100/90 active:scale-95 border border-blue-200 hover:border-blue-300 text-blue-700 font-bold text-xs shadow-2xs hover:shadow-xs transition-all cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500/30" title="Ver baralhos e cartões salvos no Caderno" aria-label="Ver baralhos e cartões salvos no Caderno" data-i18n-title="view_notebook_saved_title" data-i18n-aria-label="view_notebook_saved_title">
-                    <img src="../assets/img/bookmark_check.svg" class="w-3.5 h-3.5 flex-shrink-0" alt="Caderno">
+                    <img src="../assets/img/bookmark_check.svg" class="w-3.5 h-3.5 flex-shrink-0" alt="Caderno" data-i18n-alt="notebook">
                     <span id="notebook-total-count" data-i18n="notebook_count_zero">0 no caderno</span>
                     <span class="material-symbols-rounded text-sm text-blue-500 transition-transform group-hover:translate-x-0.5">chevron_right</span>
                 </button>
@@ -126,7 +126,7 @@
             
             <div id="upload-dropzone" class="border-2 border-dashed border-gray-300 hover:border-blue-500 rounded-3xl p-8 sm:p-12 text-center bg-white shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col items-center justify-center gap-3 group">
                 <div class="w-16 h-16 rounded-3xl bg-blue-50 group-hover:bg-blue-100 text-blue-600 flex items-center justify-center shadow-xs transition-transform group-hover:scale-110">
-                    <img src="../assets/img/bulk_add.svg" class="w-8 h-8" alt="Upload">
+                    <img src="../assets/img/bulk_add.svg" class="w-8 h-8" alt="Upload" data-i18n-alt="bulk_drop_title">
                 </div>
                 <div>
                     <h2 class="text-lg sm:text-xl font-bold text-gray-900" data-i18n="bulk_drop_title">Faça upload de baralhos para o Caderno</h2>
@@ -145,7 +145,7 @@
         <section id="upload-summary-bar" class="hidden bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200/90 shadow-xs flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <img src="../assets/img/loaded.svg" class="w-5 h-5 flex-shrink-0" alt="Baralhos carregados">
+                    <img src="../assets/img/loaded.svg" class="w-5 h-5 flex-shrink-0" alt="Baralhos carregados" data-i18n-alt="summary_decks_loaded_zero">
                 </div>
                 <div>
                     <span id="summary-decks-text" class="text-sm font-bold text-gray-900 block" data-i18n="summary_decks_loaded_zero">0 baralhos carregados</span>
@@ -240,7 +240,7 @@
                             <!-- Hint in background when empty -->
                             <div id="right-empty-hint" class="absolute inset-4 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-6 text-center select-none bg-gray-50/40 bulk-empty-hint">
                                 <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center mb-3 shadow-2xs">
-                                    <img src="../assets/img/bulk_add.svg" class="w-7 h-7 opacity-60" alt="Mova cartões para cá">
+                                    <img src="../assets/img/bulk_add.svg" class="w-7 h-7 opacity-60" alt="Mova cartões para cá" data-i18n-alt="move_cards_here_title">
                                 </div>
                                 <h4 class="text-base font-bold text-gray-700" data-i18n="move_cards_here_title">Mova cartões para cá</h4>
                                 <p class="text-xs text-gray-400 max-w-xs mt-1 leading-relaxed" data-i18n="move_cards_here_sub">
@@ -316,7 +316,7 @@
         <div class="bg-white rounded-3xl border border-gray-200 shadow-xl max-w-lg w-full p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
             <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 class="font-bold text-base text-gray-900 flex items-center gap-2">
-                    <img src="../assets/img/edit.svg" class="w-4 h-4" alt="Editar">
+                    <img src="../assets/img/edit.svg" class="w-4 h-4" alt="Editar" data-i18n-alt="edit">
                     <span data-i18n="edit_notebook_card">Editar Cartão do Caderno</span>
                 </h3>
                 <button type="button" id="close-edit-modal-btn" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition" title="Fechar" aria-label="Fechar" data-i18n-title="close" data-i18n-aria-label="close">

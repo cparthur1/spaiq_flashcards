@@ -401,7 +401,7 @@ function renderCurrentSession(sess, gameState, history) {
     // Anki Quality Distribution
     const anki = sess && sess.ankiRatings ? sess.ankiRatings : { again: 0, hard: 0, good: 0, easy: 0 };
     const ankiTotal = (anki.again || 0) + (anki.hard || 0) + (anki.good || 0) + (anki.easy || 0);
-    ankiTotalBadge.textContent = `${ankiTotal} respostas`;
+    ankiTotalBadge.textContent = t('anki_responses_count', { count: ankiTotal });
 
     const pctAgain = ankiTotal > 0 ? Math.round((anki.again / ankiTotal) * 100) : 0;
     const pctHard = ankiTotal > 0 ? Math.round((anki.hard / ankiTotal) * 100) : 0;
@@ -520,7 +520,7 @@ function renderPaceAndEstimate(sess, gameState, avgSeconds, poolRemaining, accur
             paceEstimateSub.removeAttribute('title');
         }
         if (paceEstimateBadge) {
-            paceEstimateBadge.textContent = '100% Zerado';
+            paceEstimateBadge.textContent = t('pace_100_cleared');
             paceEstimateBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
             paceEstimateBadge.removeAttribute('title');
         }
@@ -582,7 +582,7 @@ function renderPaceAndEstimate(sess, gameState, avgSeconds, poolRemaining, accur
             paceEstimateSub.removeAttribute('title');
         }
         if (paceEstimateBadge) {
-            paceEstimateBadge.textContent = 'Aguardando dados';
+            paceEstimateBadge.textContent = t('waiting_for_data');
             paceEstimateBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600';
             paceEstimateBadge.removeAttribute('title');
         }
@@ -596,7 +596,7 @@ function renderDeckMastery(progressPct, accuracyPct, currentStreak, completedCar
         masteryScore.textContent = '0 pts';
         if (masteryProgressBar) masteryProgressBar.style.width = '0%';
         if (masteryLevelBadge) {
-            masteryLevelBadge.textContent = 'Sem dados';
+            masteryLevelBadge.textContent = t('no_data');
             masteryLevelBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600';
         }
         if (masteryDescription) masteryDescription.textContent = t('no_cards_in_deck');
@@ -611,22 +611,22 @@ function renderDeckMastery(progressPct, accuracyPct, currentStreak, completedCar
     masteryScore.textContent = `${score} pts`;
     if (masteryProgressBar) masteryProgressBar.style.width = `${score}%`;
 
-    let badgeText = 'Iniciando';
+    let badgeText = t('mastery_initiating');
     let badgeClass = 'bg-amber-100 text-amber-800';
-    let desc = 'Primeiras conexões neurais sendo formadas.';
+    let desc = t('mastery_initiating_desc');
 
     if (score >= 85) {
-        badgeText = 'Mestre do Baralho';
+        badgeText = t('mastery_master');
         badgeClass = 'bg-purple-100 text-purple-700';
-        desc = 'Retenção sólida e velocidade de recall no nível máximo!';
+        desc = t('mastery_master_desc');
     } else if (score >= 65) {
-        badgeText = 'Domínio Avançado';
+        badgeText = t('mastery_advanced');
         badgeClass = 'bg-emerald-100 text-emerald-700';
-        desc = 'Excelente taxa de acertos e recall consistente.';
+        desc = t('mastery_advanced_desc');
     } else if (score >= 40) {
-        badgeText = 'Em Construção';
+        badgeText = t('mastery_in_progress');
         badgeClass = 'bg-blue-100 text-blue-700';
-        desc = 'Fixação ativa em progresso constante.';
+        desc = t('mastery_in_progress_desc');
     }
 
     if (masteryLevelBadge) {
