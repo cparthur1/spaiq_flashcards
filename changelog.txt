@@ -1,3 +1,16 @@
+CHANGELOG: GOOGLE G LOGO CONTRAST FILTER ON BLUE BUTTONS (v15.15)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Google Sign-In Blue Button Contrast:
+   - Replaced embedded multi-color Google SVG with `google_g_logo.svg` / `Google__G__logo.svg` on blue Google Sign-In buttons (`account-login-google-btn` in `js/account-modal.js` and `pro-google-login-btn` in `js/explore-modal.js`).
+   - Applied CSS filter `brightness(0) invert(1)` to render the logo in pure monochrome white, providing optimal contrast against the blue theme background (`#3b82f7` / `bg-blue-600`).
+2. Assets & Service Worker:
+   - Added `assets/img/google_g_logo.svg` mirroring `Google__G__logo.svg`.
+   - Updated `sw.js` cache list to include Google logo assets and bumped cache version to `flashcards-v15.15`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: 3-SHARED-SLOT REPLACEMENT WARNING & CLOUD SYNC LOCK (v15.14)
 Date: 2026-11-02
 
