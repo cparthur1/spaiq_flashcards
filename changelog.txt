@@ -1,3 +1,18 @@
+CHANGELOG: LOGIN-FREE AI GENERATION TRIAL & FREE DECK SHARING (v15.8)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Login-Free AI Generation Trial for Non-Pro Users:
+   - Removed mandatory Google login prompt for non-Pro users generating their 1 free AI deck trial in `js/generate.js` (Option 2.1 and Option 2.2).
+   - Updated Cloudflare Worker backend proxy in `worker/src/index.js` (`/api/ai/generate`) to accept unauthenticated requests for initial deck creation (`isNewDeck: true`), allowing anonymous users to use their 1 free AI generation trial seamlessly without authentication barriers.
+2. Direct and Free Deck Sharing for All Users:
+   - Added direct "Compartilhar Baralho" action to the hamburger menu in `pages/game.html` and wired with `shareDeckToCloud` in `js/game.js`, allowing users to generate shareable links for free without requiring login.
+   - Added direct "Compartilhar" button to the deck actions bar in `pages/generate.html` and wired in `js/generate.js`.
+   - Added dynamic localization key `share_deck_free_hint` to `js/i18n.js` in both pt-BR and en-US with 100% dictionary parity.
+3. Cache bumped to `flashcards-v15.8` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: 100% BACKEND AI PROXY ROUTING & CLIENT SDK DECOMMISSION (v15.7)
 Date: 2026-11-02
 

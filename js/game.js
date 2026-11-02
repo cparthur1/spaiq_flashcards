@@ -22,7 +22,7 @@ import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCu
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
 import { onAuthChange, auth } from './firebase-client.js';
-import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots } from './share-manager.js';
+import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
@@ -81,6 +81,7 @@ const aiSwitch = document.getElementById('ai-switch');
 const resetBtn = document.getElementById('reset-btn');
 const restartGameBtn = document.getElementById('restart-game-btn');
 const exportBtn = document.getElementById('export-btn');
+const menuShareDeckBtn = document.getElementById('menu-share-deck-btn');
 const gameContainer = document.getElementById('game-container');
 const goToEditorBtn = document.getElementById('go-to-editor-btn');
 
@@ -4329,6 +4330,40 @@ exportBtn.addEventListener('click', () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
 });
+
+if (menuShareDeckBtn) {
+    menuShareDeckBtn.addEventListener('click', async () => {
+        closeHamburgerMenu();
+        const title = (deckTitle && deckTitle.textContent ? deckTitle.textContent : (activeMode === 'notebook' ? 'Caderno' : 'Flashcards')).trim();
+        const cards = (allQuestions || []).filter(isPlayableCard);
+        if (cards.length === 0) return;
+
+        const slots = getLocalSlots();
+        let targetSlotIdx = null;
+        if (activeMode === 'exam') {
+            targetSlotIdx = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
+        } else if (activeMode === 'normal') {
+            targetSlotIdx = slots.findIndex(s => s.isCurrent && !s.isExam);
+        }
+
+        const deckData = {
+            questionsPool: questionsPool,
+            allQuestions: allQuestions,
+            score: score,
+            deckTitle: title,
+            updatedAt: Date.now()
+        };
+
+        try {
+            const { shareUrl } = await shareDeckToCloud(deckData, title, targetSlotIdx !== -1 ? targetSlotIdx : null);
+            showNotificationPill(t('deck_shared_copied'), "link.svg");
+            alert(t('deck_shared_and_pinned', { url: shareUrl }));
+        } catch (err) {
+            console.error('[Share] Erro ao compartilhar baralho:', err);
+            alert(t('error_sharing_deck'));
+        }
+    });
+}
 goToEditorBtn.addEventListener('click', () => {
     if (activeMode === 'notebook') {
         window.location.href = ROUTES.BULK_ADD;

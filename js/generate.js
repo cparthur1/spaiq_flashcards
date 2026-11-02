@@ -1,9 +1,9 @@
 import { callWithRetry, checkAndResetModelFallback, sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId } from './utils.js';
 import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserProStatus, refreshUserProStatus } from './explore-modal.js';
-import { onAuthChange, getCurrentUserToken, signInWithGoogle } from './firebase-client.js';
+import { onAuthChange, getCurrentUserToken } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
-import { syncSharedDeckToFirestore } from './share-manager.js';
+import { syncSharedDeckToFirestore, shareDeckToCloud } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
 
 function compressPDFWithWorker(file) {
@@ -190,6 +190,7 @@ const cardsList = document.getElementById('cards-list');
 const deckSizeBadge = document.getElementById('deck-size-badge');
 const deckTitleDisplay = document.getElementById('deck-title-display');
 const downloadDeckBtn = document.getElementById('download-deck-btn');
+const shareDeckBtn = document.getElementById('share-deck-btn');
 const playDeckBtn = document.getElementById('play-deck-btn');
 const addCardBtn = document.getElementById('add-card-btn');
 
@@ -1874,29 +1875,23 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
         let fullText = "";
         const seenSignatures = new Set();
 
-        let token = await getCurrentUserToken();
-        if (!token) {
-            updateGeneratingStatus("Conectando com o Google para liberar sua geração gratuita...");
-            try {
-                const user = await signInWithGoogle();
-                if (!user) throw new Error("Login necessário para gerar baralho com IA.");
-                token = await getCurrentUserToken();
-            } catch (authErr) {
-                throw new Error("Faça login com sua conta Google para liberar sua geração gratuita com IA.");
-            }
-        }
-
+        const token = await getCurrentUserToken().catch(() => null);
         const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
         if (isTrial) {
             window.currentDeckIsFreeAiTrial = true;
+        } else if (!isUserPro() && hasUsedFreeAiDeck()) {
+            openProModal();
+            return;
+        }
+
+        const reqHeaders = { 'Content-Type': 'application/json' };
+        if (token) {
+            reqHeaders['Authorization'] = `Bearer ${token}`;
         }
 
         const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: reqHeaders,
             body: JSON.stringify({
                 model: currentEditorModel || "gemini-flash-latest",
                 contents: [{ role: 'user', parts }],
@@ -2094,29 +2089,23 @@ Ao terminar, chame 'adicionar_varios_cards' para enviar o baralho finalizado.
 JSON:
 ${JSON.stringify(localCards, null, 2)}`;
 
-        let token = await getCurrentUserToken();
-        if (!token) {
-            updateGeneratingStatus("Conectando com o Google para liberar sua geração gratuita...");
-            try {
-                const user = await signInWithGoogle();
-                if (!user) throw new Error("Login necessário para gerar baralho com IA.");
-                token = await getCurrentUserToken();
-            } catch (authErr) {
-                throw new Error("Faça login com sua conta Google para liberar sua geração gratuita com IA.");
-            }
-        }
-
+        const token = await getCurrentUserToken().catch(() => null);
         const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
         if (isTrial) {
             window.currentDeckIsFreeAiTrial = true;
+        } else if (!isUserPro() && hasUsedFreeAiDeck()) {
+            openProModal();
+            return;
+        }
+
+        const reqHeaders = { 'Content-Type': 'application/json' };
+        if (token) {
+            reqHeaders['Authorization'] = `Bearer ${token}`;
         }
 
         const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: reqHeaders,
             body: JSON.stringify({
                 model: "gemini-flash-latest",
                 contents: [{ role: 'user', parts: [{ text: fillPrompt }] }],
@@ -3779,6 +3768,33 @@ deckTitleDisplay.addEventListener('input', () => {
     document.title = `${deckTitleDisplay.value.trim() || 'Flashcards'} | Editor`;
     syncCurrentDeckToSlotAndCloud();
 });
+
+if (shareDeckBtn) {
+    shareDeckBtn.addEventListener('click', async () => {
+        if (deckCards.length === 0) {
+            alert(t('alert_add_card_before_play'));
+            return;
+        }
+        syncCurrentDeckToSlotAndCloud();
+        const title = deckTitleDisplay.value.trim() || 'Meu Baralho';
+        const playableCards = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
+        const gameState = {
+            questionsPool: playableCards,
+            allQuestions: deckCards,
+            score: 0,
+            deckTitle: title,
+            isFreeAiTrial: Boolean(window.currentDeckIsFreeAiTrial || localStorage.getItem('editing_deck_is_free_trial') === 'true'),
+            updatedAt: Date.now()
+        };
+        try {
+            const { shareUrl } = await shareDeckToCloud(gameState, title, currentEditingSlotIndex);
+            alert(t('deck_shared_and_pinned', { url: shareUrl }));
+        } catch (err) {
+            console.error('[Share] Erro ao compartilhar baralho:', err);
+            alert(t('error_sharing_deck'));
+        }
+    });
+}
 
 downloadDeckBtn.addEventListener('click', () => {
     if (deckCards.length === 0) return;

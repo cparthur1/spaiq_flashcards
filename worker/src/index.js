@@ -679,85 +679,108 @@ export default {
         return jsonResponse({ error: 'Nenhuma assinatura ativa encontrada para reativar.' }, 400, corsHeaders);
       }
 
-      // 6. Gemini AI - Deck Generation (Requires Pro & Quota Check)
+      // 6. Gemini AI - Deck Generation (Requires Pro & Quota Check; Free 1-Deck Trial for Non-Pro without login)
       if (path === '/api/ai/generate' && request.method === 'POST') {
-        const user = await authenticateUser();
+        const authHeader = request.headers.get('Authorization') || '';
         const reqBody = await request.json();
+        const isNewDeck = reqBody.isNewDeck !== false;
 
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        let userDoc = null;
-        let serviceAccount = null;
-        try {
-          serviceAccount = getServiceAccount(env);
-          userDoc = await getUserDocument(serviceAccount, user.uid);
-        } catch (e) {
-          console.warn('[Generate] Falha ao ler Firestore:', e.message);
+        let user = null;
+        if (authHeader.startsWith('Bearer ')) {
+          const token = authHeader.substring(7);
+          const projectId = env.FIREBASE_PROJECT_ID || 'flashcards-ead57';
+          try {
+            user = await verifyFirebaseIdToken(token, projectId);
+          } catch (authErr) {
+            return jsonResponse({ error: 'unauthorized', message: authErr.message || 'Token inválido' }, 401, corsHeaders);
+          }
         }
 
-        const isPro = Boolean(isLifetime || user.pro || userDoc?.subscription?.status === 'active');
-        const hasUsedFreeTrial = Boolean(userDoc?.freeAiDeckUsed);
-        let extraGens = userDoc?.extraGenerations || 0;
+        if (user) {
+          const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+          let userDoc = null;
+          let serviceAccount = null;
+          try {
+            serviceAccount = getServiceAccount(env);
+            userDoc = await getUserDocument(serviceAccount, user.uid);
+          } catch (e) {
+            console.warn('[Generate] Falha ao ler Firestore:', e.message);
+          }
 
-        // Quota check logic
-        const isNewDeck = reqBody.isNewDeck !== false;
-        if (isNewDeck && !isLifetime) {
-          if (isPro) {
-            // PRO USER: 4 free deck generations per month + any purchased extra generations
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            const lastReset = userDoc?.quotaLastResetMonth || '';
-            let monthlyUsed = userDoc?.monthlyGenerationsUsed || 0;
+          const isPro = Boolean(isLifetime || user.pro || userDoc?.subscription?.status === 'active');
+          const hasUsedFreeTrial = Boolean(userDoc?.freeAiDeckUsed);
+          let extraGens = userDoc?.extraGenerations || 0;
 
-            if (lastReset !== currentMonth) {
-              monthlyUsed = 0;
-            }
+          // Quota check logic
+          if (isNewDeck && !isLifetime) {
+            if (isPro) {
+              // PRO USER: 4 free deck generations per month + any purchased extra generations
+              const currentMonth = new Date().toISOString().slice(0, 7);
+              const lastReset = userDoc?.quotaLastResetMonth || '';
+              let monthlyUsed = userDoc?.monthlyGenerationsUsed || 0;
 
-            if (monthlyUsed < 4) {
-              monthlyUsed += 1;
-            } else if (extraGens > 0) {
-              extraGens -= 1;
-            } else {
-              return jsonResponse({
-                error: 'quota_exceeded',
-                message: 'Você atingiu o limite de 4 baralhos por IA este mês. Adquira gerações extras por R$ 0,99 cada.',
-                limit: 4,
-                used: monthlyUsed,
-                extra: extraGens
-              }, 402, corsHeaders);
-            }
-
-            if (serviceAccount) {
-              await updateUserDocument(serviceAccount, user.uid, {
-                monthlyGenerationsUsed: monthlyUsed,
-                quotaLastResetMonth: currentMonth,
-                extraGenerations: extraGens
-              }).catch(() => {});
-            }
-          } else {
-            // NON-PRO USER: 1 free trial deck generation, or use purchased extra generations (R$ 1,49 on Stripe)
-            if (!hasUsedFreeTrial) {
-              if (serviceAccount) {
-                await updateUserDocument(serviceAccount, user.uid, {
-                  freeAiDeckUsed: true,
-                  freeAiDeckUsedAt: new Date().toISOString()
-                }).catch((err) => console.warn('[Generate] Erro ao registrar freeAiDeckUsed:', err.message));
+              if (lastReset !== currentMonth) {
+                monthlyUsed = 0;
               }
-            } else if (extraGens > 0) {
-              extraGens -= 1;
+
+              if (monthlyUsed < 4) {
+                monthlyUsed += 1;
+              } else if (extraGens > 0) {
+                extraGens -= 1;
+              } else {
+                return jsonResponse({
+                  error: 'quota_exceeded',
+                  message: 'Você atingiu o limite de 4 baralhos por IA este mês. Adquira gerações extras por R$ 0,99 cada.',
+                  limit: 4,
+                  used: monthlyUsed,
+                  extra: extraGens
+                }, 402, corsHeaders);
+              }
+
               if (serviceAccount) {
                 await updateUserDocument(serviceAccount, user.uid, {
+                  monthlyGenerationsUsed: monthlyUsed,
+                  quotaLastResetMonth: currentMonth,
                   extraGenerations: extraGens
                 }).catch(() => {});
               }
             } else {
-              return jsonResponse({
-                error: 'quota_exceeded',
-                message: 'Você já utilizou sua geração gratuita de 1 baralho com IA. Adquira uma geração avulsa por R$ 1,49 no Stripe ou assine o Spaiq Pro (R$ 4,99/mês com 4 gerações mensais)!',
-                limit: 0,
-                used: 1,
-                extra: 0,
-                canBuyExtra: true
-              }, 402, corsHeaders);
+              // NON-PRO LOGGED-IN USER: 1 free trial deck generation, or use purchased extra generations (R$ 1,49 on Stripe)
+              if (!hasUsedFreeTrial) {
+                if (serviceAccount) {
+                  await updateUserDocument(serviceAccount, user.uid, {
+                    freeAiDeckUsed: true,
+                    freeAiDeckUsedAt: new Date().toISOString()
+                  }).catch((err) => console.warn('[Generate] Erro ao registrar freeAiDeckUsed:', err.message));
+                }
+              } else if (extraGens > 0) {
+                extraGens -= 1;
+                if (serviceAccount) {
+                  await updateUserDocument(serviceAccount, user.uid, {
+                    extraGenerations: extraGens
+                  }).catch(() => {});
+                }
+              } else {
+                return jsonResponse({
+                  error: 'quota_exceeded',
+                  message: 'Você já utilizou sua geração gratuita de 1 baralho com IA. Adquira uma geração avulsa por R$ 1,49 no Stripe ou assine o Spaiq Pro (R$ 4,99/mês com 4 gerações mensais)!',
+                  limit: 0,
+                  used: 1,
+                  extra: 0,
+                  canBuyExtra: true
+                }, 402, corsHeaders);
+              }
             }
+          }
+        } else {
+          // NON-LOGGED-IN USER:
+          // 1 free trial deck generation is allowed without login.
+          // Editor AI agent turns (isNewDeck === false) require a Pro account.
+          if (!isNewDeck) {
+            return jsonResponse({
+              error: 'unauthorized',
+              message: 'O assistente de edição por IA é exclusivo para assinantes Flashcards Pro. Faça login com sua conta Pro para usar.'
+            }, 401, corsHeaders);
           }
         }
 
