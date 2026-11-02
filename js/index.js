@@ -2,7 +2,7 @@
 import { ROUTES, shuffleArray, generateSecureId, escapeHtml } from './utils.js';
 import { getDailyStreak } from './engine/notebook-scheduler.js';
 import { initExploreModal, openExploreModal } from './explore-modal.js';
-import { checkAndLoadSharedDeck } from './share-manager.js';
+import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots } from './share-manager.js';
 import { openDeckInSlots, syncSlotsToCloud } from './slot-manager.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference } from './i18n.js';
 
@@ -13,6 +13,9 @@ async function init() {
     // 1. Check for shared deck via deep-link (?share=...)
     const sharedLoaded = await checkAndLoadSharedDeck();
     if (sharedLoaded) return;
+
+    // Check in background if imported shared decks have new updates from owner
+    checkAndUpdateSharedSlots().catch(() => {});
 
     // 2. Initialize the Explore Files Modal
     initExploreModal();

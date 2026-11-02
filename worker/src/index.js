@@ -3,13 +3,12 @@
  * Flashcards WebApp - Cloudflare Worker Backend
  * Provides:
  * 1. Secure Gemini AI Proxy (without exposing server API keys to client)
- * 2. Asaas & Stripe Payment Processing (R$ 5/mês Pro, R$ 1,49 geração extra/avulsa)
+ * 2. Stripe Payment Processing (R$ 4,99/mês Pro, R$ 1,49 geração extra/avulsa)
  * 3. Webhook Handlers with Firebase Admin OAuth2 token minting
  * 4. User Quota & Pro Claim Management
  */
 
 import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail } from './google-auth.js';
-import { getOrCreateCustomer, createSubscription, createExtraGenerationPayment, cancelSubscription, getSubscriptionDetails, checkCustomerProStatusInAsaas } from './asaas.js';
 import { callGemini } from './gemini.js';
 import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData } from './firestore.js';
 import Stripe from 'stripe';
@@ -88,12 +87,7 @@ export default {
 
 
 
-      // 2. Asaas Webhook (No client auth, called directly by Asaas servers)
-      if (path === '/api/webhook/asaas' && request.method === 'POST') {
-        return await handleAsaasWebhook(request, env);
-      }
-
-      // 2.1 Stripe Webhook (No client auth, called directly by Stripe servers)
+      // 2. Stripe Webhook (No client auth, called directly by Stripe servers)
       if ((path === '/api/webhook/stripe' || path === '/api/webhook') && request.method === 'POST') {
         return await handleStripeWebhook(request, env);
       }

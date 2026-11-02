@@ -5,6 +5,7 @@ import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserP
 import { onAuthChange, getCurrentUserToken, signInWithGoogle } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
+import { syncSharedDeckToFirestore } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
 
 function compressPDFWithWorker(file) {
@@ -325,6 +326,12 @@ function syncCurrentDeckToSlotAndCloud() {
         } else {
             const allocatedIdx = openDeckInSlots(gameState, title, isExam ? 'exam' : 'normal', targetIdx);
             currentEditingSlotIndex = allocatedIdx;
+        }
+
+        // Auto-sync to Firestore share document if this deck is being shared
+        const activeSlot = (currentEditingSlotIndex !== null && slots[currentEditingSlotIndex]) ? slots[currentEditingSlotIndex] : null;
+        if (activeSlot?.shareSlug) {
+            syncSharedDeckToFirestore(activeSlot.shareSlug, gameState, title);
         }
     } catch (e) {
         console.warn('Erro ao atualizar slots do baralho:', e);

@@ -1342,10 +1342,6 @@ window.flashcardsDeleteSlot = function(slotIdx) {
 };
 
 window.flashcardsShareSlot = async function(slotIdx) {
-  if (!isUserPro()) {
-    openProModal();
-    return;
-  }
   const slots = getLocalSlots();
   const slot = slots[slotIdx];
   if (!slot?.deckData) return;
@@ -1378,10 +1374,6 @@ window.flashcardsImportNotebookBackup = function() {
 };
 
 window.flashcardsShareNotebook = async function() {
-  if (!isUserPro()) {
-    openProModal();
-    return;
-  }
   const notebook = getNotebookSlotData();
   if (!notebook.deckData) return;
   try {

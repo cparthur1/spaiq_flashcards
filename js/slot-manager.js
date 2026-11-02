@@ -7,6 +7,7 @@
 import { auth, db, doc, getDoc, setDoc, updateDoc, onSnapshot } from './firebase-client.js';
 import { getCloudSlots, saveCloudSlots } from './backend-api.js';
 import { isUserPro } from './explore-modal.js';
+import { syncSharedDeckToFirestore } from './share-manager.js';
 import { t } from './i18n.js';
 
 let syncTimeout = null;
@@ -198,9 +199,10 @@ export function deleteSlot(slotIndex) {
     const isExam = Boolean(slots[slotIndex].isExam || slots[slotIndex].mode === 'exam' || (slots[slotIndex].deckData && slots[slotIndex].deckData.decks));
     const targetDeckId = slots[slotIndex].deckId;
     const shareSlug = slots[slotIndex].shareSlug;
+    const isShareOwner = slots[slotIndex].isShareOwner === true || slots[slotIndex].isSharedImport !== true;
 
-    // If deck was shared, mark share as deleted in Firestore
-    if (shareSlug) {
+    // If deck was shared by owner (not a recipient import), mark share as deleted in Firestore
+    if (shareSlug && isShareOwner && !slots[slotIndex].isSharedImport) {
       try {
         updateDoc(doc(db, 'shares', shareSlug), { deleted: true, deletedAt: Date.now() }).catch(() => {});
       } catch (e) {}
@@ -211,6 +213,8 @@ export function deleteSlot(slotIndex) {
       slotIndex,
       deckId: null,
       shareSlug: null,
+      isShareOwner: false,
+      isSharedImport: false,
       title: `Slot ${slotIndex + 1} (Vazio)`,
       cardCount: 0,
       isFixed: false,
@@ -250,6 +254,13 @@ export function deleteSlot(slotIndex) {
  */
 export function clearNotebookSlot() {
   const now = Date.now();
+  const nbShareSlug = localStorage.getItem('flashcards_notebook_share_slug');
+  if (nbShareSlug) {
+    try {
+      updateDoc(doc(db, 'shares', nbShareSlug), { deleted: true, deletedAt: now }).catch(() => {});
+    } catch (e) {}
+    localStorage.removeItem('flashcards_notebook_share_slug');
+  }
   localStorage.removeItem(NOTEBOOK_KEY);
   localStorage.setItem('flashcards_notebook_deleted_at', String(now));
   syncSlotsToCloud();
@@ -546,6 +557,77 @@ export function mergeStatsData(local, cloud) {
 }
 
 /**
+ * Synchronize active game session into local slot and auto-sync to Firestore if deck is shared.
+ * Runs for all users (Pro and non-Pro) so card edits/deletions immediately update the slot and share link.
+ */
+export function syncActiveSlotState() {
+  const slots = getLocalSlots();
+  const activeMode = localStorage.getItem(ACTIVE_MODE_KEY) || 'normal';
+  const activeSave = localStorage.getItem(SAVE_KEY);
+  const activeExam = localStorage.getItem('flashcardsExam');
+  let updatedSlotIndex = -1;
+
+  if (activeMode === 'normal' && activeSave) {
+    try {
+      const parsedSave = JSON.parse(activeSave);
+      let currentSlotIndex = slots.findIndex(s => s.isCurrent && !s.isExam);
+      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
+      if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
+        slots[currentSlotIndex].deckData = parsedSave;
+        slots[currentSlotIndex].cardCount = (parsedSave.allQuestions || []).length;
+        slots[currentSlotIndex].title = parsedSave.deckTitle || slots[currentSlotIndex].title;
+        slots[currentSlotIndex].isExam = false;
+        slots[currentSlotIndex].mode = 'normal';
+        slots[currentSlotIndex].updatedAt = Date.now();
+        saveLocalSlots(slots);
+        updatedSlotIndex = currentSlotIndex;
+      }
+    } catch (e) {}
+  } else if (activeMode === 'exam' && activeExam) {
+    try {
+      const parsedExam = JSON.parse(activeExam);
+      let currentSlotIndex = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
+      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isExam || s.mode === 'exam');
+      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
+      if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
+        slots[currentSlotIndex].deckData = parsedExam;
+        slots[currentSlotIndex].cardCount = (parsedExam.allQuestions || []).length;
+        slots[currentSlotIndex].title = parsedExam.deckTitle || slots[currentSlotIndex].title || 'Semana de Provas';
+        slots[currentSlotIndex].isExam = true;
+        slots[currentSlotIndex].mode = 'exam';
+        slots[currentSlotIndex].updatedAt = Date.now();
+        saveLocalSlots(slots);
+        updatedSlotIndex = currentSlotIndex;
+      } else {
+        openDeckInSlots(parsedExam, parsedExam.deckTitle || 'Semana de Provas', 'exam');
+      }
+    } catch (e) {}
+  }
+
+  // If the updated slot is being shared, sync changes to Firestore share doc so anyone with the link gets the update!
+  if (updatedSlotIndex !== -1 && slots[updatedSlotIndex]?.shareSlug) {
+    syncSharedDeckToFirestore(
+      slots[updatedSlotIndex].shareSlug,
+      slots[updatedSlotIndex].deckData,
+      slots[updatedSlotIndex].title
+    );
+  }
+
+  // If notebook is active and shared, sync changes to notebook share
+  if (activeMode === 'notebook') {
+    const notebookShareSlug = localStorage.getItem('flashcards_notebook_share_slug');
+    if (notebookShareSlug) {
+      const localNotebook = getNotebookSlotData();
+      if (localNotebook?.deckData) {
+        syncSharedDeckToFirestore(notebookShareSlug, localNotebook.deckData, 'Caderno');
+      }
+    }
+  }
+
+  return updatedSlotIndex;
+}
+
+/**
  * Synchronize slots, settings, daily streak, and user progress to Firestore via Backend Admin API
  */
 export async function syncSlotsToCloud() {
@@ -554,58 +636,19 @@ export async function syncSlotsToCloud() {
     syncTimeout = null;
   }
 
+  // Always keep active slot and shared decks up to date locally & in shares (for all users)
+  syncActiveSlotState();
+
   const user = auth.currentUser;
   if (!user) return;
 
-  // Crucial: Cloud sync is exclusively for Pro users. Non-pro users use only local storage.
+  // Crucial: Cloud account backup sync is exclusively for Pro users. Non-pro users use local storage + direct link shares.
   if (!isUserPro()) {
     return;
   }
 
   try {
     const slots = getLocalSlots();
-
-    // Keep active slot updated with the latest normal game session or exam session if active
-    const activeMode = localStorage.getItem(ACTIVE_MODE_KEY) || 'normal';
-    const activeSave = localStorage.getItem(SAVE_KEY);
-    const activeExam = localStorage.getItem('flashcardsExam');
-
-    if (activeMode === 'normal' && activeSave) {
-      try {
-        const parsedSave = JSON.parse(activeSave);
-        let currentSlotIndex = slots.findIndex(s => s.isCurrent && !s.isExam);
-        if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
-        if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
-          slots[currentSlotIndex].deckData = parsedSave;
-          slots[currentSlotIndex].cardCount = (parsedSave.allQuestions || []).length;
-          slots[currentSlotIndex].title = parsedSave.deckTitle || slots[currentSlotIndex].title;
-          slots[currentSlotIndex].isExam = false;
-          slots[currentSlotIndex].mode = 'normal';
-          slots[currentSlotIndex].updatedAt = Date.now();
-          saveLocalSlots(slots);
-        }
-      } catch (e) {}
-    } else if (activeMode === 'exam' && activeExam) {
-      try {
-        const parsedExam = JSON.parse(activeExam);
-        let currentSlotIndex = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
-        if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isExam || s.mode === 'exam');
-        if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
-        if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
-          slots[currentSlotIndex].deckData = parsedExam;
-          slots[currentSlotIndex].cardCount = (parsedExam.allQuestions || []).length;
-          slots[currentSlotIndex].title = parsedExam.deckTitle || slots[currentSlotIndex].title || 'Semana de Provas';
-          slots[currentSlotIndex].isExam = true;
-          slots[currentSlotIndex].mode = 'exam';
-          slots[currentSlotIndex].updatedAt = Date.now();
-          saveLocalSlots(slots);
-        } else {
-          // No slot allocated for this exam mix yet: allocate one
-          openDeckInSlots(parsedExam, parsedExam.deckTitle || 'Semana de Provas', 'exam');
-          return;
-        }
-      } catch (e) {}
-    }
 
     // Attach deletion timestamps if slot is empty
     for (let i = 0; i < slots.length; i++) {

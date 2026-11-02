@@ -158,12 +158,20 @@ export async function checkAndLoadSharedDeck() {
       const title = shareData.title || 'Baralho Compartilhado';
       const isExam = Boolean(shareData.isExam || (deckData && deckData.decks && Array.isArray(deckData.decks)));
 
+      // If user already had this shared deck loaded in an existing slot, update it in place
+      const existingSlots = getLocalSlots();
+      const existingIdx = existingSlots.findIndex(s => s.shareSlug === shareSlug);
+      const targetSlot = existingIdx !== -1 ? existingIdx : null;
+
       // Load into slots and fix it
-      const slotIdx = openDeckInSlots(deckData, title, isExam ? 'exam' : 'normal');
+      const slotIdx = openDeckInSlots(deckData, title, isExam ? 'exam' : 'normal', targetSlot);
       fixSlot(slotIdx, true);
       const slots = getLocalSlots();
       if (slots[slotIdx]) {
         slots[slotIdx].shareSlug = shareSlug;
+        slots[slotIdx].isSharedImport = true;
+        slots[slotIdx].isShareOwner = false;
+        slots[slotIdx].updatedAt = shareData.updatedAt || Date.now();
         saveLocalSlots(slots);
       }
 
@@ -184,6 +192,76 @@ export async function checkAndLoadSharedDeck() {
     console.error('Erro ao carregar baralho compartilhado:', err);
     handleDeletedDeckRedirect();
     return true;
+  }
+}
+
+/**
+ * Check in background if imported shared slots have an updated version in Firestore.
+ * If owner made edits or deletions, keep local slot synchronized!
+ */
+export async function checkAndUpdateSharedSlots() {
+  try {
+    const slots = getLocalSlots();
+    let hasChanges = false;
+
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      if (slot?.shareSlug && slot?.isSharedImport) {
+        try {
+          const shareDocRef = doc(db, 'shares', slot.shareSlug);
+          const snap = await getDoc(shareDocRef);
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data.deleted === true) {
+              // Owner deleted shared deck; clear local slot
+              slots[i] = {
+                title: null,
+                cardCount: 0,
+                deckData: null,
+                isCurrent: false,
+                isFixed: false,
+                isExam: false,
+                mode: 'normal',
+                shareSlug: null,
+                isShareOwner: false,
+                isSharedImport: false,
+                deletedAt: Date.now(),
+                updatedAt: Date.now()
+              };
+              hasChanges = true;
+            } else if (data.updatedAt && data.updatedAt > (slot.updatedAt || 0) && data.deckData) {
+              // Fresh cards or edits available!
+              slot.deckData = data.deckData;
+              slot.title = data.title || slot.title;
+              slot.cardCount = data.cardCount || (data.deckData.allQuestions || []).length;
+              slot.updatedAt = data.updatedAt;
+              hasChanges = true;
+
+              // If this slot is currently being studied, update active save too
+              if (slot.isCurrent) {
+                const activeMode = localStorage.getItem('flashcardsActiveMode') || 'normal';
+                if (activeMode === 'normal' && !slot.isExam) {
+                  localStorage.setItem('flashcardsSave', JSON.stringify(data.deckData));
+                } else if (activeMode === 'exam' && slot.isExam) {
+                  localStorage.setItem('flashcardsExam', JSON.stringify(data.deckData));
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn(`[ShareManager] Falha ao verificar atualização para slot ${i}:`, e);
+        }
+      }
+    }
+
+    if (hasChanges) {
+      saveLocalSlots(slots);
+      try {
+        window.dispatchEvent(new CustomEvent('flashcards:sync-updated', { detail: { hasSlotChanges: true } }));
+      } catch (e) {}
+    }
+  } catch (err) {
+    console.warn('[ShareManager] Erro em checkAndUpdateSharedSlots:', err);
   }
 }
 

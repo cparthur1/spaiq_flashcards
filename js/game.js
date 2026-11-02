@@ -23,8 +23,8 @@ import { getApiKeyAsync, getCachedApiKey, saveApiKey, clearApiKey, isKeyRemember
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
 import { onAuthChange, auth } from './firebase-client.js';
-import { checkAndLoadSharedDeck } from './share-manager.js';
-import { debouncedSyncSlotsToCloud, syncSlotsToCloud, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
+import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots } from './share-manager.js';
+import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
 
@@ -2292,6 +2292,9 @@ function executeSaveGameState() {
                 deckTitle: deckTitle.textContent
             }));
         }
+
+        // Auto-update active slot and sync shared link if deck is shared
+        syncActiveSlotState();
         debouncedSyncSlotsToCloud();
     } catch (e) {
         console.error("Erro ao salvar estado do jogo no localStorage:", e);
@@ -6048,6 +6051,9 @@ async function initGame() {
     // Check if opening a shared deck via link (?share=...)
     const sharedLoaded = await checkAndLoadSharedDeck();
     if (sharedLoaded) return;
+
+    // Check in background if imported shared decks have new updates from owner
+    checkAndUpdateSharedSlots().catch(() => {});
 
     activeMode = localStorage.getItem('flashcardsActiveMode') || 'normal';
 
