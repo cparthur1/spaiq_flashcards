@@ -123,14 +123,27 @@ export function initExploreModal() {
           if (user) {
             await refreshUserProStatus(user, true);
           }
-          alert(t('extra_deck_payment_success'));
+
           try {
+            window.__extraDeckJustPaid = true;
+            window.dispatchEvent(new CustomEvent('flashcards:extra-deck-paid', { detail: { verifyResult } }));
             window.dispatchEvent(new CustomEvent('flashcards:pro-updated', { detail: { extraGenerations: currentExtras + 1 } }));
           } catch (e) {}
+
+          const isGeneratePage = typeof window !== 'undefined' && window.location.pathname.includes('generate');
+          if (!isGeneratePage) {
+            alert(t('extra_deck_payment_success'));
+            // If on another page, redirect to generate page and open AI modal automatically
+            window.location.href = '/pages/generate.html?open_ai_modal=true';
+          }
         } else if (verifyResult?.isPro) {
           if (user) {
             await refreshUserProStatus(user, true);
             triggerProUnlockCelebration();
+            try {
+              window.__extraDeckJustPaid = true;
+              window.dispatchEvent(new CustomEvent('flashcards:extra-deck-paid', { detail: { verifyResult } }));
+            } catch (e) {}
           } else {
             alert(t('payment_identified_login_pro'));
             if (typeof window.flashcardsOpenAccountModal === 'function') {
@@ -923,6 +936,13 @@ export function renderExtraDeckModalContent() {
       if (loadingIndicator) loadingIndicator.classList.remove('hidden');
 
       try {
+        if (typeof window.__saveCurrentGenerationDraft === 'function') {
+          try {
+            await window.__saveCurrentGenerationDraft();
+          } catch (draftErr) {
+            console.warn('[Stripe Checkout] Erro ao salvar rascunho de geração:', draftErr);
+          }
+        }
         const returnUrl = window.location.href;
         const res = await createExtraDeckCheckoutSession(returnUrl);
         if (res && res.url) {

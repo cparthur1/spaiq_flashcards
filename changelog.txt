@@ -1,3 +1,25 @@
+CHANGELOG: AUTOMATED POST-PAYMENT AI GENERATION & DRAFT RESUMPTION (v15.13)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Automated Post-Payment AI Deck Generation:
+   - When a user uploads study materials (PDFs, PPTX, images, text) and provides instructions before payment:
+     * Draft materials and instructions are serialized into browser IndexedDB (`spaiq_flashcards_db`, store `pending_generations`) across the Stripe Checkout redirect.
+     * Upon payment completion and return from Stripe, deck generation (`executeAiGenerationFromMaterials` / `executeAiEnhanceFromDoc`) starts immediately without requiring the user to re-upload files or re-enter prompts.
+   - When a user pays without pre-attached materials, the generation modal (`modal-2-1`) opens automatically with the newly credited generation ready for immediate use.
+2. Cross-Page Post-Payment Redirection:
+   - If an extra deck payment was initiated from another page (e.g., `index.html`), the user is automatically redirected to `pages/generate.html?open_ai_modal=true` upon verification, opening the generation modal automatically.
+   - Suppressed blocking native `alert()` dialogs on `pages/generate.html` post-payment to ensure uninterrupted, seamless automated generation execution.
+3. Paywall & Pricing Modal UX:
+   - Removed blocking guard on generation cards in Mode 2.1 and Mode 2.2, allowing users without credits to select their files, enter custom prompts, and configure languages before being prompted to pay.
+   - Added `single_deck_price_title` ("Baralho Avulso - R$ 1,49 por baralho • Pague e gere instantaneamente") badges inside generation modals.
+4. Persistence & Service Worker:
+   - Added `js/pending-generation.js` providing robust IndexedDB file serialization and draft management.
+   - Bumped service worker cache version to `flashcards-v15.13` in `sw.js` and included `pending-generation.js` in cached assets.
+   - Maintained strict i18n support exclusively for Portuguese (`pt-BR`) and English (`en-US`).
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: 3-SLOT ROLLING SHIFT QUEUE & CLOUD SYNC SHARING LOCK (v15.12)
 Date: 2026-11-02
 

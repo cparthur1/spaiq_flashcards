@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.12'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.13'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -31,6 +31,7 @@ const RAW_ASSETS = [
   '/js/slot-manager.js',
   '/js/share-manager.js',
   '/js/explore-modal.js',
+  '/js/pending-generation.js',
   '/js/bulk-add.js',
   '/js/engine/scheduler.js',
   '/js/engine/notebook-scheduler.js',

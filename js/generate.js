@@ -5,6 +5,11 @@ import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { syncSharedDeckToFirestore, shareDeckToCloud } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
+import { savePendingGeneration, getPendingGeneration, clearPendingGeneration, hasPendingGenerationFlag } from './pending-generation.js';
+
+try {
+    initExploreModal();
+} catch (e) {}
 
 function compressPDFWithWorker(file) {
     return new Promise((resolve, reject) => {
@@ -1655,6 +1660,37 @@ function updateProPaywalledUI() {
                 </span>
             `;
         }
+    } else if (!isPro && usedTrial && !hasExtra) {
+        if (modal21Badge) {
+            modal21Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal21Badge.innerHTML = `
+                <div class="flex items-center gap-2.5">
+                    <span class="material-symbols-rounded text-[#3b82f7] text-xl">auto_awesome</span>
+                    <div>
+                        <span class="text-xs font-bold text-blue-900 block">${t('single_deck_price_title')}</span>
+                        <span class="text-[11px] text-blue-700">${t('single_deck_pay_on_generate')}</span>
+                    </div>
+                </div>
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-[#3b82f7] bg-blue-100 px-2.5 py-1 rounded-full border border-blue-200">
+                    R$ 1,49
+                </span>
+            `;
+        }
+        if (modal22Badge) {
+            modal22Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal22Badge.innerHTML = `
+                <div class="flex items-center gap-2.5">
+                    <span class="material-symbols-rounded text-[#3b82f7] text-xl">auto_awesome</span>
+                    <div>
+                        <span class="text-xs font-bold text-blue-900 block">${t('single_deck_price_title')}</span>
+                        <span class="text-[11px] text-blue-700">${t('single_deck_pay_on_generate')}</span>
+                    </div>
+                </div>
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-[#3b82f7] bg-blue-100 px-2.5 py-1 rounded-full border border-blue-200">
+                    R$ 1,49
+                </span>
+            `;
+        }
     }
 
     if (tabAiChatBtn) {
@@ -1736,10 +1772,6 @@ submitModal12Btn.addEventListener('click', async () => {
 
 // 2.1 Crie de materiais — Transforme slides, pdf, fotos... em cards
 cardMode21.addEventListener('click', () => {
-    if (!canGenerateWithAi()) {
-        openExtraDeckModal();
-        return;
-    }
     modal21Error.textContent = '';
     modal21Files.value = '';
     modal21FilesCount.textContent = t('no_file_selected');
@@ -1785,24 +1817,16 @@ modal21Files.addEventListener('change', () => {
     renderFileIcons(files, modal21IconsContainer, FILES_DEFAULT_SVG);
 });
 
-submitModal21Btn.addEventListener('click', async () => {
-    modal21Error.textContent = '';
-    if (!canGenerateWithAi()) {
-        openExtraDeckModal();
-        return;
-    }
+/**
+ * Executes AI generation from materials (Mode 2.1)
+ * @param {File[]} files
+ * @param {string} [customInstructions='']
+ * @param {string} [selectedLanguage='Inglês']
+ * @param {string} [customLanguage='']
+ */
+async function executeAiGenerationFromMaterials(files, customInstructions = '', selectedLanguage = 'Inglês', customLanguage = '') {
+    if (!files || files.length === 0) return;
 
-    const files = Array.from(modal21Files.files);
-    if (files.length === 0) {
-        modal21Error.textContent = t('select_at_least_one_file');
-        return;
-    }
-    if (files.length > 10) {
-        modal21Error.textContent = t('file_limit_10_error');
-        return;
-    }
-
-    // Immediately close modal and transition to editor view with live animations
     modal21.classList.add('hidden');
     openEditorView('ai');
 
@@ -1823,15 +1847,15 @@ Atribua obrigatoriamente a matéria de alto nível ('subject') e o assunto espec
 Ao final revise se os flashcards criados realmente abordam por extenso tudo que foi enviado.
 Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados conforme as diretrizes do sistema.`;
 
-        const customText = modal21Prompt.value.trim();
+        const customText = (customInstructions || '').trim();
         if (customText) {
             userTaskPrompt += `\n\nDemandas adicionais do usuário (prioridade máxima sobre os padrões quando conflitarem):\n${customText}`;
         }
 
         if (getCurrentLanguage() !== 'pt-BR') {
-            let targetDeckLanguage = modal21SelectedLanguage || 'Inglês';
+            let targetDeckLanguage = selectedLanguage || 'Inglês';
             if (targetDeckLanguage === 'custom') {
-                targetDeckLanguage = modal21CustomLangInput?.value.trim() || 'Inglês';
+                targetDeckLanguage = (customLanguage || '').trim() || 'Inglês';
             }
             userTaskPrompt += `\n\nGere em ${targetDeckLanguage}`;
         }
@@ -1880,10 +1904,12 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
 
         const token = await getCurrentUserToken().catch(() => null);
         const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
+        const localExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+
         if (isTrial) {
             window.currentDeckIsFreeAiTrial = true;
-        } else if (!isUserPro() && hasUsedFreeAiDeck()) {
-            openProModal();
+        } else if (!isUserPro() && hasUsedFreeAiDeck() && localExtra <= 0) {
+            openExtraDeckModal();
             return;
         }
 
@@ -1984,9 +2010,9 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
                 deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
                 localStorage.setItem('editing_deck_is_free_trial', 'true');
             } else if (!isUserPro() && hasUsedFreeAiDeck()) {
-                const localExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
-                if (localExtra > 0) {
-                    localStorage.setItem('spaiq_extra_generations', String(Math.max(0, localExtra - 1)));
+                const updatedExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+                if (updatedExtra > 0) {
+                    localStorage.setItem('spaiq_extra_generations', String(Math.max(0, updatedExtra - 1)));
                 }
             }
             refreshUserProStatus().then(() => updateProPaywalledUI());
@@ -2014,14 +2040,42 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
         modal21Spinner.classList.add('hidden');
         modal21LoadingMsg.classList.add('hidden');
     }
+}
+
+submitModal21Btn.addEventListener('click', async () => {
+    modal21Error.textContent = '';
+    const files = Array.from(modal21Files.files);
+    if (files.length === 0) {
+        modal21Error.textContent = t('select_at_least_one_file');
+        return;
+    }
+    if (files.length > 10) {
+        modal21Error.textContent = t('file_limit_10_error');
+        return;
+    }
+
+    if (!canGenerateWithAi()) {
+        await savePendingGeneration({
+            mode: '2.1',
+            files,
+            prompt: modal21Prompt.value.trim(),
+            language: modal21SelectedLanguage || 'Inglês',
+            customLanguage: modal21CustomLangInput?.value.trim() || ''
+        });
+        openExtraDeckModal();
+        return;
+    }
+
+    await executeAiGenerationFromMaterials(
+        files,
+        modal21Prompt.value.trim(),
+        modal21SelectedLanguage,
+        modal21CustomLangInput?.value.trim()
+    );
 });
 
 // 2.2 Aprimore um doc — A partir de um txt ou word, aprimore cartões
 cardMode22.addEventListener('click', () => {
-    if (!canGenerateWithAi()) {
-        openExtraDeckModal();
-        return;
-    }
     modal22Error.textContent = '';
     modal22File.value = '';
     modal22FileName.textContent = 'Clique ou arraste o arquivo .txt ou Word';
@@ -2037,23 +2091,18 @@ modal22File.addEventListener('change', () => {
     }
 });
 
-submitModal22Btn.addEventListener('click', async () => {
-    modal22Error.textContent = '';
-    if (!canGenerateWithAi()) {
-        openExtraDeckModal();
-        return;
-    }
+/**
+ * Executes AI enhancement from txt/docx document (Mode 2.2)
+ * @param {File} file
+ */
+async function executeAiEnhanceFromDoc(file) {
+    if (!file) return;
 
-    if (!modal22File.files || modal22File.files.length === 0) {
-        modal22Error.textContent = t('select_txt_word_error');
-        return;
-    }
-
+    modal22.classList.add('hidden');
     submitModal22Btn.disabled = true;
     modal22Spinner.classList.remove('hidden');
     modal22LoadingMsg.classList.remove('hidden');
 
-    const file = modal22File.files[0];
     let localCards = [];
     try {
         const textContent = await extractTextFromFile(file);
@@ -2065,7 +2114,6 @@ submitModal22Btn.addEventListener('click', async () => {
             return;
         }
 
-        modal22.classList.add('hidden');
         openEditorView('ai');
 
         deckTitleDisplay.value = file.name.replace(/\.[^/.]+$/, "");
@@ -2099,10 +2147,12 @@ ${JSON.stringify(localCards, null, 2)}`;
 
         const token = await getCurrentUserToken().catch(() => null);
         const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
+        const localExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+
         if (isTrial) {
             window.currentDeckIsFreeAiTrial = true;
-        } else if (!isUserPro() && hasUsedFreeAiDeck()) {
-            openProModal();
+        } else if (!isUserPro() && hasUsedFreeAiDeck() && localExtra <= 0) {
+            openExtraDeckModal();
             return;
         }
 
@@ -2156,9 +2206,9 @@ ${JSON.stringify(localCards, null, 2)}`;
             deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
             localStorage.setItem('editing_deck_is_free_trial', 'true');
         } else if (!isUserPro() && hasUsedFreeAiDeck()) {
-            const localExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
-            if (localExtra > 0) {
-                localStorage.setItem('spaiq_extra_generations', String(Math.max(0, localExtra - 1)));
+            const updatedExtra = Number(localStorage.getItem('spaiq_extra_generations') || 0);
+            if (updatedExtra > 0) {
+                localStorage.setItem('spaiq_extra_generations', String(Math.max(0, updatedExtra - 1)));
             }
         }
         refreshUserProStatus().then(() => updateProPaywalledUI());
@@ -2177,7 +2227,104 @@ ${JSON.stringify(localCards, null, 2)}`;
         modal22Spinner.classList.add('hidden');
         modal22LoadingMsg.classList.add('hidden');
     }
+}
+
+submitModal22Btn.addEventListener('click', async () => {
+    modal22Error.textContent = '';
+    if (!modal22File.files || modal22File.files.length === 0) {
+        modal22Error.textContent = t('select_txt_word_error');
+        return;
+    }
+
+    const file = modal22File.files[0];
+
+    if (!canGenerateWithAi()) {
+        await savePendingGeneration({
+            mode: '2.2',
+            files: [file]
+        });
+        openExtraDeckModal();
+        return;
+    }
+
+    await executeAiEnhanceFromDoc(file);
 });
+
+// Hook for Stripe Checkout: persists draft before redirect
+if (typeof window !== 'undefined') {
+    window.__saveCurrentGenerationDraft = async () => {
+        try {
+            // Mode 2.1
+            if (modal21Files && modal21Files.files && modal21Files.files.length > 0) {
+                await savePendingGeneration({
+                    mode: '2.1',
+                    files: Array.from(modal21Files.files),
+                    prompt: modal21Prompt ? modal21Prompt.value.trim() : '',
+                    language: modal21SelectedLanguage || 'Inglês',
+                    customLanguage: modal21CustomLangInput ? modal21CustomLangInput.value.trim() : ''
+                });
+                return;
+            }
+            // Mode 2.2
+            if (modal22File && modal22File.files && modal22File.files.length > 0) {
+                await savePendingGeneration({
+                    mode: '2.2',
+                    files: Array.from(modal22File.files)
+                });
+                return;
+            }
+        } catch (e) {
+            console.warn('[DraftSave] Erro ao salvar rascunho de geração:', e);
+        }
+    };
+}
+
+// Automated post-payment generation & modal opening handler
+let postPaymentHandled = false;
+async function handlePostPaymentGeneration() {
+    if (postPaymentHandled) return;
+    postPaymentHandled = true;
+
+    try {
+        const pending = await getPendingGeneration();
+        if (pending && pending.files && pending.files.length > 0) {
+            await clearPendingGeneration();
+            if (pending.mode === '2.2') {
+                await executeAiEnhanceFromDoc(pending.files[0]);
+            } else {
+                await executeAiGenerationFromMaterials(
+                    pending.files,
+                    pending.prompt,
+                    pending.language,
+                    pending.customLanguage
+                );
+            }
+            return;
+        }
+
+        // If no draft files were provided beforehand, automatically open the generation modal
+        if (modal21) {
+            modal21Error.textContent = '';
+            modal21Files.value = '';
+            modal21FilesCount.textContent = t('no_file_selected');
+            if (modal21IconsContainer) modal21IconsContainer.innerHTML = FILES_DEFAULT_SVG;
+            updateProPaywalledUI();
+            modal21.classList.remove('hidden');
+        }
+    } catch (err) {
+        console.error('[PostPayment] Erro ao retomar geração pós-pagamento:', err);
+    }
+}
+
+// Listen for extra deck payment confirmation event
+window.addEventListener('flashcards:extra-deck-paid', () => {
+    handlePostPaymentGeneration();
+});
+
+// Check if payment was confirmed before this module finished loading
+if (typeof window !== 'undefined' && window.__extraDeckJustPaid) {
+    handlePostPaymentGeneration();
+}
 
 openProBtn?.addEventListener('click', openProModal);
 
@@ -3979,5 +4126,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {
             console.error("Erro ao carregar deck salvo:", e);
         }
+    }
+
+    // Post-payment checks: URL query parameter ?open_ai_modal=true
+    const urlParams = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search) : null;
+    if (urlParams && urlParams.get('open_ai_modal') === 'true') {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('open_ai_modal');
+        window.history.replaceState({}, document.title, cleanUrl.toString());
+        handlePostPaymentGeneration();
     }
 });
