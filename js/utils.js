@@ -53,12 +53,12 @@ export function calculateSimilarity(s1, s2) {
  * Retorna um número pseudo-aleatório no intervalo [0, 1) criptograficamente seguro.
  */
 export function secureRandom() {
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
         const arr = new Uint32Array(1);
         crypto.getRandomValues(arr);
         return arr[0] / (0xffffffff + 1);
     }
-    return Math.random();
+    return 0.5;
 }
 
 /**
@@ -416,6 +416,8 @@ export function renderMathAndMarkdown(text) {
             ADD_TAGS: ['semantics', 'annotation', 'mark'],
             ADD_ATTR: ['target', 'class', 'style', 'aria-hidden', 'columnspacing', 'columnalign', 'rowspacing']
         });
+    } else {
+        html = escapeHtml(html);
     }
 
     return html;

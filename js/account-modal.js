@@ -5,7 +5,7 @@
  */
 
 import { auth, signInWithGoogle, signOutUser, onAuthChange } from './firebase-client.js';
-import { isLifetime, isUserPro, openProModal, refreshUserProStatus } from './explore-modal.js';
+import { isLifetime, isUserPro, openProModal, refreshUserProStatus, getUserProStatus } from './explore-modal.js';
 import { getSubscriptionDetails, cancelSubscriptionOnly, reactivateSubscription, deleteAccountAndCancelSubscription } from './backend-api.js';
 import { escapeHtml, sanitizeImageUrl } from './utils.js';
 import { t, applyTranslations } from './i18n.js';
@@ -255,12 +255,24 @@ async function renderAccountModalContent() {
     `;
   } else {
     // 2.3 USUÁRIO ${t('free_plan_badge')}
+    const userStatus = getUserProStatus();
+    const extraGens = Number(userStatus?.extraGenerations || 0);
+
     html += `
       <div class="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">${t('current_plan_free')}</span>
           <span class="text-xs font-bold text-[var(--md-sys-color-primary)]">R$ 0,00</span>
         </div>
+
+        ${extraGens > 0 ? `
+          <div class="p-2.5 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-950 font-medium">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-rounded text-base text-amber-700">stars</span>
+              <span>${t('extra_gens_available', { count: extraGens })}</span>
+            </div>
+          </div>
+        ` : ''}
 
         <div class="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl space-y-2">
           <p class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
@@ -275,11 +287,20 @@ async function renderAccountModalContent() {
           </ul>
         </div>
 
-        <button type="button" id="account-upgrade-pro-btn"
-          class="m3-btn-expressive m3-btn-filled w-full py-2.5 px-4 font-bold text-xs flex items-center justify-center gap-2 shadow cursor-pointer">
-          <span class="material-symbols-rounded text-base">star</span>
-          <span>${t('subscribe_flashcards_pro_btn')}</span>
-        </button>
+        <div class="space-y-2">
+          <button type="button" id="account-upgrade-pro-btn"
+            class="m3-btn-expressive m3-btn-filled w-full py-2.5 px-4 font-bold text-xs flex items-center justify-center gap-2 shadow cursor-pointer">
+            <span class="material-symbols-rounded text-base">star</span>
+            <span>${t('subscribe_flashcards_pro_btn')}</span>
+          </button>
+
+          <!-- Botão Comprar Geração Avulsa via Stripe -->
+          <button type="button" id="account-buy-single-deck-btn"
+            class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer shadow-xs">
+            <span class="material-symbols-rounded text-base text-amber-700">add_circle</span>
+            <span>${t('buy_single_deck_btn')}</span>
+          </button>
+        </div>
       </div>
     `;
   }
@@ -307,6 +328,13 @@ async function renderAccountModalContent() {
   document.getElementById('account-upgrade-pro-btn')?.addEventListener('click', () => {
     closeAccountModal();
     openProModal();
+  });
+
+  document.getElementById('account-buy-single-deck-btn')?.addEventListener('click', () => {
+    closeAccountModal();
+    if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
+      window.flashcardsOpenExtraDeckModal();
+    }
   });
 
   document.getElementById('account-logout-btn')?.addEventListener('click', async () => {

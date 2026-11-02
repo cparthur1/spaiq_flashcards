@@ -5,7 +5,7 @@
  * e formatação de respostas didáticas com KaTeX/Markdown.
  */
 
-import { renderMathAndMarkdown, stripHtml } from '../utils.js';
+import { renderMathAndMarkdown, stripHtml, escapeHtml } from '../utils.js';
 import { isUserPro } from '../explore-modal.js';
 import { getCurrentUserToken } from '../firebase-client.js';
 import { BACKEND_URL } from '../backend-api.js';
@@ -159,7 +159,7 @@ export function addMsg(sender, text, chatMessages) {
                 ADD_ATTR: ['target', 'class', 'style', 'aria-hidden', 'columnspacing', 'columnalign', 'rowspacing']
             });
         } else {
-            div.innerHTML = rendered;
+            div.innerHTML = escapeHtml(rendered);
         }
     } else {
         div.textContent = text;

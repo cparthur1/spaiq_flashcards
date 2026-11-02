@@ -156,7 +156,7 @@ function showStatsPill(message, isSuccess = true) {
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
         </svg>
-        <span>${message}</span>
+        <span>${escapeHtml(message || '')}</span>
     `;
     document.body.appendChild(pill);
 
@@ -737,25 +737,32 @@ function renderTimelineFlow(sess) {
             ? 'ring-2 ring-blue-500 ring-offset-2' 
             : '';
 
+        const safeQuestion = escapeHtml(entry.question || '');
+        const safeRating = escapeHtml(entry.rating || '');
+        const safeUserAnswer = escapeHtml(entry.userAnswer || '');
+        const safeAiExplanation = escapeHtml(entry.aiExplanation || '');
+        const safeStatus = isAiCorrected ? t('ai_corrected') : safeRating;
+        const recentLabel = isLatest ? t('timeline_last_answered') : t('timeline_nth_recent', { n: reverseIdx + 1 });
+
         dot.className = `flex-shrink-0 w-8 h-8 rounded-xl ${badgeColor} ${ringEffect} flex items-center justify-center font-bold text-xs cursor-pointer shadow-sm hover:scale-110 transition-transform relative group`;
         dot.innerHTML = `
             ${label}
-            ${isLatest ? `<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white animate-pulse" title="Mais recente"></span>` : ''}
+            ${isLatest ? `<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white animate-pulse" title="${escapeHtml(t('timeline_most_recent_10'))}"></span>` : ''}
             <!-- Tooltip -->
             <div class="hidden group-hover:block absolute bottom-full mb-2 z-30 p-2.5 bg-gray-900/95 text-white text-[11px] rounded-xl shadow-xl w-56 text-left backdrop-blur-sm pointer-events-none -left-20">
                 <div class="flex items-center justify-between mb-1 pb-1 border-b border-gray-700">
                     <span class="font-bold text-gray-200">#${originalCardNum}</span>
                     <span class="text-[10px] font-semibold ${isLatest ? 'text-blue-400' : 'text-gray-400'}">
-                        ${isLatest ? 'Último respondido' : `${reverseIdx + 1}º mais recente`}
+                        ${recentLabel}
                     </span>
                 </div>
-                <p class="text-gray-200 truncate mb-1" title="${entry.question}">${entry.question}</p>
+                <p class="text-gray-200 truncate mb-1" title="${safeQuestion}">${safeQuestion}</p>
                 <div class="flex items-center justify-between text-gray-400 text-[10px]">
-                    <span>Tempo: <b>${entry.timeSeconds}s</b></span>
-                    <span>Status: <b>${isAiCorrected ? 'Corrigido por IA' : entry.rating}</b></span>
+                    <span>${t('time_label')}: <b>${entry.timeSeconds}s</b></span>
+                    <span>${t('status_label')}: <b>${safeStatus}</b></span>
                 </div>
-                ${entry.userAnswer ? `<p class="text-blue-300 text-[10px] truncate mt-1 pt-1 border-t border-gray-800">Digitou: ${entry.userAnswer}</p>` : ''}
-                ${entry.aiExplanation ? `<p class="text-amber-300 text-[10px] line-clamp-2 mt-1 pt-1 border-t border-gray-800" title="${entry.aiExplanation}">IA: ${entry.aiExplanation}</p>` : ''}
+                ${safeUserAnswer ? `<p class="text-blue-300 text-[10px] truncate mt-1 pt-1 border-t border-gray-800">${t('typed_label')}: ${safeUserAnswer}</p>` : ''}
+                ${safeAiExplanation ? `<p class="text-amber-300 text-[10px] line-clamp-2 mt-1 pt-1 border-t border-gray-800" title="${safeAiExplanation}">IA: ${safeAiExplanation}</p>` : ''}
             </div>
         `;
         timelineStrip.appendChild(dot);
@@ -815,20 +822,20 @@ function renderTopicItem(t, idx, topicsList = []) {
 
         if (acc >= 80) {
             badgeClass = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
-            badgeText = isBestAnswered ? 'Melhor Assunto' : 'Alta Retenção';
+            badgeText = isBestAnswered ? t('best_subject') : t('high_retention');
             barColor = 'bg-emerald-500';
         } else if (acc >= 60) {
             badgeClass = 'bg-blue-100 text-blue-700 border border-blue-200';
-            badgeText = (isWorstAnswered && answeredTopics.length > 1) ? 'Atenção (Revisar)' : 'Bom Progresso';
+            badgeText = (isWorstAnswered && answeredTopics.length > 1) ? t('attention_review') : t('stable_status');
             barColor = 'bg-blue-500';
         } else {
             badgeClass = 'bg-red-100 text-red-700 border border-red-200';
-            badgeText = isWorstAnswered ? 'Maior Dificuldade' : 'Atenção (Revisar)';
+            badgeText = isWorstAnswered ? t('attention_review') : t('attention_review');
             barColor = 'bg-red-500';
         }
     }
 
-    const safeTopic = escapeHtml(t.topic || 'Geral');
+    const safeTopic = escapeHtml(t.topic || t('general_topic'));
 
     return `
         <div class="p-3.5 rounded-xl bg-gray-50/80 border border-gray-200/70 transition hover:border-purple-300 shadow-xs">
@@ -838,7 +845,7 @@ function renderTopicItem(t, idx, topicsList = []) {
                         ${safeTopic}
                     </h4>
                     <p class="text-[11px] text-gray-500">
-                        ${t.cardsCount} card${t.cardsCount !== 1 ? 's' : ''} ${isAnswered ? `• ${t.correctCount}/${t.answeredCount} certos` : '• Não respondido nesta rodada'}
+                        ${t.cardsCount} ${t.cardsCount !== 1 ? t('cards_unit') : t('card_unit_singular')} ${isAnswered ? `• ${t.correctCount}/${t.answeredCount} ${t('correct_plural')}` : `• ${t('not_answered_round')}`}
                     </p>
                 </div>
                 <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -861,24 +868,24 @@ function renderTopicItem(t, idx, topicsList = []) {
 function renderSubjectItem(s, idx, totalSubjects) {
     const acc = s.accuracy;
     let badgeClass = 'bg-blue-100 text-blue-700 border border-blue-200';
-    let badgeText = 'Estável';
+    let badgeText = t('stable_status');
     let barColor = 'bg-blue-500';
 
     if (idx === 0 && s.totalAnswered > 0) {
         badgeClass = 'bg-purple-100 text-purple-700 border border-purple-200';
-        badgeText = 'Melhor Matéria';
+        badgeText = t('best_subject');
         barColor = 'bg-purple-600';
     } else if (idx === totalSubjects - 1 && totalSubjects > 1 && acc < 70 && s.totalAnswered > 0) {
         badgeClass = 'bg-amber-100 text-amber-800 border border-amber-200';
-        badgeText = 'Foco Recomendado';
+        badgeText = t('recommended_focus');
         barColor = 'bg-amber-500';
     } else if (acc >= 80) {
         badgeClass = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
-        badgeText = 'Alta Retenção';
+        badgeText = t('high_retention');
         barColor = 'bg-emerald-500';
     }
 
-    const safeSubject = escapeHtml(s.subject || 'Geral');
+    const safeSubject = escapeHtml(s.subject || t('general_topic'));
     const safeDeckNames = escapeHtml(s.decks.join(', '));
 
     return `
@@ -889,7 +896,7 @@ function renderSubjectItem(s, idx, totalSubjects) {
                         ${safeSubject}
                     </h4>
                     <p class="text-[11px] text-gray-500 truncate max-w-[200px]" title="${safeDeckNames}">
-                        ${s.decks.length} baralho${s.decks.length !== 1 ? 's' : ''}: ${safeDeckNames}
+                        ${s.decks.length} ${s.decks.length !== 1 ? t('decks_unit') : t('deck_unit_singular')}: ${safeDeckNames}
                     </p>
                 </div>
                 <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -946,13 +953,15 @@ function renderHistorySubjectsSection(subjectsStats) {
 function renderAiDashboard(currentDeckTitle, subjectsStats, topicsStats, gameState, statsData) {
     if (!aiStatsSection) return;
 
+    const safeDeckTitle = escapeHtml(currentDeckTitle || t('deck_default_title'));
+
     const topicsHtml = topicsStats.length > 0
         ? topicsStats.map((t, idx) => renderTopicItem(t, idx, topicsStats)).join('')
-        : '<p class="text-xs text-gray-400 italic py-4 text-center">Nenhum assunto classificado ainda.</p>';
+        : `<p class="text-xs text-gray-400 italic py-4 text-center">${t('no_topics_classified')}</p>`;
 
     const subjectsHtml = subjectsStats.length > 0
         ? subjectsStats.map((s, idx) => renderSubjectItem(s, idx, subjectsStats.length)).join('')
-        : '<p class="text-xs text-gray-400 italic py-4 text-center">Nenhuma matéria classificada ainda.</p>';
+        : `<p class="text-xs text-gray-400 italic py-4 text-center">${t('no_subjects_classified')}</p>`;
 
     aiStatsSection.innerHTML = `
         <div class="space-y-4">
@@ -966,18 +975,18 @@ function renderAiDashboard(currentDeckTitle, subjectsStats, topicsStats, gameSta
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-sm font-bold text-gray-900">Categorização Inteligente</h2>
+                            <h2 class="text-sm font-bold text-gray-900">${t('ai_categorization_title')}</h2>
                         </div>
-                        <p class="text-xs text-gray-500">Classifique os cards para analisar a performance por categoria</p>
+                        <p class="text-xs text-gray-500">${t('ai_categorization_desc')}</p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2 self-end sm:self-auto">
-                    <button id="btn-refresh-ai-stats" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 transition shadow-xs flex items-center gap-1.5" title="Recalcular categorização com Gemini Flash-Lite">
+                    <button id="btn-refresh-ai-stats" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 transition shadow-xs flex items-center gap-1.5" title="${t('recalculate_ai_cat_tooltip')}">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        <span>Recategorizar com IA</span>
+                        <span>${t('recategorize_with_ai')}</span>
                     </button>
                 </div>
             </div>
@@ -991,18 +1000,18 @@ function renderAiDashboard(currentDeckTitle, subjectsStats, topicsStats, gameSta
                         <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
                             <div>
                                 <h3 class="font-bold text-sm text-gray-900 flex items-center gap-1.5">
-                                    <span class="material-symbols-rounded text-base text-blue-600">topic</span> Assuntos deste Baralho
+                                    <span class="material-symbols-rounded text-base text-blue-600">topic</span> ${t('topics_of_this_deck')}
                                 </h3>
-                                <p class="text-[11px] text-gray-500 truncate max-w-[200px]" title="${currentDeckTitle}">
-                                    ${currentDeckTitle}
+                                <p class="text-[11px] text-gray-500 truncate max-w-[200px]" title="${safeDeckTitle}">
+                                    ${safeDeckTitle}
                                 </p>
                             </div>
                             <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded-md" title="Lista ordenada do menor para o maior desempenho">
-                                    Pior → Melhor
+                                <span class="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded-md" title="${t('worst_to_best_tooltip')}">
+                                    ${t('worst_to_best_label')}
                                 </span>
                                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                                    ${topicsStats.length} assunto${topicsStats.length !== 1 ? 's' : ''}
+                                    ${topicsStats.length} ${topicsStats.length !== 1 ? t('topics_unit_plural') : t('topic_unit_singular')}
                                 </span>
                             </div>
                         </div>
@@ -1019,11 +1028,11 @@ function renderAiDashboard(currentDeckTitle, subjectsStats, topicsStats, gameSta
                         <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
                             <div>
                                 <h3 class="font-bold text-sm text-gray-900 flex items-center gap-1.5">
-                                    <span class="material-symbols-rounded text-base text-purple-600">menu_book</span> Desempenho por Matéria
+                                    <span class="material-symbols-rounded text-base text-purple-600">menu_book</span> ${t('performance_by_subject')}
                                 </h3>
                             </div>
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                                ${subjectsStats.length} matéria${subjectsStats.length !== 1 ? 's' : ''}
+                                ${subjectsStats.length} ${subjectsStats.length !== 1 ? t('subjects_unit_plural') : t('subject_unit_singular')}
                             </span>
                         </div>
 
@@ -1690,8 +1699,8 @@ function renderStrugglingCards(sess) {
     if (top20Entries.length === 0) {
         strugglingList.innerHTML = `
             <div class="text-center py-8 text-gray-400">
-                <p class="text-sm font-semibold text-emerald-600 flex items-center justify-center gap-1.5"><span class="material-symbols-rounded text-base text-emerald-500">celebration</span> Nenhum card com dificuldade nesta sessão!</p>
-                <p class="text-xs mt-1">Quando você errar ou marcar 'Difícil/Errei', os 20 cards com mais erros aparecerão aqui para revisão focada.</p>
+                <p class="text-sm font-semibold text-emerald-600 flex items-center justify-center gap-1.5"><span class="material-symbols-rounded text-base text-emerald-500">celebration</span> ${t('no_struggling_cards')}</p>
+                <p class="text-xs mt-1">${t('struggling_cards_desc')}</p>
             </div>
         `;
         return;
@@ -1700,6 +1709,13 @@ function renderStrugglingCards(sess) {
     top20Entries.forEach(([key, item], idx) => {
         const cardEl = document.createElement('div');
         cardEl.className = 'p-4 rounded-xl border border-gray-200 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition hover:border-gray-300 shadow-xs';
+        const safeDesc = escapeHtml(item.description || '');
+        const safeAns = escapeHtml(item.answer || t('consult_card'));
+        const safeRating = escapeHtml(item.lastRating || t('i_missed'));
+        const safeType = escapeHtml(item.type || 'open');
+        const errCount = Number(item.incorrectCount) || 1;
+        const errText = t('errors_label', { count: errCount, s: errCount > 1 ? 's' : '' });
+
         cardEl.innerHTML = `
             <div class="space-y-1 flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
@@ -1707,23 +1723,23 @@ function renderStrugglingCards(sess) {
                         #${idx + 1}
                     </span>
                     <span class="px-2 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-bold">
-                        ${item.incorrectCount || 1} erro${(item.incorrectCount || 1) > 1 ? 's' : ''}
+                        ${errText}
                     </span>
                     <span class="text-[10px] text-gray-400">
-                        Última avaliação: ${item.lastRating || 'errei'}
+                        ${t('last_rating_label')}: ${safeRating}
                     </span>
                 </div>
-                <p class="text-sm font-semibold text-gray-800 leading-snug">${escapeHtml(item.description || '')}</p>
-                <p class="text-xs text-emerald-600 font-medium">Resposta: ${escapeHtml(item.answer || 'Consultar cartão')}</p>
+                <p class="text-sm font-semibold text-gray-800 leading-snug">${safeDesc}</p>
+                <p class="text-xs text-emerald-600 font-medium">${t('answer_label')}: ${safeAns}</p>
             </div>
             <div class="flex flex-col items-center sm:items-end gap-1.5 flex-shrink-0 self-end sm:self-center">
                 <button class="add-single-notebook-btn w-full sm:w-auto px-3.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 text-xs font-semibold transition shadow-xs flex items-center justify-center gap-1"
-                    data-desc="${encodeURIComponent(item.description)}" data-ans="${encodeURIComponent(item.answer || '')}" data-ans2="${encodeURIComponent(item.answer2 || '')}" data-type="${item.type || 'open'}" data-topic="${encodeURIComponent(item.aiTopic || '')}" data-subject="${encodeURIComponent(item.aiSubject || '')}">
-                    + Caderno
+                    data-desc="${encodeURIComponent(item.description || '')}" data-ans="${encodeURIComponent(item.answer || '')}" data-ans2="${encodeURIComponent(item.answer2 || '')}" data-type="${safeType}" data-topic="${encodeURIComponent(item.aiTopic || '')}" data-subject="${encodeURIComponent(item.aiSubject || '')}">
+                    + ${t('notebook_label')}
                 </button>
                 <button class="ignore-single-struggling-btn text-[11px] font-medium text-gray-400 hover:text-red-500 transition hover:underline px-1 py-0.5"
                     data-key="${encodeURIComponent(key)}">
-                    Ignorar
+                    ${t('ignore')}
                 </button>
             </div>
         `;
@@ -1740,7 +1756,7 @@ function renderStrugglingCards(sess) {
             const topic = decodeURIComponent(btn.dataset.topic || '');
             const subject = decodeURIComponent(btn.dataset.subject || '');
             addCardToNotebook({ description: desc, answer: ans, answer2: ans2, type: type, aiTopic: topic, aiSubject: subject });
-            btn.innerHTML = 'Adicionado <span class="material-symbols-rounded text-sm align-middle">check</span>';
+            btn.innerHTML = `${t('added_singular')} <span class="material-symbols-rounded text-sm align-middle">check</span>`;
             btn.classList.add('bg-emerald-100', 'text-emerald-700');
             btn.disabled = true;
         });
@@ -1766,7 +1782,7 @@ function ignoreCardFromStruggling(cardKey) {
             statsData.currentSession.ignoredStrugglingKeys.push(cardKey);
         }
         saveStatsStorage(statsData);
-        showStatsPill("Card removido do Foco de Revisão", true);
+        showStatsPill(t('card_removed_from_focus'), true);
         renderStrugglingCards(statsData.currentSession);
     }
 }
@@ -1798,9 +1814,9 @@ function addCardToNotebook(card) {
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCard);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCard);
         localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookState));
-        showStatsPill("Card adicionado ao Caderno de Estudos!", true);
+        showStatsPill(t('card_added_toast'), true);
     } else {
-        showStatsPill("Este card já estava no seu Caderno!", true);
+        showStatsPill(t('card_already_in_notebook'), true);
     }
 }
 
@@ -1848,7 +1864,7 @@ addAllToNotebookBtn?.addEventListener('click', () => {
 clearStatsBtn?.addEventListener('click', () => {
     if (confirm(t('clear_stats_confirm'))) {
         resetAllStats();
-        showStatsPill("Estatísticas zeradas com sucesso!", true);
+        showStatsPill(t('stats_reset_success'), true);
         renderAllStats();
     }
 });
@@ -1861,7 +1877,7 @@ exportStatsBtn?.addEventListener('click', () => {
     a.href = url;
     a.download = `flashcards_estatisticas_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    showStatsPill("Relatório exportado!", true);
+    showStatsPill(t('report_exported_success'), true);
 });
 
 // INITIALIZATION

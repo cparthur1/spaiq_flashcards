@@ -3,8 +3,8 @@
  * Flashcards WebApp - Cloudflare Worker Backend
  * Provides:
  * 1. Secure Gemini AI Proxy (without exposing server API keys to client)
- * 2. Asaas Payment & Subscription Processing (R$ 5/mês Pro, R$ 0.99 geração extra)
- * 3. Asaas Webhook Handler with Firebase Admin OAuth2 token minting
+ * 2. Asaas & Stripe Payment Processing (R$ 5/mês Pro, R$ 1,49 geração extra/avulsa)
+ * 3. Webhook Handlers with Firebase Admin OAuth2 token minting
  * 4. User Quota & Pro Claim Management
  */
 
@@ -198,7 +198,7 @@ export default {
         return jsonResponse({ client_secret: session.client_secret }, 200, corsHeaders);
       }
 
-      // 2.3 Create Stripe Embedded Checkout Session for Extra Deck Generation (R$ 0,99 one-time)
+      // 2.3 Create Stripe Embedded Checkout Session for Deck Generation (R$ 1,49 one-time)
       if ((path === '/api/create-extra-deck-session' || path === '/api/payment/extra-deck-session') && request.method === 'POST') {
         let user = null;
         try {
@@ -209,15 +209,28 @@ export default {
 
         const mode = "payment";
 
+        // Use custom Price ID if configured and not the old 0.99 price, otherwise use price_data for R$ 1,49
+        const lineItem = (env.STRIPE_EXTRA_PRICE_ID && env.STRIPE_EXTRA_PRICE_ID !== "price_1UWEc0Rynl9tIFFYhgaFcei3")
+          ? {
+              price: env.STRIPE_EXTRA_PRICE_ID,
+              quantity: 1,
+            }
+          : {
+              price_data: {
+                currency: 'brl',
+                unit_amount: 149, // R$ 1,49
+                product_data: {
+                  name: 'Geração de Baralho com IA',
+                  description: '1 geração de baralho com IA de alta precisão (Gemini Flash Thinking)'
+                }
+              },
+              quantity: 1
+            };
+
         const sessionParams = {
           mode,
           ui_mode: "form",
-          line_items: [
-            {
-              price: env.STRIPE_EXTRA_PRICE_ID || "price_1UWEc0Rynl9tIFFYhgaFcei3",
-              quantity: 1,
-            },
-          ],
+          line_items: [lineItem],
           billing_address_collection: "auto",
           submit_type: "auto",
           integration_identifier: "custom_embedded_web_0002",
@@ -335,8 +348,11 @@ export default {
           monthlyUsed = 0;
         }
         const extraGenerations = userDoc?.extraGenerations || 0;
-        const remainingIncluded = isLifetime ? 9999 : Math.max(0, 3 - monthlyUsed);
-        const totalRemaining = isPro ? (isLifetime ? 9999 : remainingIncluded + extraGenerations) : 0;
+        const remainingIncluded = isLifetime ? 9999 : Math.max(0, 4 - monthlyUsed);
+        const freeTrialRemaining = userDoc?.freeAiDeckUsed ? 0 : 1;
+        const totalRemaining = isPro
+          ? (isLifetime ? 9999 : remainingIncluded + extraGenerations)
+          : (extraGenerations + freeTrialRemaining);
 
         if (isLifetime && serviceAccount) {
           ctx.waitUntil(Promise.all([
@@ -361,8 +377,8 @@ export default {
           isPro,
           isLifetimePro: isLifetime,
           freeAiDeckUsed: Boolean(userDoc?.freeAiDeckUsed),
-          monthlyGenerationsUsed: monthlyUsed,
-          monthlyIncluded: isLifetime ? 9999 : 3,
+          monthlyGenerationsUsed: isPro ? monthlyUsed : 0,
+          monthlyIncluded: isLifetime ? 9999 : (isPro ? 4 : 0),
           extraGenerations,
           remainingGenerations: totalRemaining,
           subscription: isLifetime ? { status: 'active', plan: 'pro_lifetime' } : (userDoc?.subscription || null)
@@ -616,12 +632,18 @@ export default {
               const session = await stripe.checkout.sessions.retrieve(sessionId);
               if (session && (session.status === 'complete' || session.payment_status === 'paid')) {
                 if (session.mode === 'payment' || session.metadata?.type === 'extra_deck') {
-                  const currentExtras = userDoc?.extraGenerations || 0;
-                  await updateUserDocument(serviceAccount, user.uid, {
-                    extraGenerations: currentExtras + 1,
-                    updatedAt: new Date().toISOString()
-                  });
-                  return jsonResponse({ isPro: Boolean(user.pro || userDoc?.subscription?.status === 'active'), extraGenerations: currentExtras + 1, type: 'extra_deck' }, 200, corsHeaders);
+                  const paidSessions = Array.isArray(userDoc?.paidSessionIds) ? [...userDoc.paidSessionIds] : [];
+                  let currentExtras = userDoc?.extraGenerations || 0;
+                  if (!paidSessions.includes(sessionId)) {
+                    currentExtras += 1;
+                    paidSessions.push(sessionId);
+                    await updateUserDocument(serviceAccount, user.uid, {
+                      extraGenerations: currentExtras,
+                      paidSessionIds: paidSessions,
+                      updatedAt: new Date().toISOString()
+                    });
+                  }
+                  return jsonResponse({ isPro: Boolean(user.pro || userDoc?.subscription?.status === 'active'), extraGenerations: currentExtras, type: 'extra_deck' }, 200, corsHeaders);
                 } else {
                   await Promise.all([
                     setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
@@ -949,56 +971,69 @@ export default {
 
         const isPro = Boolean(isLifetime || user.pro || userDoc?.subscription?.status === 'active');
         const hasUsedFreeTrial = Boolean(userDoc?.freeAiDeckUsed);
+        let extraGens = userDoc?.extraGenerations || 0;
 
-        // Allow 1 free deck generation for new/non-pro users before requiring subscription
-        if (!isPro && hasUsedFreeTrial) {
-          return jsonResponse({
-            error: 'subscription_required',
-            message: 'Você já utilizou sua geração gratuita de 1 baralho com IA. Assine o Spaiq Pro (R$ 4,99/mês) para ter acesso completo!'
-          }, 403, corsHeaders);
-        }
-
-        const isFreeTrial = !isPro && !hasUsedFreeTrial;
-
-        // Quota check (bypassed for lifetime Pro, non-new deck operations, or free trial)
+        // Quota check logic
         const isNewDeck = reqBody.isNewDeck !== false;
-        if (isNewDeck && !isLifetime && !isFreeTrial) {
-          const currentMonth = new Date().toISOString().slice(0, 7);
-          const lastReset = userDoc?.quotaLastResetMonth || '';
-          let monthlyUsed = userDoc?.monthlyGenerationsUsed || 0;
-          let extraGens = userDoc?.extraGenerations || 0;
+        if (isNewDeck && !isLifetime) {
+          if (isPro) {
+            // PRO USER: 4 free deck generations per month + any purchased extra generations
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            const lastReset = userDoc?.quotaLastResetMonth || '';
+            let monthlyUsed = userDoc?.monthlyGenerationsUsed || 0;
 
-          if (lastReset !== currentMonth) {
-            monthlyUsed = 0;
-          }
+            if (lastReset !== currentMonth) {
+              monthlyUsed = 0;
+            }
 
-          if (monthlyUsed < 3) {
-            monthlyUsed += 1;
-          } else if (extraGens > 0) {
-            extraGens -= 1;
+            if (monthlyUsed < 4) {
+              monthlyUsed += 1;
+            } else if (extraGens > 0) {
+              extraGens -= 1;
+            } else {
+              return jsonResponse({
+                error: 'quota_exceeded',
+                message: 'Você atingiu o limite de 4 baralhos por IA este mês. Adquira gerações extras por R$ 1,49 cada.',
+                limit: 4,
+                used: monthlyUsed,
+                extra: extraGens
+              }, 402, corsHeaders);
+            }
+
+            if (serviceAccount) {
+              await updateUserDocument(serviceAccount, user.uid, {
+                monthlyGenerationsUsed: monthlyUsed,
+                quotaLastResetMonth: currentMonth,
+                extraGenerations: extraGens
+              }).catch(() => {});
+            }
           } else {
-            return jsonResponse({
-              error: 'quota_exceeded',
-              message: 'Você atingiu o limite de 3 baralhos por IA este mês. Adquira gerações extras por R$ 0,99 cada.',
-              limit: 3,
-              used: monthlyUsed,
-              extra: extraGens
-            }, 402, corsHeaders);
+            // NON-PRO USER: 1 free trial deck generation, or use purchased extra generations (R$ 1,49 on Stripe)
+            if (!hasUsedFreeTrial) {
+              if (serviceAccount) {
+                await updateUserDocument(serviceAccount, user.uid, {
+                  freeAiDeckUsed: true,
+                  freeAiDeckUsedAt: new Date().toISOString()
+                }).catch((err) => console.warn('[Generate] Erro ao registrar freeAiDeckUsed:', err.message));
+              }
+            } else if (extraGens > 0) {
+              extraGens -= 1;
+              if (serviceAccount) {
+                await updateUserDocument(serviceAccount, user.uid, {
+                  extraGenerations: extraGens
+                }).catch(() => {});
+              }
+            } else {
+              return jsonResponse({
+                error: 'quota_exceeded',
+                message: 'Você já utilizou sua geração gratuita de 1 baralho com IA. Adquira uma geração avulsa por R$ 1,49 no Stripe ou assine o Spaiq Pro (R$ 4,99/mês com 4 gerações mensais)!',
+                limit: 0,
+                used: 1,
+                extra: 0,
+                canBuyExtra: true
+              }, 402, corsHeaders);
+            }
           }
-
-          // Update quota in Firestore if serviceAccount available
-          if (serviceAccount) {
-            await updateUserDocument(serviceAccount, user.uid, {
-              monthlyGenerationsUsed: monthlyUsed,
-              quotaLastResetMonth: currentMonth,
-              extraGenerations: extraGens
-            }).catch(() => {});
-          }
-        } else if (isFreeTrial && serviceAccount) {
-          await updateUserDocument(serviceAccount, user.uid, {
-            freeAiDeckUsed: true,
-            freeAiDeckUsedAt: new Date().toISOString()
-          }).catch((err) => console.warn('[Generate] Erro ao registrar freeAiDeckUsed:', err.message));
         }
 
         // Proxy Gemini call
@@ -1129,11 +1164,11 @@ export default {
  * Handle Asaas Webhook events
  */
 async function handleAsaasWebhook(request, env) {
-  // Validate Asaas Webhook secret if configured
+  // Validate Asaas Webhook secret (mandatory verification)
   const webhookToken = request.headers.get('asaas-access-token') || request.headers.get('webhook-token') || '';
-  if (env.ASAAS_WEBHOOK_SECRET && webhookToken !== env.ASAAS_WEBHOOK_SECRET) {
+  if (!env.ASAAS_WEBHOOK_SECRET || !webhookToken || webhookToken !== env.ASAAS_WEBHOOK_SECRET) {
     console.warn('[Asaas Webhook] Token de autenticação inválido ou ausente:', webhookToken);
-    return new Response(JSON.stringify({ error: 'unauthorized', message: 'Token de webhook inválido' }), {
+    return new Response(JSON.stringify({ error: 'unauthorized', message: 'Token de webhook inválido ou configuração ausente' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -1296,12 +1331,19 @@ async function handleStripeWebhook(request, env) {
       if (dataObject.mode === 'payment' || dataObject.metadata?.type === 'extra_deck') {
         // ONE-TIME EXTRA DECK GENERATION PURCHASE
         const userDoc = await getUserDocument(serviceAccount, uid);
-        const currentExtras = userDoc?.extraGenerations || 0;
-        await updateUserDocument(serviceAccount, uid, {
-          extraGenerations: currentExtras + 1,
-          updatedAt: new Date().toISOString()
-        });
-        console.log(`[Stripe Webhook] Geração extra adicionada com sucesso para UID: ${uid} (novo total: ${currentExtras + 1})`);
+        const paidSessions = Array.isArray(userDoc?.paidSessionIds) ? [...userDoc.paidSessionIds] : [];
+        if (!paidSessions.includes(dataObject.id)) {
+          const currentExtras = userDoc?.extraGenerations || 0;
+          paidSessions.push(dataObject.id);
+          await updateUserDocument(serviceAccount, uid, {
+            extraGenerations: currentExtras + 1,
+            paidSessionIds: paidSessions,
+            updatedAt: new Date().toISOString()
+          });
+          console.log(`[Stripe Webhook] Geração extra adicionada com sucesso para UID: ${uid} (novo total: ${currentExtras + 1})`);
+        } else {
+          console.log(`[Stripe Webhook] Sessão ${dataObject.id} já processada anteriormente para UID: ${uid}`);
+        }
       } else {
         // RECURRING MONTHLY PRO SUBSCRIPTION
         await setFirebaseUserProClaim(serviceAccount, uid, true);

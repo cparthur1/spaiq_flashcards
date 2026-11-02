@@ -4,6 +4,9 @@
  * This makes the QR code extremely simple and easy to scan.
  */
 
+import { t } from './i18n.js';
+import { escapeHtml } from './utils.js';
+
 // --- ELEMENTS ---
 const transferModal = document.getElementById('transfer-modal');
 const transferModalContent = document.getElementById('transfer-modal-content');
@@ -22,7 +25,7 @@ let html5QrCode = null;
 
 function logSync(msg) {
     if (syncDebugLog) {
-        syncDebugLog.innerHTML += `<br>> ${msg}`;
+        syncDebugLog.innerHTML += `<br>> ${escapeHtml(msg || '')}`;
         syncDebugLog.scrollTop = syncDebugLog.scrollHeight;
     }
     console.log("[SyncLog] " + msg);
@@ -45,7 +48,7 @@ export function initTransfer() {
     closeTransferBtn?.addEventListener('click', closeTransferModal);
     
     if (forceSyncBtn) {
-        forceSyncBtn.textContent = "Atualizar Progresso";
+        forceSyncBtn.textContent = t('update_progress_btn');
         forceSyncBtn.onclick = startSender;
     }
 
@@ -81,7 +84,7 @@ function getActiveStorageKey() {
 }
 
 function startSender() {
-    transferStatus.textContent = "Otimizando QR...";
+    transferStatus.textContent = t('optimizing_qr');
     const rawData = localStorage.getItem(getActiveStorageKey());
     if (!rawData) return;
 
@@ -109,7 +112,7 @@ function startSender() {
         
         console.log("Bitset Data Size:", jsonString.length, "Compressed:", currentCompressedState.length);
 
-        transferStatus.textContent = "Pronto! Use o app de câmera.";
+        transferStatus.textContent = t('ready_use_camera');
         transferStatus.classList.add('text-green-600');
         generateQR(currentCompressedState);
     } catch (err) {
@@ -147,7 +150,7 @@ async function openScanner() {
     try {
         await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
     } catch (err) {
-        alert("Erro ao iniciar câmera. Verifique as permissões.");
+        alert(t('camera_error_permissions'));
         closeScanner();
     }
 }
@@ -174,21 +177,21 @@ function onScanSuccess(decodedText) {
 
 function applyProgress(stateString) {
     syncOverlay.classList.remove('hidden');
-    logSync("Lendo progresso otimizado...");
+    logSync(t('reading_optimized_progress'));
 
     try {
         const decompressed = LZString.decompressFromEncodedURIComponent(stateString);
-        if (!decompressed) throw new Error("Dados inválidos.");
+        if (!decompressed) throw new Error(t('invalid_data'));
 
         const progress = JSON.parse(decompressed);
         const storageKey = getActiveStorageKey();
         const localDataRaw = localStorage.getItem(storageKey);
         
-        if (!localDataRaw) throw new Error("Abra o deck no celular primeiro!");
+        if (!localDataRaw) throw new Error(t('open_deck_mobile_first'));
 
         const localData = JSON.parse(localDataRaw);
         
-        logSync("Sincronizando Bitset...");
+        logSync(t('syncing_bitset'));
         localData.score = progress.s;
         
         // Rebuild pool using the bitset
@@ -203,7 +206,7 @@ function applyProgress(stateString) {
 
         localStorage.setItem(storageKey, JSON.stringify(localData));
         
-        logSync("Sincronizado! Reiniciando...");
+        logSync(t('synced_restarting'));
         setTimeout(() => {
             window.location.href = window.location.origin + window.location.pathname;
         }, 1000);

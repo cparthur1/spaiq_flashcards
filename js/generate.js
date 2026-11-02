@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { callWithRetry, checkAndResetModelFallback, sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId } from './utils.js';
 import { getApiKeyAsync, getCachedApiKey, saveApiKey, clearApiKey, isKeyRemembered } from './key-manager.js';
-import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
+import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserProStatus, refreshUserProStatus } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken, signInWithGoogle } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
@@ -996,11 +996,12 @@ function addAiChatGeneratingBubble(text) {
     const bubble = document.createElement('div');
     bubble.id = 'ai-chat-generating-bubble';
     bubble.className = "self-start bg-gradient-to-b from-purple-50/90 to-purple-100/60 border border-purple-200/80 p-3.5 rounded-2xl rounded-tl-sm text-xs text-purple-900 flex items-center gap-3 shadow-[0_2px_8px_rgba(109,40,217,0.05),inset_0_1px_0_rgba(255,255,255,0.8)]";
+    const safeText = escapeHtml(text || '');
     bubble.innerHTML = `
         <div class="relative flex-shrink-0 w-2.5 h-2.5 flex items-center justify-center">
             <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-600 animate-pulse shadow-[0_0_6px_rgba(147,51,234,0.5)]"></span>
         </div>
-        <span class="font-medium">${text}</span>
+        <span class="font-medium">${safeText}</span>
     `;
     chatHistory.appendChild(bubble);
     chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -1505,28 +1506,45 @@ export function markFreeAiDeckUsed() {
 
 export function canGenerateWithAi() {
     if (isUserPro()) return true;
-    return !hasUsedFreeAiDeck();
+    if (!hasUsedFreeAiDeck()) return true;
+    const status = getUserProStatus();
+    return Boolean(status && status.extraGenerations > 0);
 }
 
 function updateProPaywalledUI() {
     initExploreModal();
     const isPro = isUserPro();
     const usedTrial = hasUsedFreeAiDeck();
+    const userStatus = getUserProStatus();
+    const extraGens = Number(userStatus?.extraGenerations || 0);
+    const hasExtra = extraGens > 0;
 
     [cardMode21, cardMode22].forEach(card => {
         if (!card) return;
         const existingBadge = card.querySelector('.paywall-badge-pill');
         if (!isPro) {
-            if (usedTrial) {
+            if (usedTrial && !hasExtra) {
                 card.classList.add('is-paywalled');
                 if (!existingBadge) {
                     const badge = document.createElement('div');
                     badge.className = 'paywall-badge-pill';
-                    badge.innerHTML = `<img src="../assets/img/PRO.svg" alt="Pro"><span>PRO</span>`;
+                    badge.innerHTML = `<img src="../assets/img/PRO.svg" alt="Pro"><span>PRO / R$ 1,49</span>`;
                     card.appendChild(badge);
                 } else {
                     existingBadge.className = 'paywall-badge-pill';
-                    existingBadge.innerHTML = `<img src="../assets/img/PRO.svg" alt="Pro"><span>PRO</span>`;
+                    existingBadge.innerHTML = `<img src="../assets/img/PRO.svg" alt="Pro"><span>PRO / R$ 1,49</span>`;
+                }
+            } else if (usedTrial && hasExtra) {
+                card.classList.remove('is-paywalled');
+                const badgeLabel = `${extraGens} ${extraGens === 1 ? 'DISPONÍVEL' : 'DISPONÍVEIS'}`;
+                if (!existingBadge) {
+                    const badge = document.createElement('div');
+                    badge.className = 'paywall-badge-pill trial-badge-pill';
+                    badge.innerHTML = `<img src="../assets/img/ai.svg" alt="IA"><span>${badgeLabel}</span>`;
+                    card.appendChild(badge);
+                } else {
+                    existingBadge.className = 'paywall-badge-pill trial-badge-pill';
+                    existingBadge.innerHTML = `<img src="../assets/img/ai.svg" alt="IA"><span>${badgeLabel}</span>`;
                 }
             } else {
                 card.classList.remove('is-paywalled');
@@ -1579,6 +1597,38 @@ function updateProPaywalledUI() {
                 </span>
             `;
         }
+    } else if (!isPro && usedTrial && hasExtra) {
+        const extraLabel = `${extraGens} ${extraGens === 1 ? 'Crédito' : 'Créditos'}`;
+        if (modal21Badge) {
+            modal21Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal21Badge.innerHTML = `
+                <div class="flex items-center gap-2.5">
+                    <img src="../assets/img/ai.svg" class="w-5 h-5 flex-shrink-0" alt="IA">
+                    <div>
+                        <span class="text-xs font-bold text-blue-900 block">Geração Avulsa com IA</span>
+                        <span class="text-[11px] text-blue-700">Você possui ${extraGens} geração(ões) avulsa(s) disponível(is)</span>
+                    </div>
+                </div>
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                    ${extraLabel}
+                </span>
+            `;
+        }
+        if (modal22Badge) {
+            modal22Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal22Badge.innerHTML = `
+                <div class="flex items-center gap-2.5">
+                    <img src="../assets/img/ai.svg" class="w-5 h-5 flex-shrink-0" alt="IA">
+                    <div>
+                        <span class="text-xs font-bold text-blue-900 block">Geração Avulsa com IA</span>
+                        <span class="text-[11px] text-blue-700">Você possui ${extraGens} geração(ões) avulsa(s) disponível(is)</span>
+                    </div>
+                </div>
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                    ${extraLabel}
+                </span>
+            `;
+        }
     } else if (isPro) {
         if (modal21Badge) {
             modal21Badge.className = 'p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between';
@@ -1587,7 +1637,7 @@ function updateProPaywalledUI() {
                     <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                     <div>
                         <span class="text-xs font-bold text-purple-900 block">Recurso Spaiq Pro</span>
-                        <span class="text-[11px] text-purple-700">Geração de IA com Gemini integrada ao seu plano</span>
+                        <span class="text-[11px] text-purple-700">Geração de IA com Gemini integrada ao seu plano (4/mês)</span>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
@@ -1602,7 +1652,7 @@ function updateProPaywalledUI() {
                     <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                     <div>
                         <span class="text-xs font-bold text-purple-900 block">Recurso Spaiq Pro</span>
-                        <span class="text-[11px] text-purple-700">Aprimoramento de IA com Gemini integrado ao seu plano</span>
+                        <span class="text-[11px] text-purple-700">Aprimoramento de IA com Gemini integrado ao seu plano (4/mês)</span>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
@@ -1691,8 +1741,8 @@ submitModal12Btn.addEventListener('click', async () => {
 
 // 2.1 Crie de materiais — Transforme slides, pdf, fotos... em cards
 cardMode21.addEventListener('click', () => {
-    if (!isUserPro() && hasUsedFreeAiDeck()) {
-        openProModal();
+    if (!canGenerateWithAi()) {
+        openExtraDeckModal();
         return;
     }
     modal21Error.textContent = '';
@@ -1742,8 +1792,8 @@ modal21Files.addEventListener('change', () => {
 
 submitModal21Btn.addEventListener('click', async () => {
     modal21Error.textContent = '';
-    if (!isUserPro() && hasUsedFreeAiDeck()) {
-        openProModal();
+    if (!canGenerateWithAi()) {
+        openExtraDeckModal();
         return;
     }
 
@@ -1875,7 +1925,8 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
                 if (errData.error === 'quota_exceeded') {
-                    if (confirm(t('alert_pro_monthly_limit'))) {
+                    const promptMsg = isUserPro() ? t('alert_pro_monthly_limit') : t('alert_non_pro_limit');
+                    if (confirm(promptMsg)) {
                         if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
                             window.flashcardsOpenExtraDeckModal();
                         }
@@ -1994,14 +2045,8 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
                 markFreeAiDeckUsed();
                 deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
                 localStorage.setItem('editing_deck_is_free_trial', 'true');
-                updateProPaywalledUI();
             }
-            if (window.currentDeckIsFreeAiTrial) {
-                markFreeAiDeckUsed();
-                deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
-                localStorage.setItem('editing_deck_is_free_trial', 'true');
-                updateProPaywalledUI();
-            }
+            refreshUserProStatus().then(() => updateProPaywalledUI());
             finishGeneratingAnimation(true, deckCards.length);
             removeAiChatGeneratingBubble();
             addChatMessage('model', `✓ Baralho gerado com sucesso! Criei ${deckCards.length} flashcards técnicos com base no material enviado. Quer que eu ajuste algo, adicione mais perguntas ou altere alguma alternativa?`);
@@ -2036,8 +2081,8 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
 
 // 2.2 Aprimore um doc — A partir de um txt ou word, aprimore cartões
 cardMode22.addEventListener('click', () => {
-    if (!isUserPro() && hasUsedFreeAiDeck()) {
-        openProModal();
+    if (!canGenerateWithAi()) {
+        openExtraDeckModal();
         return;
     }
     modal22Error.textContent = '';
@@ -2057,8 +2102,8 @@ modal22File.addEventListener('change', () => {
 
 submitModal22Btn.addEventListener('click', async () => {
     modal22Error.textContent = '';
-    if (!isUserPro() && hasUsedFreeAiDeck()) {
-        openProModal();
+    if (!canGenerateWithAi()) {
+        openExtraDeckModal();
         return;
     }
 
@@ -2160,7 +2205,8 @@ ${JSON.stringify(localCards, null, 2)}`;
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
                 if (errData.error === 'quota_exceeded') {
-                    if (confirm(t('alert_pro_monthly_limit'))) {
+                    const promptMsg = isUserPro() ? t('alert_pro_monthly_limit') : t('alert_non_pro_limit');
+                    if (confirm(promptMsg)) {
                         if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
                             window.flashcardsOpenExtraDeckModal();
                         }
@@ -2186,14 +2232,8 @@ ${JSON.stringify(localCards, null, 2)}`;
                 markFreeAiDeckUsed();
                 deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
                 localStorage.setItem('editing_deck_is_free_trial', 'true');
-                updateProPaywalledUI();
             }
-            if (window.currentDeckIsFreeAiTrial) {
-                markFreeAiDeckUsed();
-                deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
-                localStorage.setItem('editing_deck_is_free_trial', 'true');
-                updateProPaywalledUI();
-            }
+            refreshUserProStatus().then(() => updateProPaywalledUI());
             finishGeneratingAnimation(true, deckCards.length);
             removeAiChatGeneratingBubble();
             addChatMessage('model', `✓ Documento aprimorado com sucesso! ${deckCards.length} cartões foram enriquecidos com opções e rótulos pelo Gemini.`);
@@ -2339,14 +2379,10 @@ document.addEventListener('keydown', (e) => {
 });
 
 // --- CARD CREATOR UI LOGIC (LEFT SIDEBAR) ---
-const typeHints = {
-    open: "Pergunta é uma descrição e você digita o nome do conceito.",
-    open_double: "Uma pergunta, você digita duas respostas.",
-    fill: "Frase com lacunas marcadas por '_' (ex: 'O KDIGO define A1 como < _ mg/g e A3 como > _ mg/g'). Você digita cada lacuna.",
-    anki: "Pergunta é um conceito (curto), ou imagem, e resposta é uma descrição longa, ou imagem. Sem digitação.",
-    multiple_choice: "Pergunta é um conceito, você escolhe entre alternativas (2 a 6 opções).",
-    divisor: "Adiciona um comentário na lista para organizar tópicos no editor. Não aparece no jogo."
-};
+function getTypeHint(type) {
+    const key = `type_hint_${type}`;
+    return t(key) || '';
+}
 
 // --- M3 CUSTOM CARD TYPE SELECT CONTROLLER ---
 function selectCardType(type, triggerChange = true) {
@@ -2477,8 +2513,8 @@ function initCardTypeSelect() {
 initCardTypeSelect();
 
 creatorCardType.addEventListener('change', () => {
-    const t = creatorCardType.value;
-    creatorTypeHint.textContent = typeHints[t] || '';
+    const tVal = creatorCardType.value;
+    creatorTypeHint.textContent = getTypeHint(tVal);
 
     // Adjust visibility
     creatorGroupOpen.classList.toggle('hidden', t !== 'open');
@@ -2741,16 +2777,18 @@ renderCreatorMcOptions(["", "", "", ""], 0);
 
 // --- AI FLASHCARD GENERATION ANIMATION & PROGRESS ---
 let isGeneratingCards = false;
-let generationStatusPhrases = [
-    "Processando conteúdo e identificando tópicos principais...",
-    "Estruturando conceitos fundamentais e definições...",
-    "Formulando perguntas abertas e respostas técnicas...",
-    "Criando alternativas plausíveis e distratores...",
-    "Organizando cartões e refinando o baralho..."
-];
+function getGenerationStatusPhrases() {
+    return [
+        t('gen_phrase_1'),
+        t('gen_phrase_2'),
+        t('gen_phrase_3'),
+        t('gen_phrase_4'),
+        t('gen_phrase_5')
+    ];
+}
 let generationStatusInterval = null;
 
-function showGeneratingAnimation(initialMessage = "Processando arquivos e gerando flashcards...") {
+function showGeneratingAnimation(initialMessage = null) {
     isGeneratingCards = true;
     const bannerContainer = document.getElementById('generation-banner-container');
     const statusText = document.getElementById('generation-status-text');
@@ -2762,11 +2800,11 @@ function showGeneratingAnimation(initialMessage = "Processando arquivos e gerand
     if (bannerContainer) {
         bannerContainer.classList.remove('hidden', 'opacity-0', 'scale-95');
     }
-    if (statusText) statusText.textContent = initialMessage;
+    if (statusText) statusText.textContent = initialMessage || t('gen_phrase_1');
     if (counterNum) counterNum.textContent = '0';
     if (badgeStatus) {
         badgeStatus.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-purple-50 to-purple-100 text-purple-700 border border-purple-200/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
-        badgeStatus.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse"></span> AO VIVO';
+        badgeStatus.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse"></span> ${t('live_badge')}`;
     }
     if (titleText) titleText.textContent = t('gemini_generating_deck_title');
     if (progressBar) progressBar.classList.remove('hidden');
@@ -2782,8 +2820,9 @@ function showGeneratingAnimation(initialMessage = "Processando arquivos e gerand
             return;
         }
         if (deckCards.length === 0 && statusText) {
-            phraseIdx = (phraseIdx + 1) % generationStatusPhrases.length;
-            statusText.textContent = generationStatusPhrases[phraseIdx];
+            const phrases = getGenerationStatusPhrases();
+            phraseIdx = (phraseIdx + 1) % phrases.length;
+            statusText.textContent = phrases[phraseIdx];
         }
     }, 3200);
 
@@ -2829,15 +2868,15 @@ function finishGeneratingAnimation(success = true, count = 0) {
     if (progressBar) progressBar.classList.add('hidden');
 
     if (success && count > 0) {
-        if (titleText) titleText.textContent = "Flashcards gerados com sucesso!";
+        if (titleText) titleText.textContent = t('flashcards_generated_success');
         if (statusText) statusText.textContent = t('cards_ready_status', { count });
         if (badgeStatus) {
             badgeStatus.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-green-50 to-green-100/90 text-green-700 border border-green-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
-            badgeStatus.innerHTML = '✓ CONCLUÍDO';
+            badgeStatus.innerHTML = `✓ ${t('done')}`;
         }
         if (counterBadge) {
             counterBadge.className = "text-xs font-semibold text-green-700 bg-gradient-to-b from-green-50 to-green-100/80 px-3 py-1 rounded-full border border-green-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
-            counterBadge.textContent = `${count} cards`;
+            counterBadge.textContent = `${count} ${count === 1 ? t('card_unit_singular') : t('cards_unit')}`;
         }
 
         setTimeout(() => {
@@ -2854,7 +2893,7 @@ function finishGeneratingAnimation(success = true, count = 0) {
         if (statusText) statusText.textContent = t('generation_failed_desc');
         if (badgeStatus) {
             badgeStatus.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-red-50 to-red-100/90 text-red-700 border border-red-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
-            badgeStatus.innerHTML = '<span class="material-symbols-rounded text-xs align-middle">warning</span> ATENÇÃO';
+            badgeStatus.innerHTML = `<span class="material-symbols-rounded text-xs align-middle">warning</span> ${t('attention_tag')}`;
         }
     }
 }
@@ -3182,24 +3221,24 @@ function createCardElement(card, index, withAnimation = true) {
 
     if (card.type === 'anki') {
         typeBadge.className += " bg-indigo-100 text-indigo-800";
-        typeBadge.textContent = "Anki";
+        typeBadge.textContent = t('card_type_anki');
     } else if (card.type === 'multiple_choice') {
         typeBadge.className += " bg-purple-100 text-purple-800";
-        typeBadge.textContent = "Multipla escolha";
+        typeBadge.textContent = t('card_type_mc');
     } else if (card.type === 'open_double') {
         typeBadge.className += " bg-amber-100 text-amber-800";
-        typeBadge.textContent = "Escrever duplo";
+        typeBadge.textContent = t('card_type_open_double');
     } else if (card.type === 'fill') {
         typeBadge.className += " bg-teal-100 text-teal-800";
         const count = Array.isArray(card.answers) && card.answers.length > 0 ? card.answers.length : (card.answer ? card.answer.split(';').length : 1);
-        typeBadge.textContent = `Preencher (${count})`;
+        typeBadge.textContent = `${t('card_type_fill')} (${count})`;
     } else {
         typeBadge.className += " bg-gray-100 text-gray-700";
-        typeBadge.textContent = "Escrever";
+        typeBadge.textContent = t('card_type_open');
     }
     cardEl.appendChild(typeBadge);
 
-    const descLabel = card.type === 'anki' ? 'Frente:' : (card.type === 'fill' ? 'Frase:' : 'P:');
+    const descLabel = card.type === 'anki' ? `${t('front_label')}:` : (card.type === 'fill' ? `${t('phrase_label')}:` : `${t('question_label')}:`);
     let descContent = card.description || '(Sem texto)';
     if (card.type === 'anki') {
         descContent = `<div class="anki-markdown-content text-gray-800 mt-0.5">${renderMathAndMarkdown(descContent)}</div>`;
@@ -3216,28 +3255,28 @@ function createCardElement(card, index, withAnimation = true) {
         descContent = `<span class="text-gray-800">${renderMathAndMarkdown(descContent)}</span>`;
     }
     const descStr = `<strong>${descLabel}</strong> ${descContent}`;
-    let ansStr = `<strong>R:</strong> <span class="text-green-600">${escapeHtml(card.answer || '')}</span>`;
+    let ansStr = `<strong>${t('answer_label')}:</strong> <span class="text-green-600">${escapeHtml(card.answer || '')}</span>`;
 
     if (card.type === 'open_double') {
-        ansStr += `<br><strong>R2:</strong> <span class="text-green-600">${escapeHtml(card.answer2 || '')}</span>`;
+        ansStr += `<br><strong>${t('second_answer_label')}:</strong> <span class="text-green-600">${escapeHtml(card.answer2 || '')}</span>`;
     } else if (card.type === 'multiple_choice') {
         const optsList = (card.options || []).map(opt => {
             const isCorrect = opt === card.answer;
             return isCorrect ? `<strong class="text-green-600">✓ ${escapeHtml(opt)}</strong>` : escapeHtml(opt);
         }).join(' | ');
-        ansStr = `<span class="text-xs text-gray-500">Opções: ${optsList}</span>`;
+        ansStr = `<span class="text-xs text-gray-500">${t('options_label')}: ${optsList}</span>`;
     } else if (card.type === 'anki') {
         const renderedAns = renderMathAndMarkdown(card.answer || '');
-        ansStr = `<strong>Verso:</strong> <div class="anki-markdown-content text-indigo-600 mt-1">${renderedAns}</div>`;
+        ansStr = `<strong>${t('back_label')}:</strong> <div class="anki-markdown-content text-indigo-600 mt-1">${renderedAns}</div>`;
     } else if (card.type === 'fill') {
         const answers = Array.isArray(card.answers) && card.answers.length > 0 
             ? card.answers 
             : (card.answer ? card.answer.split(';').map(a => a.trim()).filter(Boolean) : []);
         if (answers.length > 0) {
             const badges = answers.map((a, i) => `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200 text-teal-700 text-xs font-semibold"><span class="text-teal-500 font-mono text-[10px]">${i + 1}:</span> ${escapeHtml(a)}</span>`).join(' ');
-            ansStr = `<strong>Lacunas:</strong> <div class="inline-flex flex-wrap gap-1 mt-1">${badges}</div>`;
+            ansStr = `<strong>${t('blanks_label')}:</strong> <div class="inline-flex flex-wrap gap-1 mt-1">${badges}</div>`;
         } else {
-            ansStr = `<strong>Lacunas:</strong> <span class="text-yellow-600 text-xs">Nenhuma resposta definida</span>`;
+            ansStr = `<strong>${t('blanks_label')}:</strong> <span class="text-yellow-600 text-xs">${t('no_answer_defined')}</span>`;
         }
     }
 

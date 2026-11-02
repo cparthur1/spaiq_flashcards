@@ -86,7 +86,7 @@ export async function verifyPaymentStatus(sessionId = null) {
 }
 
 /**
- * Buy extra deck generation (R$ 0,99)
+ * Buy extra deck generation (R$ 1,49)
  */
 export async function buyExtraGeneration(params = {}) {
   const res = await fetchWithAuth('/api/payment/extra-generation', {
@@ -101,7 +101,7 @@ export async function buyExtraGeneration(params = {}) {
 }
 
 /**
- * Create Stripe Checkout Session for Extra Deck Generation (R$ 0,99)
+ * Create Stripe Checkout Session for Deck Generation (R$ 1,49 single payment)
  */
 export async function createExtraDeckCheckoutSession() {
   const res = await fetchWithAuth('/api/create-extra-deck-session', {

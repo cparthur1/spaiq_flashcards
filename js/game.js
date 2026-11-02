@@ -1,9 +1,9 @@
 import { normalizeString, calculateSimilarity, shuffleArray, checkAndResetModelFallback, ROUTES, renderMathAndMarkdown, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl } from './utils.js';
 import { isPlayableCard, calculateThinkingGap, selectNextCard, isLeechCard, shouldGraduateCard, formatTimeDisplay, getCardTopic } from './engine/scheduler.js';
 import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString } from './engine/notebook-scheduler.js';
-import { 
-    initEffects, createBall, clearBalls, setBallColor, launchCelebrationParticles, 
-    playCompletionShockwave, cleanShockwaveContainer, resizeCanvas, animate, 
+import {
+    initEffects, createBall, clearBalls, setBallColor, launchCelebrationParticles,
+    playCompletionShockwave, cleanShockwaveContainer, resizeCanvas, animate,
     triggerHaptic, isHapticEnabled, setHapticEnabled, updateHapticUI,
     isSoundEnabled, setSoundEnabled, playFeedbackSound, updateSoundUI,
     isAnimationsEnabled, setAnimationsEnabled, applyAnimationsPreference, updateAnimationsUI, updateAccessibilityUI
@@ -11,10 +11,10 @@ import {
 import { initInputController, startGamepadLoop, stopGamepadLoop } from './engine/input-controller.js';
 import { isTutorEnabled, setTutorApiKey, disableTutor, initTutor, updateTutorUI, setLastUserAnswerForChat, getLastUserAnswerForChat, resetTutorChatSession, getHasChatInteraction, setHasChatInteraction, evaluateAnswerSemantic, addMsg, showTyping, hideTyping, sendTutorChatMessage, getTermDefinition, logDefinitionToChat } from './engine/tutor.js';
 import { initPomodoro, isPomodoroEnabled, setPomodoroEnabled, updatePomodoroUI, getPomodoroStatus } from './engine/pomodoro.js';
-import { 
-    getNotificationSettings, saveNotificationSettings, requestNotificationPermission, 
-    hasNotificationSupport, sendDailyNotification, startNotificationScheduler, 
-    updateNotificationsUI, checkAndTriggerScheduledNotifications 
+import {
+    getNotificationSettings, saveNotificationSettings, requestNotificationPermission,
+    hasNotificationSupport, sendDailyNotification, startNotificationScheduler,
+    updateNotificationsUI, checkAndTriggerScheduledNotifications
 } from './engine/notifications.js';
 import { isDeckCategorized, callGeminiFlashLiteCategorization, getStoredAiCategories, getCardSignature } from './stats-ai.js';
 import { initTransfer } from './transfer.js';
@@ -1024,10 +1024,10 @@ function showDeckCompletionScreen() {
         precomputedNextCard = null;
         const completedSession = completeCurrentSession();
         showNotificationPill(t('session_completed_toast'), "stats.svg");
-        
+
         // Silky-smooth translucent gradient shockwave (GPU-composited)
         playCompletionShockwave();
-        
+
         // Lightweight victory confetti with small delay to keep framerates locked at 60fps
         setTimeout(() => {
             launchCelebrationParticles(45);
@@ -1054,7 +1054,7 @@ function showDeckCompletionScreen() {
             completionStatCards.textContent = total;
         }
         if (completionStatAcc) {
-            const acc = completedSession?.accuracy !== undefined ? completedSession.accuracy : 
+            const acc = completedSession?.accuracy !== undefined ? completedSession.accuracy :
                 (total > 0 && completedSession?.correctCount !== undefined ? Math.round((completedSession.correctCount / total) * 100) : 100);
             completionStatAcc.textContent = `${acc}%`;
         }
@@ -2426,7 +2426,9 @@ const AVAILABLE_HEADER_STATS = [
             return activeMode === 'notebook' ? notebookReviewsCount : score;
         },
         getSubtitle: () => {
-            return activeMode === 'notebook' ? `${notebookReviewsCount} revisões feitas` : `${score} acertos acumulados`;
+            return activeMode === 'notebook'
+                ? t('header_stat_reviews_done', { count: notebookReviewsCount })
+                : t('header_stat_correct_accum', { count: score });
         }
     },
     {
@@ -2457,7 +2459,7 @@ const AVAILABLE_HEADER_STATS = [
         getSubtitle: () => {
             const metrics = getCurrentSessionMetrics();
             const avgSec = (metrics && metrics.avgTimePerCardSeconds > 0) ? Math.round(metrics.avgTimePerCardSeconds) : 15;
-            return `Estimativa (~${avgSec}s por carta)`;
+            return t('header_stat_est_time_sub', { sec: avgSec });
         }
     },
     {
@@ -2476,9 +2478,10 @@ const AVAILABLE_HEADER_STATS = [
         },
         getSubtitle: () => {
             const status = getPomodoroStatus();
-            if (!status || !status.enabled) return 'Pomodoro desativado';
-            const modeNames = { study: 'Ciclo de foco', shortBreak: 'Pausa curta', longBreak: 'Pausa longa' };
-            return `${modeNames[status.currentMode] || 'Foco'} • ${status.isRunning ? 'Ativo' : 'Pausado'}`;
+            if (!status || !status.enabled) return t('pomodoro_disabled');
+            const modeNames = { study: t('pomodoro_cycle_focus'), shortBreak: t('pomodoro_short_break'), longBreak: t('pomodoro_long_break') };
+            const statusName = status.isRunning ? t('active_status') : t('paused');
+            return `${modeNames[status.currentMode] || t('pomodoro_cycle_focus')} • ${statusName}`;
         }
     },
     {
@@ -2497,7 +2500,7 @@ const AVAILABLE_HEADER_STATS = [
         },
         getSubtitle: () => {
             const metrics = getCurrentSessionMetrics();
-            return `${metrics.correctCount || 0} acertos de ${metrics.cardsAnswered || 0} respondidos`;
+            return t('header_stat_accuracy_sub', { correct: metrics.correctCount || 0, total: metrics.cardsAnswered || 0 });
         }
     },
     {
@@ -2515,10 +2518,7 @@ const AVAILABLE_HEADER_STATS = [
             return formatTimeDisplay(elapsed);
         },
         getSubtitle: () => {
-            const metrics = getCurrentSessionMetrics();
-            const elapsed = metrics.startTime ? Math.max(0, Math.floor((Date.now() - metrics.startTime) / 1000)) : 0;
-            const mins = Math.floor(elapsed / 60);
-            return `${mins} min de estudo decorridos`;
+            return t('header_stat_active_study');
         }
     },
     {
@@ -2535,14 +2535,14 @@ const AVAILABLE_HEADER_STATS = [
             if (!metrics || !metrics.avgTimePerCardSeconds || metrics.avgTimePerCardSeconds <= 0) {
                 return '0s';
             }
-            return metrics.avgTimePerCardSeconds < 10 
-                ? `${metrics.avgTimePerCardSeconds.toFixed(1)}s` 
+            return metrics.avgTimePerCardSeconds < 10
+                ? `${metrics.avgTimePerCardSeconds.toFixed(1)}s`
                 : `${Math.round(metrics.avgTimePerCardSeconds)}s`;
         },
         getSubtitle: () => {
             const metrics = getCurrentSessionMetrics();
             const count = metrics.activeCardsCount || metrics.cardsAnswered || 0;
-            return `Média sobre ${count} cards`;
+            return t('header_stat_avg_sub', { count });
         }
     }
 ];
@@ -2553,8 +2553,8 @@ function normalizeStatsMode(mode = activeMode) {
 
 function getPinnedHeaderStats(mode = activeMode) {
     const targetMode = normalizeStatsMode(mode);
-    const key = targetMode === 'notebook' 
-        ? HEADER_PINNED_NOTEBOOK_STORAGE_KEY 
+    const key = targetMode === 'notebook'
+        ? HEADER_PINNED_NOTEBOOK_STORAGE_KEY
         : HEADER_PINNED_DECK_STORAGE_KEY;
 
     try {
@@ -2580,8 +2580,8 @@ function getPinnedHeaderStats(mode = activeMode) {
 
 function savePinnedHeaderStats(pinnedList, mode = activeMode) {
     const targetMode = normalizeStatsMode(mode);
-    const key = targetMode === 'notebook' 
-        ? HEADER_PINNED_NOTEBOOK_STORAGE_KEY 
+    const key = targetMode === 'notebook'
+        ? HEADER_PINNED_NOTEBOOK_STORAGE_KEY
         : HEADER_PINNED_DECK_STORAGE_KEY;
 
     try {
@@ -2819,14 +2819,14 @@ function renderHeaderStatsDropdown() {
         const subtitle = stat.getSubtitle();
         const statI18n = getStatI18n(stat.id);
         const statTitle = statI18n.title || stat.title;
-        const displayLabel = activeMode === 'notebook' 
-            ? (statI18n.notebookLabel || stat.notebookLabel) 
+        const displayLabel = activeMode === 'notebook'
+            ? (statI18n.notebookLabel || stat.notebookLabel)
             : (statI18n.label || stat.label);
 
         const itemRow = document.createElement('div');
         itemRow.className = `group/opt flex items-center justify-between p-2.5 rounded-xl border transition-all duration-150 cursor-pointer ${
-            isPinned 
-                ? 'bg-blue-50/40 hover:bg-blue-50/70 border-blue-200/70' 
+            isPinned
+                ? 'bg-blue-50/40 hover:bg-blue-50/70 border-blue-200/70'
                 : 'bg-white hover:bg-gray-50 border-gray-100'
         }`;
 
@@ -2858,8 +2858,8 @@ function renderHeaderStatsDropdown() {
                         ? 'bg-blue-100/70 hover:bg-blue-200/80 border border-blue-300/80 text-blue-700 shadow-xs'
                         : 'bg-gray-100 hover:bg-gray-200/80 border border-transparent text-gray-400 hover:text-gray-600'
                 }" title="${isPinned ? t('unpin_from_header') : (pinnedIds.length >= MAX_PINNED_STATS ? t('pinned_stat_max_toast') : t('pin_to_header'))}">
-                    <img src="${isPinned ? '../assets/img/pinned.svg' : '../assets/img/unpinned.svg'}" 
-                         class="w-5 h-5 flex-shrink-0 pointer-events-none transition-transform active:scale-90 ${isPinned ? '' : 'opacity-60'}" 
+                    <img src="${isPinned ? '../assets/img/pinned.svg' : '../assets/img/unpinned.svg'}"
+                         class="w-5 h-5 flex-shrink-0 pointer-events-none transition-transform active:scale-90 ${isPinned ? '' : 'opacity-60'}"
                          alt="${isPinned ? t('pinned') : t('not_pinned')}">
                 </button>
             </div>
@@ -2992,12 +2992,12 @@ function updateAiUI() {
         hlAiBtn.classList.remove('hidden');
         if (isUserPro()) {
             hlAiBtn.classList.remove('is-paywalled');
-            hlAiBtn.innerHTML = '<img src="../assets/img/tutor.svg" class="w-4 h-4 pointer-events-none relative z-10" alt="Peça ajuda">';
-            hlAiBtn.title = 'Peça ajuda ao Tutor IA';
+            hlAiBtn.innerHTML = `<img src="../assets/img/tutor.svg" class="w-4 h-4 pointer-events-none relative z-10" alt="${escapeHtml(t('ask_ai_tutor_help'))}">`;
+            hlAiBtn.title = t('ask_ai_tutor_help');
         } else {
             hlAiBtn.classList.add('is-paywalled');
             hlAiBtn.innerHTML = '<img src="../assets/img/paywall.svg" class="w-4 h-4 pointer-events-none relative z-10" alt="Pro">';
-            hlAiBtn.title = 'Recurso Pro (Clique para assinar)';
+            hlAiBtn.title = t('pro_feature_tooltip');
             if (hlAiCard) hlAiCard.classList.add('hidden');
             hlAiBtn.classList.remove('hl-ai-shimmering');
         }
@@ -3123,12 +3123,12 @@ async function sendChatMessage() {
 }
 
 // --- EVENT LISTENERS ---
-resetBtn.addEventListener('click', () => { 
-    if (confirm(t('confirm_exit_game'))) { 
-        localStorage.removeItem('flashcardsSave'); 
+resetBtn.addEventListener('click', () => {
+    if (confirm(t('confirm_exit_game'))) {
+        localStorage.removeItem('flashcardsSave');
         localStorage.removeItem('flashcardsActiveMode');
-        window.location.href = ROUTES.HOME; 
-    } 
+        window.location.href = ROUTES.HOME;
+    }
 });
 // --- HAMBURGER MENU LOGIC ---
 function openHamburgerMenu() {
@@ -3382,12 +3382,12 @@ function showHighlightPopup(range, isMarked) {
         hlAiBtn.classList.remove('hidden');
         if (isUserPro()) {
             hlAiBtn.classList.remove('is-paywalled');
-            hlAiBtn.innerHTML = '<img src="../assets/img/tutor.svg" class="w-4 h-4 pointer-events-none relative z-10" alt="Peça ajuda">';
-            hlAiBtn.title = 'Peça ajuda ao Tutor IA';
+            hlAiBtn.innerHTML = `<img src="../assets/img/tutor.svg" class="w-4 h-4 pointer-events-none relative z-10" alt="${escapeHtml(t('ask_ai_tutor_help'))}">`;
+            hlAiBtn.title = t('ask_ai_tutor_help');
         } else {
             hlAiBtn.classList.add('is-paywalled');
             hlAiBtn.innerHTML = '<img src="../assets/img/paywall.svg" class="w-4 h-4 pointer-events-none relative z-10" alt="Pro">';
-            hlAiBtn.title = 'Recurso Pro (Clique para assinar)';
+            hlAiBtn.title = t('pro_feature_tooltip');
         }
     }
 
@@ -3496,8 +3496,8 @@ function applyHighlight(color) {
     clearTimeout(selectionDebounceTimer);
     if (!activeHighlightRange || !activeHighlightField) return;
 
-    const container = activeHighlightField === 'description' 
-        ? (document.getElementById('question-body-text') || questionText) 
+    const container = activeHighlightField === 'description'
+        ? (document.getElementById('question-body-text') || questionText)
         : ankiAnswerText;
     if (!container) return;
 
@@ -3561,7 +3561,7 @@ function applyHighlight(color) {
     container.normalize();
     persistHighlightedContent(activeHighlightField);
     hideHighlightPopup();
-    
+
     const sel = window.getSelection();
     if (sel) sel.removeAllRanges();
 }
@@ -3570,8 +3570,8 @@ function removeHighlight() {
     isInteractingWithPopup = false;
     if (!activeHighlightRange || !activeHighlightField) return;
 
-    const container = activeHighlightField === 'description' 
-        ? (document.getElementById('question-body-text') || questionText) 
+    const container = activeHighlightField === 'description'
+        ? (document.getElementById('question-body-text') || questionText)
         : ankiAnswerText;
     if (!container) return;
 
@@ -4430,7 +4430,7 @@ counterLeftWrapper?.addEventListener('click', (e) => {
     }
 });
 if (aiToggleBtn) {
-    aiToggleBtn.addEventListener('click', () => { 
+    aiToggleBtn.addEventListener('click', () => {
         closeHamburgerMenu();
         if (!isUserPro()) {
             openProModal();
@@ -4621,16 +4621,16 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
     AVAILABLE_HEADER_STATS.forEach(stat => {
         const isPinned = pinnedIds.includes(stat.id);
         const statI18n = getStatI18n(stat.id);
-        const displayLabel = targetMode === 'notebook' 
-            ? (statI18n.notebookLabel || stat.notebookLabel) 
+        const displayLabel = targetMode === 'notebook'
+            ? (statI18n.notebookLabel || stat.notebookLabel)
             : (statI18n.label || stat.label);
         const statTitle = statI18n.title || stat.title;
         const statDesc = statI18n.desc || stat.description;
 
         const row = document.createElement('div');
         row.className = `group/stat flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
-            isPinned 
-                ? 'bg-blue-50/50 border-blue-200/80' 
+            isPinned
+                ? 'bg-blue-50/50 border-blue-200/80'
                 : 'bg-transparent border-transparent hover:bg-[var(--md-sys-color-surface-container-high)]'
         }`;
 
@@ -4648,12 +4648,12 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
                 </div>
             </div>
             <button type="button" class="pin-stat-btn p-1.5 rounded-xl transition-all cursor-pointer ${
-                isPinned 
-                    ? 'bg-blue-100/80 border border-blue-300 text-blue-700 shadow-xs' 
+                isPinned
+                    ? 'bg-blue-100/80 border border-blue-300 text-blue-700 shadow-xs'
                     : 'bg-gray-100 border border-transparent text-gray-400 hover:text-gray-600'
             }" title="${isPinned ? t('unpin_from_header') : (pinnedIds.length >= MAX_PINNED_STATS ? t('pinned_stat_max_toast') : t('pin_to_header'))}">
-                <img src="${isPinned ? '../assets/img/pinned.svg' : '../assets/img/unpinned.svg'}" 
-                     class="w-5 h-5 flex-shrink-0 pointer-events-none transition-transform active:scale-90 ${isPinned ? '' : 'opacity-60'}" 
+                <img src="${isPinned ? '../assets/img/pinned.svg' : '../assets/img/unpinned.svg'}"
+                     class="w-5 h-5 flex-shrink-0 pointer-events-none transition-transform active:scale-90 ${isPinned ? '' : 'opacity-60'}"
                      alt="${isPinned ? t('pinned') : t('not_pinned')}">
             </button>
         `;
@@ -4868,7 +4868,7 @@ settingNotebookGoalSelect?.addEventListener('change', () => {
     triggerHaptic('snap');
     updateSettingsModalState();
     showNotificationPill(
-        goal > 0 ? `Meta diária: ${goal} cards por dia!` : "Estudando todos os cards vencidos",
+        goal > 0 ? t('daily_goal_toast', { goal }) : t('studying_all_due_cards'),
         'collection.svg'
     );
     checkAndCelebrateNotebookDailyGoal(false);
@@ -4915,7 +4915,7 @@ settingNotifMasterSwitch?.addEventListener('change', async () => {
     }
     saveNotificationSettings(settings);
     showNotificationPill(
-        nextVal ? 'Lembretes diários ativados!' : 'Lembretes diários desativados.',
+        nextVal ? t('daily_reminders_enabled_toast') : t('daily_reminders_disabled_toast'),
         'notifications.svg'
     );
 });
@@ -4935,7 +4935,7 @@ settingNotifMorningSwitch?.addEventListener('change', async () => {
     if (nextVal) settings.enabled = true;
     saveNotificationSettings(settings);
     showNotificationPill(
-        nextVal ? `Lembrete da manhã ativado (${settings.morning.time})` : 'Lembrete da manhã desativado',
+        nextVal ? t('morning_reminder_enabled_toast', { time: settings.morning.time }) : t('morning_reminder_disabled_toast'),
         'notifications.svg'
     );
 });
@@ -5425,7 +5425,7 @@ saveEditBtn.addEventListener('click', () => {
         currentQuestion.options = options;
         currentQuestion.answer = optInputs[correctIdx]?.value.trim() || options[0];
     }
-    
+
     if (pendingEditImage) {
         currentQuestion.image = pendingEditImage;
     } else {
@@ -5445,7 +5445,7 @@ saveEditBtn.addEventListener('click', () => {
 function toggleBookmark() {
     const isMatchingDesc = (d1, d2) => d1 === d2 || (d1 && d2 && stripHtml(d1) === stripHtml(d2));
     const isBookmarked = isCardBookmarked(currentQuestion);
-    
+
     // Load notebook state
     let notebookState = JSON.parse(localStorage.getItem('flashcardsNotebook')) || {
         questionsPool: [], allQuestions: [], score: 0, deckTitle: "Caderno"
@@ -5455,7 +5455,7 @@ function toggleBookmark() {
         // Un-bookmark: Remove from Notebook
         notebookState.allQuestions = notebookState.allQuestions.filter(q => !isMatchingDesc(q.description, currentQuestion.description));
         notebookState.questionsPool = notebookState.questionsPool.filter(q => !isMatchingDesc(q.description, currentQuestion.description));
-        
+
         // Also un-bookmark in normal deck (if present)
         let normalData = JSON.parse(localStorage.getItem('flashcardsSave'));
         if (normalData) {
@@ -5491,13 +5491,13 @@ function toggleBookmark() {
     } else {
         // Bookmark: Add to Notebook
         currentQuestion.bookmarked = true;
-        
+
         const normalData = JSON.parse(localStorage.getItem('flashcardsSave'));
-        const sourceDeckTitle = (activeMode === 'exam' && currentQuestion.sourceDeck) 
-            ? currentQuestion.sourceDeck 
+        const sourceDeckTitle = (activeMode === 'exam' && currentQuestion.sourceDeck)
+            ? currentQuestion.sourceDeck
             : (normalData ? normalData.deckTitle : "Flashcards");
         currentQuestion.sourceDeck = currentQuestion.sourceDeck || sourceDeckTitle;
-        
+
         // Also mark as bookmarked in normal deck in storage
         if (normalData) {
             const findAndBookmark = (arr) => arr.forEach(q => {
@@ -5553,7 +5553,7 @@ function openDeckDropdown() {
     deckSelectDropdown.classList.remove('hidden');
     deckSelectArrow.classList.add('rotate-180');
     updateDailyStreakUI();
-    
+
     const normalData = JSON.parse(localStorage.getItem('flashcardsSave'));
     const normalTitle = normalData ? normalData.deckTitle : "Flashcards";
     if (deckItemNormalName) deckItemNormalName.textContent = normalTitle;
@@ -5576,7 +5576,7 @@ function openDeckDropdown() {
             deckItemExam.classList.add('hidden');
         }
     }
-    
+
     // Clear highlights
     [deckItemNormal, deckItemNotebook, deckItemExam].forEach(el => {
         el?.classList.remove('bg-blue-50', 'text-blue-600', 'bg-purple-50', 'text-purple-600');
@@ -5605,14 +5605,14 @@ function renderExamDecksInDropdown(examData) {
     }
 
     if (decks.length === 0) {
-        dropdownExamDecksList.innerHTML = '<p class="text-xs text-gray-400 text-center py-2 italic">Nenhum baralho na mistura.</p>';
+        dropdownExamDecksList.innerHTML = `<p class="text-xs text-gray-400 text-center py-2 italic">${t('no_decks_in_mix')}</p>`;
         return;
     }
 
     decks.forEach((deck) => {
         const item = document.createElement('div');
         item.className = 'flex items-center justify-between p-2 rounded-xl bg-gray-50/80 hover:bg-gray-100 transition text-xs';
-        
+
         const isEnabled = deck.enabled !== false;
         const cardCount = allQuestions.filter(q => q.deckId === deck.id || q.sourceDeck === deck.name).length;
         const safeDeckName = escapeHtml(deck.name || 'Baralho');
@@ -5822,15 +5822,15 @@ function updateMenuButtonsForActiveMode() {
 function switchActiveMode(newMode) {
     saveGameState();
     archiveCurrentSession(false);
-    
+
     activeMode = newMode;
     localStorage.setItem('flashcardsActiveMode', newMode);
-    
-    const storageKey = newMode === 'notebook' 
-        ? 'flashcardsNotebook' 
+
+    const storageKey = newMode === 'notebook'
+        ? 'flashcardsNotebook'
         : (newMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
     let data = JSON.parse(localStorage.getItem(storageKey));
-    
+
     if (newMode === 'notebook' && (!data || !data.allQuestions)) {
         data = {
             allQuestions: [],
@@ -5860,7 +5860,7 @@ function switchActiveMode(newMode) {
             }
         }
     } catch (e) {}
-    
+
     allQuestions = data.allQuestions || [];
     if (newMode === 'notebook') {
         questionsPool = (allQuestions || []).filter(isPlayableCard);
@@ -5876,17 +5876,17 @@ function switchActiveMode(newMode) {
     }
     deckTitle.textContent = data.deckTitle || (newMode === 'notebook' ? "Caderno" : (newMode === 'exam' ? "Semana de Provas" : "Flashcards"));
     document.title = data.deckTitle ? `${data.deckTitle} | Flashcards` : "Estudando Flashcards";
-    
+
     clearBalls();
     scoreDisplay.textContent = newMode === 'notebook' ? notebookReviewsCount : score;
     updateScoreDisplay();
     updateDailyStreakUI();
     updateMenuButtonsForActiveMode();
     isFirstQuestion = true;
-    
+
     initStatsSession(deckTitle.textContent, newMode, allQuestions.filter(isPlayableCard).length, score);
     loadQuestion();
-    
+
     const pillIcon = newMode === 'notebook' ? "collection.svg" : (newMode === 'exam' ? "magic.svg" : "uploaded.svg");
     showNotificationPill(`Estudando: ${deckTitle.textContent}`, pillIcon);
 }
@@ -5969,7 +5969,7 @@ function keepCardInFocus() {
 
 function initMobileFocusHelpers() {
     const inputs = [answerInput, answerInput1, answerInput2].filter(Boolean);
-    
+
     inputs.forEach(input => {
         input.addEventListener('focus', () => {
             document.body.classList.add('keyboard-open');
@@ -5994,7 +5994,7 @@ function initMobileFocusHelpers() {
 async function initGame() {
     checkAndResetModelFallback();
     resizeCanvas(); animate();
-    
+
     initTransfer(); // Initialize P2P logic from transfer.js
     initExploreModal(); // Initialize Explore Files & Pro Modal
     initPwaInstallBanner(); // PWA Install Notification on Mobile/Tablet
@@ -6014,8 +6014,8 @@ async function initGame() {
         return;
     }
 
-    const storageKey = activeMode === 'notebook' 
-        ? 'flashcardsNotebook' 
+    const storageKey = activeMode === 'notebook'
+        ? 'flashcardsNotebook'
         : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
     let data = JSON.parse(localStorage.getItem(storageKey));
 
@@ -6025,8 +6025,8 @@ async function initGame() {
         else activeMode = 'notebook';
 
         localStorage.setItem('flashcardsActiveMode', activeMode);
-        const fallbackKey = activeMode === 'notebook' 
-            ? 'flashcardsNotebook' 
+        const fallbackKey = activeMode === 'notebook'
+            ? 'flashcardsNotebook'
             : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
         data = JSON.parse(localStorage.getItem(fallbackKey));
     }
@@ -6069,8 +6069,8 @@ async function initGame() {
     updateDailyStreakUI();
     deckTitle.textContent = data.deckTitle || (activeMode === 'notebook' ? "Caderno" : (activeMode === 'exam' ? "Semana de Provas" : "Flashcards"));
     document.title = data.deckTitle ? `${data.deckTitle} | Flashcards` : "Estudando Flashcards";
-    scoreDisplay.textContent = activeMode === 'notebook' ? notebookReviewsCount : score; 
-    
+    scoreDisplay.textContent = activeMode === 'notebook' ? notebookReviewsCount : score;
+
     const normalData = JSON.parse(localStorage.getItem('flashcardsSave'));
     if (normalData && deckItemNormalName) {
         deckItemNormalName.textContent = normalData.deckTitle || "Flashcards";
@@ -6079,7 +6079,7 @@ async function initGame() {
     updateScoreDisplay();
     updateMenuButtonsForActiveMode();
     initStatsSession(deckTitle.textContent, activeMode, allQuestions.filter(isPlayableCard).length, score);
-    loadQuestion(); 
+    loadQuestion();
     const loadedKey = await getApiKeyAsync();
     const aiPreference = localStorage.getItem('flashcards_ai_enabled');
     const shouldEnableAi = Boolean(loadedKey && aiPreference !== 'false');

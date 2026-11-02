@@ -48,6 +48,13 @@ export function isUserPro(user = (currentUser || auth.currentUser), status = use
 }
 
 /**
+ * Returns current loaded user status
+ */
+export function getUserProStatus() {
+  return userProStatus;
+}
+
+/**
  * Refreshes Pro status from backend for a specific user
  */
 export async function refreshUserProStatus(user = (currentUser || auth.currentUser), forceTokenRefresh = false) {
@@ -341,13 +348,20 @@ function injectModalHtml() {
           <div id="checkout-form"></div>
         </div>
 
+        <div class="mt-4 pt-3 border-t border-[var(--md-sys-color-outline-variant)] text-center text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1">
+          <div><span data-i18n="prefer_single_deck">${t('prefer_single_deck')}</span></div>
+          <button type="button" id="switch-to-extra-from-pro-btn" class="font-bold text-amber-700 hover:underline cursor-pointer">
+            ${t('buy_single_deck_btn')}
+          </button>
+        </div>
+
         <button id="close-pro-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto">
           Voltar
         </button>
       </div>
     </div>
 
-    <!-- EXTRA DECK PURCHASE MODAL (R$ 0,99) -->
+    <!-- EXTRA DECK PURCHASE MODAL (R$ 1,49) -->
     <div id="extra-deck-modal" class="hidden fixed inset-0 modal-overlay z-[120] items-center justify-center p-3 sm:p-4 bg-black/60">
       <div class="m3-dialog-card w-full max-w-md bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] p-6 text-center animate-fadeIn max-h-[92vh] overflow-y-auto custom-scrollbar">
         <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
@@ -357,7 +371,7 @@ function injectModalHtml() {
         <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4" data-i18n="extra_deck_subtitle">${t('extra_deck_subtitle')}</p>
 
         <div class="mb-4">
-          <span class="text-3xl font-extrabold text-[var(--md-sys-color-primary)]">R$ 0,99</span>
+          <span class="text-3xl font-extrabold text-[var(--md-sys-color-primary)]">R$ 1,49</span>
           <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="per_deck">${t('per_deck')}</span>
         </div>
 
@@ -367,6 +381,13 @@ function injectModalHtml() {
             <span>${t('loading_stripe_form')}</span>
           </div>
           <div id="extra-deck-checkout-form"></div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-[var(--md-sys-color-outline-variant)] text-center text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1">
+          <div><span data-i18n="prefer_pro_plan">${t('prefer_pro_plan')}</span></div>
+          <button type="button" id="switch-to-pro-from-extra-btn" class="font-bold text-[var(--md-sys-color-primary)] hover:underline cursor-pointer">
+            Flashcards Pro (R$ 4,99 / mês)
+          </button>
         </div>
 
         <button id="close-extra-deck-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto cursor-pointer">
@@ -386,6 +407,16 @@ function attachModalEventListeners() {
   document.getElementById('close-explore-modal-btn')?.addEventListener('click', closeExploreModal);
   document.getElementById('close-pro-modal-btn')?.addEventListener('click', closeProModal);
   document.getElementById('close-extra-deck-modal-btn')?.addEventListener('click', closeExtraDeckModal);
+
+  document.getElementById('switch-to-extra-from-pro-btn')?.addEventListener('click', () => {
+    closeProModal();
+    openExtraDeckModal();
+  });
+
+  document.getElementById('switch-to-pro-from-extra-btn')?.addEventListener('click', () => {
+    closeExtraDeckModal();
+    openProModal();
+  });
 
   // File Upload inside modal
   let pendingTargetSlotIndex = null;
@@ -474,7 +505,7 @@ function attachModalEventListeners() {
       // Redirect to game
       window.location.href = ROUTES.GAME;
     } catch (err) {
-      alert(t('error_reading_json_file', { error: err.message || 'formato inválido' }));
+      alert(t('error_reading_json_file', { error: err.message || t('invalid_format') }));
     }
   });
 
@@ -535,7 +566,7 @@ async function checkPaymentStatusNow(showFeedback = false) {
   const checkBtn = document.getElementById('pro-check-payment-btn');
   if (checkBtn && showFeedback) {
     checkBtn.disabled = true;
-    checkBtn.innerHTML = '<span class="material-symbols-rounded text-base animate-spin mr-1">sync</span><span>Verificando...</span>';
+    checkBtn.innerHTML = `<span class="material-symbols-rounded text-base animate-spin mr-1">sync</span><span>${t('verifying')}</span>`;
   }
 
   try {
@@ -555,7 +586,7 @@ async function checkPaymentStatusNow(showFeedback = false) {
   } finally {
     if (checkBtn && showFeedback) {
       checkBtn.disabled = false;
-      checkBtn.innerHTML = '<span class="material-symbols-rounded text-base mr-1">check_circle</span><span>Já realizei o pagamento</span>';
+      checkBtn.innerHTML = `<span class="material-symbols-rounded text-base mr-1">check_circle</span><span>${t('i_paid_already')}</span>`;
     }
   }
   return false;
@@ -622,7 +653,7 @@ function bindProCheckoutBtn() {
     const selectedMethod = document.querySelector('input[name="pro-payment-method"]:checked')?.value || 'PIX';
 
     btn.disabled = true;
-    btn.innerHTML = '<span class="material-symbols-rounded text-base animate-spin mr-1.5">sync</span><span>Gerando cobrança...</span>';
+    btn.innerHTML = `<span class="material-symbols-rounded text-base animate-spin mr-1.5">sync</span><span>${t('generating_invoice')}</span>`;
 
     try {
       const result = await createProSubscription({
@@ -779,17 +810,18 @@ async function mountStripeEmbeddedForm() {
     console.error('[Stripe Form Error]:', err);
     if (loadingEl) {
       loadingEl.classList.remove('hidden');
+      const safeErrorMsg = escapeHtml(err && err.message ? err.message : t('stripe_keys_missing_desc'));
       loadingEl.innerHTML = `
         <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-left space-y-1">
           <div class="flex items-center gap-1.5 text-xs font-bold text-blue-900">
             <span class="material-symbols-rounded text-base text-blue-600">info</span>
-            <span>Configuração do Stripe</span>
+            <span>${t('stripe_config_title')}</span>
           </div>
           <p class="text-[11px] text-blue-800 leading-tight">
-            ${err.message || 'Defina suas chaves públicas e secretas do Stripe para ativar o formulário de pagamento.'}
+            ${safeErrorMsg}
           </p>
           <p class="text-[10px] text-blue-700">
-            Consulte as instruções do painel do Stripe para obter as chaves de integração.
+            ${t('stripe_keys_instructions')}
           </p>
         </div>
       `;

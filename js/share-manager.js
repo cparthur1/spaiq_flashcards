@@ -6,7 +6,7 @@
 
 import { db, doc, getDoc, setDoc, updateDoc } from './firebase-client.js';
 import { openDeckInSlots, fixSlot, getLocalSlots, saveLocalSlots } from './slot-manager.js';
-import { ROUTES, generateSecureId } from './utils.js';
+import { ROUTES, generateSecureId, escapeHtml } from './utils.js';
 
 const DELETED_NOTICE_KEY = 'flashcards_deleted_deck_notice';
 
@@ -156,7 +156,7 @@ function showDeletedNoticePill(message) {
   pill.className = 'fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-red-600 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-sm font-bold animate-fadeIn transition-all';
   pill.innerHTML = `
     <span class="material-symbols-rounded text-xl">delete_forever</span>
-    <span>${message}</span>
+    <span>${escapeHtml(message || '')}</span>
   `;
   document.body.appendChild(pill);
   setTimeout(() => {
