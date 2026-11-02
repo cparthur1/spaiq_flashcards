@@ -4,7 +4,7 @@
  * Manages the 3 deck slots, the dedicated notebook slot, and cloud synchronization
  */
 
-import { auth, db, doc, getDoc, setDoc, updateDoc, onSnapshot } from './firebase-client.js';
+import { auth, db, doc, getDoc, setDoc, updateDoc, onSnapshot, onAuthChange } from './firebase-client.js';
 import { getCloudSlots, saveCloudSlots } from './backend-api.js';
 import { isUserPro } from './explore-modal.js';
 import { syncSharedDeckToFirestore } from './share-manager.js';
@@ -718,175 +718,16 @@ export async function loadSlotsFromCloud() {
     const cloudData = await getCloudSlots();
     if (!cloudData || cloudData.syncDisabled) return false;
 
-    let hasSlotChanges = false;
-    const localSlots = getLocalSlots();
-
-    if (cloudData.deckSlots && Array.isArray(cloudData.deckSlots) && cloudData.deckSlots.length > 0) {
-      for (let i = 0; i < 3; i++) {
-        const cloudSlot = cloudData.deckSlots.find(s => s.slotIndex === i);
-        const localSlot = localSlots[i];
-        const localUpdatedAt = localSlot?.updatedAt || 0;
-
-        if (cloudSlot) {
-          const cloudUpdatedAt = cloudSlot.updatedAt || cloudData.lastSyncedAt || 0;
-          const cloudDeletedAt = cloudSlot.deletedAt || (cloudSlot.deckData ? 0 : cloudUpdatedAt);
-
-          if (cloudSlot.deckData) {
-            // Cloud has an active deck or exam mix: load if local is empty or cloud is newer/equal
-            if (!localSlot?.deckData || cloudUpdatedAt >= localUpdatedAt) {
-              const isExam = Boolean(cloudSlot.isExam || cloudSlot.mode === 'exam' || (cloudSlot.deckData && cloudSlot.deckData.decks));
-              localSlots[i] = {
-                slotIndex: i,
-                deckId: cloudSlot.deckId,
-                title: cloudSlot.title,
-                cardCount: cloudSlot.cardCount,
-                isFixed: Boolean(cloudSlot.isFixed),
-                isCurrent: Boolean(cloudSlot.isCurrent),
-                isExam,
-                mode: isExam ? 'exam' : 'normal',
-                deckData: cloudSlot.deckData,
-                updatedAt: cloudUpdatedAt
-              };
-              localStorage.removeItem(`flashcards_slot_${i}_deleted_at`);
-              hasSlotChanges = true;
-
-              if (cloudSlot.isCurrent) {
-                if (isExam) {
-                  localStorage.setItem('flashcardsExam', JSON.stringify(cloudSlot.deckData));
-                  localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
-                } else {
-                  localStorage.setItem(SAVE_KEY, JSON.stringify(cloudSlot.deckData));
-                  localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
-                }
-              }
-            }
-          } else {
-            // Cloud slot is EMPTY or DELETED: propagate deletion if local has a deck/mix!
-            if (localSlot?.deckData && cloudDeletedAt >= localUpdatedAt) {
-              const wasExam = Boolean(localSlot.isExam || localSlot.mode === 'exam');
-              if (localSlot.isCurrent) {
-                if (wasExam) {
-                  localStorage.removeItem('flashcardsExam');
-                } else {
-                  localStorage.removeItem(SAVE_KEY);
-                }
-                localStorage.removeItem(ACTIVE_MODE_KEY);
-              }
-              localSlots[i] = {
-                slotIndex: i,
-                deckId: null,
-                shareSlug: null,
-                title: `Slot ${i + 1} (Vazio)`,
-                cardCount: 0,
-                isFixed: false,
-                isCurrent: false,
-                isExam: false,
-                mode: 'normal',
-                deckData: null,
-                updatedAt: cloudDeletedAt,
-                deletedAt: cloudDeletedAt
-              };
-              localStorage.setItem(`flashcards_slot_${i}_deleted_at`, String(cloudDeletedAt));
-              hasSlotChanges = true;
-            }
-          }
-        }
-      }
-
-      if (hasSlotChanges) {
-        saveLocalSlots(localSlots);
-      }
-    } else {
-      // If cloud has no slots yet, but local device has decks or exam or notebook, push local to cloud!
-      const hasLocalDecks = localSlots.some(s => s.deckData);
-      const localNotebook = getNotebookSlotData();
-      const hasLocalExam = Boolean(localStorage.getItem('flashcardsExam'));
-      if (hasLocalDecks || localNotebook?.deckData || hasLocalExam) {
-        await syncSlotsToCloud();
-      }
-    }
-
-    // Load cloud notebook or propagate notebook deletion
-    const localNotebook = getNotebookSlotData();
-    const localNotebookUpdated = localNotebook?.deckData?.updatedAt || 0;
-
-    if (cloudData.notebookSlot?.deckData) {
-      const cloudNotebookUpdated = cloudData.notebookSlot.deckData.updatedAt || cloudData.notebookSlot.updatedAt || cloudData.lastSyncedAt || 0;
-      if (!localNotebook?.deckData || cloudNotebookUpdated >= localNotebookUpdated) {
-        localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(cloudData.notebookSlot.deckData));
-        localStorage.removeItem('flashcards_notebook_deleted_at');
-        hasSlotChanges = true;
-      }
-    } else if (localNotebook?.deckData) {
-      // Cloud notebook is deleted/empty: check deletion timestamp
-      const cloudNotebookDeletedAt = cloudData.notebookSlot?.deletedAt || cloudData.lastSyncedAt || 0;
-      if (cloudNotebookDeletedAt >= localNotebookUpdated) {
-        localStorage.removeItem(NOTEBOOK_KEY);
-        localStorage.setItem('flashcards_notebook_deleted_at', String(cloudNotebookDeletedAt));
-        hasSlotChanges = true;
-      }
-    }
-
-    // Synchronize Daily Streak
-    if (cloudData.dailyStreak && typeof cloudData.dailyStreak === 'object') {
-      try {
-        let localStreak = null;
-        const streakRaw = localStorage.getItem('flashcards_daily_streak');
-        if (streakRaw) localStreak = JSON.parse(streakRaw);
-
-        const mergedStreak = mergeDailyStreaks(localStreak, cloudData.dailyStreak);
-        localStorage.setItem('flashcards_daily_streak', JSON.stringify(mergedStreak));
-        hasSlotChanges = true;
-      } catch (e) {
-        console.warn('Erro ao sincronizar streak diário:', e);
-      }
-    } else if (localStorage.getItem('flashcards_daily_streak')) {
-      syncSlotsToCloud();
-    }
-
-    // Synchronize Stats (merging history and allTime)
-    if (cloudData.stats && typeof cloudData.stats === 'object' && Object.keys(cloudData.stats).length > 0) {
-      try {
-        let localStats = null;
-        const statsRaw = localStorage.getItem('flashcards_stats') || localStorage.getItem('flashcardsStats');
-        if (statsRaw) localStats = JSON.parse(statsRaw);
-
-        const mergedStats = mergeStatsData(localStats, cloudData.stats);
-        localStorage.setItem('flashcards_stats', JSON.stringify(mergedStats));
-        localStorage.setItem('flashcardsStats', JSON.stringify(mergedStats));
-        hasSlotChanges = true;
-      } catch (e) {
-        console.warn('Erro ao sincronizar estatísticas:', e);
-      }
-    } else if (localStorage.getItem('flashcards_stats') || localStorage.getItem('flashcardsStats')) {
-      syncSlotsToCloud();
-    }
-
-    // Synchronize Settings
-    if (cloudData.settings && typeof cloudData.settings === 'object') {
-      try {
-        const settingsChanged = applyCloudSettings(cloudData.settings);
-        if (settingsChanged) hasSlotChanges = true;
-      } catch (e) {
-        console.warn('Erro ao aplicar configurações da nuvem:', e);
-      }
-    }
-
-    // Synchronize Active Mode
-    if (cloudData.activeMode && (cloudData.activeMode === 'normal' || cloudData.activeMode === 'exam' || cloudData.activeMode === 'notebook')) {
-      const currentActive = localStorage.getItem(ACTIVE_MODE_KEY);
-      if (!currentActive) {
-        localStorage.setItem(ACTIVE_MODE_KEY, cloudData.activeMode);
-        hasSlotChanges = true;
-      }
-    }
+    const hasSlotChanges = applyCloudSlotsData(cloudData);
 
     // Broadcast sync update event across page
     try {
       window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
         detail: {
+          hasSlotChanges,
           hasChanges: hasSlotChanges,
-          lastSyncedAt: cloudData.lastSyncedAt || Date.now()
+          lastSyncedAt: cloudData.lastSyncedAt || Date.now(),
+          source: 'cloud-load'
         }
       }));
     } catch (e) {}
@@ -896,4 +737,224 @@ export async function loadSlotsFromCloud() {
     console.warn('Erro ao carregar slots da nuvem:', e);
     return false;
   }
+}
+
+/**
+ * Apply remote cloud data into local storage slots, notebook, streak and settings.
+ * Reusable across initial load and real-time onSnapshot events.
+ */
+export function applyCloudSlotsData(cloudData) {
+  if (!cloudData || cloudData.syncDisabled) return false;
+
+  let hasSlotChanges = false;
+  const localSlots = getLocalSlots();
+
+  if (cloudData.deckSlots && Array.isArray(cloudData.deckSlots) && cloudData.deckSlots.length > 0) {
+    for (let i = 0; i < 3; i++) {
+      const cloudSlot = cloudData.deckSlots.find(s => s.slotIndex === i);
+      const localSlot = localSlots[i];
+      const localUpdatedAt = localSlot?.updatedAt || 0;
+
+      if (cloudSlot) {
+        const cloudUpdatedAt = cloudSlot.updatedAt || cloudData.lastSyncedAt || 0;
+        const cloudDeletedAt = cloudSlot.deletedAt || (cloudSlot.deckData ? 0 : cloudUpdatedAt);
+
+        if (cloudSlot.deckData) {
+          // Cloud has an active deck or exam mix: load if local is empty or cloud is newer/equal
+          if (!localSlot?.deckData || cloudUpdatedAt >= localUpdatedAt) {
+            const isExam = Boolean(cloudSlot.isExam || cloudSlot.mode === 'exam' || (cloudSlot.deckData && cloudSlot.deckData.decks));
+            localSlots[i] = {
+              slotIndex: i,
+              deckId: cloudSlot.deckId,
+              title: cloudSlot.title,
+              cardCount: cloudSlot.cardCount,
+              isFixed: Boolean(cloudSlot.isFixed),
+              isCurrent: Boolean(cloudSlot.isCurrent),
+              isExam,
+              mode: isExam ? 'exam' : 'normal',
+              deckData: cloudSlot.deckData,
+              updatedAt: cloudUpdatedAt
+            };
+            localStorage.removeItem(`flashcards_slot_${i}_deleted_at`);
+            hasSlotChanges = true;
+
+            if (cloudSlot.isCurrent) {
+              if (isExam) {
+                localStorage.setItem('flashcardsExam', JSON.stringify(cloudSlot.deckData));
+                localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
+              } else {
+                localStorage.setItem(SAVE_KEY, JSON.stringify(cloudSlot.deckData));
+                localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
+              }
+            }
+          }
+        } else {
+          // Cloud slot is EMPTY or DELETED: propagate deletion if local has a deck/mix!
+          if (localSlot?.deckData && cloudDeletedAt >= localUpdatedAt) {
+            const wasExam = Boolean(localSlot.isExam || localSlot.mode === 'exam');
+            if (localSlot.isCurrent) {
+              if (wasExam) {
+                localStorage.removeItem('flashcardsExam');
+              } else {
+                localStorage.removeItem(SAVE_KEY);
+              }
+              localStorage.removeItem(ACTIVE_MODE_KEY);
+            }
+            localSlots[i] = {
+              slotIndex: i,
+              deckId: null,
+              shareSlug: null,
+              title: `Slot ${i + 1} (Vazio)`,
+              cardCount: 0,
+              isFixed: false,
+              isCurrent: false,
+              isExam: false,
+              mode: 'normal',
+              deckData: null,
+              updatedAt: cloudDeletedAt,
+              deletedAt: cloudDeletedAt
+            };
+            localStorage.setItem(`flashcards_slot_${i}_deleted_at`, String(cloudDeletedAt));
+            hasSlotChanges = true;
+          }
+        }
+      }
+    }
+
+    if (hasSlotChanges) {
+      saveLocalSlots(localSlots);
+    }
+  } else {
+    // If cloud has no slots yet, but local device has decks or exam or notebook, push local to cloud!
+    const hasLocalDecks = localSlots.some(s => s.deckData);
+    const localNotebook = getNotebookSlotData();
+    const hasLocalExam = Boolean(localStorage.getItem('flashcardsExam'));
+    if (hasLocalDecks || localNotebook?.deckData || hasLocalExam) {
+      syncSlotsToCloud();
+    }
+  }
+
+  // Load cloud notebook or propagate notebook deletion
+  const localNotebook = getNotebookSlotData();
+  const localNotebookUpdated = localNotebook?.deckData?.updatedAt || 0;
+
+  if (cloudData.notebookSlot?.deckData) {
+    const cloudNotebookUpdated = cloudData.notebookSlot.deckData.updatedAt || cloudData.notebookSlot.updatedAt || cloudData.lastSyncedAt || 0;
+    if (!localNotebook?.deckData || cloudNotebookUpdated >= localNotebookUpdated) {
+      localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(cloudData.notebookSlot.deckData));
+      localStorage.removeItem('flashcards_notebook_deleted_at');
+      hasSlotChanges = true;
+    }
+  } else if (localNotebook?.deckData) {
+    // Cloud notebook is deleted/empty: check deletion timestamp
+    const cloudNotebookDeletedAt = cloudData.notebookSlot?.deletedAt || cloudData.lastSyncedAt || 0;
+    if (cloudNotebookDeletedAt >= localNotebookUpdated) {
+      localStorage.removeItem(NOTEBOOK_KEY);
+      localStorage.setItem('flashcards_notebook_deleted_at', String(cloudNotebookDeletedAt));
+      hasSlotChanges = true;
+    }
+  }
+
+  // Synchronize Daily Streak
+  if (cloudData.dailyStreak && typeof cloudData.dailyStreak === 'object') {
+    try {
+      let localStreak = null;
+      const streakRaw = localStorage.getItem('flashcards_daily_streak');
+      if (streakRaw) localStreak = JSON.parse(streakRaw);
+
+      const mergedStreak = mergeDailyStreaks(localStreak, cloudData.dailyStreak);
+      localStorage.setItem('flashcards_daily_streak', JSON.stringify(mergedStreak));
+      hasSlotChanges = true;
+    } catch (e) {
+      console.warn('Erro ao sincronizar streak diário:', e);
+    }
+  } else if (localStorage.getItem('flashcards_daily_streak')) {
+    syncSlotsToCloud();
+  }
+
+  // Synchronize Stats (merging history and allTime)
+  if (cloudData.stats && typeof cloudData.stats === 'object' && Object.keys(cloudData.stats).length > 0) {
+    try {
+      let localStats = null;
+      const statsRaw = localStorage.getItem('flashcards_stats') || localStorage.getItem('flashcardsStats');
+      if (statsRaw) localStats = JSON.parse(statsRaw);
+
+      const mergedStats = mergeStatsData(localStats, cloudData.stats);
+      localStorage.setItem('flashcards_stats', JSON.stringify(mergedStats));
+      localStorage.setItem('flashcardsStats', JSON.stringify(mergedStats));
+      hasSlotChanges = true;
+    } catch (e) {
+      console.warn('Erro ao sincronizar estatísticas:', e);
+    }
+  } else if (localStorage.getItem('flashcards_stats') || localStorage.getItem('flashcardsStats')) {
+    syncSlotsToCloud();
+  }
+
+  // Synchronize Settings
+  if (cloudData.settings && typeof cloudData.settings === 'object') {
+    try {
+      const settingsChanged = applyCloudSettings(cloudData.settings);
+      if (settingsChanged) hasSlotChanges = true;
+    } catch (e) {
+      console.warn('Erro ao aplicar configurações da nuvem:', e);
+    }
+  }
+
+  // Synchronize Active Mode
+  if (cloudData.activeMode && (cloudData.activeMode === 'normal' || cloudData.activeMode === 'exam' || cloudData.activeMode === 'notebook')) {
+    const currentActive = localStorage.getItem(ACTIVE_MODE_KEY);
+    if (!currentActive) {
+      localStorage.setItem(ACTIVE_MODE_KEY, cloudData.activeMode);
+      hasSlotChanges = true;
+    }
+  }
+
+  return hasSlotChanges;
+}
+
+let userDocUnsubscribe = null;
+
+/**
+ * Real-time listener (onSnapshot) for the authenticated PRO user document in Firestore.
+ * When the same user edits or plays decks on Device A, Device B receives updates live!
+ */
+export function initRealtimeCloudSync() {
+  onAuthChange(async (user) => {
+    if (userDocUnsubscribe) {
+      userDocUnsubscribe();
+      userDocUnsubscribe = null;
+    }
+
+    if (!user) return;
+    if (!isUserPro()) return;
+
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      userDocUnsubscribe = onSnapshot(userDocRef, (snap) => {
+        // Ignore local optimistic writes
+        if (snap.metadata?.hasPendingWrites) return;
+        if (!snap.exists()) return;
+
+        const data = snap.data();
+        if (!data || data.syncDisabled) return;
+
+        const hasChanges = applyCloudSlotsData(data);
+        if (hasChanges) {
+          try {
+            window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
+              detail: {
+                hasSlotChanges: true,
+                hasDeckChanges: true,
+                source: 'realtime-user-doc'
+              }
+            }));
+          } catch (e) {}
+        }
+      }, (err) => {
+        console.warn('[RealtimeSync] Snapshot listener error on user doc:', err);
+      });
+    } catch (e) {
+      console.warn('[RealtimeSync] Could not attach user snapshot listener:', e);
+    }
+  });
 }

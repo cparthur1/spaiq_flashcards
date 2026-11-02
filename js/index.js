@@ -2,8 +2,8 @@
 import { ROUTES, shuffleArray, generateSecureId, escapeHtml } from './utils.js';
 import { getDailyStreak } from './engine/notebook-scheduler.js';
 import { initExploreModal, openExploreModal } from './explore-modal.js';
-import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots } from './share-manager.js';
-import { openDeckInSlots, syncSlotsToCloud } from './slot-manager.js';
+import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots } from './share-manager.js';
+import { openDeckInSlots, syncSlotsToCloud, initRealtimeCloudSync } from './slot-manager.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference } from './i18n.js';
 
 async function init() {
@@ -16,6 +16,10 @@ async function init() {
 
     // Check in background if imported shared decks have new updates from owner
     checkAndUpdateSharedSlots().catch(() => {});
+
+    // Start real-time Firestore listeners (onSnapshot)
+    subscribeToAllSharedSlots();
+    initRealtimeCloudSync();
 
     // 2. Initialize the Explore Files Modal
     initExploreModal();

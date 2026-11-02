@@ -4,7 +4,7 @@
  * Handles file sharing links and direct deep-linking into shared decks
  */
 
-import { db, doc, getDoc, setDoc, updateDoc } from './firebase-client.js';
+import { db, doc, getDoc, setDoc, updateDoc, onSnapshot } from './firebase-client.js';
 import { openDeckInSlots, fixSlot, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { ROUTES, generateSecureId, escapeHtml } from './utils.js';
 
@@ -173,6 +173,7 @@ export async function checkAndLoadSharedDeck() {
         slots[slotIdx].isShareOwner = false;
         slots[slotIdx].updatedAt = shareData.updatedAt || Date.now();
         saveLocalSlots(slots);
+        subscribeToSharedDeck(shareSlug);
       }
 
       // Clean the query string from URL without reloading
@@ -262,6 +263,103 @@ export async function checkAndUpdateSharedSlots() {
     }
   } catch (err) {
     console.warn('[ShareManager] Erro em checkAndUpdateSharedSlots:', err);
+  }
+}
+
+const activeShareListeners = new Map();
+
+/**
+ * Real-time listener (onSnapshot) for a shared deck document in Firestore.
+ * When owner updates/edits/deletes cards, any active viewer receives the changes live!
+ */
+export function subscribeToSharedDeck(shareSlug, onUpdateCallback = null) {
+  if (!shareSlug || activeShareListeners.has(shareSlug)) return;
+
+  try {
+    const shareDocRef = doc(db, 'shares', shareSlug);
+    const unsubscribe = onSnapshot(shareDocRef, (snap) => {
+      // Ignore local optimistic writes
+      if (snap.metadata?.hasPendingWrites) return;
+
+      if (!snap.exists()) {
+        handleDeletedDeckRedirect();
+        return;
+      }
+
+      const shareData = snap.data();
+      if (shareData.deleted === true) {
+        handleDeletedDeckRedirect();
+        return;
+      }
+
+      if (shareData.deckData) {
+        const slots = getLocalSlots();
+        let slotUpdated = false;
+        let isCurrentSession = false;
+
+        for (let i = 0; i < slots.length; i++) {
+          if (slots[i]?.shareSlug === shareSlug && slots[i]?.isSharedImport) {
+            // Only update if remote is newer
+            if ((shareData.updatedAt || 0) >= (slots[i].updatedAt || 0)) {
+              slots[i].deckData = shareData.deckData;
+              slots[i].title = shareData.title || slots[i].title;
+              slots[i].cardCount = shareData.cardCount || (shareData.deckData.allQuestions || []).length;
+              slots[i].updatedAt = shareData.updatedAt || Date.now();
+              slotUpdated = true;
+
+              if (slots[i].isCurrent) {
+                isCurrentSession = true;
+                const activeMode = localStorage.getItem('flashcardsActiveMode') || 'normal';
+                if (activeMode === 'normal' && !slots[i].isExam) {
+                  localStorage.setItem('flashcardsSave', JSON.stringify(shareData.deckData));
+                } else if (activeMode === 'exam' && slots[i].isExam) {
+                  localStorage.setItem('flashcardsExam', JSON.stringify(shareData.deckData));
+                }
+              }
+            }
+          }
+        }
+
+        if (slotUpdated) {
+          saveLocalSlots(slots);
+        }
+
+        if (onUpdateCallback) {
+          onUpdateCallback(shareData);
+        }
+
+        try {
+          window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
+            detail: {
+              hasSlotChanges: slotUpdated,
+              hasDeckChanges: isCurrentSession,
+              shareSlug,
+              deckData: shareData.deckData,
+              title: shareData.title,
+              source: 'realtime-shared-deck'
+            }
+          }));
+        } catch (e) {}
+      }
+    }, (err) => {
+      console.warn(`[ShareManager] Realtime listener error for share (${shareSlug}):`, err);
+    });
+
+    activeShareListeners.set(shareSlug, unsubscribe);
+  } catch (err) {
+    console.warn(`[ShareManager] Failed to subscribe to share (${shareSlug}):`, err);
+  }
+}
+
+/**
+ * Subscribe to real-time updates for all imported shared decks currently in slots.
+ */
+export function subscribeToAllSharedSlots() {
+  const slots = getLocalSlots();
+  for (const slot of slots) {
+    if (slot?.shareSlug && slot?.isSharedImport) {
+      subscribeToSharedDeck(slot.shareSlug);
+    }
   }
 }
 

@@ -277,6 +277,7 @@ export const TRANSLATIONS = {
     delete_slot: 'Excluir',
     export_deck: 'Exportar .json',
     deck_shared_copied: 'Link de compartilhamento copiado!',
+    deck_updated_realtime: 'Baralho atualizado em tempo real',
     slot_delete_confirm: 'Deseja excluir este baralho do slot?',
     notebook_clear_confirm: 'Deseja realmente limpar todo o Caderno?',
 
@@ -1444,6 +1445,7 @@ export const TRANSLATIONS = {
     delete_slot: 'Delete',
     export_deck: 'Export .json',
     deck_shared_copied: 'Share link copied to clipboard!',
+    deck_updated_realtime: 'Deck updated in real-time',
     slot_delete_confirm: 'Do you want to delete this deck from its slot?',
     notebook_clear_confirm: 'Are you sure you want to clear the entire Notebook?',
 

@@ -16,7 +16,7 @@ import {
   importNotebookBackupData,
   loadSlotsFromCloud
 } from './slot-manager.js';
-import { shareDeckToCloud } from './share-manager.js';
+import { shareDeckToCloud, subscribeToAllSharedSlots } from './share-manager.js';
 import { getUserStatus, createProSubscription, createCheckoutSession, buyExtraGeneration, deleteAccountAndCancelSubscription, verifyPaymentStatus, BACKEND_URL } from './backend-api.js';
 import { triggerProUnlockCelebration } from './engine/pro-unlock-celebration.js';
 import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl } from './utils.js';
@@ -159,6 +159,7 @@ export function initExploreModal() {
  */
 export function openExploreModal() {
   initExploreModal();
+  subscribeToAllSharedSlots();
   renderModalContent();
   const modal = document.getElementById('explore-modal');
   if (modal) {

@@ -23,8 +23,8 @@ import { getApiKeyAsync, getCachedApiKey, saveApiKey, clearApiKey, isKeyRemember
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
 import { onAuthChange, auth } from './firebase-client.js';
-import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots } from './share-manager.js';
-import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
+import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots } from './share-manager.js';
+import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
 
@@ -6055,6 +6055,10 @@ async function initGame() {
     // Check in background if imported shared decks have new updates from owner
     checkAndUpdateSharedSlots().catch(() => {});
 
+    // Start real-time Firestore listeners (onSnapshot) for shared slots and cloud user doc
+    subscribeToAllSharedSlots();
+    initRealtimeCloudSync();
+
     activeMode = localStorage.getItem('flashcardsActiveMode') || 'normal';
 
     const saveState = localStorage.getItem('flashcardsSave');
@@ -6315,6 +6319,31 @@ window.addEventListener('flashcards:sync-updated', (event) => {
         }
         if (headerStatsDropdown && !headerStatsDropdown.classList.contains('hidden')) {
             renderHeaderStatsDropdown();
+        }
+
+        // Live-update active deck cards if updated in real time via onSnapshot (shared link or user doc)
+        if (event.detail?.hasDeckChanges || event.detail?.source === 'realtime-shared-deck' || event.detail?.source === 'realtime-user-doc') {
+            const storageKey = activeMode === 'notebook' ? 'flashcardsNotebook' : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
+            try {
+                const freshSaved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                if (freshSaved && Array.isArray(freshSaved.allQuestions) && freshSaved.allQuestions.length > 0) {
+                    const freshIds = new Set(freshSaved.allQuestions.map(q => q.description));
+                    allQuestions = freshSaved.allQuestions;
+                    questionsPool = (questionsPool || []).filter(q => freshIds.has(q.description));
+                    if (freshSaved.deckTitle && deckTitle) {
+                        deckTitle.textContent = freshSaved.deckTitle;
+                    }
+                    if (currentQuestion && !freshIds.has(currentQuestion.description)) {
+                        if (questionsPool.length > 0) {
+                            loadQuestion();
+                        } else {
+                            clearBalls();
+                            showDeckCompletionScreen();
+                        }
+                    }
+                    showNotificationPill(t('deck_updated_realtime') || "Baralho atualizado em tempo real", "uploaded.svg");
+                }
+            } catch (err) {}
         }
     } catch (e) {
         console.warn('Erro ao atualizar UI após sincronização:', e);
