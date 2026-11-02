@@ -66,7 +66,7 @@
   --md-sys-motion-duration-long: var(--md-sys-motion-duration-long2);
 
   /* Light Theme Color Roles (Material You Vibrant Expressive Palette) */
-  --md-sys-color-primary: #1a56db;
+  --md-sys-color-primary: #3b82f7;
   --md-sys-color-on-primary: #ffffff;
   --md-sys-color-primary-container: #dbeafe;
   --md-sys-color-on-primary-container: #1e3a8a;
@@ -235,10 +235,10 @@ md-outlined-text-field {
   --md-outlined-text-field-container-shape: 16px;
   --md-outlined-text-field-outline-color: var(--md-sys-color-outline-variant, #cbd5e1);
   --md-outlined-text-field-hover-outline-color: var(--md-sys-color-outline, #94a3b8);
-  --md-outlined-text-field-focus-outline-color: var(--md-sys-color-primary, #1a56db);
+  --md-outlined-text-field-focus-outline-color: var(--md-sys-color-primary, #3b82f7);
   --md-outlined-text-field-label-text-color: var(--md-sys-color-on-surface-variant, #64748b);
   --md-outlined-text-field-hover-label-text-color: var(--md-sys-color-on-surface-variant, #475569);
-  --md-outlined-text-field-focus-label-text-color: var(--md-sys-color-primary, #1a56db);
+  --md-outlined-text-field-focus-label-text-color: var(--md-sys-color-primary, #3b82f7);
   --md-outlined-text-field-input-text-color: var(--md-sys-color-on-surface, #0f172a);
   --md-outlined-text-field-supporting-text-color: var(--md-sys-color-on-surface-variant, #64748b);
 }
@@ -461,6 +461,7 @@ body {
 .m3-btn-filled {
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
+    font-weight: 700;
     box-shadow: var(--md-sys-elevation-level-1);
 }
 
@@ -481,6 +482,7 @@ body {
 .m3-btn-outlined {
     background: transparent;
     color: var(--md-sys-color-primary);
+    font-weight: 600;
     border: 1px solid var(--md-sys-color-outline);
 }
 
@@ -492,12 +494,13 @@ body {
 .m3-btn-text {
     background: transparent;
     color: var(--md-sys-color-primary);
+    font-weight: 600;
     box-shadow: none;
     padding: 0.5rem 1rem;
 }
 
 .m3-btn-text:hover:not(:disabled) {
-    background: rgba(26, 86, 219, 0.08);
+    background: rgba(59, 130, 247, 0.08);
     box-shadow: none;
     transform: none;
 }
@@ -706,7 +709,7 @@ textarea::-webkit-scrollbar-thumb,
 .spinner {
     border: 3px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
-    border-top: 3px solid #3b82f6;
+    border-top: 3px solid #3b82f7;
     width: 20px;
     height: 20px;
     animation: spin 1s linear infinite;
@@ -2791,7 +2794,7 @@ mark.card-hl-purple {
 #pomodoro-break-overlay.pomodoro-state-done #pomodoro-resume-btn {
     height: 52px;
     border-radius: var(--md-sys-shape-corner-full);
-    background: var(--md-sys-color-primary, #2563eb);
+    background: var(--md-sys-color-primary, #3b82f7);
     color: #ffffff;
     font-size: 1rem;
     font-weight: 700;
@@ -2978,10 +2981,10 @@ mark.card-hl-purple {
 /* Bulk Preview Checkbox */
 .bulk-card-checkbox {
     --md-checkbox-container-shape: 8px;
-    --md-checkbox-selected-container-color: #2563eb;
+    --md-checkbox-selected-container-color: #3b82f7;
     --md-checkbox-selected-icon-color: #ffffff;
     --md-checkbox-outline-color: #94a3b8;
-    --md-checkbox-state-layer-color: #3b82f6;
+    --md-checkbox-state-layer-color: #3b82f7;
     margin: 0;
 }
 
@@ -3163,6 +3166,30 @@ body.reduce-motion #header-shimmer-beam {
     border-color: #93c5fd !important;
     color: #1d4ed8 !important;
 }
+
+/* ==========================================================================
+   APP THEME BLUE (#3b82f7) FOR ICONS & BUTTONS WITH ACCESSIBLE CONTRAST
+   ========================================================================== */
+button.bg-blue-600,
+a.bg-blue-600,
+.btn-primary-tactile {
+    background-color: #3b82f7 !important;
+    color: #ffffff !important;
+}
+
+button.bg-blue-600:hover,
+a.bg-blue-600:hover,
+.btn-primary-tactile:hover {
+    background-color: #2563eb !important;
+}
+
+/* Primary Icon Theme (#3b82f7) */
+.icon-theme-blue,
+.material-symbols-rounded.text-blue-600,
+.material-symbols-rounded.text-blue-500 {
+    color: #3b82f7 !important;
+}
+
 
 
 
