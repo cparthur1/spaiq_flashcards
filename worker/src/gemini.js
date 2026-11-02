@@ -36,8 +36,27 @@ export async function callGemini({
   const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
   const url = `${GEMINI_API_BASE}/models/${model}:${action}${queryString}`;
 
+  // Normalize contents and parts so strings are cleanly wrapped in { text: string }
+  const normalizedContents = (Array.isArray(contents) ? contents : [contents]).filter(Boolean).map(item => {
+    if (typeof item === 'string') {
+      return { role: 'user', parts: [{ text: item }] };
+    }
+    if (item && Array.isArray(item.parts)) {
+      return {
+        ...item,
+        parts: item.parts.map(part => {
+          if (typeof part === 'string') {
+            return { text: part };
+          }
+          return part;
+        })
+      };
+    }
+    return item;
+  });
+
   const body = {
-    contents
+    contents: normalizedContents
   };
   if (systemInstruction) {
     body.systemInstruction = typeof systemInstruction === 'string'

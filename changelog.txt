@@ -1,3 +1,14 @@
+CHANGELOG: GEMINI API PART OBJECT NORMALIZATION & 400 FIX (v15.9)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Resolved Gemini API 400 Invalid Part Error:
+   - Fixed `Invalid value at 'contents[0].parts[0]'` error in `js/generate.js` (Option 2.1) where user prompt and extracted file texts were pushed as bare strings instead of Part objects `{ text: string }`.
+   - Hardened server-side Cloudflare Worker in `worker/src/gemini.js` with defensive normalization, ensuring all `contents` and `parts` strings are automatically wrapped into valid `{ text: string }` Part objects before dispatching to the Google Gemini REST API.
+2. Bumped cache to `flashcards-v15.9` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: LOGIN-FREE AI GENERATION TRIAL & FREE DECK SHARING (v15.8)
 Date: 2026-11-02
 

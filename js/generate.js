@@ -1833,7 +1833,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             userTaskPrompt += `\n\nGere em ${targetDeckLanguage}`;
         }
 
-        const parts = [userTaskPrompt];
+        const parts = [{ text: userTaskPrompt }];
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -1842,14 +1842,14 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             if (ext === 'pptx') {
                 const pptxText = await extractTextFromPPTX(file);
                 if (pptxText) {
-                    parts.push(pptxText);
+                    parts.push({ text: pptxText });
                     continue;
                 }
             } else if (ext === 'docx' || ext === 'doc' || ext === 'txt') {
                 try {
                     const text = await extractTextFromFile(file);
                     if (text) {
-                        parts.push(text);
+                        parts.push({ text });
                         continue;
                     }
                 } catch (e) {
