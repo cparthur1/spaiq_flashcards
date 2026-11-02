@@ -1,3 +1,24 @@
+CHANGELOG: COMPLETE REMOVAL OF LEGACY ASAAS & STRIPE MODULARIZATION (v15.6)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Complete Decommission of Legacy Asaas:
+   - Eliminated all legacy Asaas REST API calls, endpoints, webhook processing (`handleAsaasWebhook`), environment variables (`ASAAS_ENV`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_SECRET`), and CPF / Pix generation routines.
+   - Cleaned frontend `js/backend-api.js` (removed `createProSubscription` and `buyExtraGeneration`) and `js/explore-modal.js` (removed CPF validation mask, Pix QR polling and Asaas modal listeners).
+2. Modular Stripe Payment Architecture:
+   - Encapsulated all Stripe SDK interactions within [`worker/src/stripe.js`](file:///home/chief_arthur/apps/Flashcards/worker/src/stripe.js):
+     - `getStripeClient(env)`
+     - `createSubscription({ env, user, returnUrl })`
+     - `createExtraGenerationPayment({ env, user, isPro, returnUrl })`
+     - `checkCustomerProStatusInStripe({ env, email })`
+     - `getSubscriptionDetails({ env, subscriptionId, userDoc })`
+     - `cancelSubscription({ env, subscriptionId, immediate })`
+     - `reactivateSubscription({ env, subscriptionId })`
+   - Streamlined [`worker/src/index.js`](file:///home/chief_arthur/apps/Flashcards/worker/src/index.js) by delegating checkout session creation, status checks, verification, cancellation, and reactivation directly to `stripe.js`.
+3. Cache bumped to `flashcards-v15.6` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: PINNED STATS LOCALIZATION & FULL DICTIONARY KEY PARITY (v15.5)
 Date: 2026-11-02
 

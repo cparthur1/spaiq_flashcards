@@ -40,21 +40,6 @@ export async function getUserStatus() {
 }
 
 /**
- * Request Pro Subscription checkout / Pix (R$ 4,99/mês)
- */
-export async function createProSubscription(params = {}) {
-  const res = await fetchWithAuth('/api/payment/subscribe', {
-    method: 'POST',
-    body: JSON.stringify(params)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || 'Erro ao gerar assinatura Pro');
-  }
-  return await res.json();
-}
-
-/**
  * Create Stripe Checkout Session for Embedded Form (R$ 4,99/mês)
  */
 export async function createCheckoutSession() {
@@ -81,21 +66,6 @@ export async function verifyPaymentStatus(sessionId = null) {
   const res = await fetchWithAuth('/api/payment/verify', options);
   if (!res.ok) {
     return { isPro: false, status: 'unknown' };
-  }
-  return await res.json();
-}
-
-/**
- * Buy extra deck generation (R$ 1,49)
- */
-export async function buyExtraGeneration(params = {}) {
-  const res = await fetchWithAuth('/api/payment/extra-generation', {
-    method: 'POST',
-    body: JSON.stringify(params)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || 'Erro ao gerar pagamento da geração extra');
   }
   return await res.json();
 }

@@ -192,69 +192,29 @@ export default {
         // If not recognized as Pro or if Firestore doc is pending/out of sync, verify directly with Stripe first
         if ((!isPro || userDoc?.subscription?.status !== 'active') && env.STRIPE_SECRET_KEY && user.email) {
           try {
-            const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
-            const customers = await stripe.customers.list({ email: user.email.toLowerCase().trim(), limit: 1 });
-            if (customers.data.length > 0) {
-              const customerId = customers.data[0].id;
-              const subs = await stripe.subscriptions.list({
-                customer: customerId,
+            const stripeStatus = await checkCustomerProStatusInStripe({ env, email: user.email });
+            if (stripeStatus.isPro) {
+              isPro = true;
+              userDoc = userDoc || {};
+              userDoc.subscription = {
                 status: 'active',
-                limit: 1
-              });
-              if (subs.data.length > 0) {
-                const sub = subs.data[0];
-                isPro = true;
-                userDoc = userDoc || {};
-                userDoc.subscription = {
-                  status: 'active',
-                  plan: 'pro_monthly',
-                  provider: 'stripe',
-                  subscriptionId: sub.id,
-                  customerId: customerId,
-                  updatedAt: new Date().toISOString()
-                };
-                if (serviceAccount) {
-                  ctx.waitUntil(Promise.all([
-                    setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
-                    updateUserDocument(serviceAccount, user.uid, {
-                      subscription: userDoc.subscription
-                    }).catch(() => {})
-                  ]));
-                }
+                plan: 'pro_monthly',
+                provider: 'stripe',
+                subscriptionId: stripeStatus.subscriptionId,
+                customerId: stripeStatus.customerId,
+                updatedAt: new Date().toISOString()
+              };
+              if (serviceAccount) {
+                ctx.waitUntil(Promise.all([
+                  setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
+                  updateUserDocument(serviceAccount, user.uid, {
+                    subscription: userDoc.subscription
+                  }).catch(() => {})
+                ]));
               }
             }
           } catch (stripeErr) {
             console.warn('[Status] Falha ao checar Stripe por e-mail:', stripeErr.message);
-          }
-        }
-
-        // Fallback: If still not Pro, verify directly with Asaas
-        if (!isPro && env.ASAAS_API_KEY && user.email) {
-          const asaasCheck = await checkCustomerProStatusInAsaas({
-            email: user.email,
-            customerId: userDoc?.subscription?.customerId || null,
-            apiKey: env.ASAAS_API_KEY,
-            isProduction: env.ASAAS_ENV !== 'sandbox'
-          });
-
-          if (asaasCheck.isPro) {
-            isPro = true;
-            if (serviceAccount) {
-              ctx.waitUntil(Promise.all([
-                setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
-                updateUserDocument(serviceAccount, user.uid, {
-                  subscription: {
-                    status: 'active',
-                    plan: 'pro_monthly',
-                    provider: 'asaas',
-                    subscriptionId: asaasCheck.subscriptionId || userDoc?.subscription?.id || '',
-                    customerId: asaasCheck.customerId || '',
-                    lastPaymentId: asaasCheck.paymentId || '',
-                    updatedAt: new Date().toISOString()
-                  }
-                }).catch(() => {})
-              ]));
-            }
           }
         }
 
@@ -477,54 +437,7 @@ export default {
         return jsonResponse({ success: true, syncedAt: Date.now() }, 200, corsHeaders);
       }
 
-      // 4. Create Pro Subscription (R$ 5,00/mês)
-      if (path === '/api/payment/subscribe' && request.method === 'POST') {
-        const user = await authenticateUser();
-        const body = await request.json().catch(() => ({}));
-        const apiKey = env.ASAAS_API_KEY;
-        const isProduction = env.ASAAS_ENV !== 'sandbox';
-
-        const cleanCpf = body.cpfCnpj ? String(body.cpfCnpj).replace(/\D/g, '') : '';
-        if (cleanCpf.length !== 11) {
-          return jsonResponse({ error: 'Para assinar, é obrigatório informar um CPF válido de 11 dígitos.' }, 400, corsHeaders);
-        }
-
-        const customer = await getOrCreateCustomer({
-          name: body.name || user.name || user.email.split('@')[0],
-          email: user.email,
-          cpfCnpj: cleanCpf,
-          apiKey,
-          isProduction
-        });
-
-        const allowedTypes = ['PIX', 'CREDIT_CARD'];
-        const billingType = allowedTypes.includes(body.billingType) ? body.billingType : 'PIX';
-
-        const subResult = await createSubscription({
-          customerId: customer.id,
-          uid: user.uid,
-          apiKey,
-          isProduction,
-          value: 5.00,
-          billingType
-        });
-
-        // Save pending subscription in user doc
-        const serviceAccount = getServiceAccount(env);
-        await updateUserDocument(serviceAccount, user.uid, {
-          subscription: {
-            id: subResult.subscriptionId,
-            customerId: customer.id,
-            status: 'pending',
-            invoiceUrl: subResult.invoiceUrl || null,
-            updatedAt: new Date().toISOString()
-          }
-        }).catch(err => console.warn('Erro ao salvar subscription pending no Firestore:', err));
-
-        return jsonResponse(subResult, 200, corsHeaders);
-      }
-
-      // 4.1 Verify Payment Status & Activate Pro immediately
+      // 4. Verify Payment Status & Activate Pro immediately
       if (path === '/api/payment/verify' && request.method === 'POST') {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
@@ -542,7 +455,7 @@ export default {
         // Check Stripe subscription / session if applicable
         if (env.STRIPE_SECRET_KEY) {
           try {
-            const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
+            const stripe = getStripeClient(env);
 
             // 1. If session_id (cs_...) is provided
             if (sessionId && typeof sessionId === 'string' && sessionId.startsWith('cs_')) {
@@ -582,61 +495,27 @@ export default {
 
             // 2. Direct customer check by email in Stripe
             if (user.email) {
-              const customers = await stripe.customers.list({ email: user.email.toLowerCase().trim(), limit: 1 });
-              if (customers.data.length > 0) {
-                const customerId = customers.data[0].id;
-                const subs = await stripe.subscriptions.list({
-                  customer: customerId,
-                  status: 'active',
-                  limit: 1
-                });
-                if (subs.data.length > 0) {
-                  const sub = subs.data[0];
-                  await Promise.all([
-                    setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
-                    updateUserDocument(serviceAccount, user.uid, {
-                      subscription: {
-                        status: 'active',
-                        plan: 'pro_monthly',
-                        provider: 'stripe',
-                        subscriptionId: sub.id,
-                        customerId: customerId,
-                        updatedAt: new Date().toISOString()
-                      }
-                    }).catch(() => {})
-                  ]);
-                  return jsonResponse({ isPro: true, status: 'active', plan: 'pro_monthly' }, 200, corsHeaders);
-                }
+              const stripeStatus = await checkCustomerProStatusInStripe({ env, email: user.email });
+              if (stripeStatus.isPro) {
+                await Promise.all([
+                  setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
+                  updateUserDocument(serviceAccount, user.uid, {
+                    subscription: {
+                      status: 'active',
+                      plan: 'pro_monthly',
+                      provider: 'stripe',
+                      subscriptionId: stripeStatus.subscriptionId,
+                      customerId: stripeStatus.customerId,
+                      updatedAt: new Date().toISOString()
+                    }
+                  }).catch(() => {})
+                ]);
+                return jsonResponse({ isPro: true, status: 'active', plan: 'pro_monthly' }, 200, corsHeaders);
               }
             }
           } catch (stripeErr) {
             console.warn('[Verify] Erro ao checar Stripe:', stripeErr.message);
           }
-        }
-
-        const asaasCheck = await checkCustomerProStatusInAsaas({
-          email: user.email,
-          customerId: userDoc?.subscription?.customerId || null,
-          apiKey: env.ASAAS_API_KEY,
-          isProduction: env.ASAAS_ENV !== 'sandbox'
-        });
-
-        if (asaasCheck.isPro) {
-          await Promise.all([
-            setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
-            updateUserDocument(serviceAccount, user.uid, {
-              subscription: {
-                status: 'active',
-                plan: 'pro_monthly',
-                provider: 'asaas',
-                subscriptionId: asaasCheck.subscriptionId || userDoc?.subscription?.id || '',
-                customerId: asaasCheck.customerId || '',
-                lastPaymentId: asaasCheck.paymentId || '',
-                updatedAt: new Date().toISOString()
-              }
-            }).catch(() => {})
-          ]);
-          return jsonResponse({ isPro: true, status: 'active', plan: 'pro_monthly' }, 200, corsHeaders);
         }
 
         return jsonResponse({
@@ -646,57 +525,19 @@ export default {
         }, 200, corsHeaders);
       }
 
-      // 5. Create Extra Deck Generation Payment (R$ 0,99)
-      if (path === '/api/payment/extra-generation' && request.method === 'POST') {
-        const user = await authenticateUser();
-        const body = await request.json().catch(() => ({}));
-        const apiKey = env.ASAAS_API_KEY;
-        const isProduction = env.ASAAS_ENV !== 'sandbox';
-
-        const customer = await getOrCreateCustomer({
-          name: body.name || user.name || user.email.split('@')[0],
-          email: user.email,
-          cpfCnpj: body.cpfCnpj,
-          apiKey,
-          isProduction
-        });
-
-        const extraResult = await createExtraGenerationPayment({
-          customerId: customer.id,
-          uid: user.uid,
-          apiKey,
-          isProduction,
-          value: 0.99
-        });
-
-        return jsonResponse(extraResult, 200, corsHeaders);
-      }
-
-      // 5.1 Cancel Subscription and Delete User Account & All Data
+      // 5. Cancel Subscription and Delete User Account & All Data
       if (path === '/api/user/delete-account' && request.method === 'POST') {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
 
-        // 1. Cancel Subscription if exists (Stripe or Asaas)
+        // 1. Cancel Subscription if exists (Stripe)
         const subId = userDoc?.subscription?.subscriptionId;
-        const provider = userDoc?.subscription?.provider;
-        if (subId) {
-          if (provider === 'stripe' || subId.startsWith('sub_')) {
-            if (env.STRIPE_SECRET_KEY) {
-              try {
-                const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
-                await stripe.subscriptions.cancel(subId);
-              } catch (stripeErr) {
-                console.warn('Falha ao cancelar assinatura Stripe:', stripeErr.message);
-              }
-            }
-          } else if (env.ASAAS_API_KEY) {
-            await cancelSubscription({
-              subscriptionId: subId,
-              apiKey: env.ASAAS_API_KEY,
-              isProduction: env.ASAAS_ENV !== 'sandbox'
-            }).catch(err => console.warn('Falha ao cancelar assinatura Asaas:', err));
+        if (subId && env.STRIPE_SECRET_KEY) {
+          try {
+            await cancelSubscription({ env, subscriptionId: subId, immediate: true });
+          } catch (stripeErr) {
+            console.warn('Falha ao cancelar assinatura Stripe:', stripeErr.message);
           }
         }
 
@@ -712,7 +553,7 @@ export default {
         }, 200, corsHeaders);
       }
 
-      // 5.2 Get Subscription Details from Stripe / Asaas (for manage modal)
+      // 5.1 Get Subscription Details from Stripe (for manage modal)
       if (path === '/api/subscription/details' && request.method === 'GET') {
         const user = await authenticateUser();
         const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
@@ -739,48 +580,23 @@ export default {
 
         if (subId && (provider === 'stripe' || subId.startsWith('sub_')) && env.STRIPE_SECRET_KEY) {
           try {
-            const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
-            const sub = await stripe.subscriptions.retrieve(subId);
-            const isCanceling = Boolean(sub.cancel_at_period_end || userDoc?.subscription?.cancelAtPeriodEnd);
-            const activeUntil = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString().slice(0, 10) : null;
-            return jsonResponse({
-              isPro: sub.status === 'active' || sub.status === 'trialing',
-              isLifetime: false,
-              status: sub.status.toUpperCase(),
-              cancelAtPeriodEnd: isCanceling,
-              activeUntil: activeUntil || userDoc?.subscription?.cancelAt || null,
-              nextDueDate: activeUntil,
-              provider: 'stripe',
-              storedStatus: userDoc?.subscription?.status || 'inactive'
-            }, 200, corsHeaders);
+            const details = await getSubscriptionDetails({ env, subscriptionId: subId, userDoc });
+            if (details) {
+              return jsonResponse(details, 200, corsHeaders);
+            }
           } catch (stripeErr) {
             console.warn('[Subscription] Erro ao buscar assinatura Stripe:', stripeErr.message);
           }
         }
 
-        if (!subId) {
-          return jsonResponse({
-            isPro: Boolean(userDoc?.subscription?.status === 'active' || user.pro),
-            isLifetime: false,
-            status: userDoc?.subscription?.status || 'inactive'
-          }, 200, corsHeaders);
-        }
-
-        const details = env.ASAAS_API_KEY ? await getSubscriptionDetails({
-          subscriptionId: subId,
-          apiKey: env.ASAAS_API_KEY,
-          isProduction: env.ASAAS_ENV !== 'sandbox'
-        }) : null;
-
         return jsonResponse({
-          isPro: details ? (details.status === 'ACTIVE') : Boolean(userDoc?.subscription?.status === 'active'),
+          isPro: Boolean(userDoc?.subscription?.status === 'active' || user.pro),
           isLifetime: false,
-          ...(details || {}),
-          storedStatus: userDoc?.subscription?.status || 'inactive'
+          status: userDoc?.subscription?.status || 'inactive'
         }, 200, corsHeaders);
       }
 
-      // 5.3 Cancel Subscription Only (cancels renewal at period end so user keeps remaining paid days)
+      // 5.2 Cancel Subscription Only (cancels renewal at period end so user keeps remaining paid days)
       if (path === '/api/subscription/cancel' && request.method === 'POST') {
         const user = await authenticateUser();
         let serviceAccount = null;
@@ -800,19 +616,12 @@ export default {
           if (provider === 'stripe' || subId.startsWith('sub_')) {
             if (env.STRIPE_SECRET_KEY) {
               try {
-                const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
-                const sub = await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
-                activeUntil = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString().slice(0, 10) : null;
+                const sub = await cancelSubscription({ env, subscriptionId: subId, immediate: false });
+                activeUntil = sub?.current_period_end ? new Date(sub.current_period_end * 1000).toISOString().slice(0, 10) : null;
               } catch (stripeErr) {
                 console.warn('Falha ao cancelar assinatura Stripe:', stripeErr.message);
               }
             }
-          } else if (env.ASAAS_API_KEY) {
-            await cancelSubscription({
-              subscriptionId: subId,
-              apiKey: env.ASAAS_API_KEY,
-              isProduction: env.ASAAS_ENV !== 'sandbox'
-            }).catch(err => console.warn('Falha ao cancelar assinatura Asaas:', err));
           }
         }
 
@@ -838,7 +647,7 @@ export default {
         }, 200, corsHeaders);
       }
 
-      // 5.4 Reactivate Subscription (removes cancel_at_period_end)
+      // 5.3 Reactivate Subscription (removes cancel_at_period_end)
       if (path === '/api/subscription/reactivate' && request.method === 'POST') {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
@@ -847,9 +656,8 @@ export default {
 
         if (subId && env.STRIPE_SECRET_KEY) {
           try {
-            const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
-            const sub = await stripe.subscriptions.update(subId, { cancel_at_period_end: false });
-            const nextDueDate = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString().slice(0, 10) : null;
+            const sub = await reactivateSubscription({ env, subscriptionId: subId });
+            const nextDueDate = sub?.current_period_end ? new Date(sub.current_period_end * 1000).toISOString().slice(0, 10) : null;
             await updateUserDocument(serviceAccount, user.uid, {
               'subscription.cancelAtPeriodEnd': false,
               'subscription.cancelAt': null,
@@ -1078,132 +886,6 @@ export default {
 };
 
 /**
- * Handle Asaas Webhook events
- */
-async function handleAsaasWebhook(request, env) {
-  // Validate Asaas Webhook secret (mandatory verification)
-  const webhookToken = request.headers.get('asaas-access-token') || request.headers.get('webhook-token') || '';
-  if (!env.ASAAS_WEBHOOK_SECRET || !webhookToken || webhookToken !== env.ASAAS_WEBHOOK_SECRET) {
-    console.warn('[Asaas Webhook] Token de autenticação inválido ou ausente:', webhookToken);
-    return new Response(JSON.stringify({ error: 'unauthorized', message: 'Token de webhook inválido ou configuração ausente' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  const body = await request.json().catch(() => null);
-  if (!body || !body.event) {
-    return new Response('Payload inválido', { status: 400 });
-  }
-
-  const serviceAccount = getServiceAccount(env);
-  const event = body.event;
-  const payment = body.payment || {};
-  const externalRef = payment.externalReference || '';
-
-  console.log(`[Asaas Webhook] Event: ${event}, Ref: ${externalRef}, Id: ${payment.id}`);
-
-  // Subscription confirmation
-  if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {
-    let uid = externalRef.startsWith('sub:') ? externalRef.replace('sub:', '') : null;
-
-    // 1. If not on payment, look up subscription externalReference
-    if (!uid && payment.subscription && env.ASAAS_API_KEY) {
-      try {
-        const baseUrl = env.ASAAS_ENV === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://api.asaas.com/v3';
-        const headers = { 'Content-Type': 'application/json', 'access_token': env.ASAAS_API_KEY, 'User-Agent': 'Flashcards/1.0 (https://flashcards.camblu.org)' };
-        const subRes = await fetch(`${baseUrl}/subscriptions/${payment.subscription}`, { headers });
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          if (subData.externalReference && subData.externalReference.startsWith('sub:')) {
-            uid = subData.externalReference.replace('sub:', '');
-          }
-        }
-      } catch (err) {
-        console.warn('[Asaas Webhook] Erro ao buscar assinatura do pagamento:', err);
-      }
-    }
-
-    // 2. If still not found, look up customer email -> Firebase Auth UID
-    if (!uid && payment.customer && env.ASAAS_API_KEY) {
-      try {
-        const baseUrl = env.ASAAS_ENV === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://api.asaas.com/v3';
-        const headers = { 'Content-Type': 'application/json', 'access_token': env.ASAAS_API_KEY, 'User-Agent': 'Flashcards/1.0 (https://flashcards.camblu.org)' };
-        const custRes = await fetch(`${baseUrl}/customers/${payment.customer}`, { headers });
-        if (custRes.ok) {
-          const custData = await custRes.json();
-          if (custData.email) {
-            const userRecord = await getFirebaseUserByEmail(serviceAccount, custData.email).catch(() => null);
-            if (userRecord?.uid) {
-              uid = userRecord.uid;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('[Asaas Webhook] Erro ao buscar cliente do pagamento:', err);
-      }
-    }
-
-    if (uid) {
-      // 1. Assign Pro custom claim on Firebase Auth
-      await setFirebaseUserProClaim(serviceAccount, uid, true);
-      // 2. Update Firestore user document
-      await updateUserDocument(serviceAccount, uid, {
-        subscription: {
-          status: 'active',
-          plan: 'pro_monthly',
-          provider: 'asaas',
-          subscriptionId: payment.subscription || '',
-          customerId: payment.customer || '',
-          lastPaymentId: payment.id,
-          updatedAt: new Date().toISOString()
-        }
-      });
-      console.log(`[Asaas Webhook] Pro ativado com sucesso para UID: ${uid}`);
-    } else if (externalRef.startsWith('extra:')) {
-      const uidExtra = externalRef.replace('extra:', '');
-      const userDoc = await getUserDocument(serviceAccount, uidExtra);
-      const currentExtras = userDoc?.extraGenerations || 0;
-      await updateUserDocument(serviceAccount, uidExtra, {
-        extraGenerations: currentExtras + 1
-      });
-      console.log(`[Asaas Webhook] Geração extra adicionada para UID: ${uidExtra}`);
-    }
-  }
-
-  // Subscription cancellation or delinquency
-  if (event === 'SUBSCRIPTION_INACTIVATED' || event === 'PAYMENT_OVERDUE') {
-    let uid = externalRef.startsWith('sub:') ? externalRef.replace('sub:', '') : null;
-    if (!uid && payment.subscription && env.ASAAS_API_KEY) {
-      try {
-        const baseUrl = env.ASAAS_ENV === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://api.asaas.com/v3';
-        const headers = { 'Content-Type': 'application/json', 'access_token': env.ASAAS_API_KEY, 'User-Agent': 'Flashcards/1.0 (https://flashcards.camblu.org)' };
-        const subRes = await fetch(`${baseUrl}/subscriptions/${payment.subscription}`, { headers });
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          if (subData.externalReference && subData.externalReference.startsWith('sub:')) {
-            uid = subData.externalReference.replace('sub:', '');
-          }
-        }
-      } catch (e) {}
-    }
-
-    if (uid) {
-      await setFirebaseUserProClaim(serviceAccount, uid, false);
-      await updateUserDocument(serviceAccount, uid, {
-        'subscription.status': 'canceled'
-      });
-      console.log(`[Asaas Webhook] Pro desativado para UID: ${uid}`);
-    }
-  }
-
-  return new Response(JSON.stringify({ received: true }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
-
-/**
  * Handle Stripe Webhook events
  */
 async function handleStripeWebhook(request, env) {
@@ -1211,7 +893,7 @@ async function handleStripeWebhook(request, env) {
   const bodyText = await request.text();
   let event;
 
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-03-25.dahlia' });
+  const stripe = getStripeClient(env);
 
   if (!sig || !env.STRIPE_WEBHOOK_SECRET) {
     console.warn('[Stripe Webhook] Assinatura stripe-signature ou STRIPE_WEBHOOK_SECRET ausente');
