@@ -2,7 +2,7 @@ import { callWithRetry, checkAndResetModelFallback, sanitizeChatHistory, renderM
 import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserProStatus, refreshUserProStatus } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
-import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots, deleteSlot, promptSlotSelectionForReplacement } from './slot-manager.js';
+import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { syncSharedDeckToFirestore, shareDeckToCloud } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
 
@@ -3884,27 +3884,6 @@ playDeckBtn.addEventListener('click', async () => {
         isFreeAiTrial: isFreeTrial,
         updatedAt: now
     };
-
-    // If deck has no assigned slot yet and user already uses all 3 slots, prompt user
-    if (title !== "Caderno" && (currentEditingSlotIndex === null || currentEditingSlotIndex < 0)) {
-        const slots = getLocalSlots();
-        const occupiedCount = slots.filter(s => s && s.deckData && s.cardCount > 0).length;
-        if (occupiedCount >= 3) {
-            const chosenSlot = await promptSlotSelectionForReplacement({
-                newDeckTitle: title,
-                newCardCount: playableCards.length,
-                action: 'play'
-            });
-            if (chosenSlot === null) {
-                return; // User cancelled
-            }
-            deleteSlot(chosenSlot);
-            currentEditingSlotIndex = chosenSlot;
-        } else {
-            const emptyIdx = slots.findIndex(s => !s || !s.deckData || s.cardCount === 0);
-            currentEditingSlotIndex = emptyIdx !== -1 ? emptyIdx : 0;
-        }
-    }
 
     try {
         if (title === "Caderno") {

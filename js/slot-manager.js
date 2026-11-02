@@ -88,9 +88,14 @@ export function getNotebookSlotData() {
 
 /**
  * Put a deck or exam mix into the 3-slot system
- * Rule 1.1: Save 3 latest decks / mixes.
- * - If sharing the file: fixed on the slot without being overwritten.
- * - The currently opened slot is always overwritable.
+ * Rolling FIFO Queue Rules:
+ * - When all 3 decks are occupied and a new deck is opened:
+ *   - The 3rd oldest deck (Slot 3, index 2) is deleted.
+ *   - The 2nd (Slot 2, index 1) is moved to Slot 3 (index 2).
+ *   - The previously-current deck (Slot 1, index 0) is moved to Slot 2 (index 1).
+ *   - The now opened deck occupies the first slot (Slot 1, index 0).
+ * - The current deck should always sync to the cloud, except when all 3 slots are shared
+ *   (sharing locks overwriting/auto-deleting).
  */
 export function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'normal', preferredSlotIndex = null) {
   const slots = getLocalSlots();
@@ -100,66 +105,190 @@ export function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'normal',
   deckData.deckId = newDeckId;
   deckData.deckName = deckName;
 
-  let targetIndex = -1;
-
+  // 1. If preferredSlotIndex is explicitly specified
   if (preferredSlotIndex !== null && preferredSlotIndex >= 0 && preferredSlotIndex < slots.length) {
-    targetIndex = preferredSlotIndex;
-  } else {
-    // 1. Check if this deck or mix is already in one of the slots
-    const existingIndex = slots.findIndex(s => s.deckData && (
-      s.deckId === newDeckId ||
-      (isExam ? ((s.isExam || s.mode === 'exam') && (s.deckId === newDeckId || s.title === deckName)) : (!s.isExam && s.mode !== 'exam' && s.title === deckName))
-    ));
+    slots.forEach((s, idx) => {
+      s.isCurrent = (idx === preferredSlotIndex);
+    });
 
-    if (existingIndex !== -1) {
-      // Deck/mix already in a slot, make it active
-      targetIndex = existingIndex;
+    slots[preferredSlotIndex] = {
+      slotIndex: preferredSlotIndex,
+      deckId: newDeckId,
+      shareSlug: slots[preferredSlotIndex]?.shareSlug || deckData.shareSlug || null,
+      isShareOwner: slots[preferredSlotIndex]?.isShareOwner || false,
+      isSharedImport: slots[preferredSlotIndex]?.isSharedImport || false,
+      title: deckName,
+      cardCount,
+      isFixed: slots[preferredSlotIndex]?.isFixed || false,
+      isCurrent: true,
+      isExam,
+      mode: isExam ? 'exam' : 'normal',
+      deckData,
+      updatedAt: Date.now()
+    };
+
+    localStorage.removeItem(`flashcards_slot_${preferredSlotIndex}_deleted_at`);
+    saveLocalSlots(slots);
+
+    if (isExam) {
+      localStorage.setItem('flashcardsExam', JSON.stringify(deckData));
+      localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
     } else {
-      // Find slot to overwrite:
-      // First priority: Any empty slot
-      const emptyIndex = slots.findIndex(s => !s.deckData);
-      if (emptyIndex !== -1) {
-        targetIndex = emptyIndex;
-      } else {
-        // Second priority: The currently active slot IF not fixed
-        const currentActiveIndex = slots.findIndex(s => s.isCurrent && !s.isFixed);
-        if (currentActiveIndex !== -1) {
-          targetIndex = currentActiveIndex;
-        } else {
-          // Third priority: Oldest slot that is not fixed
-          const unfixedSlots = slots
-            .map((s, idx) => ({ ...s, originalIdx: idx }))
-            .filter(s => !s.isFixed);
+      localStorage.setItem(SAVE_KEY, JSON.stringify(deckData));
+      localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
+    }
 
-          if (unfixedSlots.length > 0) {
-            unfixedSlots.sort((a, b) => a.updatedAt - b.updatedAt);
-            targetIndex = unfixedSlots[0].originalIdx;
-          } else {
-            // If all 3 slots are fixed, overwrite slot 0
-            targetIndex = 0;
-          }
-        }
-      }
+    syncSlotsToCloud();
+    return preferredSlotIndex;
+  }
+
+  // 2. Check if this deck or mix is already in one of the slots
+  const existingIndex = slots.findIndex(s => s && s.deckData && (
+    s.deckId === newDeckId ||
+    (s.shareSlug && deckData.shareSlug && s.shareSlug === deckData.shareSlug) ||
+    (isExam ? ((s.isExam || s.mode === 'exam') && s.title === deckName) : (!s.isExam && s.mode !== 'exam' && s.title === deckName))
+  ));
+
+  if (existingIndex !== -1) {
+    // Deck/mix already in a slot, make it active
+    slots.forEach((s, idx) => {
+      s.isCurrent = (idx === existingIndex);
+    });
+
+    slots[existingIndex] = {
+      ...slots[existingIndex],
+      deckId: newDeckId,
+      title: deckName,
+      cardCount,
+      deckData,
+      isCurrent: true,
+      updatedAt: Date.now()
+    };
+
+    saveLocalSlots(slots);
+
+    if (isExam) {
+      localStorage.setItem('flashcardsExam', JSON.stringify(deckData));
+      localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
+    } else {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(deckData));
+      localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
+    }
+
+    syncSlotsToCloud();
+    return existingIndex;
+  }
+
+  // 3. Deck is NOT in any slot (it is a NEW deck being opened)
+  const allThreeShared = slots.length === 3 && slots.every(s => s && s.deckData && s.cardCount > 0 && (s.shareSlug || s.isFixed));
+
+  if (allThreeShared) {
+    // Sharing locks overwriting/auto-deleting when all 3 slots are shared!
+    // The opened deck plays in local session, but does NOT overwrite any slot
+    // and does NOT sync to cloud slots.
+    if (isExam) {
+      localStorage.setItem('flashcardsExam', JSON.stringify(deckData));
+      localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
+    } else {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(deckData));
+      localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
+    }
+    return -1;
+  }
+
+  // 4. Rolling shift:
+  // "When all 3 decks are occupied and a new deck is opened, the 3rd oldest deck is deleted,
+  // the 2nd is moved to the 3rd slot, the previously-current deck is moved to 2nd slot and
+  // the now opened deck occupies the first slot."
+
+  // Existing occupied decks from newest to oldest:
+  const existingDecks = [slots[0], slots[1], slots[2]].filter(s => s && s.deckData && s.cardCount > 0);
+
+  // If 3 decks were occupied, the 3rd oldest is dropped and deleted
+  if (existingDecks.length >= 3) {
+    const oldest = existingDecks[2];
+    if (oldest && oldest.shareSlug && (oldest.isShareOwner === true || oldest.isSharedImport !== true)) {
+      try {
+        updateDoc(doc(db, 'shares', oldest.shareSlug), { deleted: true, deletedAt: Date.now() }).catch(() => {});
+      } catch (e) {}
     }
   }
 
-  // Update target slot
-  slots.forEach((s, idx) => {
-    s.isCurrent = (idx === targetIndex);
-  });
+  // The 2nd deck moves to Slot 3 (index 2)
+  if (existingDecks.length >= 2) {
+    slots[2] = {
+      ...existingDecks[1],
+      slotIndex: 2,
+      isCurrent: false
+    };
+    localStorage.removeItem('flashcards_slot_2_deleted_at');
+  } else {
+    const now = Date.now();
+    slots[2] = {
+      slotIndex: 2,
+      deckId: null,
+      shareSlug: null,
+      isShareOwner: false,
+      isSharedImport: false,
+      title: 'Slot 3 (Vazio)',
+      cardCount: 0,
+      isFixed: false,
+      isCurrent: false,
+      isExam: false,
+      mode: 'normal',
+      deckData: null,
+      updatedAt: now,
+      deletedAt: now
+    };
+    localStorage.setItem('flashcards_slot_2_deleted_at', String(now));
+  }
 
-  slots[targetIndex] = {
-    slotIndex: targetIndex,
+  // The previously-current deck (1st) moves to Slot 2 (index 1)
+  if (existingDecks.length >= 1) {
+    slots[1] = {
+      ...existingDecks[0],
+      slotIndex: 1,
+      isCurrent: false
+    };
+    localStorage.removeItem('flashcards_slot_1_deleted_at');
+  } else {
+    const now = Date.now();
+    slots[1] = {
+      slotIndex: 1,
+      deckId: null,
+      shareSlug: null,
+      isShareOwner: false,
+      isSharedImport: false,
+      title: 'Slot 2 (Vazio)',
+      cardCount: 0,
+      isFixed: false,
+      isCurrent: false,
+      isExam: false,
+      mode: 'normal',
+      deckData: null,
+      updatedAt: now,
+      deletedAt: now
+    };
+    localStorage.setItem('flashcards_slot_1_deleted_at', String(now));
+  }
+
+  // The newly opened deck occupies Slot 1 (index 0)
+  slots[0] = {
+    slotIndex: 0,
     deckId: newDeckId,
+    shareSlug: deckData.shareSlug || null,
+    isShareOwner: false,
+    isSharedImport: false,
     title: deckName,
     cardCount,
-    isFixed: slots[targetIndex].isFixed || false,
+    isFixed: Boolean(deckData.shareSlug),
     isCurrent: true,
     isExam,
     mode: isExam ? 'exam' : 'normal',
     deckData,
     updatedAt: Date.now()
   };
+  localStorage.removeItem('flashcards_slot_0_deleted_at');
 
   saveLocalSlots(slots);
 
@@ -172,10 +301,10 @@ export function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'normal',
     localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
   }
 
-  // Trigger cloud sync
+  // The current deck should always sync to the cloud, except when all 3 slots are shared
   syncSlotsToCloud();
 
-  return targetIndex;
+  return 0;
 }
 
 /**
@@ -715,6 +844,7 @@ export function mergeStatsData(local, cloud) {
  */
 export function syncActiveSlotState() {
   const slots = getLocalSlots();
+  const allThreeShared = slots.length === 3 && slots.every(s => s && s.deckData && s.cardCount > 0 && (s.shareSlug || s.isFixed));
   const activeMode = localStorage.getItem(ACTIVE_MODE_KEY) || 'normal';
   const activeSave = localStorage.getItem(SAVE_KEY);
   const activeExam = localStorage.getItem('flashcardsExam');
@@ -725,6 +855,15 @@ export function syncActiveSlotState() {
       const parsedSave = JSON.parse(activeSave);
       let currentSlotIndex = slots.findIndex(s => s.isCurrent && !s.isExam);
       if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
+
+      // When all 3 slots are shared, sharing locks overwriting/auto-deleting
+      if (allThreeShared && currentSlotIndex !== -1) {
+        const matchesCurrent = slots[currentSlotIndex].deckId === parsedSave.deckId || slots[currentSlotIndex].title === parsedSave.deckTitle;
+        if (!matchesCurrent) {
+          return;
+        }
+      }
+
       if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
         slots[currentSlotIndex].deckData = parsedSave;
         slots[currentSlotIndex].cardCount = (parsedSave.allQuestions || []).length;
@@ -742,6 +881,15 @@ export function syncActiveSlotState() {
       let currentSlotIndex = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
       if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isExam || s.mode === 'exam');
       if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
+
+      // When all 3 slots are shared, sharing locks overwriting/auto-deleting
+      if (allThreeShared && currentSlotIndex !== -1) {
+        const matchesCurrent = slots[currentSlotIndex].deckId === parsedExam.deckId || slots[currentSlotIndex].title === (parsedExam.deckTitle || 'Semana de Provas');
+        if (!matchesCurrent) {
+          return;
+        }
+      }
+
       if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
         slots[currentSlotIndex].deckData = parsedExam;
         slots[currentSlotIndex].cardCount = (parsedExam.allQuestions || []).length;
@@ -751,7 +899,7 @@ export function syncActiveSlotState() {
         slots[currentSlotIndex].updatedAt = Date.now();
         saveLocalSlots(slots);
         updatedSlotIndex = currentSlotIndex;
-      } else {
+      } else if (!allThreeShared) {
         openDeckInSlots(parsedExam, parsedExam.deckTitle || 'Semana de Provas', 'exam');
       }
     } catch (e) {}

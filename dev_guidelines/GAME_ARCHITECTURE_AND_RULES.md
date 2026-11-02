@@ -21,9 +21,20 @@ A aplicação opera em três modos distintos controlados via `activeMode` e sinc
 
 ### 1.2 Sistema de Slots e Sincronização em Nuvem (Pro)
 A aplicação adota um sistema de slots gerenciado por [`js/slot-manager.js`](file:///home/chief_arthur/apps/Flashcards/js/slot-manager.js):
-1. **3 Slots de Baralhos e Misturas**:
+1. **3 Slots de Baralhos e Misturas (Fila FIFO com Deslocamento Contínuo)**:
    - Os slots armazenam os baralhos recentes ou misturas de "Semana de Provas" criadas pelo usuário.
    - Cada slot registra `slotIndex`, `deckId`, `title`, `cardCount`, `isFixed`, `isCurrent`, `isExam`, `mode` e `deckData`.
+   - **Mecânica de Deslocamento ao Abrir Novo Baralho**:
+     - Quando todos os 3 slots estão ocupados e um novo baralho é aberto:
+       - O 3º baralho mais antigo (Slot 3, `slotIndex: 2`) é excluído automaticamente.
+       - O 2º baralho (Slot 2, `slotIndex: 1`) é movido para o 3º slot (`slotIndex: 2`).
+       - O baralho anteriormente atual (Slot 1, `slotIndex: 0`) é movido para o 2º slot (`slotIndex: 1`).
+       - O baralho recém-aberto ocupa o primeiro slot (Slot 1, `slotIndex: 0`, marcado como `isCurrent: true`).
+     - Os usuários podem tornar qualquer baralho permanente baixando-o como arquivo `.json` ("Salvar Baralho"), dispensando confirmações invasivas a cada abertura.
+   - **Bloqueio por Compartilhamento**:
+     - O compartilhamento trava a substituição e exclusão automática (`isFixed: true`, `shareSlug`).
+     - O baralho atual deve **sempre sincronizar com a nuvem, exceto quando todos os 3 slots estiverem compartilhados**.
+     - Quando todos os 3 slots estiverem compartilhados, a exclusão automática fica totalmente bloqueada.
    - Se o slot for uma mistura da Semana de Provas (`isExam: true`), ao ser aberto ele restaura o estado em `flashcardsExam` e ativa `activeMode = 'exam'`.
    - Durante a partida no modo exame, alterações na mistura (resposta de cards, adição ou remoção de baralhos) atualizam o slot correspondente e disparam `debouncedSyncSlotsToCloud()`.
 2. **Slot Dedicado do Caderno**:
@@ -39,7 +50,14 @@ A aplicação adota um sistema de slots gerenciado por [`js/slot-manager.js`](fi
 
 ---
 
-### 1.2 Tipos de Flashcards Suportados
+### 1.3 Regras de Internacionalização (i18n)
+- O arquivo de internacionalização ([`js/i18n.js`](file:///home/chief_arthur/apps/Flashcards/js/i18n.js)) **deve suportar estritamente apenas Português (`pt-BR`) e Inglês (`en-US`)**.
+- Nenhum outro idioma ou dicionário regional deve ser adicionado.
+- Navegadores configurados em Espanhol (`es*`) ou variações do Português (`pt*`, `pt-PT`) são automaticamente mapeados para `pt-BR`. Todas as demais línguas utilizam `en-US`.
+
+---
+
+### 1.4 Tipos de Flashcards Suportados
 
 | Tipo (`card.type`) | Estrutura de Resposta | Interface de Entrada | Método de Validação |
 | :--- | :--- | :--- | :--- |
@@ -52,7 +70,7 @@ A aplicação adota um sistema de slots gerenciado por [`js/slot-manager.js`](fi
 
 ---
 
-### 1.3 Ciclo de Vida de um Cartão (Fluxograma)
+### 1.5 Ciclo de Vida de um Cartão (Fluxograma)
 
 ```
 [ Início / Próximo ]

@@ -257,8 +257,8 @@ export async function checkAndLoadSharedDeck() {
       let targetSlot = existingIdx !== -1 ? existingIdx : null;
 
       if (targetSlot === null) {
-        const occupied = existingSlots.filter(s => s && s.deckData && s.cardCount > 0);
-        if (occupied.length >= 3) {
+        const allThreeShared = existingSlots.length === 3 && existingSlots.every(s => s && s.deckData && s.cardCount > 0 && (s.shareSlug || s.isFixed));
+        if (allThreeShared) {
           const chosen = await promptSlotSelectionForReplacement({
             newDeckTitle: title,
             newCardCount: (deckData.allQuestions || []).length,

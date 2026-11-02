@@ -1,3 +1,26 @@
+CHANGELOG: 3-SLOT ROLLING SHIFT QUEUE & CLOUD SYNC SHARING LOCK (v15.12)
+Date: 2026-11-02
+
+OVERVIEW:
+1. 3-Slot FIFO Rolling Shift Queue:
+   - Updated `openDeckInSlots` in `js/slot-manager.js` to implement an automated FIFO rolling shift when all 3 deck slots are occupied and a new deck is opened:
+     * The 3rd oldest deck (Slot 3, index 2) is automatically deleted.
+     * The 2nd deck (Slot 2, index 1) is moved to Slot 3 (index 2).
+     * The previously-current deck (Slot 1, index 0) is moved to Slot 2 (index 1).
+     * The newly opened deck occupies the first slot (Slot 1, index 0, marked `isCurrent: true`).
+   - Streamlined deck loading in `js/index.js` and `js/generate.js`: users can open decks instantly without interruption or intrusive modal prompts, relying on local JSON backups for persistence.
+2. Cloud Sync Sharing Lock:
+   - The current active deck always syncs to cloud storage, except when all 3 slots are shared (`slot.shareSlug || slot.isFixed`).
+   - When all 3 slots are shared, sharing locks overwriting/auto-deleting: the opened deck runs in the current local session without overwriting shared slots and without pushing to cloud slots.
+   - Preserved `promptSlotSelectionForReplacement` exclusively when a user attempts to share a deck while all 3 slots are occupied, requiring explicit replacement of a slot.
+3. Internationalization (i18n) Policy:
+   - Enforced that `js/i18n.js` strictly supports only Portuguese (`pt-BR`) and English (`en-US`).
+   - Documented this guideline across global agent rules (`~/.gemini/GEMINI.md`), project developer guidelines (`dev_guidelines/GAME_ARCHITECTURE_AND_RULES.md`), and `dev_guidelines/agent_notebook.txt`.
+4. Service Worker:
+   - Bumped cache version to `flashcards-v15.12` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: LOGIN-FREE STRIPE CHECKOUT & PRO UPGRADE FLOW (v15.11)
 Date: 2026-11-02
 

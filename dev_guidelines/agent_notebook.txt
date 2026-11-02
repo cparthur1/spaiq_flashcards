@@ -31,3 +31,7 @@
    - **DO NOT implement, re-introduce, or design for Dark Mode**. The application is strictly Light Mode only.
    - Never add `@media (prefers-color-scheme: dark)`, `.dark` selectors, `dark:` Tailwind classes, or theme toggles.
    - Maintain all backgrounds, containers, typography, and contrast tokens strictly within the Light Theme Material Design 3 specifications.
+
+7. **Internationalization (i18n)**:
+   - The internationalization file (`js/i18n.js`) strictly supports only Portuguese (`pt-BR`) and English (`en-US`).
+   - Do not introduce or support any other language or locale dictionary.
