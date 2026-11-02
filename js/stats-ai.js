@@ -117,7 +117,6 @@ export function isDeckCategorized({ allQuestions, currentDeckTitle, categories }
  * Calls Gemini Flash-Lite using Function Calling to categorize all decks and current cards at once.
  */
 export async function callGeminiFlashLiteCategorization({
-    apiKey,
     currentDeckTitle,
     deckTitles,
     cards,
@@ -165,13 +164,11 @@ REGRAS CRÍTICAS E OBRIGATÓRIAS:
 
     for (const modelName of models) {
         try {
-            const url = apiKey
-                ? `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
-                : `${BACKEND_URL}/api/ai/stats`;
-            const headers = { "Content-Type": "application/json" };
-            if (!apiKey && token) {
-                headers["Authorization"] = `Bearer ${token}`;
-            }
+            const url = `${BACKEND_URL}/api/ai/stats`;
+            const headers = {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            };
 
             const requestBody = {
                 model: modelName,

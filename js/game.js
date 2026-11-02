@@ -9,7 +9,7 @@ import {
     isAnimationsEnabled, setAnimationsEnabled, applyAnimationsPreference, updateAnimationsUI, updateAccessibilityUI
 } from './engine/effects.js';
 import { initInputController, startGamepadLoop, stopGamepadLoop } from './engine/input-controller.js';
-import { isTutorEnabled, setTutorApiKey, disableTutor, initTutor, updateTutorUI, setLastUserAnswerForChat, getLastUserAnswerForChat, resetTutorChatSession, getHasChatInteraction, setHasChatInteraction, evaluateAnswerSemantic, addMsg, showTyping, hideTyping, sendTutorChatMessage, getTermDefinition, logDefinitionToChat } from './engine/tutor.js';
+import { isTutorEnabled, disableTutor, initTutor, updateTutorUI, setLastUserAnswerForChat, getLastUserAnswerForChat, resetTutorChatSession, getHasChatInteraction, setHasChatInteraction, evaluateAnswerSemantic, addMsg, showTyping, hideTyping, sendTutorChatMessage, getTermDefinition, logDefinitionToChat } from './engine/tutor.js';
 import { initPomodoro, isPomodoroEnabled, setPomodoroEnabled, updatePomodoroUI, getPomodoroStatus } from './engine/pomodoro.js';
 import {
     getNotificationSettings, saveNotificationSettings, requestNotificationPermission,
@@ -19,7 +19,6 @@ import {
 import { isDeckCategorized, callGeminiFlashLiteCategorization, getStoredAiCategories, getCardSignature } from './stats-ai.js';
 import { initTransfer } from './transfer.js';
 import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCurrentSession, completeCurrentSession, getCurrentSessionMetrics } from './stats-tracker.js';
-import { getApiKeyAsync, getCachedApiKey, saveApiKey, clearApiKey, isKeyRemembered } from './key-manager.js';
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
 import { onAuthChange, auth } from './firebase-client.js';
@@ -238,9 +237,6 @@ let lastCardTopic = '';
 let isAnkiFlipped = false;
 let pendingEditAnsImage = '';
 let questionStartTime = Date.now();
-
-// --- AI STATE ---
-let geminiApiKey = getCachedApiKey();
 
 // --- UI UTILITIES ---
 const imageLoadTokens = new WeakMap();
@@ -3053,9 +3049,6 @@ function updateAiUI() {
 }
 
 function initializeAi() {
-    if (geminiApiKey) {
-        setTutorApiKey(geminiApiKey);
-    }
     updateAiUI();
 }
 
@@ -4557,8 +4550,6 @@ const settingPomodoroSwitch = document.getElementById('setting-pomodoro-switch')
 // AI controls in settings modal
 const settingAiRow = document.getElementById('setting-ai-row');
 const settingAiSwitch = document.getElementById('setting-ai-switch');
-const settingApiKeyBtn = document.getElementById('setting-api-key-btn');
-const settingApiKeyStatus = document.getElementById('setting-api-key-status');
 
 // Notebook goal & clear controls in settings modal
 const settingNotebookGoalSelect = document.getElementById('setting-notebook-goal-select');
@@ -6136,11 +6127,7 @@ async function initGame() {
     updateMenuButtonsForActiveMode();
     initStatsSession(deckTitle.textContent, activeMode, allQuestions.filter(isPlayableCard).length, score);
     loadQuestion();
-    const loadedKey = await getApiKeyAsync();
-    const aiPreference = localStorage.getItem('flashcards_ai_enabled');
-    const shouldEnableAi = Boolean(loadedKey && aiPreference !== 'false');
-    if (shouldEnableAi) {
-        geminiApiKey = loadedKey;
+    if (isTutorEnabled()) {
         initializeAi();
     } else {
         disableTutor();
@@ -6176,8 +6163,7 @@ async function initBackgroundCategorization() {
             }
         }
 
-        const key = await getApiKeyAsync();
-        if (!key || !isTutorEnabled()) {
+        if (!isTutorEnabled()) {
             return;
         }
 
@@ -6195,7 +6181,6 @@ async function initBackgroundCategorization() {
                 if (cards.length === 0) return;
 
                 const categorizedResult = await callGeminiFlashLiteCategorization({
-                    apiKey: key,
                     currentDeckTitle,
                     deckTitles,
                     cards,

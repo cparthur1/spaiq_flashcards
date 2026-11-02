@@ -8,7 +8,6 @@ import {
     getCardSignature
 } from './stats-ai.js';
 import { ROUTES, escapeHtml } from './utils.js';
-import { getApiKeyAsync, getCachedApiKey, saveApiKey, clearApiKey, isKeyRemembered } from './key-manager.js';
 import { getDailyStreak, getHeatmapActivityMap, getTodayDateString } from './engine/notebook-scheduler.js';
 import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { onAuthChange } from './firebase-client.js';
@@ -1175,8 +1174,6 @@ async function triggerAiCategorization(gameState, statsData) {
         return;
     }
 
-    let apiKey = getGeminiApiKey() || getCachedApiKey() || '';
-
     isAiLoading = true;
     if (aiStatsSection) {
         aiStatsSection.innerHTML = `
@@ -1201,7 +1198,6 @@ async function triggerAiCategorization(gameState, statsData) {
         const existingCategories = getStoredAiCategories() || { knownSubjects: [], knownTopicsByDeck: {} };
 
         const categorizedResult = await callGeminiFlashLiteCategorization({
-            apiKey,
             currentDeckTitle,
             deckTitles,
             cards,

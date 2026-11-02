@@ -1,3 +1,20 @@
+CHANGELOG: 100% BACKEND AI PROXY ROUTING & CLIENT SDK DECOMMISSION (v15.7)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Complete Transition to Backend AI Infrastructure:
+   - Eliminated all client-side direct calls to Google Gemini and removed `@google/generative-ai` SDK imports across the application.
+   - Fixed `ReferenceError: apiKey is not defined` in `js/generate.js` by removing legacy client-side SDK fallback blocks.
+   - All AI functions (Deck generation, text enrichment, AI agent chat turns, tutor semantic verification, and deck/card pedagogical categorization) now route 100% through the authenticated Cloudflare Worker proxy (`/api/ai/generate`, `/api/ai/tutor`, `/api/ai/stats`).
+2. Legacy SDK and Split-Path Cleanup:
+   - Removed `@google/generative-ai` import maps from `pages/game.html`, `pages/generate.html`, and `pages/stats.html`.
+   - Removed obsolete HTTP fetch interceptor from `js/utils.js` that previously translated function roles for the client-side Gemini SDK.
+   - Updated `js/stats-ai.js` and `js/stats.js` to unconditionally query `${BACKEND_URL}/api/ai/stats` with Firebase Auth tokens.
+   - Updated `js/game.js` to enable AI tutor and background interleaving categorization based purely on `isTutorEnabled()` without blocking on legacy client API keys.
+3. Cache bumped to `flashcards-v15.7` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: COMPLETE REMOVAL OF LEGACY ASAAS & STRIPE MODULARIZATION (v15.6)
 Date: 2026-11-02
 

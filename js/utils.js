@@ -184,52 +184,9 @@ export function checkAndResetModelFallback() {
     }
 }
 
-// --- FETCH INTERCEPTOR FOR GEMINI API ROLE FIX ---
-// Fixes GoogleGenerativeAI SDK sending role 'function' over HTTP wire:
-// The Gemini REST API requires role 'user' for function response turns on the wire,
-// while the client SDK internal validation strictly requires role 'function' in memory.
-if (typeof window !== 'undefined' && window.fetch) {
-    const originalFetch = window.fetch;
-    window.fetch = async function (resource, options) {
-        if (options && options.body && typeof options.body === 'string') {
-            const urlStr = typeof resource === 'string' ? resource : (resource && resource.url) ? resource.url : '';
-            let isGeminiUrl = false;
-            try {
-                const parsedUrl = new URL(urlStr, window.location.origin);
-                isGeminiUrl = (parsedUrl.hostname === 'generativelanguage.googleapis.com');
-            } catch (urlErr) {
-                isGeminiUrl = false;
-            }
-
-            if (isGeminiUrl) {
-                try {
-                    const body = JSON.parse(options.body);
-                    if (body.contents && Array.isArray(body.contents)) {
-                        let modified = false;
-                        for (const content of body.contents) {
-                            if (content.role === 'function') {
-                                content.role = 'user';
-                                modified = true;
-                            }
-                        }
-                        if (modified) {
-                            options = { ...options, body: JSON.stringify(body) };
-                        }
-                    }
-                } catch (e) {
-                    // Ignore JSON parsing errors
-                }
-            }
-        }
-        return originalFetch.call(this, resource, options);
-    };
-}
-
 /**
  * Garante que os itens de histórico em uma sessão de chat ou array do Gemini usem os papéis (roles) válidos:
- * - Partes que contêm 'functionResponse' DEVEM ter role 'function' na memória do SDK do GoogleGenerativeAI
- *   para passar na validação estrita do SDK (startChat validação de histórico).
- *   (O interceptor de fetch cuida da tradução de 'function' para 'user' no payload HTTP enviado à API).
+ * - Converte respostas de ferramentas para role 'user' estruturado conforme esperado pela API Gemini.
  * - Remove itens órfãos que antecedam a primeira mensagem de usuário.
  * @param {Object|Array} target - ChatSession ou array de histórico
  */

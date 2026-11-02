@@ -1,6 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { callWithRetry, checkAndResetModelFallback, sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId } from './utils.js';
-import { getApiKeyAsync, getCachedApiKey, saveApiKey, clearApiKey, isKeyRemembered } from './key-manager.js';
 import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserProStatus, refreshUserProStatus } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken, signInWithGoogle } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
@@ -230,7 +228,6 @@ const inlineEditAnsImageUrl = document.getElementById('inline-edit-ans-image-url
 // --- STATE ---
 let deckCards = [];
 let geminiChatSession = null;
-let currentGenModel = null;
 let inlineEditSavedScrollTop = 0;
 let inlineEditSavedWindowY = 0;
 let currentEditingMode = 'normal'; // 'normal' | 'exam'
@@ -676,19 +673,6 @@ const toolFunctions = {
 };
 
 // --- HELPER FUNCTIONS ---
-function getApiKey() {
-    return getCachedApiKey();
-}
-
-async function setApiKey(key, remember = false) {
-    if (key) {
-        await saveApiKey(key, remember);
-    } else {
-        await clearApiKey();
-    }
-    updateApiKeyStatusUI();
-}
-
 function updateApiKeyStatusUI() {
     if (dashboardProStatus) {
         dashboardProStatus.textContent = isUserPro() ? "Flashcards Pro ✓" : "Flashcards Pro";
@@ -2088,14 +2072,7 @@ submitModal22Btn.addEventListener('click', async () => {
         const hasPlaceholders = JSON.stringify(localCards).includes("[GEMINI]");
 
         if (!hasPlaceholders) {
-            if (apiKey) {
-                const genAI = new GoogleGenerativeAI(apiKey);
-                const model = genAI.getGenerativeModel({ model: currentEditorModel, systemInstruction, tools: deckTools });
-                currentGenModel = model;
-                geminiChatSession = model.startChat({ history: [] });
-            } else {
-                geminiChatSession = { _history: [] };
-            }
+            geminiChatSession = { _history: [] };
             addChatMessage('model', `✓ Documento importado com sucesso! ${deckCards.length} cartões foram carregados no baralho. Como posso ajudar a revisar ou enriquecer seus cards?`);
             return;
         }
@@ -2117,129 +2094,75 @@ Ao terminar, chame 'adicionar_varios_cards' para enviar o baralho finalizado.
 JSON:
 ${JSON.stringify(localCards, null, 2)}`;
 
-        if (!apiKey) {
-            let token = await getCurrentUserToken();
-            if (!token) {
-                updateGeneratingStatus("Conectando com o Google para liberar sua geração gratuita...");
-                try {
-                    const user = await signInWithGoogle();
-                    if (!user) throw new Error("Login necessário para gerar baralho com IA.");
-                    token = await getCurrentUserToken();
-                } catch (authErr) {
-                    throw new Error("Faça login com sua conta Google para liberar sua geração gratuita com IA.");
-                }
+        let token = await getCurrentUserToken();
+        if (!token) {
+            updateGeneratingStatus("Conectando com o Google para liberar sua geração gratuita...");
+            try {
+                const user = await signInWithGoogle();
+                if (!user) throw new Error("Login necessário para gerar baralho com IA.");
+                token = await getCurrentUserToken();
+            } catch (authErr) {
+                throw new Error("Faça login com sua conta Google para liberar sua geração gratuita com IA.");
             }
+        }
 
-            const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
-            if (isTrial) {
-                window.currentDeckIsFreeAiTrial = true;
-            }
+        const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
+        if (isTrial) {
+            window.currentDeckIsFreeAiTrial = true;
+        }
 
-            const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    model: "gemini-flash-latest",
-                    contents: [{ role: 'user', parts: [{ text: fillPrompt }] }],
-                    tools: deckTools,
-                    systemInstruction: { parts: [{ text: systemInstruction + "\nPreencha os placeholders '[GEMINI]' no JSON de flashcards e retorne-os usando a ferramenta 'adicionar_varios_cards'. Preserve cards com type 'anki' (frente e verso), 'fill' (lacunas), 'open' e 'divisor' exatamente como foram fornecidos. REGRA MANDATÓRIA: As perguntas ('description') de todos os cartões podem e devem usar Markdown e LaTeX livremente. Apenas respostas digitadas na gameplay ('open', 'open_double', 'fill') NUNCA devem usar Markdown nem fórmulas matemáticas." }] },
-                    generationConfig: { temperature: 0.7, responseMimeType: "text/plain" },
-                    stream: false,
-                    isNewDeck: true
-                })
-            });
+        const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                model: "gemini-flash-latest",
+                contents: [{ role: 'user', parts: [{ text: fillPrompt }] }],
+                tools: deckTools,
+                systemInstruction: { parts: [{ text: systemInstruction + "\nPreencha os placeholders '[GEMINI]' no JSON de flashcards e retorne-os usando a ferramenta 'adicionar_varios_cards'. Preserve cards com type 'anki' (frente e verso), 'fill' (lacunas), 'open' e 'divisor' exatamente como foram fornecidos. REGRA MANDATÓRIA: As perguntas ('description') de todos os cartões podem e devem usar Markdown e LaTeX livremente. Apenas respostas digitadas na gameplay ('open', 'open_double', 'fill') NUNCA devem usar Markdown nem fórmulas matemáticas." }] },
+                generationConfig: { temperature: 0.7, responseMimeType: "text/plain" },
+                stream: false,
+                isNewDeck: true
+            })
+        });
 
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                if (errData.error === 'quota_exceeded') {
-                    const promptMsg = isUserPro() ? t('alert_pro_monthly_limit') : t('alert_non_pro_limit');
-                    if (confirm(promptMsg)) {
-                        if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
-                            window.flashcardsOpenExtraDeckModal();
-                        }
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            if (errData.error === 'quota_exceeded') {
+                const promptMsg = isUserPro() ? t('alert_pro_monthly_limit') : t('alert_non_pro_limit');
+                if (confirm(promptMsg)) {
+                    if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
+                        window.flashcardsOpenExtraDeckModal();
                     }
                 }
-                throw new Error(errData.message || `Erro no servidor (${res.status})`);
             }
-
-            const fillData = await res.json();
-            deckCards = [];
-            renderCardsList(true);
-
-            const candidate = fillData.candidates?.[0];
-            const calls = candidate?.content?.parts?.filter(p => !!p.functionCall) || [];
-            for (const call of calls) {
-                if (call.functionCall.name === 'adicionar_varios_cards') {
-                    const args = call.functionCall.args;
-                    executeAddMultipleCards(args.cards || args);
-                }
-            }
-            geminiChatSession = { _history: [] };
-            if (window.currentDeckIsFreeAiTrial) {
-                markFreeAiDeckUsed();
-                deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
-                localStorage.setItem('editing_deck_is_free_trial', 'true');
-            }
-            refreshUserProStatus().then(() => updateProPaywalledUI());
-            finishGeneratingAnimation(true, deckCards.length);
-            removeAiChatGeneratingBubble();
-            addChatMessage('model', `✓ Documento aprimorado com sucesso! ${deckCards.length} cartões foram enriquecidos com opções e rótulos pelo Gemini.`);
-        } else {
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({
-                model: "gemini-flash-latest",
-                generationConfig: { temperature: 0.7, responseMimeType: "text/plain" },
-                tools: deckTools,
-                systemInstruction: systemInstruction + "\nPreencha os placeholders '[GEMINI]' no JSON de flashcards e retorne-os usando a ferramenta 'adicionar_varios_cards'. Preserve cards com type 'anki' (frente e verso), 'fill' (lacunas), 'open' e 'divisor' exatamente como foram fornecidos. REGRA MANDATÓRIA: As perguntas ('description') de todos os cartões podem e devem usar Markdown e LaTeX livremente. Apenas respostas digitadas na gameplay ('open', 'open_double', 'fill') NUNCA devem usar Markdown nem fórmulas matemáticas."
-            });
-
-            currentGenModel = model;
-            const chat = model.startChat({ history: [] });
-            deckCards = []; // Will be populated via function call
-            renderCardsList(true);
-
-            let result = await callWithRetry(() => chat.sendMessage(fillPrompt));
-            let response = result.response;
-
-            for (let i = 0; i < 4; i++) {
-                const candidate = response.candidates[0];
-                const calls = candidate.content.parts.filter(p => !!p.functionCall);
-                if (calls.length === 0) break;
-
-                const functionResponses = calls.map(call => {
-                    const { name, args } = call.functionCall;
-                    const output = toolFunctions[name] ? toolFunctions[name](args) : { error: "Função não encontrada" };
-                    return {
-                        functionResponse: { name, response: output }
-                    };
-                });
-
-                result = await callWithRetry(() => chat.sendMessage(functionResponses));
-                sanitizeChatHistory(chat);
-                response = result.response;
-            }
-
-            if (window.currentDeckIsFreeAiTrial) {
-                markFreeAiDeckUsed();
-                deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
-                localStorage.setItem('editing_deck_is_free_trial', 'true');
-                updateProPaywalledUI();
-            }
-            finishGeneratingAnimation(true, deckCards.length);
-            removeAiChatGeneratingBubble();
-            addChatMessage('model', `✓ Flashcards aprimorados com sucesso! ${deckCards.length} cartões foram enriquecidos com alternativas e detalhes.`);
-            const editModel = genAI.getGenerativeModel({
-                model: "gemini-flash-lite-latest",
-                systemInstruction,
-                tools: deckToolsWithHandoff
-            });
-            currentGenModel = editModel;
-            currentEditorModel = "gemini-flash-lite-latest";
-            geminiChatSession = editModel.startChat({ history: [] });
+            throw new Error(errData.message || `Erro no servidor (${res.status})`);
         }
+
+        const fillData = await res.json();
+        deckCards = [];
+        renderCardsList(true);
+
+        const candidate = fillData.candidates?.[0];
+        const calls = candidate?.content?.parts?.filter(p => !!p.functionCall) || [];
+        for (const call of calls) {
+            if (call.functionCall.name === 'adicionar_varios_cards') {
+                const args = call.functionCall.args;
+                executeAddMultipleCards(args.cards || args);
+            }
+        }
+        geminiChatSession = { _history: [] };
+        if (window.currentDeckIsFreeAiTrial) {
+            markFreeAiDeckUsed();
+            deckCards.forEach(c => { if (c && typeof c === 'object') c.isFreeAiTrial = true; });
+            localStorage.setItem('editing_deck_is_free_trial', 'true');
+        }
+        refreshUserProStatus().then(() => updateProPaywalledUI());
+        finishGeneratingAnimation(true, deckCards.length);
+        removeAiChatGeneratingBubble();
+        addChatMessage('model', `✓ Documento aprimorado com sucesso! ${deckCards.length} cartões foram enriquecidos com opções e rótulos pelo Gemini.`);
 
     } catch (err) {
         console.error("Erro na aprimoração 2.2:", err);
@@ -3589,53 +3512,33 @@ const triageSystemInstruction = "Você é o analisador de capacidade do agente d
     "- Se a tarefa exigir raciocínio avançado, reestruturação profunda de grande escala do baralho ou elaboração pedagógica densa e complexa: Chame 'handoff_to_gemini_flash' com o motivo detalhado.\n\n" +
     "Sempre priorize economizar tokens do modelo avançado quando você for capaz.";
 
-async function analyzePromptCapability(apiKey, userPrompt) {
+async function analyzePromptCapability(userPrompt) {
     console.log('[AI Agent Analysis] Iniciando análise de capacidade com modelo padrão (gemini-flash-lite-latest)...');
     console.log('[AI Agent Analysis] Prompt sob análise:', userPrompt);
     try {
         const deckBrief = `Baralho atual: ${deckCards.length} cartões.`;
 
-        let candidate = null;
-        if (!apiKey) {
-            const token = await getCurrentUserToken().catch(() => null);
-            if (!token) return { handoff: false };
+        const token = await getCurrentUserToken().catch(() => null);
+        if (!token) return { handoff: false };
 
-            const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    model: "gemini-flash-lite-latest",
-                    systemInstruction: { parts: [{ text: triageSystemInstruction }] },
-                    contents: [{ role: 'user', parts: [{ text: `${deckBrief}\nComando do usuário: "${userPrompt}"` }] }],
-                    tools: handoffTools,
-                    stream: false,
-                    isNewDeck: false
-                })
-            });
-            if (!res.ok) return { handoff: false };
-            const data = await res.json();
-            candidate = data.candidates?.[0];
-        } else {
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const triageModel = genAI.getGenerativeModel({
+        const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
                 model: "gemini-flash-lite-latest",
-                systemInstruction: triageSystemInstruction,
-                tools: handoffTools
-            });
-
-            const triageResult = await callWithRetry(() => triageModel.generateContent({
-                contents: [
-                    {
-                        role: 'user',
-                        parts: [{ text: `${deckBrief}\nComando do usuário: "${userPrompt}"` }]
-                    }
-                ]
-            }));
-            candidate = triageResult.response.candidates?.[0];
-        }
+                systemInstruction: { parts: [{ text: triageSystemInstruction }] },
+                contents: [{ role: 'user', parts: [{ text: `${deckBrief}\nComando do usuário: "${userPrompt}"` }] }],
+                tools: handoffTools,
+                stream: false,
+                isNewDeck: false
+            })
+        });
+        if (!res.ok) return { handoff: false };
+        const data = await res.json();
+        const candidate = data.candidates?.[0];
 
         const calls = candidate?.content?.parts?.filter(p => !!p.functionCall) || [];
         const handoffCall = calls.find(c => c.functionCall.name === 'handoff_to_gemini_flash');
@@ -3656,7 +3559,7 @@ async function analyzePromptCapability(apiKey, userPrompt) {
     }
 }
 
-async function executeAgentChatTurn(apiKey, modelName, userPrompt, forceLite = false) {
+async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
     let history = [];
     if (geminiChatSession && geminiChatSession._history) {
         try {
@@ -3680,15 +3583,66 @@ async function executeAgentChatTurn(apiKey, modelName, userPrompt, forceLite = f
     }).join('\n');
     const enrichedPrompt = `ATENÇÃO: O estado atual do baralho é:\n${contextLines}\n\nComando do Usuário: ${userPrompt}`;
 
-    if (!apiKey) {
-        const token = await getCurrentUserToken().catch(() => null);
-        if (!token) throw new Error("Usuário não autenticado.");
+    const token = await getCurrentUserToken().catch(() => null);
+    if (!token) throw new Error("Usuário não autenticado.");
 
-        currentEditorModel = modelName;
-        history.push({ role: 'user', parts: [{ text: enrichedPrompt }] });
+    currentEditorModel = modelName;
+    history.push({ role: 'user', parts: [{ text: enrichedPrompt }] });
 
-        try {
-            let res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                model: modelName,
+                systemInstruction: { parts: [{ text: systemInstruction }] },
+                tools: toolsForModel,
+                contents: history,
+                stream: false,
+                isNewDeck: false
+            })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.message || `Erro no assistente (${res.status})`);
+        }
+
+        let data = await res.json();
+        let candidate = data.candidates?.[0];
+
+        for (let i = 0; i < 5; i++) {
+            const calls = candidate?.content?.parts?.filter(p => !!p.functionCall) || [];
+            if (calls.length === 0) break;
+
+            const midHandoff = calls.find(c => c.functionCall.name === 'handoff_to_gemini_flash');
+            if (midHandoff && modelName === "gemini-flash-lite-latest" && !forceLite) {
+                const reason = midHandoff.functionCall.args?.reason || 'Handoff solicitado durante turn';
+                console.log('[AI Agent Execution] Lite model acionou handoff_to_gemini_flash durante a execução. Motivo:', reason);
+                console.log('[AI Agent Execution] Transferindo execução para gemini-flash-latest...');
+                if (geminiChatSession) geminiChatSession._history = historyBeforeTurn;
+                return await executeAgentChatTurn("gemini-flash-latest", userPrompt, false);
+            }
+
+            if (candidate?.content) {
+                history.push(candidate.content);
+            }
+
+            const functionResponses = calls.map(call => {
+                const { name, args } = call.functionCall;
+                console.log(`[AI Agent] [Tool Call] Invocando ferramenta '${name}':`, args);
+                const output = toolFunctions[name] ? toolFunctions[name](args) : { error: "Função não encontrada" };
+                return {
+                    functionResponse: { name, response: output }
+                };
+            });
+
+            history.push({ role: 'user', parts: functionResponses });
+
+            res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3704,124 +3658,19 @@ async function executeAgentChatTurn(apiKey, modelName, userPrompt, forceLite = f
                 })
             });
 
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.message || `Erro no assistente (${res.status})`);
-            }
-
-            let data = await res.json();
-            let candidate = data.candidates?.[0];
-
-            for (let i = 0; i < 5; i++) {
-                const calls = candidate?.content?.parts?.filter(p => !!p.functionCall) || [];
-                if (calls.length === 0) break;
-
-                const midHandoff = calls.find(c => c.functionCall.name === 'handoff_to_gemini_flash');
-                if (midHandoff && modelName === "gemini-flash-lite-latest" && !forceLite) {
-                    const reason = midHandoff.functionCall.args?.reason || 'Handoff solicitado durante turn';
-                    console.log('[AI Agent Execution] Lite model acionou handoff_to_gemini_flash durante a execução. Motivo:', reason);
-                    console.log('[AI Agent Execution] Transferindo execução para gemini-flash-latest...');
-                    if (geminiChatSession) geminiChatSession._history = historyBeforeTurn;
-                    return await executeAgentChatTurn(apiKey, "gemini-flash-latest", userPrompt, false);
-                }
-
-                if (candidate?.content) {
-                    history.push(candidate.content);
-                }
-
-                const functionResponses = calls.map(call => {
-                    const { name, args } = call.functionCall;
-                    console.log(`[AI Agent] [Tool Call] Invocando ferramenta '${name}':`, args);
-                    const output = toolFunctions[name] ? toolFunctions[name](args) : { error: "Função não encontrada" };
-                    return {
-                        functionResponse: { name, response: output }
-                    };
-                });
-
-                history.push({ role: 'user', parts: functionResponses });
-
-                res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        model: modelName,
-                        systemInstruction: { parts: [{ text: systemInstruction }] },
-                        tools: toolsForModel,
-                        contents: history,
-                        stream: false,
-                        isNewDeck: false
-                    })
-                });
-
-                if (!res.ok) break;
-                data = await res.json();
-                candidate = data.candidates?.[0];
-            }
-
-            if (candidate?.content) {
-                history.push(candidate.content);
-            }
-            if (!geminiChatSession) geminiChatSession = {};
-            geminiChatSession._history = history;
-
-            const textPart = candidate?.content?.parts?.find(p => p.text)?.text || '';
-            return textPart || 'Ação realizada com sucesso.';
-        } catch (turnErr) {
-            if (geminiChatSession) {
-                geminiChatSession._history = historyBeforeTurn;
-            }
-            throw turnErr;
-        }
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction,
-        tools: toolsForModel
-    });
-
-    currentGenModel = model;
-    currentEditorModel = modelName;
-    geminiChatSession = model.startChat({ history });
-
-    try {
-        let result = await callWithRetry(() => geminiChatSession.sendMessage(enrichedPrompt));
-        let response = result.response;
-
-        for (let i = 0; i < 5; i++) {
-            const candidate = response.candidates?.[0];
-            const calls = candidate?.content?.parts?.filter(p => !!p.functionCall) || [];
-            if (calls.length === 0) break;
-
-            const midHandoff = calls.find(c => c.functionCall.name === 'handoff_to_gemini_flash');
-            if (midHandoff && modelName === "gemini-flash-lite-latest" && !forceLite) {
-                const reason = midHandoff.functionCall.args?.reason || 'Handoff solicitado durante turn';
-                console.log('[AI Agent Execution] Lite model acionou handoff_to_gemini_flash durante a execução. Motivo:', reason);
-                console.log('[AI Agent Execution] Transferindo execução para gemini-flash-latest...');
-                geminiChatSession._history = historyBeforeTurn;
-                return await executeAgentChatTurn(apiKey, "gemini-flash-latest", userPrompt, false);
-            }
-
-            const functionResponses = calls.map(call => {
-                const { name, args } = call.functionCall;
-                console.log(`[AI Agent] [Tool Call] Invocando ferramenta '${name}':`, args);
-                const output = toolFunctions[name] ? toolFunctions[name](args) : { error: "Função não encontrada" };
-                return {
-                    functionResponse: { name, response: output }
-                };
-            });
-
-            result = await callWithRetry(() => geminiChatSession.sendMessage(functionResponses));
-            sanitizeChatHistory(geminiChatSession);
-            response = result.response;
+            if (!res.ok) break;
+            data = await res.json();
+            candidate = data.candidates?.[0];
         }
 
-        const modelText = response.text ? response.text() : '';
-        return modelText || 'Ação realizada com sucesso.';
+        if (candidate?.content) {
+            history.push(candidate.content);
+        }
+        if (!geminiChatSession) geminiChatSession = {};
+        geminiChatSession._history = history;
+
+        const textPart = candidate?.content?.parts?.find(p => p.text)?.text || '';
+        return textPart || 'Ação realizada com sucesso.';
     } catch (turnErr) {
         if (geminiChatSession) {
             geminiChatSession._history = historyBeforeTurn;
@@ -3830,25 +3679,25 @@ async function executeAgentChatTurn(apiKey, modelName, userPrompt, forceLite = f
     }
 }
 
-async function executePromptWithAnalysisAndFallback(apiKey, userPrompt) {
-    const analysis = await analyzePromptCapability(apiKey, userPrompt);
+async function executePromptWithAnalysisAndFallback(userPrompt) {
+    const analysis = await analyzePromptCapability(userPrompt);
 
     if (analysis.handoff) {
         console.log('[AI Agent Execution] Executando comando com modelo avançado: gemini-flash-latest');
         try {
-            const output = await executeAgentChatTurn(apiKey, "gemini-flash-latest", userPrompt, false);
+            const output = await executeAgentChatTurn("gemini-flash-latest", userPrompt, false);
             console.log('[AI Agent Execution] gemini-flash-latest completou a tarefa com sucesso.');
             return output;
         } catch (flashErr) {
             console.warn('[AI Agent Fallback] gemini-flash-latest falhou com erro:', flashErr?.message || flashErr);
             console.log('[AI Agent Fallback] Retornando e forçando gemini-flash-lite-latest a executar o trabalho como puder...');
-            const fallbackOutput = await executeAgentChatTurn(apiKey, "gemini-flash-lite-latest", userPrompt, true /* forceLite */);
+            const fallbackOutput = await executeAgentChatTurn("gemini-flash-lite-latest", userPrompt, true /* forceLite */);
             console.log('[AI Agent Fallback] gemini-flash-lite-latest concluiu com sucesso a execução forçada.');
             return fallbackOutput;
         }
     } else {
         console.log('[AI Agent Execution] Executando comando com modelo padrão: gemini-flash-lite-latest');
-        const output = await executeAgentChatTurn(apiKey, "gemini-flash-lite-latest", userPrompt, false);
+        const output = await executeAgentChatTurn("gemini-flash-lite-latest", userPrompt, false);
         console.log('[AI Agent Execution] gemini-flash-lite-latest completou a tarefa com sucesso.');
         return output;
     }
@@ -3878,7 +3727,7 @@ async function processPromptQueue() {
         }
 
         try {
-            const responseText = await executePromptWithAnalysisAndFallback("", item.text);
+            const responseText = await executePromptWithAnalysisAndFallback(item.text);
             hideChatTypingIndicator();
             // Log on chat the prompt and agent's response
             addChatMessage('user', item.text);
@@ -4038,7 +3887,6 @@ playDeckBtn.addEventListener('click', () => {
 // --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
     checkAndResetModelFallback();
-    await getApiKeyAsync();
     updateApiKeyStatusUI();
 
     // Check if loading an existing deck for editing

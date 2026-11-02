@@ -7,6 +7,20 @@ import { getGoogleAdminAccessToken } from './google-auth.js';
 const FIRESTORE_BASE = 'https://firestore.googleapis.com/v1';
 
 /**
+ * Extracts and parses Firebase Service Account from Worker environment
+ */
+export function getServiceAccount(env) {
+  if (!env) throw new Error('Objeto env não fornecido');
+  if (env.FIREBASE_SERVICE_ACCOUNT_OBJ) return env.FIREBASE_SERVICE_ACCOUNT_OBJ;
+  if (!env.FIREBASE_SERVICE_ACCOUNT) {
+    throw new Error('Configuração FIREBASE_SERVICE_ACCOUNT não definida');
+  }
+  return typeof env.FIREBASE_SERVICE_ACCOUNT === 'string'
+    ? JSON.parse(env.FIREBASE_SERVICE_ACCOUNT)
+    : env.FIREBASE_SERVICE_ACCOUNT;
+}
+
+/**
  * Convert plain JS object to Firestore field format
  */
 function toFirestoreFields(obj) {
