@@ -178,9 +178,9 @@ async function init() {
                     const icon = document.createElement('span');
                     icon.className = 'material-symbols-rounded text-xl';
                     icon.textContent = 'folder_open';
-                    startBtn.append(icon, document.createTextNode(` Abrir ${selectedFiles[0].name}`));
+                    startBtn.append(icon, document.createTextNode(` ${t('open_single_file_btn', { name: selectedFiles[0].name })}`));
                 } else {
-                    startBtn.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> Abrir Semana de Provas (${Number(selectedFiles.length) || 0} baralhos)`;
+                    startBtn.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> ${t('open_exam_week_count', { count: Number(selectedFiles.length) || 0 })}`;
                 }
             }
             if (uploadError) uploadError.textContent = '';

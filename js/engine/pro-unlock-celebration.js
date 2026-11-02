@@ -11,14 +11,15 @@
  */
 
 import { triggerHaptic } from './effects.js';
+import { t } from '../i18n.js';
 
 let isCelebrationActive = false;
 
 /**
  * Triggers the full-screen Pro Unlock celebration animation
  * @param {object} options
- * @param {string} [options.title="DESBLOQUEADO!"]
- * @param {string} [options.subtitle="FLASHCARDS PRO"]
+ * @param {string} [options.title]
+ * @param {string} [options.subtitle]
  * @param {Function} [options.onComplete]
  */
 export function triggerProUnlockCelebration(options = {}) {
@@ -26,8 +27,8 @@ export function triggerProUnlockCelebration(options = {}) {
   isCelebrationActive = true;
 
   const {
-    title = 'DESBLOQUEADO!',
-    subtitle = 'FLASHCARDS PRO',
+    title = t('pro_unlocked_title'),
+    subtitle = t('pro_unlocked_subtitle'),
     onComplete = null
   } = options;
 
@@ -445,24 +446,24 @@ export function triggerProUnlockCelebration(options = {}) {
       <div class="f-unlock-chips">
         <div class="f-unlock-chip">
           <span class="material-symbols-rounded text-sm" style="font-size: 16px;">bolt</span>
-          <span>Tutor IA Ilimitado</span>
+          <span>${t('unlimited_ai_tutor_chip')}</span>
         </div>
         <div class="f-unlock-chip">
           <span class="material-symbols-rounded text-sm" style="font-size: 16px;">auto_stories</span>
-          <span>Gerações de Baralhos</span>
+          <span>${t('deck_generations_label')}</span>
         </div>
         <div class="f-unlock-chip">
           <span class="material-symbols-rounded text-sm" style="font-size: 16px;">cloud_done</span>
-          <span>Nuvem em Tempo Real</span>
+          <span>${t('realtime_cloud_chip')}</span>
         </div>
         <div class="f-unlock-chip">
           <span class="material-symbols-rounded text-sm" style="font-size: 16px;">star</span>
-          <span>Recursos Exclusivos</span>
+          <span>${t('exclusive_features_chip')}</span>
         </div>
       </div>
 
       <button id="f-unlock-confirm-btn" class="f-unlock-btn">
-        APROVEITAR AGORA
+        ${t('enjoy_now_btn')}
       </button>
     </div>
   `;

@@ -5,6 +5,8 @@
  * Material Design 3 Expressive.
  */
 
+import { t } from '../i18n.js';
+
 let deferredPrompt = (typeof window !== 'undefined' && window.deferredPrompt) ? window.deferredPrompt : null;
 let bannerEl = null;
 
@@ -79,8 +81,8 @@ export function showIosInstallModal() {
             <span class="material-symbols-rounded text-2xl">install_mobile</span>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-gray-900 leading-tight">Instalar no iPhone / iPad</h3>
-            <p class="text-[11px] text-gray-500">Adicione à tela inicial para tela cheia</p>
+            <h3 class="text-sm font-bold text-gray-900 leading-tight">${t('pwa_install_ios_title')}</h3>
+            <p class="text-[11px] text-gray-500">${t('add_to_home_fullscreen')}</p>
           </div>
         </div>
         <button id="pwa-ios-modal-x" class="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer">
@@ -93,9 +95,9 @@ export function showIosInstallModal() {
         <div class="flex items-center gap-3 p-2.5 bg-white rounded-xl shadow-2xs border border-gray-100">
           <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">1</div>
           <div class="flex-1 flex items-center gap-1.5 flex-wrap">
-            <span class="text-gray-700">Clique</span>
-            <img src="${assetsRoot}assets/img/install_webapp/apple_share.png" onerror="this.onerror=null; this.src='${assetsRoot}assets/img/apple_share.png';" alt="Compartilhar" class="h-6 w-auto inline-block p-0.5 bg-gray-50 rounded border border-gray-200 shadow-2xs align-middle">
-            <strong class="text-gray-900 font-semibold">compartilhar</strong>
+            <span class="text-gray-700">${t('pwa_click_label')}</span>
+            <img src="${assetsRoot}assets/img/install_webapp/apple_share.png" onerror="this.onerror=null; this.src='${assetsRoot}assets/img/apple_share.png';" alt="${t('pwa_share_word')}" class="h-6 w-auto inline-block p-0.5 bg-gray-50 rounded border border-gray-200 shadow-2xs align-middle">
+            <strong class="text-gray-900 font-semibold">${t('pwa_share_word')}</strong>
           </div>
         </div>
 
@@ -103,8 +105,8 @@ export function showIosInstallModal() {
         <div class="flex items-center gap-3 p-2.5 bg-white rounded-xl shadow-2xs border border-gray-100">
           <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">2</div>
           <div class="flex-1 flex items-center gap-1.5 flex-wrap">
-            <img src="${assetsRoot}assets/img/install_webapp/apple_add.png" onerror="this.onerror=null; this.src='${assetsRoot}assets/img/apple_add.png';" alt="Adicionar a tela inicial" class="h-6 w-auto inline-block p-0.5 bg-gray-50 rounded border border-gray-200 shadow-2xs align-middle">
-            <strong class="text-gray-900 font-semibold">Adicionar a tela inicial</strong>
+            <img src="${assetsRoot}assets/img/install_webapp/apple_add.png" onerror="this.onerror=null; this.src='${assetsRoot}assets/img/apple_add.png';" alt="${t('pwa_add_to_home_screen')}" class="h-6 w-auto inline-block p-0.5 bg-gray-50 rounded border border-gray-200 shadow-2xs align-middle">
+            <strong class="text-gray-900 font-semibold">${t('pwa_add_to_home_screen')}</strong>
           </div>
         </div>
 
@@ -112,13 +114,13 @@ export function showIosInstallModal() {
         <div class="flex items-center gap-3 p-2.5 bg-white rounded-xl shadow-2xs border border-gray-100">
           <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">3</div>
           <div class="flex-1 text-gray-900 font-semibold">
-            Abrir como webapp
+            ${t('pwa_open_as_webapp')}
           </div>
         </div>
       </div>
 
       <button id="pwa-ios-modal-close" class="m3-btn-expressive m3-btn-filled w-full py-3 px-4 text-xs font-bold rounded-xl shadow-xs cursor-pointer">
-        Entendi
+        ${t('got_it_btn')}
       </button>
     </div>
   `;
@@ -169,8 +171,8 @@ export function showAndroidInstallModal() {
             <span class="material-symbols-rounded text-2xl">install_mobile</span>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-gray-900 leading-tight">Instalar no Android</h3>
-            <p class="text-[11px] text-gray-500">Adicione à tela inicial para tela cheia</p>
+            <h3 class="text-sm font-bold text-gray-900 leading-tight">${t('pwa_install_android_title')}</h3>
+            <p class="text-[11px] text-gray-500">${t('add_to_home_fullscreen')}</p>
           </div>
         </div>
         <button id="pwa-android-modal-x" class="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer">
@@ -182,27 +184,27 @@ export function showAndroidInstallModal() {
         <div class="flex items-center gap-3 p-2 bg-white rounded-xl shadow-2xs border border-gray-100">
           <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">1</div>
           <div class="flex-1 text-gray-700">
-            Toque nos <strong class="text-gray-900">3 pontinhos (Menu)</strong> do navegador
+            ${t('pwa_android_step1_html')}
           </div>
         </div>
 
         <div class="flex items-center gap-3 p-2 bg-white rounded-xl shadow-2xs border border-gray-100">
           <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">2</div>
           <div class="flex-1 text-gray-700">
-            Selecione <strong class="text-gray-900">Instalar aplicativo</strong> ou <strong class="text-gray-900">Adicionar à tela inicial</strong>
+            ${t('pwa_android_step2_html')}
           </div>
         </div>
 
         <div class="flex items-center gap-3 p-2 bg-white rounded-xl shadow-2xs border border-gray-100">
           <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">3</div>
           <div class="flex-1 text-gray-700">
-            Abra o ícone criado para estudar em tela cheia como webapp!
+            ${t('pwa_open_created_icon')}
           </div>
         </div>
       </div>
 
       <button id="pwa-android-modal-close" class="m3-btn-expressive m3-btn-filled w-full py-3 px-4 text-xs font-bold rounded-xl shadow-xs cursor-pointer">
-        Entendi
+        ${t('got_it_btn')}
       </button>
     </div>
   `;
@@ -315,16 +317,16 @@ export function initPwaInstallBanner() {
           <span class="material-symbols-rounded text-xl">install_mobile</span>
         </div>
         <p class="text-xs font-semibold text-gray-800 leading-tight line-clamp-2">
-          Instale o app para uma melhor experiência
+          ${t('pwa_install_better_experience')}
         </p>
       </div>
 
       <div class="flex items-center gap-1.5 flex-shrink-0">
         <button id="pwa-install-action-btn" class="m3-btn-expressive m3-btn-filled py-1.5 px-3 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-xs cursor-pointer flex items-center gap-1 transition">
           <span class="material-symbols-rounded text-base">download</span>
-          <span>Instalar</span>
+          <span>${t('install_btn')}</span>
         </button>
-        <button id="pwa-install-dismiss-btn" class="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer" title="Fechar aviso">
+        <button id="pwa-install-dismiss-btn" class="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer" title="${t('dismiss_notice_title')}">
           <span class="material-symbols-rounded text-lg">close</span>
         </button>
       </div>

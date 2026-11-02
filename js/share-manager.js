@@ -7,6 +7,7 @@
 import { db, doc, getDoc, setDoc, updateDoc, onSnapshot } from './firebase-client.js';
 import { openDeckInSlots, fixSlot, deleteSlot, getLocalSlots, saveLocalSlots, promptSlotSelectionForReplacement } from './slot-manager.js';
 import { ROUTES, generateSecureId, escapeHtml } from './utils.js';
+import { t } from './i18n.js';
 
 const DELETED_NOTICE_KEY = 'flashcards_deleted_deck_notice';
 let sharedSyncTimeouts = {};
@@ -475,7 +476,7 @@ export function subscribeToAllSharedSlots() {
 }
 
 function handleDeletedDeckRedirect() {
-  sessionStorage.setItem(DELETED_NOTICE_KEY, 'Este baralho compartilhado foi apagado pelo proprietário.');
+  sessionStorage.setItem(DELETED_NOTICE_KEY, t('shared_deck_deleted'));
   const cleanUrl = window.location.pathname;
   window.history.replaceState({}, document.title, cleanUrl);
 

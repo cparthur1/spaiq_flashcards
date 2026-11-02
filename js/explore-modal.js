@@ -362,7 +362,7 @@ function injectModalHtml() {
 
         <div class="mb-5">
           <span class="text-3xl font-extrabold text-[var(--md-sys-color-primary)]">R$ 4,99</span>
-          <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]">/ mês</span>
+          <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="per_month">${t('per_month')}</span>
         </div>
 
         <!-- Checkout View -->
@@ -377,8 +377,8 @@ function injectModalHtml() {
           </button>
         </div>
 
-        <button id="close-pro-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto">
-          Voltar
+        <button id="close-pro-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto" data-i18n="back">
+          ${t('back')}
         </button>
       </div>
     </div>
@@ -420,15 +420,15 @@ function injectModalHtml() {
               <span data-i18n="prefer_pro_plan">${t('prefer_pro_plan')}</span>
             </p>
           </div>
-          <button type="button" id="switch-to-pro-from-extra-btn" class="w-full py-2.5 px-4 rounded-2xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
+          <button type="button" id="switch-to-pro-from-extra-btn" class="w-full py-2.5 px-4 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs border border-purple-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
             <span class="material-symbols-rounded text-base text-purple-600">workspace_premium</span>
-            <span>Flashcards Pro (R$ 4,99 / mês)</span>
+            <span data-i18n="flashcards_pro_monthly_btn">${t('flashcards_pro_monthly_btn')}</span>
           </button>
           <div id="extra-deck-google-login-wrapper"></div>
         </div>
 
-        <button id="close-extra-deck-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto cursor-pointer">
-          Cancelar
+        <button id="close-extra-deck-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto cursor-pointer" data-i18n="cancel">
+          ${t('cancel')}
         </button>
       </div>
     </div>
@@ -571,7 +571,7 @@ function attachModalEventListeners() {
       renderNotebookSlot();
       alert(t('notebook_backup_imported_success', { count: importedCount }));
     } catch (err) {
-      alert(t('error_importing_notebook_backup', { error: err.message || 'Arquivo corrompido' }));
+      alert(t('error_importing_notebook_backup', { error: err.message || t('invalid_format') }));
     } finally {
       if (hiddenNotebookInput) hiddenNotebookInput.value = '';
     }
@@ -727,7 +727,7 @@ export function renderProModalContent() {
         <span>${t('already_pro_plan', { status: lifetime ? t('pro_lifetime_badge') : t('pro_active_badge') })}</span>
       </div>
       <button id="pro-dismiss-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 mt-3 font-bold text-xs bg-green-600 hover:bg-green-700 text-white shadow">
-        Continuar Estudando
+        ${t('continue_studying')}
       </button>
     `;
     document.getElementById('pro-dismiss-btn')?.addEventListener('click', closeProModal);
@@ -744,7 +744,7 @@ export function renderProModalContent() {
           <img src="${googleLogoSrc}" alt="Google" class="w-4 h-4 flex-shrink-0 brightness-0 invert" style="filter: brightness(0) invert(1);">
           <span data-i18n="login_with_google">${t('login_with_google')}</span>
         </button>
-        <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">Faça login com sua conta Google para assinar o plano Pro.</p>
+        <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]">${t('login_google_to_subscribe_pro')}</p>
       </div>
     `;
 
@@ -868,14 +868,15 @@ async function mountExtraDeckEmbeddedForm() {
     console.error('[Stripe Extra Deck Form Error]:', err);
     if (loadingEl) {
       loadingEl.classList.remove('hidden');
+      const safeErrorMsg = escapeHtml(err && err.message ? err.message : t('checkout_init_error'));
       loadingEl.innerHTML = `
         <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-left space-y-1">
           <div class="flex items-center gap-1.5 text-xs font-bold text-amber-900">
             <span class="material-symbols-rounded text-base text-amber-600">info</span>
-            <span>Erro ao carregar checkout</span>
+            <span>${t('checkout_load_error_title')}</span>
           </div>
           <p class="text-[11px] text-amber-800 leading-tight">
-            ${err.message || t('checkout_init_error')}
+            ${safeErrorMsg}
           </p>
         </div>
       `;
@@ -910,7 +911,7 @@ export function renderExtraDeckModalContent() {
   if (loginWrapper) {
     if (!pro && !currentUser) {
       loginWrapper.innerHTML = `
-        <button type="button" id="extra-google-login-btn" class="w-full py-2.5 px-4 rounded-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] hover:bg-[var(--md-sys-color-surface-container-high,#f1f5f9)] text-[var(--md-sys-color-on-surface,#0f172a)] dark:text-white font-semibold text-xs flex items-center justify-center gap-2.5 shadow-2xs transition-colors cursor-pointer bg-white dark:bg-gray-800">
+        <button type="button" id="extra-google-login-btn" class="w-full py-2.5 px-4 rounded-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] hover:bg-[var(--md-sys-color-surface-container-high,#f1f5f9)] text-[var(--md-sys-color-on-surface,#0f172a)] font-semibold text-xs flex items-center justify-center gap-2.5 shadow-2xs transition-colors cursor-pointer bg-white">
           <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
           <span data-i18n="login_with_google">${t('login_with_google')}</span>
         </button>
@@ -951,9 +952,14 @@ export function renderExtraDeckModalContent() {
         const returnUrl = window.location.href;
         const res = await createExtraDeckCheckoutSession(returnUrl);
         if (res && res.url) {
-          window.location.href = res.url;
+          const parsedCheckoutUrl = new URL(res.url);
+          if (parsedCheckoutUrl.protocol === 'https:' && (parsedCheckoutUrl.hostname === 'checkout.stripe.com' || parsedCheckoutUrl.hostname.endsWith('.stripe.com'))) {
+            window.location.href = parsedCheckoutUrl.href;
+          } else {
+            throw new Error(t('checkout_init_error'));
+          }
         } else {
-          throw new Error('URL de checkout não recebida do Stripe.');
+          throw new Error(t('checkout_init_error'));
         }
       } catch (err) {
         console.error('[Stripe Checkout Error]:', err);

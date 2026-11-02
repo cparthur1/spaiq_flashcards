@@ -10,6 +10,34 @@
 import Stripe from 'stripe';
 import { getServiceAccount, updateUserDocument } from './firestore.js';
 
+const ALLOWED_RETURN_ORIGINS = new Set([
+  'https://flashcards.camblu.org',
+  'http://localhost:8000',
+  'http://127.0.0.1:8000',
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+  'http://localhost:3000',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500'
+]);
+
+export function sanitizeReturnUrl(rawUrl, preserveQuery = false) {
+  const fallback = 'https://flashcards.camblu.org';
+  if (!rawUrl || typeof rawUrl !== 'string') return fallback;
+  try {
+    const parsed = new URL(rawUrl);
+    if (!ALLOWED_RETURN_ORIGINS.has(parsed.origin)) {
+      return fallback;
+    }
+    if (!preserveQuery) {
+      return `${parsed.origin}${parsed.pathname}`;
+    }
+    return parsed.href;
+  } catch {
+    return fallback;
+  }
+}
+
 export function getStripeClient(env) {
   if (!env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY não configurada no servidor.');
@@ -23,6 +51,7 @@ export function getStripeClient(env) {
 export async function createSubscription({ env, user, returnUrl }) {
   const stripe = getStripeClient(env);
   const mode = "subscription";
+  const safeReturnUrl = sanitizeReturnUrl(returnUrl, true);
 
   const sessionParams = {
     ui_mode: "form",
@@ -33,7 +62,7 @@ export async function createSubscription({ env, user, returnUrl }) {
     submit_type: "auto",
     saved_payment_method_options: { payment_method_save: "enabled" },
     integration_identifier: "custom_embedded_web_0001",
-    return_url: returnUrl,
+    return_url: safeReturnUrl,
     line_items: [
       {
         price: env.STRIPE_PRICE_ID || "price_1UWEb0Rynl9tIFFYF2cvZ3RB",
@@ -118,8 +147,7 @@ export async function createExtraGenerationPayment({ env, user, isPro, returnUrl
   const nonProId = env.STRIPE_EXTRA_PRICE_ID_NON_PRO || env.STRIPE_PRICE_NON_PRO || "prod_VYSOFAreE9zDHt";
   const lineItem = resolveStripeLineItem(isPro ? proId : nonProId, isPro);
 
-  const rawBase = (returnUrl && typeof returnUrl === 'string') ? returnUrl : 'https://flashcards.camblu.org';
-  const cleanBase = rawBase.split('?')[0];
+  const cleanBase = sanitizeReturnUrl(returnUrl, false);
   const sep = cleanBase.includes('?') ? '&' : '?';
 
   const sessionParams = {

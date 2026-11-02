@@ -138,7 +138,7 @@ function generateQR(stateString) {
 async function openScanner() {
     // Check for Secure Context (HTTPS)
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        alert("O acesso à câmera é bloqueado em conexões não-seguras (HTTP).\n\nUse o app de câmera nativo do seu celular ou acesse via HTTPS.");
+        alert(t('camera_blocked_http_alert'));
         return;
     }
 

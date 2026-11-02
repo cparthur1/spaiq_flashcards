@@ -1,3 +1,21 @@
+CHANGELOG: COMPREHENSIVE I18N AUDIT, LOCALIZATION & CODEQL SECURITY FIXES (v15.16)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Full Localization & Language Key Parity (`js/i18n.js`):
+   - Added 152 missing and newly bound translation keys across both `TRANSLATIONS['pt-BR']` and `TRANSLATIONS['en-US']` in `js/i18n.js`, achieving 100% key parity (1,271 keys per locale) while strictly supporting only `pt-BR` and `en-US`.
+   - Bound all previously untranslated UI strings across `js/explore-modal.js`, `js/index.js`, `js/game.js`, `js/generate.js`, `js/stats.js`, `js/bulk-add.js`, `js/share-manager.js`, `js/transfer.js`, `js/engine/effects.js`, `js/engine/notebook-scheduler.js`, `js/engine/pro-unlock-celebration.js`, `js/engine/pwa-install.js`, and `js/engine/tutor.js` to `t(...)` calls.
+   - Replaced all Streak Freeze Unicode emojis in `js/stats.js` with Material Symbols (`ac_unit`).
+2. GitHub CodeQL Security Fixes:
+   - Remediated `js/xss-through-exception` in `js/explore-modal.js` by escaping `err.message` via `escapeHtml` before rendering into `loadingEl.innerHTML`.
+   - Remediated `js/client-side-unvalidated-url-redirection` in `js/explore-modal.js` by validating `res.url` against `https:` and `checkout.stripe.com` / `.stripe.com` before assigning `window.location.href`.
+   - Remediated `js/xss-through-dom` in `js/slot-manager.js` (`promptSlotSelectionForReplacement`) by escaping `newDeckTitle`, `titleText`, and `descText` prior to `modal.innerHTML` interpolation, and hardened `applyTranslations` for `[data-i18n-html]` in `js/i18n.js` with `DOMPurify.sanitize`.
+   - Remediated server-side unvalidated redirect URL in `worker/src/stripe.js` by introducing `sanitizeReturnUrl` to validate `returnUrl` against a strict allowlist of trusted origins.
+3. Service Worker:
+   - Bumped `CACHE_NAME` to `flashcards-v15.16` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: GOOGLE G LOGO CONTRAST FILTER ON BLUE BUTTONS (v15.15)
 Date: 2026-11-02
 

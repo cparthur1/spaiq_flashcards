@@ -10,6 +10,7 @@
 import { secureRandom, stripHtml } from '../utils.js';
 import { isLeechCard } from './scheduler.js';
 import { debouncedSyncSlotsToCloud } from '../slot-manager.js';
+import { t } from '../i18n.js';
 
 const DAILY_STREAK_KEY = 'flashcards_daily_streak';
 const MAX_FREEZES = 2;
@@ -634,7 +635,7 @@ export function getCardMemoryStage(card, todayStr = getTodayDateString()) {
 
     if (!card.lastReviewedDate) {
         return {
-            label: 'Card Novo',
+            label: t('new_card_stage'),
             colorClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200/80',
             isDue: true
         };
@@ -645,7 +646,7 @@ export function getCardMemoryStage(card, todayStr = getTodayDateString()) {
 
     if (isDue) {
         return {
-            label: 'Revisão Vencida',
+            label: t('overdue_review'),
             colorClass: 'bg-amber-50 text-amber-700 border border-amber-200/80',
             isDue: true
         };
@@ -653,14 +654,14 @@ export function getCardMemoryStage(card, todayStr = getTodayDateString()) {
 
     if (interval >= 14) {
         return {
-            label: `Memória Fixada (${interval}d)`,
+            label: t('memory_fixed_days', { days: interval }),
             colorClass: 'bg-purple-50 text-purple-700 border border-purple-200/80',
             isDue: false
         };
     }
 
     return {
-        label: `Intervalo: ${interval}d`,
+        label: t('interval_days_stage', { days: interval }),
         colorClass: 'bg-blue-50 text-blue-700 border border-blue-200/80',
         isDue: false
     };

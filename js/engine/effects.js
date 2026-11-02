@@ -6,6 +6,7 @@
  */
 
 import { debouncedSyncSlotsToCloud } from '../slot-manager.js';
+import { t } from '../i18n.js';
 
 // --- HAPTIC FEEDBACK (VIBRATION API) ---
 const HAPTIC_STORAGE_KEY = 'flashcardsHapticEnabled';
@@ -66,26 +67,26 @@ export function updateHapticUI() {
         if (!hasVibrationSupport) {
             sw.disabled = true;
             sw.selected = false;
-            sw.title = 'Vibração indisponível neste dispositivo';
+            sw.title = t('vibration_unavailable_device');
         } else {
             sw.disabled = false;
             sw.selected = enabled;
-            sw.title = enabled ? 'Vibração ativada' : 'Vibração desativada';
+            sw.title = enabled ? t('vibration_enabled') : t('vibration_disabled');
         }
     });
 
     if (hapticStatusBadge) {
         if (!hasVibrationSupport) {
-            hapticStatusBadge.textContent = 'Indisponível';
+            hapticStatusBadge.textContent = t('unavailable_status');
             hapticStatusBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
             return;
         }
 
         if (enabled) {
-            hapticStatusBadge.textContent = 'Ativa';
+            hapticStatusBadge.textContent = t('active_status_fem');
             hapticStatusBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
         } else {
-            hapticStatusBadge.textContent = 'Desativada';
+            hapticStatusBadge.textContent = t('disabled_status_fem');
             hapticStatusBadge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
         }
     }
@@ -195,7 +196,7 @@ export function updateSoundUI() {
     const soundSwitch = document.getElementById('setting-sound-switch');
     if (soundSwitch) {
         soundSwitch.selected = isSoundEnabled();
-        soundSwitch.title = isSoundEnabled() ? 'Efeitos sonoros ativados' : 'Efeitos sonoros desativados';
+        soundSwitch.title = isSoundEnabled() ? t('sound_effects_enabled_title') : t('sound_effects_disabled_title');
     }
 }
 
@@ -227,7 +228,7 @@ export function updateAnimationsUI() {
     const animSwitch = document.getElementById('setting-animations-switch');
     if (animSwitch) {
         animSwitch.selected = isAnimationsEnabled();
-        animSwitch.title = isAnimationsEnabled() ? 'Animações ativadas' : 'Animações reduzidas';
+        animSwitch.title = isAnimationsEnabled() ? t('animations_enabled') : t('animations_reduced');
     }
 }
 

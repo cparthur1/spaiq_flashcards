@@ -1356,8 +1356,8 @@ function loadQuestion() {
         const separator = document.createElement('div');
         separator.className = 'chat-separator';
         separator.innerHTML = `
-            <img src="../assets/img/wavy.svg" alt="separador">
-            <span class="chat-question-label">Nova Questão</span>
+            <img src="../assets/img/wavy.svg" alt="">
+            <span class="chat-question-label">${t('new_question_divider')}</span>
         `;
         chatMessages.appendChild(separator);
 
@@ -1405,7 +1405,7 @@ function renderDynamicMcOptions(rawOptions) {
         const keyBadge = document.createElement('span');
         keyBadge.className = "mc-key-badge";
         keyBadge.textContent = String(index + 1);
-        keyBadge.title = `Tecla ${index + 1}`;
+        keyBadge.title = t('key_shortcut_title', { key: index + 1 });
         btn.appendChild(keyBadge);
 
         btn.onclick = () => handleMCSubmit(btn);
@@ -1629,7 +1629,7 @@ function resetUI() {
         inp.value = ''; inp.disabled = false;
         inp.classList.remove('animate-pulse', 'border-red-500');
     });
-    answerInput.placeholder = 'Digite sua resposta aqui...';
+    answerInput.placeholder = t('type_answer_placeholder');
 
     const fillInputs = questionCard.querySelectorAll('.fill-blank-input');
     fillInputs.forEach(inp => {
@@ -2184,10 +2184,10 @@ function updateFeedbackText() {
         if (feedbackElem) {
             feedbackElem.replaceChildren();
             if (currentQuestion.type === 'open_double') {
-                const label1 = currentQuestion.placeholder1 || 'Resposta 1';
-                const label2 = currentQuestion.placeholder2 || 'Resposta 2';
-                const a1 = (currentQuestion.answer || '').replace('/', ' ou ');
-                const a2 = (currentQuestion.answer2 || '').replace('/', ' ou ');
+                const label1 = currentQuestion.placeholder1 || t('answer_1_label');
+                const label2 = currentQuestion.placeholder2 || t('answer_2_label');
+                const a1 = (currentQuestion.answer || '').replace('/', ' / ');
+                const a2 = (currentQuestion.answer2 || '').replace('/', ' / ');
 
                 const span1 = document.createElement('span');
                 span1.className = 'text-green-500 font-semibold mt-2 block';
@@ -2204,14 +2204,14 @@ function updateFeedbackText() {
             } else if (currentQuestion.type === 'anki') {
                 const span = document.createElement('span');
                 span.className = 'text-indigo-500 font-semibold mt-2 block';
-                span.textContent = `Resposta: ${currentQuestion.answer || ''}`;
+                span.textContent = `${t('answer_prefix')}: ${currentQuestion.answer || ''}`;
                 feedbackElem.append(span);
                 feedbackElem.classList.remove('hidden');
             } else {
-                const a1 = (currentQuestion.answer || '').replace('/', ' ou ');
+                const a1 = (currentQuestion.answer || '').replace('/', ' / ');
                 const span = document.createElement('span');
                 span.className = 'text-green-500 font-semibold mt-2 block';
-                span.textContent = `Resposta: ${a1}`;
+                span.textContent = `${t('answer_prefix')}: ${a1}`;
                 feedbackElem.append(span);
                 feedbackElem.classList.remove('hidden');
             }
@@ -3393,7 +3393,7 @@ function hideHighlightPopup() {
     closeHighlightPalette(true);
     if (hlTriggerBtn) {
         hlTriggerBtn.classList.remove('is-marked');
-        hlTriggerBtn.title = "Marca-texto (1-4)";
+        hlTriggerBtn.title = t('highlighter_shortcut_title');
     }
     textHighlightPopup.classList.add('hidden');
 }
@@ -3437,10 +3437,10 @@ function showHighlightPopup(range, isMarked) {
     if (hlTriggerBtn) {
         if (isMarked) {
             hlTriggerBtn.classList.add('is-marked');
-            hlTriggerBtn.title = "Tirar marcação";
+            hlTriggerBtn.title = t('remove_highlight_title');
         } else {
             hlTriggerBtn.classList.remove('is-marked');
-            hlTriggerBtn.title = "Marca-texto (1-4)";
+            hlTriggerBtn.title = t('highlighter_shortcut_title');
         }
     }
 
@@ -3867,7 +3867,7 @@ if (hlAiBtn) {
             if (hlAiTermTitle) {
                 hlAiTermTitle.dataset.term = selectedText;
                 const displayTerm = selectedText.length > 25 ? `${selectedText.slice(0, 22)}...` : selectedText;
-                hlAiTermTitle.textContent = `Ajuda: "${displayTerm}"`;
+                hlAiTermTitle.textContent = t('help_term_prefix', { term: displayTerm });
             }
             if (hlAiLoading) hlAiLoading.classList.remove('hidden');
             if (hlAiContent) {
@@ -4498,7 +4498,7 @@ saveDailyGoalBtn?.addEventListener('click', () => {
     if (goal > 0) {
         showNotificationPill(t('daily_goal_toast', { goal }), 'collection.svg');
     } else {
-        showNotificationPill("Estudando todos os cards vencidos", 'collection.svg');
+        showNotificationPill(t('studying_all_due_cards'), 'collection.svg');
     }
     checkAndCelebrateNotebookDailyGoal(false);
 });
@@ -4522,11 +4522,11 @@ if (aiToggleBtn) {
         if (nextState) {
             initializeAi();
             initBackgroundCategorization();
-            showNotificationPill("Recursos de IA ativados", "enabled_ai.svg");
+            showNotificationPill(t('ai_enabled_toast'), "enabled_ai.svg");
         } else {
             disableTutor();
             updateAiUI();
-            showNotificationPill("Recursos de IA desativados", "config_ai.svg");
+            showNotificationPill(t('ai_disabled_toast'), "config_ai.svg");
         }
     });
 }
@@ -4539,19 +4539,19 @@ if (aiSwitch) {
                 localStorage.setItem('flashcards_ai_enabled', 'true');
                 initializeAi();
                 initBackgroundCategorization();
-                showNotificationPill("Recursos de IA ativados", "enabled_ai.svg");
+                showNotificationPill(t('ai_enabled_toast'), "enabled_ai.svg");
                 debouncedSyncSlotsToCloud();
             } else {
                 aiSwitch.selected = false;
                 closeHamburgerMenu();
                 openProModal();
-                showNotificationPill("Recurso exclusivo do plano Flashcards Pro", "paywall.svg");
+                showNotificationPill(t('pro_exclusive_feature'), "paywall.svg");
             }
         } else {
             localStorage.setItem('flashcards_ai_enabled', 'false');
             disableTutor();
             updateAiUI();
-            showNotificationPill("Recursos de IA desativados", "config_ai.svg");
+            showNotificationPill(t('ai_disabled_toast'), "config_ai.svg");
             debouncedSyncSlotsToCloud();
         }
     });
@@ -4900,14 +4900,14 @@ if (settingAiSwitch) {
                 initBackgroundCategorization();
                 if (aiSwitch) aiSwitch.selected = true;
                 updateSettingsModalState();
-                showNotificationPill("Recursos de IA ativados", "enabled_ai.svg");
+                showNotificationPill(t('ai_enabled_toast'), "enabled_ai.svg");
                 debouncedSyncSlotsToCloud();
             } else {
                 settingAiSwitch.selected = false;
                 if (aiSwitch) aiSwitch.selected = false;
                 closeAppSettingsModal();
                 openProModal();
-                showNotificationPill("Recurso exclusivo do plano Flashcards Pro", "paywall.svg");
+                showNotificationPill(t('pro_exclusive_feature'), "paywall.svg");
             }
         } else {
             localStorage.setItem('flashcards_ai_enabled', 'false');
@@ -4915,7 +4915,7 @@ if (settingAiSwitch) {
             updateAiUI();
             if (aiSwitch) aiSwitch.selected = false;
             updateSettingsModalState();
-            showNotificationPill("Recursos de IA desativados", "config_ai.svg");
+            showNotificationPill(t('ai_disabled_toast'), "config_ai.svg");
             debouncedSyncSlotsToCloud();
         }
     });
@@ -5038,7 +5038,7 @@ settingNotifNoonSwitch?.addEventListener('change', async () => {
     if (nextVal) settings.enabled = true;
     saveNotificationSettings(settings);
     showNotificationPill(
-        nextVal ? `Lembrete do meio-dia ativado (${settings.noon.time})` : 'Lembrete do meio-dia desativado',
+        nextVal ? t('noon_reminder_enabled_toast', { time: settings.noon.time }) : t('noon_reminder_disabled_toast'),
         'notifications.svg'
     );
 });
@@ -5063,7 +5063,7 @@ settingNotifNightSwitch?.addEventListener('change', async () => {
     if (nextVal) settings.enabled = true;
     saveNotificationSettings(settings);
     showNotificationPill(
-        nextVal ? `Alerta noturno urgente ativado (${settings.night.time})` : 'Alerta noturno desativado',
+        nextVal ? t('night_alert_enabled_toast', { time: settings.night.time }) : t('night_alert_disabled_toast'),
         'fire.svg'
     );
 });
@@ -5101,7 +5101,7 @@ if (hapticSwitch) {
         const nextState = hapticSwitch.selected;
         setHapticEnabled(nextState);
         showNotificationPill(
-            nextState ? "Vibração tátil ativada" : "Vibração tátil desativada",
+            nextState ? t('haptic_enabled_toast') : t('haptic_disabled_toast'),
             "stats.svg"
         );
     });
@@ -5120,7 +5120,7 @@ if (hapticToggleBtn) {
         const nextState = !isHapticEnabled();
         setHapticEnabled(nextState);
         showNotificationPill(
-            nextState ? "Vibração tátil ativada" : "Vibração tátil desativada",
+            nextState ? t('haptic_enabled_toast') : t('haptic_disabled_toast'),
             "stats.svg"
         );
     });
@@ -5395,7 +5395,7 @@ function renderEditMcOptions(options = ["", "", "", ""], correctAnswer = "") {
         radio.value = String(i);
         if (isCorrect) radio.checked = true;
         radio.className = 'w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer';
-        radio.title = 'Marcar como correta';
+        radio.title = t('mark_as_correct_option');
 
         const textInput = document.createElement('input');
         textInput.type = 'text';
@@ -5405,7 +5405,7 @@ function renderEditMcOptions(options = ["", "", "", ""], correctAnswer = "") {
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'edit-mc-remove-opt-btn p-1 text-gray-400 hover:text-red-500 transition';
-        removeBtn.title = 'Remover alternativa';
+        removeBtn.title = t('remove_option_tooltip');
         removeBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
 
         removeBtn.addEventListener('click', () => {
@@ -5442,28 +5442,28 @@ if (editAddMcOptBtn) {
 editBtn.addEventListener('click', () => {
     editQuestionInput.value = currentQuestion.description || '';
 
-    const t = currentQuestion.type || 'open';
-    if (editAnswer1Group) editAnswer1Group.classList.toggle('hidden', t === 'anki' || t === 'multiple_choice' || t === 'fill');
-    if (editAnswer2Group) editAnswer2Group.classList.toggle('hidden', t !== 'open_double');
-    if (editAnkiAnswerGroup) editAnkiAnswerGroup.classList.toggle('hidden', t !== 'anki');
-    if (editMcOptionsGroup) editMcOptionsGroup.classList.toggle('hidden', t !== 'multiple_choice');
-    if (editAnsImageGroup) editAnsImageGroup.classList.toggle('hidden', t !== 'anki');
-    if (editFillAnswerGroup) editFillAnswerGroup.classList.toggle('hidden', t !== 'fill');
+    const cardType = currentQuestion.type || 'open';
+    if (editAnswer1Group) editAnswer1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill');
+    if (editAnswer2Group) editAnswer2Group.classList.toggle('hidden', cardType !== 'open_double');
+    if (editAnkiAnswerGroup) editAnkiAnswerGroup.classList.toggle('hidden', cardType !== 'anki');
+    if (editMcOptionsGroup) editMcOptionsGroup.classList.toggle('hidden', cardType !== 'multiple_choice');
+    if (editAnsImageGroup) editAnsImageGroup.classList.toggle('hidden', cardType !== 'anki');
+    if (editFillAnswerGroup) editFillAnswerGroup.classList.toggle('hidden', cardType !== 'fill');
 
-    if (t === 'open') {
-        if (editAnswer1Label) editAnswer1Label.textContent = "Resposta Principal";
+    if (cardType === 'open') {
+        if (editAnswer1Label) editAnswer1Label.textContent = t('main_answer_label');
         editAnswerInput.value = currentQuestion.answer || '';
-    } else if (t === 'open_double') {
-        if (editAnswer1Label) editAnswer1Label.textContent = "Resposta 1";
+    } else if (cardType === 'open_double') {
+        if (editAnswer1Label) editAnswer1Label.textContent = t('answer_1_label');
         editAnswerInput.value = currentQuestion.answer || '';
         editAnswer2Input.value = currentQuestion.answer2 || '';
-    } else if (t === 'fill') {
+    } else if (cardType === 'fill') {
         if (editFillAnswerInput) {
             editFillAnswerInput.value = currentQuestion.answer || (currentQuestion.answers || []).join('; ');
         }
-    } else if (t === 'anki') {
+    } else if (cardType === 'anki') {
         editAnkiAnswerInput.value = currentQuestion.answer || '';
-    } else if (t === 'multiple_choice') {
+    } else if (cardType === 'multiple_choice') {
         renderEditMcOptions(currentQuestion.options || ["", "", "", ""], currentQuestion.answer);
     }
 
@@ -5648,7 +5648,7 @@ function openDeckDropdown() {
             const totalCards = (examData && examData.questionsPool) ? examData.questionsPool.length : 0;
             const numDecks = (examData && examData.decks) ? examData.decks.length : 0;
             if (deckItemExamSub) {
-                deckItemExamSub.textContent = `${numDecks} baralhos • ${totalCards} cards`;
+                deckItemExamSub.textContent = `${numDecks} ${numDecks === 1 ? t('deck_unit_singular') : t('decks_unit')} • ${totalCards} ${totalCards === 1 ? t('card_unit_singular') : t('cards_unit')}`;
             }
         } else {
             deckItemExam.classList.add('hidden');
@@ -5703,7 +5703,7 @@ function renderExamDecksInDropdown(examData) {
             </label>
             <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                 <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">${cardCount}</span>
-                <button type="button" class="exam-deck-del-btn p-1 text-gray-400 hover:text-red-500 transition" title="Remover da mistura">
+                <button type="button" class="exam-deck-del-btn p-1 text-gray-400 hover:text-red-500 transition" title="${t('remove_from_mix_tooltip')}">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             </div>
@@ -5869,30 +5869,30 @@ function updateMenuButtonsForActiveMode() {
     const editorIcon = document.getElementById('go-to-editor-btn-icon');
 
     if (activeMode === 'notebook') {
-        if (exportTitle) exportTitle.textContent = "Salvar Backup";
-        if (exportDesc) exportDesc.textContent = "Exportar backup completo (.json)";
-        if (exportBtn) exportBtn.title = "Salvar Backup do Caderno";
+        if (exportTitle) exportTitle.textContent = t('save_backup_title');
+        if (exportDesc) exportDesc.textContent = t('save_backup_desc');
+        if (exportBtn) exportBtn.title = t('save_notebook_backup_tooltip');
 
         if (editorTitle) editorTitle.textContent = t('add_multiple_title');
         if (editorDesc) editorDesc.textContent = t('add_multiple_desc');
         if (editorIcon) {
             editorIcon.src = "../assets/img/bulk_add.svg";
-            editorIcon.alt = "Adicionar vários";
+            editorIcon.alt = t('add_multiple_title');
         }
-        if (goToEditorBtn) goToEditorBtn.title = "Adicionar múltiplos baralhos ao Caderno";
+        if (goToEditorBtn) goToEditorBtn.title = t('add_multiple_decks_notebook_tooltip');
         if (clearNotebookBtn) clearNotebookBtn.classList.remove('hidden');
     } else {
         if (exportTitle) exportTitle.textContent = t('save_deck_title');
         if (exportDesc) exportDesc.textContent = t('save_deck_desc');
-        if (exportBtn) exportBtn.title = "Baixar JSON Atualizado";
+        if (exportBtn) exportBtn.title = t('download_updated_json_tooltip');
 
         if (editorTitle) editorTitle.textContent = t('edit_deck_action_title');
-        if (editorDesc) editorDesc.textContent = "Abrir editor e gerador IA";
+        if (editorDesc) editorDesc.textContent = t('open_editor_ai_generator_desc');
         if (editorIcon) {
             editorIcon.src = "../assets/img/edit.svg";
-            editorIcon.alt = "Editar";
+            editorIcon.alt = t('edit');
         }
-        if (goToEditorBtn) goToEditorBtn.title = "Editar com Assistente de IA";
+        if (goToEditorBtn) goToEditorBtn.title = t('edit_with_ai_assistant_tooltip');
         if (clearNotebookBtn) clearNotebookBtn.classList.add('hidden');
     }
 }
@@ -5966,7 +5966,7 @@ function switchActiveMode(newMode) {
     loadQuestion();
 
     const pillIcon = newMode === 'notebook' ? "collection.svg" : (newMode === 'exam' ? "magic.svg" : "uploaded.svg");
-    showNotificationPill(`Estudando: ${deckTitle.textContent}`, pillIcon);
+    showNotificationPill(t('studying_deck_toast', { title: deckTitle.textContent }), pillIcon);
 }
 
 // Bind Bookmark & Dropdown Listeners
@@ -6302,7 +6302,7 @@ export function updateHamburgerUserUI(user) {
             menuAccountIcon.classList.remove('hidden');
         }
         if (menuAccountTitle) {
-            menuAccountTitle.textContent = 'Minha Conta';
+            menuAccountTitle.textContent = t('my_account');
         }
         if (menuAccountSubtitle) {
             menuAccountSubtitle.textContent = t('menu_sync_and_pro');

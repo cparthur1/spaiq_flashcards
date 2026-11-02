@@ -1720,7 +1720,7 @@ setTimeout(updateProPaywalledUI, 100);
 // 1.1 Crie agora — Escreva cada cartão direto no aplicativo
 cardMode11.addEventListener('click', () => {
     deckCards = [];
-    deckTitleDisplay.value = "Novo Baralho";
+    deckTitleDisplay.value = t('new_deck_default_title');
     openEditorView('creator');
 });
 
@@ -1728,7 +1728,7 @@ cardMode11.addEventListener('click', () => {
 cardMode12.addEventListener('click', () => {
     modal12Error.textContent = '';
     modal12File.value = '';
-    modal12FileName.textContent = 'Clique ou arraste o arquivo aqui';
+    modal12FileName.textContent = t('click_or_drag_file_here');
     modal12.classList.remove('hidden');
 });
 
@@ -1833,8 +1833,8 @@ async function executeAiGenerationFromMaterials(files, customInstructions = '', 
     deckCards = [];
     deckTitleDisplay.value = files[0].name.replace(/\.[^/.]+$/, "");
 
-    showGeneratingAnimation("Processando materiais enviados...");
-    addAiChatGeneratingBubble("O Gemini está analisando seus materiais para gerar os flashcards com nível universitário. Acompanhe a formulação ao vivo!");
+    showGeneratingAnimation(t('processing_uploaded_materials'));
+    addAiChatGeneratingBubble(t('gemini_analyzing_materials_bubble'));
 
     submitModal21Btn.disabled = true;
     modal21Spinner.classList.remove('hidden');
@@ -1864,7 +1864,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            updateGeneratingStatus(`Processando arquivo ${i + 1} de ${files.length}: ${file.name}...`);
+            updateGeneratingStatus(t('processing_file_progress', { current: i + 1, total: files.length, name: file.name }));
             const ext = getFileExtension(file.name);
             if (ext === 'pptx') {
                 const pptxText = await extractTextFromPPTX(file);
@@ -1897,7 +1897,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             parts.push(part);
         }
 
-        updateGeneratingStatus("Conectando ao Gemini e gerando os cartões...");
+        updateGeneratingStatus(t('connecting_gemini_generating'));
 
         let fullText = "";
         const seenSignatures = new Set();
@@ -2018,11 +2018,11 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             refreshUserProStatus().then(() => updateProPaywalledUI());
             finishGeneratingAnimation(true, deckCards.length);
             removeAiChatGeneratingBubble();
-            addChatMessage('model', `✓ Baralho gerado com sucesso! Criei ${deckCards.length} flashcards técnicos com base no material enviado. Quer que eu ajuste algo, adicione mais perguntas ou altere alguma alternativa?`);
+            addChatMessage('model', t('deck_generated_chat_msg', { count: deckCards.length }));
         } else {
             finishGeneratingAnimation(false, 0);
             removeAiChatGeneratingBubble();
-            addChatMessage('model', 'Não foi possível extrair flashcards a partir dos materiais fornecidos. Tente enviar outros arquivos ou descrever o conteúdo.');
+            addChatMessage('model', t('deck_generation_empty_chat_msg'));
             renderCardsList(true);
         }
 
@@ -2033,7 +2033,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
         console.error("Erro na geração 2.1:", err);
         finishGeneratingAnimation(false, 0);
         removeAiChatGeneratingBubble();
-        addChatMessage('error', `Erro durante a geração: ${err.message}`);
+        addChatMessage('error', t('generation_error_chat_msg', { error: err.message }));
         showGeminiDownModal(err.message, 'files');
     } finally {
         submitModal21Btn.disabled = false;
@@ -2078,7 +2078,7 @@ submitModal21Btn.addEventListener('click', async () => {
 cardMode22.addEventListener('click', () => {
     modal22Error.textContent = '';
     modal22File.value = '';
-    modal22FileName.textContent = 'Clique ou arraste o arquivo .txt ou Word';
+    modal22FileName.textContent = t('click_or_drag_txt_word');
     modal22.classList.remove('hidden');
 });
 
@@ -2124,13 +2124,13 @@ async function executeAiEnhanceFromDoc(file) {
 
         if (!hasPlaceholders) {
             geminiChatSession = { _history: [] };
-            addChatMessage('model', `✓ Documento importado com sucesso! ${deckCards.length} cartões foram carregados no baralho. Como posso ajudar a revisar ou enriquecer seus cards?`);
+            addChatMessage('model', t('doc_imported_chat_msg', { count: deckCards.length }));
             return;
         }
 
         // Fill placeholders with Gemini
-        showGeneratingAnimation("Aprimorando flashcards e preenchendo detalhes com IA...");
-        addAiChatGeneratingBubble("O Gemini está aprimorando seus flashcards e preenchendo as opções e rótulos...");
+        showGeneratingAnimation(t('enhancing_flashcards_status'));
+        addAiChatGeneratingBubble(t('gemini_enhancing_bubble'));
 
         const fillPrompt = `Aqui está uma lista de flashcards que precisam que você preencha os campos '[GEMINI]'.
 As perguntas ('description') de todos os tipos de cartões podem usar formatação Markdown e fórmulas LaTeX livremente.
@@ -2214,13 +2214,13 @@ ${JSON.stringify(localCards, null, 2)}`;
         refreshUserProStatus().then(() => updateProPaywalledUI());
         finishGeneratingAnimation(true, deckCards.length);
         removeAiChatGeneratingBubble();
-        addChatMessage('model', `✓ Documento aprimorado com sucesso! ${deckCards.length} cartões foram enriquecidos com opções e rótulos pelo Gemini.`);
+        addChatMessage('model', t('doc_enhanced_chat_msg', { count: deckCards.length }));
 
     } catch (err) {
         console.error("Erro na aprimoração 2.2:", err);
         finishGeneratingAnimation(false, 0);
         removeAiChatGeneratingBubble();
-        addChatMessage('error', `Erro ao aprimorar os cartões: ${err.message}`);
+        addChatMessage('error', t('enhance_error_chat_msg', { error: err.message }));
         showGeminiDownModal(err.message, 'txt', localCards);
     } finally {
         submitModal22Btn.disabled = false;
@@ -2539,32 +2539,32 @@ creatorCardType.addEventListener('change', () => {
     creatorTypeHint.textContent = getTypeHint(tVal);
 
     // Adjust visibility
-    creatorGroupOpen.classList.toggle('hidden', t !== 'open');
-    creatorGroupOpenDouble.classList.toggle('hidden', t !== 'open_double');
-    if (creatorGroupFill) creatorGroupFill.classList.toggle('hidden', t !== 'fill');
-    creatorGroupAnki.classList.toggle('hidden', t !== 'anki');
-    creatorGroupMc.classList.toggle('hidden', t !== 'multiple_choice');
+    creatorGroupOpen.classList.toggle('hidden', tVal !== 'open');
+    creatorGroupOpenDouble.classList.toggle('hidden', tVal !== 'open_double');
+    if (creatorGroupFill) creatorGroupFill.classList.toggle('hidden', tVal !== 'fill');
+    creatorGroupAnki.classList.toggle('hidden', tVal !== 'anki');
+    creatorGroupMc.classList.toggle('hidden', tVal !== 'multiple_choice');
 
     const qImgContainer = creatorQImgUrl?.parentElement?.parentElement;
     if (qImgContainer) {
-        qImgContainer.classList.toggle('hidden', t === 'divisor');
+        qImgContainer.classList.toggle('hidden', tVal === 'divisor');
     }
 
-    if (t === 'divisor') {
+    if (tVal === 'divisor') {
         creatorQuestionLabel.textContent = t('comment_text_label');
         creatorQuestion.placeholder = t('comment_text_ph');
-    } else if (t === 'fill') {
-        creatorQuestionLabel.textContent = "Frase com lacunas (use '_' para cada lacuna)";
+    } else if (tVal === 'fill') {
+        creatorQuestionLabel.textContent = t('fill_sentence_label');
         creatorQuestion.placeholder = t('fill_blank_example_ph');
-    } else if (t === 'anki') {
-        creatorQuestionLabel.textContent = "Pergunta / Conceito (Curto)";
-        creatorQuestion.placeholder = "Escreva a pergunta ou conceito...";
+    } else if (tVal === 'anki') {
+        creatorQuestionLabel.textContent = t('short_question_concept_label');
+        creatorQuestion.placeholder = t('question_placeholder');
     } else {
         creatorQuestionLabel.textContent = t('question_desc_label');
-        creatorQuestion.placeholder = "Escreva a pergunta ou conceito...";
+        creatorQuestion.placeholder = t('question_placeholder');
     }
 
-    if (t === 'multiple_choice' && creatorMcOptionsList.children.length === 0) {
+    if (tVal === 'multiple_choice' && creatorMcOptionsList.children.length === 0) {
         renderCreatorMcOptions(["", "", "", ""], 0);
     }
 });
@@ -2582,7 +2582,7 @@ function renderCreatorMcOptions(options = ["", "", "", ""], selectedIdx = 0) {
         radio.value = String(i);
         if (i === selectedIdx) radio.checked = true;
         radio.className = 'w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer';
-        radio.title = 'Marcar como alternativa correta';
+        radio.title = t('mark_as_correct_option');
 
         const textInput = document.createElement('input');
         textInput.type = 'text';
@@ -2593,7 +2593,7 @@ function renderCreatorMcOptions(options = ["", "", "", ""], selectedIdx = 0) {
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'creator-mc-remove-opt-btn p-1 text-gray-400 hover:text-red-500 transition';
-        removeBtn.title = 'Remover alternativa';
+        removeBtn.title = t('remove_option_tooltip');
         removeBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
 
         removeBtn.addEventListener('click', () => {
@@ -2727,8 +2727,8 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         }
         newCard.answer = a1;
         newCard.answer2 = a2;
-        newCard.placeholder1 = "Resposta 1";
-        newCard.placeholder2 = "Resposta 2";
+        newCard.placeholder1 = t('answer_1_label');
+        newCard.placeholder2 = t('answer_2_label');
     } else if (type === 'anki') {
         const ans = creatorAnsAnki.value.trim();
         if (!ans && !pendingCreatorAnsImage) {
@@ -2789,7 +2789,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         renderCreatorMcOptions(["", "", "", ""], 0);
     }
 
-    creatorFeedback.textContent = "Card adicionado com sucesso!";
+    creatorFeedback.textContent = t('card_added_success');
     creatorFeedback.classList.remove('hidden');
     setTimeout(() => creatorFeedback.classList.add('hidden'), 2000);
 });
@@ -2857,11 +2857,11 @@ function updateGeneratingProgress(count) {
     if (counterNum) counterNum.textContent = count;
     if (statusText) {
         if (count < 10) {
-            statusText.textContent = `Identificando conceitos-chave... (${count} cards formulados)`;
+            statusText.textContent = t('identifying_key_concepts_status', { count });
         } else if (count < 25) {
             statusText.textContent = t('gemini_deepening_status', { count });
         } else if (count < 50) {
-            statusText.textContent = `Construindo perguntas e alternativas... (${count} cards formulados)`;
+            statusText.textContent = t('building_questions_options_status', { count });
         } else {
             statusText.textContent = t('gemini_finalizing_status', { count });
         }
@@ -3071,8 +3071,8 @@ function renderCardsList(fullReRender = false, preserveScroll = true) {
             cardsList.innerHTML = `
                 <div class="text-center py-12 text-gray-400">
                     <svg class="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                    <p class="font-medium text-sm">Nenhum cartão no baralho ainda.</p>
-                    <p class="text-xs mt-1">Crie um novo cartão ao lado ou peça ao Assistente de IA.</p>
+                    <p class="font-medium text-sm">${t('no_cards_in_deck_yet')}</p>
+                    <p class="text-xs mt-1">${t('create_card_or_ask_ai_hint')}</p>
                 </div>
             `;
             return;
@@ -3168,7 +3168,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
     editBtn.type = "button";
     editBtn.className = "p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition";
     editBtn.title = t('edit_comment_title');
-    editBtn.innerHTML = '<img src="../assets/img/edit.svg" class="w-3.5 h-3.5" alt="Editar">';
+    editBtn.innerHTML = `<img src="../assets/img/edit.svg" class="w-3.5 h-3.5" alt="${t('edit')}">`;
     editBtn.onclick = (e) => {
         if (e) {
             e.preventDefault();
@@ -3177,7 +3177,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
         const currentScroll = cardsList ? cardsList.scrollTop : 0;
         const currentWindowY = window.scrollY || document.documentElement.scrollTop || 0;
         const currentText = divisor.text || divisor.description || '';
-        const newText = prompt('Editar texto do comentário:', currentText);
+        const newText = prompt(t('edit_comment_prompt'), currentText);
         if (newText !== null && newText.trim() !== '') {
             if (document.activeElement && typeof document.activeElement.blur === 'function') {
                 document.activeElement.blur();
@@ -3199,7 +3199,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
     delBtn.type = "button";
     delBtn.className = "p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition";
     delBtn.title = t('delete_comment_title');
-    delBtn.innerHTML = '<img src="../assets/img/delete.svg" class="w-3.5 h-3.5" alt="Excluir">';
+    delBtn.innerHTML = `<img src="../assets/img/delete.svg" class="w-3.5 h-3.5" alt="${t('delete')}">`;
     delBtn.onclick = (e) => {
         if (e) {
             e.preventDefault();
@@ -3261,7 +3261,7 @@ function createCardElement(card, index, withAnimation = true) {
     cardEl.appendChild(typeBadge);
 
     const descLabel = card.type === 'anki' ? `${t('front_label')}:` : (card.type === 'fill' ? `${t('phrase_label')}:` : `${t('question_label')}:`);
-    let descContent = card.description || '(Sem texto)';
+    let descContent = card.description || t('no_text_placeholder');
     if (card.type === 'anki') {
         descContent = `<div class="anki-markdown-content text-gray-800 mt-0.5">${renderMathAndMarkdown(descContent)}</div>`;
     } else if (card.type === 'fill') {
@@ -3339,7 +3339,7 @@ function createCardElement(card, index, withAnimation = true) {
     const editBtn = document.createElement('button');
     editBtn.type = "button";
     editBtn.className = "p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg";
-    editBtn.innerHTML = '<img src="../assets/img/edit.svg" class="w-4 h-4" alt="Editar">';
+    editBtn.innerHTML = `<img src="../assets/img/edit.svg" class="w-4 h-4" alt="${t('edit')}">`;
     editBtn.onclick = (e) => {
         if (e) {
             e.preventDefault();
@@ -3351,7 +3351,7 @@ function createCardElement(card, index, withAnimation = true) {
     const delBtn = document.createElement('button');
     delBtn.type = "button";
     delBtn.className = "p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg";
-    delBtn.innerHTML = '<img src="../assets/img/delete.svg" class="w-4 h-4" alt="Excluir">';
+    delBtn.innerHTML = `<img src="../assets/img/delete.svg" class="w-4 h-4" alt="${t('delete')}">`;
     delBtn.onclick = (e) => {
         if (e) {
             e.preventDefault();
@@ -3401,26 +3401,26 @@ function openInlineEditModal(index) {
     editCardDesc.value = card.description || '';
 
     // Show/hide groups based on type
-    const t = card.type || 'open';
-    editCardAns1Group.classList.toggle('hidden', t === 'anki' || t === 'multiple_choice' || t === 'fill');
-    editCardAns2Group.classList.toggle('hidden', t !== 'open_double');
-    if (editCardFillGroup) editCardFillGroup.classList.toggle('hidden', t !== 'fill');
-    editCardAnkiGroup.classList.toggle('hidden', t !== 'anki');
-    editCardMcGroup.classList.toggle('hidden', t !== 'multiple_choice');
-    inlineEditAnsImageGroup.classList.toggle('hidden', t !== 'anki');
+    const cardType = card.type || 'open';
+    editCardAns1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill');
+    editCardAns2Group.classList.toggle('hidden', cardType !== 'open_double');
+    if (editCardFillGroup) editCardFillGroup.classList.toggle('hidden', cardType !== 'fill');
+    editCardAnkiGroup.classList.toggle('hidden', cardType !== 'anki');
+    editCardMcGroup.classList.toggle('hidden', cardType !== 'multiple_choice');
+    inlineEditAnsImageGroup.classList.toggle('hidden', cardType !== 'anki');
 
-    if (t === 'open') {
-        editCardAns1Label.textContent = "Resposta Principal";
+    if (cardType === 'open') {
+        editCardAns1Label.textContent = t('main_answer_label');
         editCardAns1.value = card.answer || '';
-    } else if (t === 'open_double') {
-        editCardAns1Label.textContent = "Resposta 1";
+    } else if (cardType === 'open_double') {
+        editCardAns1Label.textContent = t('answer_1_label');
         editCardAns1.value = card.answer || '';
         editCardAns2.value = card.answer2 || '';
-    } else if (t === 'anki') {
+    } else if (cardType === 'anki') {
         editCardAnkiAnswer.value = card.answer || '';
-    } else if (t === 'multiple_choice') {
+    } else if (cardType === 'multiple_choice') {
         renderInlineEditMcOptions(card.options || ["", "", "", ""], card.answer);
-    } else if (t === 'fill') {
+    } else if (cardType === 'fill') {
         if (editCardFillAnswer) {
             const answers = Array.isArray(card.answers) && card.answers.length > 0 
                 ? card.answers.join('; ') 
@@ -3632,7 +3632,7 @@ function renderPromptQueue() {
         <div class="flex items-center justify-between text-[11px] font-semibold text-gray-500 select-none px-1 mb-0.5">
             <span class="flex items-center gap-1.5">
                 <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                Fila de Prompts (${promptQueue.length})
+                ${t('prompt_queue_label', { count: promptQueue.length })}
             </span>
         </div>
         <div class="flex flex-col gap-1.5">
@@ -3641,7 +3641,7 @@ function renderPromptQueue() {
                 return `
                     <div class="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-white border ${isExecuting ? 'border-purple-300 shadow-xs ring-1 ring-purple-100' : 'border-gray-200'} text-xs text-gray-700 transition">
                         <span class="truncate flex-1 font-medium text-gray-800" title="${escapeHtml(item.text)}">${escapeHtml(item.text)}</span>
-                        <div class="flex items-center justify-center w-5 h-5 flex-shrink-0" title="${isExecuting ? 'Executando...' : 'Aguardando na fila'}">
+                        <div class="flex items-center justify-center w-5 h-5 flex-shrink-0" title="${isExecuting ? t('executing_status') : t('waiting_in_queue_status')}">
                             ${isExecuting 
                                 ? '<md-circular-progress four-color indeterminate style="--md-circular-progress-size: 16px; width: 16px; height: 16px;"></md-circular-progress>' 
                                 : '<span class="w-3 h-3 rounded-full bg-gray-400 inline-block flex-shrink-0"></span>'}
@@ -3819,7 +3819,7 @@ async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
         geminiChatSession._history = history;
 
         const textPart = candidate?.content?.parts?.find(p => p.text)?.text || '';
-        return textPart || 'Ação realizada com sucesso.';
+        return textPart || t('action_completed_success');
     } catch (turnErr) {
         if (geminiChatSession) {
             geminiChatSession._history = historyBeforeTurn;
@@ -3868,7 +3868,7 @@ async function processPromptQueue() {
 
         if (!isUserPro()) {
             hideChatTypingIndicator();
-            addChatMessage('model', 'Por favor, assine o plano Pro para usar o assistente.');
+            addChatMessage('model', t('subscribe_pro_to_use_assistant'));
             openProModal();
             promptQueue.shift();
             renderPromptQueue();
@@ -3880,13 +3880,13 @@ async function processPromptQueue() {
             hideChatTypingIndicator();
             // Log on chat the prompt and agent's response
             addChatMessage('user', item.text);
-            addChatMessage('model', responseText || 'Ação realizada com sucesso.');
+            addChatMessage('model', responseText || t('action_completed_success'));
         } catch (err) {
             console.error('[AI Agent Queue] Erro ao processar prompt:', err);
             hideChatTypingIndicator();
             // Log on chat the prompt and error response
             addChatMessage('user', item.text);
-            addChatMessage('error', `Erro ao processar: ${err.message || err}`);
+            addChatMessage('error', t('error_processing_prompt', { error: err.message || err }));
         }
 
         promptQueue.shift();
@@ -3902,7 +3902,7 @@ chatSendBtn.addEventListener('click', () => {
     if (!text) return;
 
     if (!isUserPro()) {
-        addChatMessage('model', 'O assistente de IA é exclusivo para assinantes Flashcards Pro.');
+        addChatMessage('model', t('ai_assistant_pro_exclusive'));
         openProModal();
         return;
     }
@@ -3936,7 +3936,7 @@ if (shareDeckBtn) {
             return;
         }
         syncCurrentDeckToSlotAndCloud();
-        const title = deckTitleDisplay.value.trim() || 'Meu Baralho';
+        const title = deckTitleDisplay.value.trim() || t('my_deck');
         const playableCards = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
         const gameState = {
             questionsPool: playableCards,

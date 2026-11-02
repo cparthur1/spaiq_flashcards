@@ -9,6 +9,7 @@ import { renderMathAndMarkdown, stripHtml, escapeHtml } from '../utils.js';
 import { isUserPro } from '../explore-modal.js';
 import { getCurrentUserToken } from '../firebase-client.js';
 import { BACKEND_URL } from '../backend-api.js';
+import { t } from '../i18n.js';
 
 let lastUserAnswerForChat = "";
 let currentBackendChatHistory = [];
@@ -39,20 +40,20 @@ export function updateTutorUI(elements = {}) {
     if (isAiEnabled) {
         if (menuAiIcon) menuAiIcon.src = '../assets/img/enabled_ai.svg';
         if (menuAiStatusBadge) {
-            menuAiStatusBadge.textContent = 'Ativada';
+            menuAiStatusBadge.textContent = t('active_status_fem');
             menuAiStatusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
         }
-        if (menuAiSubtitle) menuAiSubtitle.textContent = 'Verificação inteligente ativa';
+        if (menuAiSubtitle) menuAiSubtitle.textContent = t('smart_verification_active');
         if (aiIconOff) aiIconOff.classList.add('hidden');
         if (aiIconOn) aiIconOn.classList.remove('hidden');
         if (aiSwitch) aiSwitch.selected = true;
     } else {
         if (menuAiIcon) menuAiIcon.src = '../assets/img/config_ai.svg';
         if (menuAiStatusBadge) {
-            menuAiStatusBadge.textContent = 'Desativada';
+            menuAiStatusBadge.textContent = t('disabled_status_fem');
             menuAiStatusBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
         }
-        if (menuAiSubtitle) menuAiSubtitle.textContent = 'Clique para configurar';
+        if (menuAiSubtitle) menuAiSubtitle.textContent = t('click_to_configure');
         if (aiIconOff) aiIconOff.classList.remove('hidden');
         if (aiIconOn) aiIconOn.classList.add('hidden');
         if (aiSwitch) aiSwitch.selected = false;
@@ -222,7 +223,7 @@ export async function sendTutorChatMessage({ msg, currentQuestion, chatInput, ch
         const token = await getCurrentUserToken().catch(() => null);
         if (!token) {
             hideTyping(tid);
-            addMsg('ai', "Por favor, faça login com sua conta Pro para usar o Tutor.", messagesContainer);
+            addMsg('ai', t('tutor_login_pro_required'), messagesContainer);
             return;
         }
 
@@ -247,7 +248,7 @@ export async function sendTutorChatMessage({ msg, currentQuestion, chatInput, ch
             hideTyping(tid);
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                addMsg('ai', errData.message || "Erro ao conectar com o Tutor IA.", messagesContainer);
+                addMsg('ai', errData.message || t('tutor_connection_error'), messagesContainer);
                 return;
             }
 
@@ -258,7 +259,7 @@ export async function sendTutorChatMessage({ msg, currentQuestion, chatInput, ch
         } catch (e) {
             console.error("[Tutor] Erro no chat:", e);
             hideTyping(tid);
-            addMsg('ai', "Erro ao conectar com a IA.", messagesContainer);
+            addMsg('ai', t('tutor_connection_error'), messagesContainer);
         }
     }
 

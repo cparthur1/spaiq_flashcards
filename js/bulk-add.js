@@ -878,7 +878,7 @@ function createRightCardElement(card) {
     editBtn.type = "button";
     editBtn.className = "p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-600 transition flex items-center justify-center shadow-2xs";
     editBtn.title = t('edit_this_card');
-    editBtn.innerHTML = `<img src="../assets/img/edit.svg" class="w-4 h-4 pointer-events-none" alt="Editar">`;
+    editBtn.innerHTML = `<img src="../assets/img/edit.svg" class="w-4 h-4 pointer-events-none" alt="${t('edit')}">`;
     editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         openEditModal(card.id);
@@ -889,7 +889,7 @@ function createRightCardElement(card) {
     delBtn.type = "button";
     delBtn.className = "p-1.5 rounded-xl bg-red-50 hover:bg-red-100 active:scale-95 text-red-600 transition flex items-center justify-center shadow-2xs";
     delBtn.title = t('remove_from_notebook');
-    delBtn.innerHTML = `<img src="../assets/img/delete.svg" class="w-4 h-4 pointer-events-none" alt="Excluir">`;
+    delBtn.innerHTML = `<img src="../assets/img/delete.svg" class="w-4 h-4 pointer-events-none" alt="${t('delete')}">`;
     delBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         handleDeleteCardFromNotebook(card.id, cardEl);
@@ -1406,7 +1406,7 @@ function createModalCardElement(card, idx) {
     // Front (Question)
     const frontEl = document.createElement('div');
     frontEl.className = "text-xs sm:text-sm text-gray-900 leading-snug card-desc-view";
-    frontEl.innerHTML = `<strong class="text-gray-900 font-semibold">${t('front_label')}:</strong> <div class="text-gray-800 mt-0.5">${renderMathAndMarkdown(card.description || '(Sem texto)')}</div>`;
+    frontEl.innerHTML = `<strong class="text-gray-900 font-semibold">${t('front_label')}:</strong> <div class="text-gray-800 mt-0.5">${renderMathAndMarkdown(card.description || t('no_text_placeholder'))}</div>`;
     cardEl.appendChild(frontEl);
 
     // Back (Answer)

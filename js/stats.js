@@ -474,7 +474,7 @@ function renderPerformanceByType(sess) {
     if (!hasAnyData) {
         byTypeContainer.innerHTML = `
             <p class="text-xs text-gray-400 italic py-2">
-                Nenhum dado por formato registrado nesta sessão ainda.
+                ${t('no_format_data_session')}
             </p>
         `;
     }
@@ -804,20 +804,20 @@ function generatePedagogicalInsight(progressPct, accuracyPct, avgSeconds, anki, 
 
 // ==================== SEÇÃO DE INTELIGÊNCIA ARTIFICIAL ====================
 
-function renderTopicItem(t, idx, topicsList = []) {
-    const isAnswered = t.answeredCount > 0;
-    const acc = t.accuracy;
+function renderTopicItem(topicObj, idx, topicsList = []) {
+    const isAnswered = topicObj.answeredCount > 0;
+    const acc = topicObj.accuracy;
 
     let badgeClass = 'bg-gray-100 text-gray-600';
-    let badgeText = 'Pendente';
+    let badgeText = t('pending_status');
     let barColor = 'bg-gray-300';
     let barWidth = '0%';
 
     if (isAnswered) {
         barWidth = `${acc}%`;
         const answeredTopics = Array.isArray(topicsList) ? topicsList.filter(item => item.answeredCount > 0) : [];
-        const isBestAnswered = answeredTopics.length > 0 && answeredTopics[answeredTopics.length - 1] === t;
-        const isWorstAnswered = answeredTopics.length > 0 && answeredTopics[0] === t;
+        const isBestAnswered = answeredTopics.length > 0 && answeredTopics[answeredTopics.length - 1] === topicObj;
+        const isWorstAnswered = answeredTopics.length > 0 && answeredTopics[0] === topicObj;
 
         if (acc >= 80) {
             badgeClass = 'bg-emerald-100 text-emerald-700 border border-emerald-200';
@@ -834,7 +834,7 @@ function renderTopicItem(t, idx, topicsList = []) {
         }
     }
 
-    const safeTopic = escapeHtml(t.topic || t('general_topic'));
+    const safeTopic = escapeHtml(topicObj.topic || t('general_topic'));
 
     return `
         <div class="p-3.5 rounded-xl bg-gray-50/80 border border-gray-200/70 transition hover:border-purple-300 shadow-xs">
@@ -844,7 +844,7 @@ function renderTopicItem(t, idx, topicsList = []) {
                         ${safeTopic}
                     </h4>
                     <p class="text-[11px] text-gray-500">
-                        ${t.cardsCount} ${t.cardsCount !== 1 ? t('cards_unit') : t('card_unit_singular')} ${isAnswered ? `• ${t.correctCount}/${t.answeredCount} ${t('correct_plural')}` : `• ${t('not_answered_round')}`}
+                        ${topicObj.cardsCount} ${topicObj.cardsCount !== 1 ? t('cards_unit') : t('card_unit_singular')} ${isAnswered ? `• ${topicObj.correctCount}/${topicObj.answeredCount} ${t('correct_plural')}` : `• ${t('not_answered_round')}`}
                     </p>
                 </div>
                 <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -912,8 +912,8 @@ function renderSubjectItem(s, idx, totalSubjects) {
                 <div class="${barColor} h-full rounded-full transition-all duration-500" style="width: ${s.totalAnswered > 0 ? acc : 0}%"></div>
             </div>
             <div class="flex items-center justify-between text-[10px] text-gray-400 mt-1.5">
-                <span>${s.totalCorrect}/${s.totalAnswered} acertos</span>
-                <span>${s.totalSessions} sessõe${s.totalSessions !== 1 ? 's' : 'ão'}</span>
+                <span>${s.totalCorrect}/${s.totalAnswered} ${t('correct_plural')}</span>
+                <span>${s.totalSessions} ${s.totalSessions !== 1 ? t('sessions_plural') : t('session_singular')}</span>
             </div>
         </div>
     `;
@@ -934,12 +934,12 @@ function renderHistorySubjectsSection(subjectsStats) {
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-rounded text-base align-middle text-purple-600">menu_book</span>
                     <div>
-                        <h2 class="font-bold text-base text-gray-900">Desempenho por Matérias Globais (IA)</h2>
-                        <p class="text-xs text-gray-500">Baralhos agrupados em disciplinas com base no histórico</p>
+                        <h2 class="font-bold text-base text-gray-900">${t('global_subjects_performance_ai')}</h2>
+                        <p class="text-xs text-gray-500">${t('decks_grouped_by_subjects_desc')}</p>
                     </div>
                 </div>
                 <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                    ${subjectsStats.length} matéria${subjectsStats.length !== 1 ? 's' : ''}
+                    ${subjectsStats.length} ${subjectsStats.length !== 1 ? t('subjects_unit_plural') : t('subject_unit_singular')}
                 </span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -955,7 +955,7 @@ function renderAiDashboard(currentDeckTitle, subjectsStats, topicsStats, gameSta
     const safeDeckTitle = escapeHtml(currentDeckTitle || t('deck_default_title'));
 
     const topicsHtml = topicsStats.length > 0
-        ? topicsStats.map((t, idx) => renderTopicItem(t, idx, topicsStats)).join('')
+        ? topicsStats.map((topicObj, idx) => renderTopicItem(topicObj, idx, topicsStats)).join('')
         : `<p class="text-xs text-gray-400 italic py-4 text-center">${t('no_topics_classified')}</p>`;
 
     const subjectsHtml = subjectsStats.length > 0
@@ -1101,18 +1101,18 @@ function renderAiSection(gameState, statsData, isLiveUpdate = false, sessionToUs
                                 <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                                 Gemini Flash-Lite
                             </span>
-                            <span class="text-xs text-gray-400 font-medium">Categorização Semântica</span>
+                            <span class="text-xs text-gray-400 font-medium">${t('semantic_categorization_badge')}</span>
                         </div>
-                        <h2 class="text-base sm:text-lg font-bold text-gray-900">Desempenho por Matérias & Assuntos (IA)</h2>
+                        <h2 class="text-base sm:text-lg font-bold text-gray-900">${t('subjects_and_topics_performance_ai')}</h2>
                         <p class="text-xs text-gray-600 max-w-xl leading-relaxed">
-                            Recurso exclusivo Flashcards Pro: categorize seus baralhos e obtenha diagnósticos avançados de retenção com inteligência artificial.
+                            ${t('pro_exclusive_categorization_desc')}
                         </p>
                     </div>
 
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <button id="btn-paywall-stats-ai" class="m3-btn-expressive m3-btn-filled px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 whitespace-nowrap shadow-md">
                             <img src="../assets/img/paywall.svg" class="w-3.5 h-3.5" alt="Pro">
-                            <span>Desbloquear com Pro</span>
+                            <span>${t('unlock_with_pro_btn')}</span>
                         </button>
                     </div>
                 </div>
@@ -1142,11 +1142,11 @@ function renderAiSection(gameState, statsData, isLiveUpdate = false, sessionToUs
                         <span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
                         Gemini Flash-Lite
                     </span>
-                    <span class="text-xs text-gray-500 font-medium">Categorização Semântica</span>
+                    <span class="text-xs text-gray-500 font-medium">${t('semantic_categorization_badge')}</span>
                 </div>
-                <h2 class="text-base sm:text-lg font-bold text-gray-900">Categorizar Baralho com IA</h2>
+                <h2 class="text-base sm:text-lg font-bold text-gray-900">${t('categorize_deck_with_ai_title')}</h2>
                 <p class="text-xs text-gray-600 max-w-xl">
-                    Classifique os cards de "<b>${escapeHtml(currentDeckTitle)}</b>" em tópicos e matérias para análise de retenção. A categorização é permanente e salva no seu navegador.
+                    ${t('categorize_deck_with_ai_desc', { title: escapeHtml(currentDeckTitle) })}
                 </p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
@@ -1155,7 +1155,7 @@ function renderAiSection(gameState, statsData, isLiveUpdate = false, sessionToUs
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span>Categorizar com IA</span>
+                    <span>${t('categorize_with_ai_btn')}</span>
                 </button>
             </div>
         </div>
@@ -1180,9 +1180,9 @@ async function triggerAiCategorization(gameState, statsData) {
             <div class="bg-white p-8 rounded-2xl border border-purple-200 shadow-sm flex flex-col items-center justify-center text-center space-y-3 py-10">
                 <div class="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
                 <div class="space-y-1">
-                    <h3 class="text-sm font-bold text-gray-900">Analisando Baralhos e Assuntos com Gemini Flash-Lite...</h3>
+                    <h3 class="text-sm font-bold text-gray-900">${t('analyzing_decks_gemini_title')}</h3>
                     <p class="text-xs text-gray-500 max-w-md">
-                        Categorizando seus baralhos em matérias amplas e mapeando os tópicos específicos dos cards com o menor número possível de categorias.
+                        ${t('analyzing_decks_gemini_desc')}
                     </p>
                 </div>
             </div>
@@ -1233,7 +1233,7 @@ async function triggerAiCategorization(gameState, statsData) {
         }
 
         isAiLoading = false;
-        showStatsPill("Estatísticas de IA geradas e salvas com sucesso!", true);
+        showStatsPill(t('ai_stats_generated_toast'), true);
         renderAiSection(gameState, statsData);
 
     } catch (err) {
@@ -1246,20 +1246,20 @@ async function triggerAiCategorization(gameState, statsData) {
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-rounded text-base text-red-600 align-middle">warning</span>
-                        <h3 class="text-sm font-bold text-red-800">Não foi possível gerar as estatísticas com IA</h3>
+                        <h3 class="text-sm font-bold text-red-800">${t('ai_stats_error_title')}</h3>
                     </div>
                     <p id="ai-stats-error-text" class="text-xs text-red-700 max-w-lg"></p>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
                     <button id="btn-retry-ai" class="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition shadow-sm">
-                        Tentar Novamente
+                        ${t('try_again')}
                     </button>
                 </div>
             </div>
         `;
         const errTextEl = document.getElementById('ai-stats-error-text');
         if (errTextEl) {
-            errTextEl.textContent = (err && err.message) ? err.message : 'Verifique sua conexão ou se seu plano Flashcards Pro está ativo.';
+            errTextEl.textContent = (err && err.message) ? err.message : t('ai_stats_error_fallback');
         }
 
         document.getElementById('btn-retry-ai')?.addEventListener('click', () => {
@@ -1272,14 +1272,14 @@ async function triggerAiCategorization(gameState, statsData) {
 function formatCellTitle(day) {
     const [y, m, d] = day.dateStr.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
-    const formatted = dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+    const formatted = dateObj.toLocaleDateString(getCurrentLanguage(), { weekday: 'short', day: 'numeric', month: 'short' });
     if (day.isFrozen) {
-        return `${formatted}: ❄️ Streak protegido pelo congelador`;
+        return `${formatted}: ${t('streak_protected_by_freeze_cell')}`;
     }
     if (day.count > 0) {
-        return `${formatted}: ${day.count} ${day.count === 1 ? 'card resolvido' : 'cards resolvidos'}`;
+        return `${formatted}: ${day.count} ${day.count === 1 ? t('card_solved_singular') : t('cards_solved_plural')}`;
     }
-    return `${formatted}: 0 cards`;
+    return `${formatted}: 0 ${t('cards_unit')}`;
 }
 
 function renderActivityHeatmap(statsData) {
@@ -1292,15 +1292,15 @@ function renderActivityHeatmap(statsData) {
 
     // 1. Atualiza badge de sequência diária no cabeçalho
     if (heatmapStreakVal) {
-        heatmapStreakVal.textContent = `${streakVal} ${streakVal === 1 ? 'dia' : 'dias'}`;
+        heatmapStreakVal.textContent = `${streakVal} ${streakVal === 1 ? t('day') : t('days')}`;
     }
 
     // 2. Atualiza status de Streak Freeze no cabeçalho
     if (heatmapFreezeStatus) {
         let freezeHtml = `
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl ${freezesAvail > 0 ? 'bg-cyan-50 text-cyan-800 border-cyan-200/90' : 'bg-gray-50 text-gray-600 border-gray-200'} border text-xs font-bold shadow-2xs" title="O Streak Freeze protege sua sequência se você faltar 1 dia. Ganhe +1 proteção a cada 7 dias de streak (máx: 2).">
-                <span class="text-sm select-none">❄️</span>
-                <span>${freezesAvail}/2 ${freezesAvail === 1 ? 'Proteção ativa' : 'Proteções ativas'}</span>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl ${freezesAvail > 0 ? 'bg-cyan-50 text-cyan-800 border-cyan-200/90' : 'bg-gray-50 text-gray-600 border-gray-200'} border text-xs font-bold shadow-2xs" title="${escapeHtml(t('streak_freeze_tooltip'))}">
+                <span class="material-symbols-rounded text-sm select-none">ac_unit</span>
+                <span>${freezesAvail}/2 ${freezesAvail === 1 ? t('active_protection_singular') : t('active_protections_plural')}</span>
             </div>
         `;
         if (streakData.streakProtectedByFreeze) {
@@ -1326,8 +1326,13 @@ function renderActivityHeatmap(statsData) {
     const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     startDate.setDate(startDate.getDate() - dayOfWeek - ((TOTAL_WEEKS - 1) * 7));
 
-    const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const DAY_LABELS = ['', 'Seg', '', 'Qua', '', 'Sex', ''];
+    const isEn = getCurrentLanguage() === 'en-US';
+    const MONTH_LABELS = isEn
+        ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const DAY_LABELS = isEn
+        ? ['', 'Mon', '', 'Wed', '', 'Fri', '']
+        : ['', 'Seg', '', 'Qua', '', 'Sex', ''];
 
     const weeks = [];
     let runningDate = new Date(startDate);
@@ -1420,7 +1425,7 @@ function renderActivityHeatmap(statsData) {
 
             if (day.isFrozen) {
                 colorClasses = 'bg-cyan-100 text-cyan-800 border-2 border-cyan-400 font-bold text-[8px] flex items-center justify-center';
-                cellContent = '❄️';
+                cellContent = '<span class="material-symbols-rounded text-[10px] select-none leading-none">ac_unit</span>';
             } else if (day.count >= 30) {
                 colorClasses = 'bg-emerald-700 border border-emerald-800 text-white';
             } else if (day.count >= 15) {
@@ -1470,15 +1475,15 @@ function renderActivityHeatmap(statsData) {
             if (!heatmapHoverInfo) return;
             const [y, m, d] = dateStr.split('-').map(Number);
             const dateObj = new Date(y, m - 1, d);
-            const formatted = dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            const formatted = dateObj.toLocaleDateString(getCurrentLanguage(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             const capFormatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
 
             if (isFrozen) {
-                heatmapHoverInfo.innerHTML = `<span class="text-cyan-700 font-bold">❄️ ${capFormatted}</span>: <span class="text-gray-700 font-medium">Streak protegido pelo congelador!</span>`;
+                heatmapHoverInfo.innerHTML = `<span class="text-cyan-700 font-bold inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm select-none">ac_unit</span> ${capFormatted}</span>: <span class="text-gray-700 font-medium">${t('streak_protected_by_freeze_hover')}</span>`;
             } else if (count > 0) {
-                heatmapHoverInfo.innerHTML = `<span class="text-gray-900 font-bold">${capFormatted}</span>: <span class="text-emerald-600 font-extrabold">${count} ${count === 1 ? 'card resolvido' : 'cards resolvidos'}</span>${isToday ? ' <span class="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">Hoje</span>' : ''}`;
+                heatmapHoverInfo.innerHTML = `<span class="text-gray-900 font-bold">${capFormatted}</span>: <span class="text-emerald-600 font-extrabold">${count} ${count === 1 ? t('card_solved_singular') : t('cards_solved_plural')}</span>${isToday ? ` <span class="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">${t('today_badge')}</span>` : ''}`;
             } else {
-                heatmapHoverInfo.innerHTML = `<span class="text-gray-700 font-medium">${capFormatted}</span>: <span class="text-gray-400">Nenhum card resolvido</span>${isToday ? ' <span class="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">Hoje</span>' : ''}`;
+                heatmapHoverInfo.innerHTML = `<span class="text-gray-700 font-medium">${capFormatted}</span>: <span class="text-gray-400">${t('no_card_solved')}</span>${isToday ? ` <span class="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">${t('today_badge')}</span>` : ''}`;
             }
         };
 
@@ -1632,7 +1637,7 @@ function renderAccuracyChart(history) {
         const barColor = acc >= 80 ? 'bg-emerald-500 hover:bg-emerald-600' :
             acc >= 65 ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-500 hover:bg-red-600';
 
-        const label = index === 0 ? 'Atual' : `S${index + 1}`;
+        const label = index === 0 ? t('current_chart_label') : `S${index + 1}`;
 
         const safeAcc = Number(acc) || 0;
         const safeCards = Number(item.cardsAnswered) || 0;
@@ -1646,9 +1651,9 @@ function renderAccuracyChart(history) {
         tooltip.className = 'hidden group-hover:block absolute bottom-full mb-2 z-30 p-2 bg-gray-900 text-white text-[10px] rounded-lg shadow-xl whitespace-nowrap';
         const tSpan1 = document.createElement('span');
         tSpan1.className = 'font-bold';
-        tSpan1.textContent = `${safeAcc}% de acerto`;
+        tSpan1.textContent = `${safeAcc}% ${t('accuracy_suffix')}`;
         const tSpan2 = document.createElement('span');
-        tSpan2.textContent = `${safeCards} cards • ${safeDuration}`;
+        tSpan2.textContent = `${safeCards} ${safeCards === 1 ? t('card_unit_singular') : t('cards_unit')} • ${safeDuration}`;
         tooltip.append(tSpan1, document.createElement('br'), tSpan2);
 
         const accSpan = document.createElement('span');

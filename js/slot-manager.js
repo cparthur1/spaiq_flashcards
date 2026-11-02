@@ -434,15 +434,16 @@ export function promptSlotSelectionForReplacement({
       existingModal.remove();
     }
 
-    let titleText = t('slot_limit_modal_title');
-    let descText = t('slot_limit_share_desc', { title: newDeckTitle || t('deck_default_title') });
+    const safeNewTitle = escapeHtml(newDeckTitle || t('deck_default_title'));
+    let titleText = escapeHtml(t('slot_limit_modal_title'));
+    let descText = escapeHtml(t('slot_limit_share_desc', { title: safeNewTitle }));
 
     if (action === 'import') {
-      titleText = t('slot_limit_import_title');
-      descText = t('slot_limit_import_desc', { title: newDeckTitle || t('deck_default_title') });
+      titleText = escapeHtml(t('slot_limit_import_title'));
+      descText = escapeHtml(t('slot_limit_import_desc', { title: safeNewTitle }));
     } else if (action === 'all_shared_warning' || action === 'play') {
-      titleText = t('slot_limit_all_shared_title');
-      descText = t('slot_limit_all_shared_desc', { title: newDeckTitle || t('deck_default_title') });
+      titleText = escapeHtml(t('slot_limit_all_shared_title'));
+      descText = escapeHtml(t('slot_limit_all_shared_desc', { title: safeNewTitle }));
     }
 
     const modal = document.createElement('div');
