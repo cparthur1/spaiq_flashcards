@@ -1,3 +1,24 @@
+CHANGELOG: 3-SHARED-SLOT REPLACEMENT WARNING & CLOUD SYNC LOCK (v15.14)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Automated Slot Replacement Warning for 3 Shared Slots:
+   - When all 3 deck slots are occupied by shared decks (`shareSlug` or `isFixed`), opening a new deck automatically displays `promptSlotSelectionForReplacement` with an explicit warning:
+     * Explains to the user that all 3 slots are locked by shared decks and that the current session will NOT be synced to the cloud unless they delete one of the shared slots.
+     * Provides an "Excluir e Substituir" option for each shared slot. If selected, the shared slot is deleted and the new deck takes its place, syncing to the cloud immediately.
+     * Provides a "Jogar sem sincronizar" ("Play without syncing") action allowing the user to proceed with their local gameplay session without overwriting shared slots and without cloud sync.
+     * Provides a "Cancelar" action allowing the user to abort opening the deck.
+2. Async `openDeckInSlots` Integration:
+   - Updated `openDeckInSlots` in `js/slot-manager.js` to asynchronously await user decision when all 3 slots are shared.
+   - Updated callers across `js/index.js`, `js/generate.js`, `js/explore-modal.js`, and `js/share-manager.js` to await slot allocation and respect cancellation.
+   - Suppressed prompt triggers during active background state synchronizations in `js/game.js` and `syncActiveSlotState`.
+3. UI, i18n & Cache:
+   - Adhered strictly to Light Mode only, Material Design 3 guidelines, and theme blue `#3b82f7`.
+   - Added translations in `js/i18n.js` strictly supporting Portuguese (`pt-BR`) and English (`en-US`).
+   - Bumped service worker cache to `flashcards-v15.14` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: AUTOMATED POST-PAYMENT AI GENERATION & DRAFT RESUMPTION (v15.13)
 Date: 2026-11-02
 

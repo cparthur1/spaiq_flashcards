@@ -275,7 +275,7 @@ export async function checkAndLoadSharedDeck() {
       }
 
       // Load into slots and fix it
-      const slotIdx = openDeckInSlots(deckData, title, isExam ? 'exam' : 'normal', targetSlot);
+      const slotIdx = await openDeckInSlots(deckData, title, isExam ? 'exam' : 'normal', targetSlot);
       fixSlot(slotIdx, true);
       const slots = getLocalSlots();
       if (slots[slotIdx]) {

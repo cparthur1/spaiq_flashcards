@@ -496,7 +496,8 @@ function attachModalEventListeners() {
           allQuestions: parsed.cards || [],
           questionsPool: shuffleArray(playable)
         };
-        openDeckInSlots(examState, examState.deckTitle, 'exam', pendingTargetSlotIndex);
+        const res = await openDeckInSlots(examState, examState.deckTitle, 'exam', pendingTargetSlotIndex);
+        if (res === null) return;
         pendingTargetSlotIndex = null;
         renderModalContent();
         hiddenInput.value = '';
@@ -534,7 +535,8 @@ function attachModalEventListeners() {
         deckTitle: deckTitle
       };
 
-      openDeckInSlots(gameState, deckTitle, 'normal', pendingTargetSlotIndex);
+      const res = await openDeckInSlots(gameState, deckTitle, 'normal', pendingTargetSlotIndex);
+      if (res === null) return;
       pendingTargetSlotIndex = null;
       renderModalContent();
       // Reset input to allow selecting same file again

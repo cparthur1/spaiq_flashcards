@@ -5928,7 +5928,7 @@ function switchActiveMode(newMode) {
                 slots.forEach((s, idx) => { s.isCurrent = (idx === examSlotIdx); });
                 saveLocalSlots(slots);
             } else if (data && data.allQuestions && data.allQuestions.length > 0) {
-                openDeckInSlots(data, data.deckTitle || "Semana de Provas", 'exam');
+                openDeckInSlots(data, data.deckTitle || "Semana de Provas", 'exam', null, { suppressPrompt: true });
             }
         } else if (newMode === 'normal') {
             const normalSlotIdx = slots.findIndex(s => !s.isExam && s.mode !== 'exam');
@@ -6127,7 +6127,7 @@ async function initGame() {
                     saveLocalSlots(slots);
                 }
             } else {
-                openDeckInSlots(data, data.deckTitle || "Semana de Provas", 'exam');
+                openDeckInSlots(data, data.deckTitle || "Semana de Provas", 'exam', null, { suppressPrompt: true });
             }
         } catch (e) {}
     }

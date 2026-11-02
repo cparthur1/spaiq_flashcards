@@ -4046,12 +4046,14 @@ playDeckBtn.addEventListener('click', async () => {
             gameState.deckId = existingExam?.deckId || `exam_${now}`;
             gameState.isExam = true;
             gameState.mode = 'exam';
-            openDeckInSlots(gameState, title, 'exam', currentEditingSlotIndex);
+            const res = await openDeckInSlots(gameState, title, 'exam', currentEditingSlotIndex);
+            if (res === null) return;
             localStorage.setItem('flashcardsExam', JSON.stringify(gameState));
             localStorage.setItem('flashcardsActiveMode', 'exam');
             syncSlotsToCloud();
         } else {
-            openDeckInSlots(gameState, title, 'normal', currentEditingSlotIndex);
+            const res = await openDeckInSlots(gameState, title, 'normal', currentEditingSlotIndex);
+            if (res === null) return;
             localStorage.setItem('flashcardsSave', JSON.stringify(gameState));
             localStorage.setItem('flashcardsActiveMode', 'normal');
             syncSlotsToCloud();

@@ -79,9 +79,10 @@ async function init() {
     }
 
     if (examContinueBtn) {
-        examContinueBtn.addEventListener('click', () => {
+        examContinueBtn.addEventListener('click', async () => {
             if (savedExamData) {
-                openDeckInSlots(savedExamData, savedExamData.deckTitle || "Semana de Provas", 'exam');
+                const res = await openDeckInSlots(savedExamData, savedExamData.deckTitle || "Semana de Provas", 'exam');
+                if (res === null) return;
             } else {
                 localStorage.setItem('flashcardsActiveMode', 'exam');
             }
@@ -118,7 +119,7 @@ async function init() {
     }
 
     // Helper: Start Exam Week Session
-    function startExamWeek(decksList) {
+    async function startExamWeek(decksList) {
         if (!decksList || decksList.length === 0) return;
 
         let allCombinedQuestions = [];
@@ -152,7 +153,8 @@ async function init() {
         };
 
         try {
-            openDeckInSlots(examState, "Semana de Provas", 'exam');
+            const res = await openDeckInSlots(examState, "Semana de Provas", 'exam');
+            if (res === null) return;
             window.location.href = ROUTES.GAME;
         } catch (err) {
             if (err.name === 'QuotaExceededError') {
@@ -222,7 +224,8 @@ async function init() {
                                 allQuestions: parsed.cards || [],
                                 questionsPool: shuffleArray((parsed.cards || []).filter(q => q && q.type !== 'divisor' && q.type !== 'divider' && q.type !== 'note'))
                             };
-                            openDeckInSlots(examState, examState.deckTitle, 'exam');
+                            const res = await openDeckInSlots(examState, examState.deckTitle, 'exam');
+                            if (res === null) return;
                             window.location.href = ROUTES.GAME;
                             return;
                         } else if (Array.isArray(parsed)) {
@@ -273,7 +276,8 @@ async function init() {
                         allQuestions: parsed.cards || [],
                         questionsPool: shuffleArray(playable)
                     };
-                    openDeckInSlots(examState, examState.deckTitle, 'exam');
+                    const res = await openDeckInSlots(examState, examState.deckTitle, 'exam');
+                    if (res === null) return;
                     window.location.href = ROUTES.GAME;
                     return;
                 } else if (Array.isArray(parsed)) {
@@ -325,7 +329,8 @@ async function init() {
             deckTitle: title
         };
         try {
-            openDeckInSlots(gameState, title, 'normal');
+            const res = await openDeckInSlots(gameState, title, 'normal');
+            if (res === null) return;
             window.location.href = ROUTES.GAME;
         } catch (err) {
             if (err.name === 'QuotaExceededError') {

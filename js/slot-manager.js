@@ -97,7 +97,7 @@ export function getNotebookSlotData() {
  * - The current deck should always sync to the cloud, except when all 3 slots are shared
  *   (sharing locks overwriting/auto-deleting).
  */
-export function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'normal', preferredSlotIndex = null) {
+export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'normal', preferredSlotIndex = null, options = {}) {
   const slots = getLocalSlots();
   const cardCount = (deckData.allQuestions || []).length;
   const isExam = mode === 'exam' || Boolean(deckData.decks && Array.isArray(deckData.decks));
@@ -183,9 +183,31 @@ export function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'normal',
   const allThreeShared = slots.length === 3 && slots.every(s => s && s.deckData && s.cardCount > 0 && (s.shareSlug || s.isFixed));
 
   if (allThreeShared) {
-    // Sharing locks overwriting/auto-deleting when all 3 slots are shared!
-    // The opened deck plays in local session, but does NOT overwrite any slot
-    // and does NOT sync to cloud slots.
+    // When all 3 slots are shared, auto-open promptSlotSelectionForReplacement
+    // warning the user that the current session won't be synced if they don't delete a shared slot.
+    if (!options.suppressPrompt && typeof document !== 'undefined') {
+      const chosen = await promptSlotSelectionForReplacement({
+        newDeckTitle: deckName,
+        newCardCount: cardCount,
+        action: 'all_shared_warning'
+      });
+
+      if (chosen !== null && typeof chosen === 'number' && chosen >= 0 && chosen < 3) {
+        deleteSlot(chosen);
+        return openDeckInSlots(deckData, deckName, mode, chosen, { suppressPrompt: true });
+      }
+
+      if (chosen === null) {
+        // User cancelled, abort opening
+        return null;
+      }
+
+      // If chosen === 'unsynced', proceed below to store in local session without cloud sync
+    }
+
+    // User opted to play without sync, or suppressPrompt is true:
+    // As warned: the current session won't be synced if they don't delete a shared slot.
+    // The opened deck runs in the current local session without overwriting shared slots and without pushing to cloud slots.
     if (isExam) {
       localStorage.setItem('flashcardsExam', JSON.stringify(deckData));
       localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
@@ -418,9 +440,9 @@ export function promptSlotSelectionForReplacement({
     if (action === 'import') {
       titleText = t('slot_limit_import_title');
       descText = t('slot_limit_import_desc', { title: newDeckTitle || t('deck_default_title') });
-    } else if (action === 'play') {
-      titleText = t('slot_limit_play_title');
-      descText = t('slot_limit_play_desc', { title: newDeckTitle || t('deck_default_title') });
+    } else if (action === 'all_shared_warning' || action === 'play') {
+      titleText = t('slot_limit_all_shared_title');
+      descText = t('slot_limit_all_shared_desc', { title: newDeckTitle || t('deck_default_title') });
     }
 
     const modal = document.createElement('div');
@@ -438,23 +460,23 @@ export function promptSlotSelectionForReplacement({
       const isShared = Boolean(slot.shareSlug);
 
       return `
-        <div class="p-3.5 rounded-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] bg-[var(--md-sys-color-surface-container-low,#f8fafc)] dark:bg-[#252525] dark:border-gray-700 flex items-center justify-between gap-3 hover:border-red-300 dark:hover:border-red-800 transition-colors">
+        <div class="p-3.5 rounded-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] bg-[var(--md-sys-color-surface-container-low,#f8fafc)] flex items-center justify-between gap-3 hover:border-red-300 transition-colors">
           <div class="flex items-center gap-3 min-w-0">
-            <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#3b82f7] flex items-center justify-center font-bold text-xs shrink-0 border border-blue-200/60 dark:border-blue-800/40">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#3b82f7] flex items-center justify-center font-bold text-xs shrink-0 border border-blue-200/60">
               ${i + 1}
             </div>
             <div class="min-w-0">
-              <h4 class="text-sm font-semibold text-[var(--md-sys-color-on-surface,#0f172a)] dark:text-white truncate" title="${title}">
+              <h4 class="text-sm font-semibold text-[var(--md-sys-color-on-surface,#0f172a)] truncate" title="${title}">
                 ${title}
               </h4>
-              <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#64748b)] dark:text-gray-400 flex items-center gap-2 mt-0.5">
+              <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#64748b)] flex items-center gap-2 mt-0.5">
                 <span>${countLabel}</span>
-                ${isExam ? `<span class="text-purple-600 dark:text-purple-400 font-medium flex items-center gap-0.5"><span class="material-symbols-rounded text-xs">bolt</span> ${t('mix_label')}</span>` : ''}
+                ${isExam ? `<span class="text-purple-600 font-medium flex items-center gap-0.5"><span class="material-symbols-rounded text-xs">bolt</span> ${t('mix_label')}</span>` : ''}
                 ${isShared ? `<span class="text-[#3b82f7] font-medium flex items-center gap-0.5"><span class="material-symbols-rounded text-xs">link</span> ${t('shared')}</span>` : ''}
               </p>
             </div>
           </div>
-          <button type="button" data-slot-index="${i}" class="slot-replace-select-btn px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 active:bg-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 font-medium text-xs flex items-center gap-1 shrink-0 transition-colors cursor-pointer border border-red-200 dark:border-red-900/50">
+          <button type="button" data-slot-index="${i}" class="slot-replace-select-btn px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 font-medium text-xs flex items-center gap-1 shrink-0 transition-colors cursor-pointer border border-red-200">
             <span class="material-symbols-rounded text-base">delete</span>
             <span>${t('delete_and_replace')}</span>
           </button>
@@ -462,21 +484,23 @@ export function promptSlotSelectionForReplacement({
       `;
     }).join('');
 
+    const isAllSharedWarning = action === 'all_shared_warning' || action === 'play';
+
     modal.innerHTML = `
-      <div class="m3-dialog-card bg-white dark:bg-[#1e1e1e] rounded-3xl max-w-md w-full shadow-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] dark:border-gray-700 overflow-hidden flex flex-col p-6 animate-scale-up">
+      <div class="m3-dialog-card bg-white rounded-3xl max-w-md w-full shadow-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] overflow-hidden flex flex-col p-6 animate-scale-up">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-[#3b82f7] flex items-center justify-center shrink-0 border border-blue-200/60 dark:border-blue-800/40">
-            <span class="material-symbols-rounded text-2xl">swap_horiz</span>
+          <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#3b82f7] flex items-center justify-center shrink-0 border border-blue-200/60">
+            <span class="material-symbols-rounded text-2xl">${isAllSharedWarning ? 'cloud_off' : 'swap_horiz'}</span>
           </div>
           <div class="min-w-0">
-            <h3 id="slot-replacement-modal-title" class="text-base font-bold text-[var(--md-sys-color-on-surface,#0f172a)] dark:text-white leading-tight">
+            <h3 id="slot-replacement-modal-title" class="text-base font-bold text-[var(--md-sys-color-on-surface,#0f172a)] leading-tight">
               ${titleText}
             </h3>
             <span class="text-[11px] font-medium text-[#3b82f7]">3 ${t('slots_label')}</span>
           </div>
         </div>
 
-        <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#64748b)] dark:text-gray-300 leading-relaxed mb-4">
+        <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#64748b)] leading-relaxed mb-4">
           ${descText}
         </p>
 
@@ -484,10 +508,16 @@ export function promptSlotSelectionForReplacement({
           ${slotsHtml}
         </div>
 
-        <div class="mt-5 pt-3 border-t border-[var(--md-sys-color-outline-variant,#e2e8f0)] dark:border-gray-700 flex justify-end">
-          <button type="button" id="slot-replace-cancel-btn" class="px-4 py-2 rounded-xl text-xs font-semibold text-[var(--md-sys-color-on-surface-variant,#64748b)] hover:bg-[var(--md-sys-color-surface-container-high,#e2e8f0)] dark:text-gray-300 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+        <div class="mt-5 pt-3 border-t border-[var(--md-sys-color-outline-variant,#e2e8f0)] flex items-center justify-between gap-2">
+          <button type="button" id="slot-replace-cancel-btn" class="px-4 py-2 rounded-xl text-xs font-semibold text-[var(--md-sys-color-on-surface-variant,#64748b)] hover:bg-[var(--md-sys-color-surface-container-high,#e2e8f0)] transition-colors cursor-pointer">
             ${t('cancel')}
           </button>
+          ${isAllSharedWarning ? `
+          <button type="button" id="slot-replace-unsynced-btn" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#3b82f7] hover:bg-blue-50 border border-blue-200 transition-colors cursor-pointer flex items-center gap-1.5">
+            <span class="material-symbols-rounded text-base">cloud_off</span>
+            <span>${t('play_without_sync')}</span>
+          </button>
+          ` : ''}
         </div>
       </div>
     `;
@@ -519,6 +549,11 @@ export function promptSlotSelectionForReplacement({
     const cancelBtn = modal.querySelector('#slot-replace-cancel-btn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => cleanup(null));
+    }
+
+    const unsyncedBtn = modal.querySelector('#slot-replace-unsynced-btn');
+    if (unsyncedBtn) {
+      unsyncedBtn.addEventListener('click', () => cleanup('unsynced'));
     }
 
     const selectBtns = modal.querySelectorAll('.slot-replace-select-btn');
@@ -900,7 +935,7 @@ export function syncActiveSlotState() {
         saveLocalSlots(slots);
         updatedSlotIndex = currentSlotIndex;
       } else if (!allThreeShared) {
-        openDeckInSlots(parsedExam, parsedExam.deckTitle || 'Semana de Provas', 'exam');
+        openDeckInSlots(parsedExam, parsedExam.deckTitle || 'Semana de Provas', 'exam', null, { suppressPrompt: true });
       }
     } catch (e) {}
   }
