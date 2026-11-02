@@ -5,7 +5,7 @@
  */
 
 import { db, doc, getDoc, setDoc, updateDoc, onSnapshot } from './firebase-client.js';
-import { openDeckInSlots, fixSlot, getLocalSlots, saveLocalSlots } from './slot-manager.js';
+import { openDeckInSlots, fixSlot, deleteSlot, getLocalSlots, saveLocalSlots, promptSlotSelectionForReplacement } from './slot-manager.js';
 import { ROUTES, generateSecureId, escapeHtml } from './utils.js';
 
 const DELETED_NOTICE_KEY = 'flashcards_deleted_deck_notice';
@@ -52,27 +52,128 @@ export async function syncSharedDeckToFirestore(shareSlug, deckData, title = nul
  * Share a deck to Firestore and return shareable link.
  * Available to all users (Pro and non-Pro).
  * Rule 1.1: If sharing the file, fix it on the slot without being overwritten.
+ * If user is already using their 3 slots, prompts them which deck they want to delete/replace.
  */
 export async function shareDeckToCloud(deckData, deckName = 'Baralho Compartilhado', slotIndex = null) {
   if (!deckData || !deckData.allQuestions || deckData.allQuestions.length === 0) {
     throw new Error('Baralho vazio não pode ser compartilhado');
   }
 
-  // Check if slot already has a shareSlug, or if Caderno has an existing shareSlug
-  let shareSlug = null;
-  const currentSlots = getLocalSlots();
-  if (slotIndex !== null && currentSlots[slotIndex]?.shareSlug) {
-    shareSlug = currentSlots[slotIndex].shareSlug;
-  } else if (slotIndex === null && deckName === 'Caderno') {
-    shareSlug = localStorage.getItem('flashcards_notebook_share_slug');
+  // Dedicated notebook sharing (does not use the 3 deck slots)
+  if (deckName === 'Caderno') {
+    let shareSlug = localStorage.getItem('flashcards_notebook_share_slug');
+    if (!shareSlug) {
+      shareSlug = generateSecureId('deck');
+    }
+
+    const shareDocRef = doc(db, 'shares', shareSlug);
+    await setDoc(shareDocRef, {
+      shareSlug,
+      title: 'Caderno',
+      cardCount: deckData.allQuestions.length,
+      deckData,
+      deleted: false,
+      updatedAt: Date.now(),
+      createdAt: Date.now()
+    }, { merge: true });
+
+    localStorage.setItem('flashcards_notebook_share_slug', shareSlug);
+
+    const origin = window.location.origin;
+    const shareUrl = `${origin}/?share=${shareSlug}`;
+
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+      } catch (e) {
+        console.warn('Erro ao copiar para clipboard:', e);
+      }
+    }
+
+    return { shareSlug, shareUrl, slotIndex: null };
   }
 
+  // Regular Deck (or Exam mix)
+  let currentSlots = getLocalSlots();
+  let targetSlotIndex = (slotIndex !== null && slotIndex >= 0 && slotIndex < currentSlots.length && currentSlots[slotIndex]?.deckData) ? slotIndex : null;
+
+  // Check if this deck is already present in one of the slots
+  if (targetSlotIndex === null) {
+    const matchIdx = currentSlots.findIndex(s => s && s.deckData && (
+      (deckData.deckId && s.deckId === deckData.deckId) ||
+      (s.shareSlug && deckData.shareSlug && s.shareSlug === deckData.shareSlug) ||
+      (s.title === deckName && s.cardCount === deckData.allQuestions.length)
+    ));
+    if (matchIdx !== -1) {
+      targetSlotIndex = matchIdx;
+    }
+  }
+
+  // If the deck is NOT in any slot yet, we must assign it to a slot
+  if (targetSlotIndex === null) {
+    const occupiedCount = currentSlots.filter(s => s && s.deckData && s.cardCount > 0).length;
+
+    if (occupiedCount >= 3) {
+      // User is already using all 3 slots! Prompt user which slot they want to delete/replace.
+      const chosenSlot = await promptSlotSelectionForReplacement({
+        newDeckTitle: deckName,
+        newCardCount: deckData.allQuestions.length,
+        action: 'share'
+      });
+
+      if (chosenSlot === null) {
+        const abortErr = new Error('Compartilhamento cancelado pelo usuário');
+        abortErr.name = 'AbortError';
+        throw abortErr;
+      }
+
+      deleteSlot(chosenSlot);
+      targetSlotIndex = chosenSlot;
+    } else {
+      // There is an available empty slot
+      const emptyIdx = currentSlots.findIndex(s => !s || !s.deckData || s.cardCount === 0);
+      targetSlotIndex = emptyIdx !== -1 ? emptyIdx : 0;
+    }
+  }
+
+  // Reload current slots in case deleteSlot modified them
+  currentSlots = getLocalSlots();
+
+  let shareSlug = currentSlots[targetSlotIndex]?.shareSlug || deckData.shareSlug || null;
   if (!shareSlug) {
     shareSlug = generateSecureId('deck');
   }
 
-  const shareDocRef = doc(db, 'shares', shareSlug);
+  const isExam = Boolean(deckData.decks && Array.isArray(deckData.decks));
+  const newDeckId = deckData.deckId || (isExam ? `exam_${Date.now()}` : `deck_${Date.now()}`);
+  deckData.deckId = newDeckId;
 
+  // Update target slot with new or updated deck and fix it
+  currentSlots[targetSlotIndex] = {
+    slotIndex: targetSlotIndex,
+    deckId: newDeckId,
+    shareSlug,
+    isShareOwner: true,
+    isSharedImport: false,
+    title: deckName,
+    cardCount: deckData.allQuestions.length,
+    isFixed: true,
+    isCurrent: true,
+    isExam,
+    mode: isExam ? 'exam' : 'normal',
+    deckData,
+    updatedAt: Date.now()
+  };
+
+  currentSlots.forEach((s, idx) => {
+    s.isCurrent = (idx === targetSlotIndex);
+  });
+
+  localStorage.removeItem(`flashcards_slot_${targetSlotIndex}_deleted_at`);
+  saveLocalSlots(currentSlots);
+
+  // Write/update the Firestore share document
+  const shareDocRef = doc(db, 'shares', shareSlug);
   await setDoc(shareDocRef, {
     shareSlug,
     title: deckName,
@@ -83,24 +184,16 @@ export async function shareDeckToCloud(deckData, deckName = 'Baralho Compartilha
     createdAt: Date.now()
   }, { merge: true });
 
-  // If a slotIndex was provided, fix the slot so it's not overwritten and record shareSlug & isShareOwner
-  if (slotIndex !== null) {
-    fixSlot(slotIndex, true);
-    const slots = getLocalSlots();
-    if (slots[slotIndex]) {
-      slots[slotIndex].shareSlug = shareSlug;
-      slots[slotIndex].isShareOwner = true;
-      slots[slotIndex].isSharedImport = false;
-      saveLocalSlots(slots);
-    }
-  } else if (deckName === 'Caderno') {
-    localStorage.setItem('flashcards_notebook_share_slug', shareSlug);
-  }
+  // Sync to cloud if user is Pro
+  try {
+    const { syncSlotsToCloud } = await import('./slot-manager.js');
+    syncSlotsToCloud();
+  } catch (e) {}
 
   const origin = window.location.origin;
   const shareUrl = `${origin}/?share=${shareSlug}`;
 
-  // Attempt clipboard copy or native share
+  // Attempt clipboard copy
   if (navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -109,7 +202,7 @@ export async function shareDeckToCloud(deckData, deckName = 'Baralho Compartilha
     }
   }
 
-  return { shareSlug, shareUrl };
+  return { shareSlug, shareUrl, slotIndex: targetSlotIndex };
 }
 
 /**
@@ -161,7 +254,25 @@ export async function checkAndLoadSharedDeck() {
       // If user already had this shared deck loaded in an existing slot, update it in place
       const existingSlots = getLocalSlots();
       const existingIdx = existingSlots.findIndex(s => s.shareSlug === shareSlug);
-      const targetSlot = existingIdx !== -1 ? existingIdx : null;
+      let targetSlot = existingIdx !== -1 ? existingIdx : null;
+
+      if (targetSlot === null) {
+        const occupied = existingSlots.filter(s => s && s.deckData && s.cardCount > 0);
+        if (occupied.length >= 3) {
+          const chosen = await promptSlotSelectionForReplacement({
+            newDeckTitle: title,
+            newCardCount: (deckData.allQuestions || []).length,
+            action: 'import'
+          });
+          if (chosen === null) {
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+            return false;
+          }
+          deleteSlot(chosen);
+          targetSlot = chosen;
+        }
+      }
 
       // Load into slots and fix it
       const slotIdx = openDeckInSlots(deckData, title, isExam ? 'exam' : 'normal', targetSlot);

@@ -3,7 +3,7 @@ import { ROUTES, shuffleArray, generateSecureId, escapeHtml } from './utils.js';
 import { getDailyStreak } from './engine/notebook-scheduler.js';
 import { initExploreModal, openExploreModal } from './explore-modal.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots } from './share-manager.js';
-import { openDeckInSlots, syncSlotsToCloud, initRealtimeCloudSync } from './slot-manager.js';
+import { openDeckInSlots, syncSlotsToCloud, initRealtimeCloudSync, getLocalSlots, deleteSlot, promptSlotSelectionForReplacement } from './slot-manager.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference } from './i18n.js';
 
 async function init() {
@@ -316,7 +316,7 @@ async function init() {
         });
     }
 
-    function saveAndRedirect(questions, title) {
+    async function saveAndRedirect(questions, title) {
         const playable = questions.filter(q => q && q.type !== 'divisor' && q.type !== 'divider' && q.type !== 'note');
         const gameState = {
             questionsPool: [...playable],
@@ -325,7 +325,22 @@ async function init() {
             deckTitle: title
         };
         try {
-            openDeckInSlots(gameState, title);
+            const slots = getLocalSlots();
+            let targetSlot = null;
+            const occupied = slots.filter(s => s && s.deckData && s.cardCount > 0);
+            if (occupied.length >= 3) {
+                const chosen = await promptSlotSelectionForReplacement({
+                    newDeckTitle: title,
+                    newCardCount: playable.length,
+                    action: 'import'
+                });
+                if (chosen === null) {
+                    return; // User cancelled
+                }
+                deleteSlot(chosen);
+                targetSlot = chosen;
+            }
+            openDeckInSlots(gameState, title, 'normal', targetSlot);
             window.location.href = ROUTES.GAME;
         } catch (err) {
             if (err.name === 'QuotaExceededError') {

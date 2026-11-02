@@ -9,6 +9,7 @@ import { getCloudSlots, saveCloudSlots } from './backend-api.js';
 import { isUserPro } from './explore-modal.js';
 import { syncSharedDeckToFirestore } from './share-manager.js';
 import { t } from './i18n.js';
+import { escapeHtml } from './utils.js';
 
 let syncTimeout = null;
 
@@ -247,6 +248,158 @@ export function deleteSlot(slotIndex) {
     saveLocalSlots(slots);
     syncSlotsToCloud();
   }
+}
+
+/**
+ * Prompts user to select which of their 3 occupied deck slots to delete and replace.
+ * Returns a Promise that resolves to:
+ * - 0, 1, or 2 (the chosen slot index to delete/replace)
+ * - null (if user cancelled or dismissed the dialog)
+ *
+ * @param {Object} options
+ * @param {string} options.newDeckTitle - Name of the new deck to be saved/shared
+ * @param {number} options.newCardCount - Number of cards in the new deck
+ * @param {'share'|'import'|'play'} options.action - Context of the replacement
+ * @returns {Promise<number|null>}
+ */
+export function promptSlotSelectionForReplacement({
+  newDeckTitle = 'Novo Baralho',
+  newCardCount = 0,
+  action = 'share'
+} = {}) {
+  const slots = getLocalSlots();
+  const occupiedSlots = slots.filter(s => s && s.deckData && s.cardCount > 0);
+
+  // If user does not have all 3 slots occupied, return first available empty slot
+  if (occupiedSlots.length < 3) {
+    const emptyIdx = slots.findIndex(s => !s || !s.deckData || s.cardCount === 0);
+    return Promise.resolve(emptyIdx !== -1 ? emptyIdx : 0);
+  }
+
+  return new Promise((resolve) => {
+    // Remove any existing replacement modal if present
+    const existingModal = document.getElementById('slot-replacement-modal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    let titleText = t('slot_limit_modal_title');
+    let descText = t('slot_limit_share_desc', { title: newDeckTitle || t('deck_default_title') });
+
+    if (action === 'import') {
+      titleText = t('slot_limit_import_title');
+      descText = t('slot_limit_import_desc', { title: newDeckTitle || t('deck_default_title') });
+    } else if (action === 'play') {
+      titleText = t('slot_limit_play_title');
+      descText = t('slot_limit_play_desc', { title: newDeckTitle || t('deck_default_title') });
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'slot-replacement-modal';
+    modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[9999] p-4 transition-opacity duration-200';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'slot-replacement-modal-title');
+
+    const slotsHtml = slots.map((slot, i) => {
+      const cardCount = slot.cardCount || 0;
+      const countLabel = `${cardCount} ${cardCount === 1 ? t('card_unit_singular') : t('cards_unit')}`;
+      const title = escapeHtml(slot.title || `Slot ${i + 1}`);
+      const isExam = Boolean(slot.isExam || slot.mode === 'exam');
+      const isShared = Boolean(slot.shareSlug);
+
+      return `
+        <div class="p-3.5 rounded-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] bg-[var(--md-sys-color-surface-container-low,#f8fafc)] dark:bg-[#252525] dark:border-gray-700 flex items-center justify-between gap-3 hover:border-red-300 dark:hover:border-red-800 transition-colors">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#3b82f7] flex items-center justify-center font-bold text-xs shrink-0 border border-blue-200/60 dark:border-blue-800/40">
+              ${i + 1}
+            </div>
+            <div class="min-w-0">
+              <h4 class="text-sm font-semibold text-[var(--md-sys-color-on-surface,#0f172a)] dark:text-white truncate" title="${title}">
+                ${title}
+              </h4>
+              <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#64748b)] dark:text-gray-400 flex items-center gap-2 mt-0.5">
+                <span>${countLabel}</span>
+                ${isExam ? `<span class="text-purple-600 dark:text-purple-400 font-medium flex items-center gap-0.5"><span class="material-symbols-rounded text-xs">bolt</span> ${t('mix_label')}</span>` : ''}
+                ${isShared ? `<span class="text-[#3b82f7] font-medium flex items-center gap-0.5"><span class="material-symbols-rounded text-xs">link</span> ${t('shared')}</span>` : ''}
+              </p>
+            </div>
+          </div>
+          <button type="button" data-slot-index="${i}" class="slot-replace-select-btn px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 active:bg-red-200 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 font-medium text-xs flex items-center gap-1 shrink-0 transition-colors cursor-pointer border border-red-200 dark:border-red-900/50">
+            <span class="material-symbols-rounded text-base">delete</span>
+            <span>${t('delete_and_replace')}</span>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    modal.innerHTML = `
+      <div class="m3-dialog-card bg-white dark:bg-[#1e1e1e] rounded-3xl max-w-md w-full shadow-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] dark:border-gray-700 overflow-hidden flex flex-col p-6 animate-scale-up">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-[#3b82f7] flex items-center justify-center shrink-0 border border-blue-200/60 dark:border-blue-800/40">
+            <span class="material-symbols-rounded text-2xl">swap_horiz</span>
+          </div>
+          <div class="min-w-0">
+            <h3 id="slot-replacement-modal-title" class="text-base font-bold text-[var(--md-sys-color-on-surface,#0f172a)] dark:text-white leading-tight">
+              ${titleText}
+            </h3>
+            <span class="text-[11px] font-medium text-[#3b82f7]">3 ${t('slots_label')}</span>
+          </div>
+        </div>
+
+        <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#64748b)] dark:text-gray-300 leading-relaxed mb-4">
+          ${descText}
+        </p>
+
+        <div class="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+          ${slotsHtml}
+        </div>
+
+        <div class="mt-5 pt-3 border-t border-[var(--md-sys-color-outline-variant,#e2e8f0)] dark:border-gray-700 flex justify-end">
+          <button type="button" id="slot-replace-cancel-btn" class="px-4 py-2 rounded-xl text-xs font-semibold text-[var(--md-sys-color-on-surface-variant,#64748b)] hover:bg-[var(--md-sys-color-surface-container-high,#e2e8f0)] dark:text-gray-300 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+            ${t('cancel')}
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    let isResolved = false;
+    const cleanup = (chosenIndex) => {
+      if (isResolved) return;
+      isResolved = true;
+      document.removeEventListener('keydown', handleKeyDown);
+      modal.remove();
+      resolve(chosenIndex);
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        cleanup(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        cleanup(null);
+      }
+    });
+
+    const cancelBtn = modal.querySelector('#slot-replace-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => cleanup(null));
+    }
+
+    const selectBtns = modal.querySelectorAll('.slot-replace-select-btn');
+    selectBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const slotIdx = parseInt(btn.getAttribute('data-slot-index'), 10);
+        cleanup(isNaN(slotIdx) ? null : slotIdx);
+      });
+    });
+  });
 }
 
 /**

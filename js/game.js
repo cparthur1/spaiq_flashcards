@@ -4359,6 +4359,9 @@ if (menuShareDeckBtn) {
             showNotificationPill(t('deck_shared_copied'), "link.svg");
             alert(t('deck_shared_and_pinned', { url: shareUrl }));
         } catch (err) {
+            if (err.name === 'AbortError') {
+                return; // User cancelled slot replacement dialog cleanly
+            }
             console.error('[Share] Erro ao compartilhar baralho:', err);
             alert(t('error_sharing_deck'));
         }

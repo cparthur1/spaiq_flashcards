@@ -1,3 +1,22 @@
+CHANGELOG: 3 DECK LIMIT ENFORCEMENT & INTERACTIVE REPLACEMENT PROMPT (v15.10)
+Date: 2026-11-02
+
+OVERVIEW:
+1. 3 Deck Maximum Capacity + 1 Notebook Rule:
+   - Preserved global invariant allowing each user (Pro or non-Pro) to keep at most 3 saved decks (in the 3 slots) + 1 dedicated notebook.
+   - Implemented `promptSlotSelectionForReplacement` in `js/slot-manager.js` featuring a Material Design 3 dialog showing all 3 currently occupied slots with deck titles, card counts, mix badges, and shared status indicators.
+2. Interactive Slot Selection on Deck Sharing, Playing, & Importing:
+   - When a user is already using their 3 slots and attempts to share a new deck (`shareDeckToCloud` in `js/share-manager.js`), prompt them with "Limite de 3 baralhos atingido" asking which deck they wish to delete and replace.
+   - Deleting and replacing cleanly clears the selected slot, assigns the new deck, marks it fixed (`isFixed: true`), syncs to Firestore share links and cloud storage, and copies the share URL to clipboard.
+   - If the user cancels the modal, the operation aborts cleanly via `AbortError` without altering any user decks or raising errors.
+   - Added replacement protection to `js/generate.js` (`syncCurrentDeckToSlotAndCloud`, `shareDeckBtn`, `playDeckBtn`) and `js/index.js` (JSON file upload), preventing any silent deck overwrites when all 3 slots are occupied.
+3. Design & Localization Standards:
+   - Fully compliant with Material Design 3, `#3b82f7` theme color, and Google Fonts Icons / Material Symbols (`swap_horiz`, `delete`, `bolt`, `link`). Zero Unicode emojis used.
+   - Added full dictionary parity in `js/i18n.js` for Portuguese (BR) and English (US).
+4. Bumped service worker cache to `flashcards-v15.10` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: GEMINI API PART OBJECT NORMALIZATION & 400 FIX (v15.9)
 Date: 2026-11-02
 

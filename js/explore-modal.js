@@ -1190,6 +1190,7 @@ window.flashcardsShareSlot = async function(slotIdx) {
     renderDeckSlots();
     alert(t('deck_shared_and_pinned', { url: shareUrl }));
   } catch (err) {
+    if (err.name === 'AbortError') return;
     alert(t('error_sharing_deck'));
   }
 };

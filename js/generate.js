@@ -2,7 +2,7 @@ import { callWithRetry, checkAndResetModelFallback, sanitizeChatHistory, renderM
 import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserProStatus, refreshUserProStatus } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
-import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
+import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots, deleteSlot, promptSlotSelectionForReplacement } from './slot-manager.js';
 import { syncSharedDeckToFirestore, shareDeckToCloud } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
 
@@ -302,12 +302,16 @@ function syncCurrentDeckToSlotAndCloud() {
         let targetIdx = currentEditingSlotIndex;
 
         if (targetIdx === null || targetIdx < 0 || targetIdx >= slots.length) {
-            if (isExam) {
-                targetIdx = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
-                if (targetIdx === -1) targetIdx = slots.findIndex(s => s.isExam || s.mode === 'exam');
+            // Check if there is an empty slot to safely claim without overwriting existing decks
+            const emptyIdx = slots.findIndex(s => !s || !s.deckData || s.cardCount === 0);
+            if (emptyIdx !== -1) {
+                targetIdx = emptyIdx;
+                currentEditingSlotIndex = emptyIdx;
             } else {
-                targetIdx = slots.findIndex(s => s.isCurrent && !s.isExam);
-                if (targetIdx === -1) targetIdx = slots.findIndex(s => !s.isExam && s.deckData);
+                // All 3 slots are currently in use! Do not overwrite any existing deck silently.
+                // The deck remains safely stored in localStorage as active editing state.
+                debouncedSyncSlotsToCloud(1200);
+                return;
             }
         }
 
@@ -321,9 +325,6 @@ function syncCurrentDeckToSlotAndCloud() {
             slots.forEach((s, idx) => { s.isCurrent = (idx === targetIdx); });
             saveLocalSlots(slots);
             currentEditingSlotIndex = targetIdx;
-        } else {
-            const allocatedIdx = openDeckInSlots(gameState, title, isExam ? 'exam' : 'normal', targetIdx);
-            currentEditingSlotIndex = allocatedIdx;
         }
 
         // Auto-sync to Firestore share document if this deck is being shared
@@ -3787,9 +3788,15 @@ if (shareDeckBtn) {
             updatedAt: Date.now()
         };
         try {
-            const { shareUrl } = await shareDeckToCloud(gameState, title, currentEditingSlotIndex);
+            const { shareUrl, slotIndex: allocatedSlotIndex } = await shareDeckToCloud(gameState, title, currentEditingSlotIndex);
+            if (allocatedSlotIndex !== undefined && allocatedSlotIndex !== null) {
+                currentEditingSlotIndex = allocatedSlotIndex;
+            }
             alert(t('deck_shared_and_pinned', { url: shareUrl }));
         } catch (err) {
+            if (err.name === 'AbortError') {
+                return; // User cancelled the slot replacement dialog cleanly
+            }
             console.error('[Share] Erro ao compartilhar baralho:', err);
             alert(t('error_sharing_deck'));
         }
@@ -3822,7 +3829,7 @@ downloadDeckBtn.addEventListener('click', () => {
     URL.revokeObjectURL(url);
 });
 
-playDeckBtn.addEventListener('click', () => {
+playDeckBtn.addEventListener('click', async () => {
     const playableCards = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
     if (playableCards.length === 0) {
         alert(t('alert_add_card_before_play'));
@@ -3865,6 +3872,27 @@ playDeckBtn.addEventListener('click', () => {
         isFreeAiTrial: isFreeTrial,
         updatedAt: now
     };
+
+    // If deck has no assigned slot yet and user already uses all 3 slots, prompt user
+    if (title !== "Caderno" && (currentEditingSlotIndex === null || currentEditingSlotIndex < 0)) {
+        const slots = getLocalSlots();
+        const occupiedCount = slots.filter(s => s && s.deckData && s.cardCount > 0).length;
+        if (occupiedCount >= 3) {
+            const chosenSlot = await promptSlotSelectionForReplacement({
+                newDeckTitle: title,
+                newCardCount: playableCards.length,
+                action: 'play'
+            });
+            if (chosenSlot === null) {
+                return; // User cancelled
+            }
+            deleteSlot(chosenSlot);
+            currentEditingSlotIndex = chosenSlot;
+        } else {
+            const emptyIdx = slots.findIndex(s => !s || !s.deckData || s.cardCount === 0);
+            currentEditingSlotIndex = emptyIdx !== -1 ? emptyIdx : 0;
+        }
+    }
 
     try {
         if (title === "Caderno") {
