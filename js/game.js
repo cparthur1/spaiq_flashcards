@@ -2830,6 +2830,8 @@ function renderHeaderStatsDropdown() {
                 : 'bg-white hover:bg-gray-50 border-gray-100'
         }`;
 
+        const safeSubtitle = escapeHtml(subtitle || '');
+
         itemRow.innerHTML = `
             <div class="flex items-center gap-3 min-w-0 flex-1 pr-2">
                 <div class="w-8 h-8 rounded-xl ${stat.iconBg} flex items-center justify-center flex-shrink-0 shadow-xs">
@@ -2843,14 +2845,14 @@ function renderHeaderStatsDropdown() {
                     <div class="flex items-center gap-2 mt-0.5">
                         <span class="text-[11px] font-bold ${stat.colorClass} truncate">${liveVal}</span>
                         <span class="text-gray-300">•</span>
-                        <span class="text-[10px] text-gray-500 truncate" title="${subtitle}">${subtitle}</span>
+                        <span class="text-[10px] text-gray-500 truncate" title="${safeSubtitle}">${safeSubtitle}</span>
                     </div>
                 </div>
             </div>
             <div class="flex items-center gap-1.5 flex-shrink-0">
                 ${activeMode === 'notebook' && stat.id === 'remaining' ? `
-                    <button type="button" class="set-goal-btn p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-medium transition-all" title="Alterar meta diária">
-                        Meta
+                    <button type="button" class="set-goal-btn p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-medium transition-all" title="${escapeHtml(t('change_daily_goal_tooltip'))}">
+                        ${t('goal_label')}
                     </button>
                 ` : ''}
                 <button type="button" class="pin-toggle-btn p-1.5 rounded-xl transition-all duration-150 ${
@@ -3240,7 +3242,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Close hamburger menu when any action is selected
-[exportBtn, goToEditorBtn, restartGameBtn, clearNotebookBtn, resetBtn, statsBtn, receiveSessionBtn, transferSessionBtn, aiToggleBtn].forEach(el => {
+const menuFeedbackBtn = document.getElementById('menu-feedback-btn');
+[exportBtn, goToEditorBtn, restartGameBtn, clearNotebookBtn, resetBtn, statsBtn, receiveSessionBtn, transferSessionBtn, aiToggleBtn, menuFeedbackBtn].forEach(el => {
     el?.addEventListener('click', () => {
         closeHamburgerMenu();
     });

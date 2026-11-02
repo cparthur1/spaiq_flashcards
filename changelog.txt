@@ -18,10 +18,11 @@ OVERVIEW:
    - Backend Webhook Hardening:
      - `worker/src/index.js`: Enforced mandatory Asaas webhook token verification (`env.ASAAS_WEBHOOK_SECRET`), blocking unauthenticated webhook requests.
 2. Complete Localization & Missing Text Translation:
-   - Added 89 missing translation keys to both `TRANSLATIONS['pt-BR']` and `TRANSLATIONS['en-US']` in `js/i18n.js` (total dictionary now reaches 1,066 keys with 100% parity).
+   - Added 115 missing translation keys to both `TRANSLATIONS['pt-BR']` and `TRANSLATIONS['en-US']` in `js/i18n.js` (total dictionary now reaches 1,092 keys with 100% parity).
    - Localized dynamic runtime text in `js/stats.js` (subject/topic badges, retention levels, struggling cards, reset/export toasts).
    - Localized `AVAILABLE_HEADER_STATS` subtitles in `js/game.js` (goal, due today, score, estimated time, pomodoro cycle, accuracy, active study time, and average response speed).
-   - Localized card creator hints, generation progress phrases, completion banners, and card type preview badges in `js/generate.js`.
+   - Localized card creator hints, generation progress phrases, completion banners, paywall trial/extra credit badges, and card type preview badges in `js/generate.js`.
+   - Localized file error messages in `js/index.js` and `js/slot-manager.js`.
    - Localized camera and sync status feedback in `js/transfer.js`.
    - Added missing `data-i18n-alt` attributes in `pages/generate.html` and fallback banner metrics in `pages/stats.html`.
 3. Bumped Service Worker cache version to `flashcards-v15.4`.

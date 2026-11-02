@@ -232,7 +232,7 @@ async function init() {
                     }
 
                     if (loadedDecks.length === 0) {
-                        throw new Error("Nenhum card válido encontrado nos arquivos selecionados.");
+                        throw new Error(t('no_valid_cards_found'));
                     }
 
                     startExamWeek(loadedDecks);
@@ -272,11 +272,11 @@ async function init() {
                 } else if (Array.isArray(parsed)) {
                     questions = parsed;
                 } else {
-                    throw new Error("O arquivo JSON deve ser um array de questões ou um backup compatível.");
+                    throw new Error(t('invalid_json_deck'));
                 }
 
                 if (questions.length === 0) {
-                    throw new Error("O arquivo JSON está vazio.");
+                    throw new Error(t('json_empty_cards'));
                 }
 
                 if (isNotebook) {

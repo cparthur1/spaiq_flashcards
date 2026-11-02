@@ -7,6 +7,7 @@
 import { auth, db, doc, getDoc, setDoc, updateDoc, onSnapshot } from './firebase-client.js';
 import { getCloudSlots, saveCloudSlots } from './backend-api.js';
 import { isUserPro } from './explore-modal.js';
+import { t } from './i18n.js';
 
 let syncTimeout = null;
 
@@ -269,11 +270,11 @@ export function importNotebookBackupData(parsedData) {
   } else if (Array.isArray(parsedData)) {
     cards = parsedData;
   } else {
-    throw new Error('O arquivo não possui o formato esperado de backup de caderno.');
+    throw new Error(t('invalid_notebook_backup_format'));
   }
 
   if (cards.length === 0) {
-    throw new Error('O arquivo está vazio ou não contém cartões válidos.');
+    throw new Error(t('json_empty_cards'));
   }
 
   const playable = cards.filter(q => q && q.type !== 'divisor' && q.type !== 'divider' && q.type !== 'note');

@@ -1536,7 +1536,7 @@ function updateProPaywalledUI() {
                 }
             } else if (usedTrial && hasExtra) {
                 card.classList.remove('is-paywalled');
-                const badgeLabel = `${extraGens} ${extraGens === 1 ? 'DISPONÍVEL' : 'DISPONÍVEIS'}`;
+                const badgeLabel = `${extraGens} ${extraGens === 1 ? t('available_singular') : t('available_plural')}`;
                 if (!existingBadge) {
                     const badge = document.createElement('div');
                     badge.className = 'paywall-badge-pill trial-badge-pill';
@@ -1551,11 +1551,11 @@ function updateProPaywalledUI() {
                 if (!existingBadge) {
                     const badge = document.createElement('div');
                     badge.className = 'paywall-badge-pill trial-badge-pill';
-                    badge.innerHTML = `<img src="../assets/img/PRO.svg" alt="Trial"><span>1 GRÁTIS</span>`;
+                    badge.innerHTML = `<img src="../assets/img/PRO.svg" alt="Trial"><span>${t('one_free_badge')}</span>`;
                     card.appendChild(badge);
                 } else {
                     existingBadge.className = 'paywall-badge-pill trial-badge-pill';
-                    existingBadge.innerHTML = `<img src="../assets/img/PRO.svg" alt="Trial"><span>1 GRÁTIS</span>`;
+                    existingBadge.innerHTML = `<img src="../assets/img/PRO.svg" alt="Trial"><span>${t('one_free_badge')}</span>`;
                 }
             }
         } else {
@@ -1573,12 +1573,12 @@ function updateProPaywalledUI() {
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">Teste Gratuito: 1 Baralho com IA</span>
-                        <span class="text-[11px] text-blue-700">Gere 1 baralho com IA antes de precisar assinar</span>
+                        <span class="text-xs font-bold text-blue-900 block">${t('free_trial_title')}</span>
+                        <span class="text-[11px] text-blue-700">${t('free_trial_desc_generate')}</span>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
-                    1 Grátis
+                    ${t('one_free_badge')}
                 </span>
             `;
         }
@@ -1588,25 +1588,25 @@ function updateProPaywalledUI() {
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">Teste Gratuito: 1 Baralho com IA</span>
-                        <span class="text-[11px] text-blue-700">Aprimoramento por IA liberado no seu teste inicial</span>
+                        <span class="text-xs font-bold text-blue-900 block">${t('free_trial_title')}</span>
+                        <span class="text-[11px] text-blue-700">${t('free_trial_desc_enhance')}</span>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
-                    1 Grátis
+                    ${t('one_free_badge')}
                 </span>
             `;
         }
     } else if (!isPro && usedTrial && hasExtra) {
-        const extraLabel = `${extraGens} ${extraGens === 1 ? 'Crédito' : 'Créditos'}`;
+        const extraLabel = `${extraGens} ${extraGens === 1 ? t('credit_singular') : t('credits_plural')}`;
         if (modal21Badge) {
             modal21Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
             modal21Badge.innerHTML = `
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/ai.svg" class="w-5 h-5 flex-shrink-0" alt="IA">
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">Geração Avulsa com IA</span>
-                        <span class="text-[11px] text-blue-700">Você possui ${extraGens} geração(ões) avulsa(s) disponível(is)</span>
+                        <span class="text-xs font-bold text-blue-900 block">${t('single_ai_generation_title')}</span>
+                        <span class="text-[11px] text-blue-700">${t('single_ai_generation_desc', { count: extraGens })}</span>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
@@ -1620,8 +1620,8 @@ function updateProPaywalledUI() {
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/ai.svg" class="w-5 h-5 flex-shrink-0" alt="IA">
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">Geração Avulsa com IA</span>
-                        <span class="text-[11px] text-blue-700">Você possui ${extraGens} geração(ões) avulsa(s) disponível(is)</span>
+                        <span class="text-xs font-bold text-blue-900 block">${t('single_ai_generation_title')}</span>
+                        <span class="text-[11px] text-blue-700">${t('single_ai_generation_desc', { count: extraGens })}</span>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
@@ -1636,12 +1636,12 @@ function updateProPaywalledUI() {
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                     <div>
-                        <span class="text-xs font-bold text-purple-900 block">Recurso Spaiq Pro</span>
-                        <span class="text-[11px] text-purple-700">Geração de IA com Gemini integrada ao seu plano (4/mês)</span>
+                        <span class="text-xs font-bold text-purple-900 block">${t('pro_feature_title')}</span>
+                        <span class="text-[11px] text-purple-700">${t('pro_feature_generate_desc')}</span>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
-                    <span class="material-symbols-rounded text-xs">check_circle</span> Ativo
+                    <span class="material-symbols-rounded text-xs">check_circle</span> ${t('active_status')}
                 </span>
             `;
         }
@@ -1651,12 +1651,12 @@ function updateProPaywalledUI() {
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                     <div>
-                        <span class="text-xs font-bold text-purple-900 block">Recurso Spaiq Pro</span>
-                        <span class="text-[11px] text-purple-700">Aprimoramento de IA com Gemini integrado ao seu plano (4/mês)</span>
+                        <span class="text-xs font-bold text-purple-900 block">${t('pro_feature_title')}</span>
+                        <span class="text-[11px] text-purple-700">${t('pro_feature_enhance_desc')}</span>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
-                    <span class="material-symbols-rounded text-xs">check_circle</span> Ativo
+                    <span class="material-symbols-rounded text-xs">check_circle</span> ${t('active_status')}
                 </span>
             `;
         }

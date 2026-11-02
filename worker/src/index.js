@@ -198,34 +198,58 @@ export default {
         return jsonResponse({ client_secret: session.client_secret }, 200, corsHeaders);
       }
 
-      // 2.3 Create Stripe Embedded Checkout Session for Deck Generation (R$ 1,49 one-time)
+      // 2.3 Create Stripe Embedded Checkout Session for Deck Generation (R$ 0,99 for Pro, R$ 1,49 for Non-Pro)
       if ((path === '/api/create-extra-deck-session' || path === '/api/payment/extra-deck-session') && request.method === 'POST') {
         let user = null;
+        let isPro = false;
         try {
           user = await authenticateUser();
+          const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+          let userDoc = null;
+          try {
+            const serviceAccount = getServiceAccount(env);
+            userDoc = await getUserDocument(serviceAccount, user.uid);
+          } catch (e) {}
+          isPro = Boolean(isLifetime || user.pro || userDoc?.subscription?.status === 'active');
         } catch (e) {
           // Authentication is optional for initial checkout session creation, but links user if logged in
         }
 
         const mode = "payment";
 
-        // Use custom Price ID if configured and not the old 0.99 price, otherwise use price_data for R$ 1,49
-        const lineItem = (env.STRIPE_EXTRA_PRICE_ID && env.STRIPE_EXTRA_PRICE_ID !== "price_1UWEc0Rynl9tIFFYhgaFcei3")
-          ? {
-              price: env.STRIPE_EXTRA_PRICE_ID,
-              quantity: 1,
-            }
-          : {
-              price_data: {
-                currency: 'brl',
-                unit_amount: 149, // R$ 1,49
-                product_data: {
-                  name: 'Geração de Baralho com IA',
-                  description: '1 geração de baralho com IA de alta precisão (Gemini Flash Thinking)'
-                }
-              },
-              quantity: 1
-            };
+        // Pro users pay R$ 0,99 (99 centavos), Non-Pro users pay R$ 1,49 (149 centavos)
+        let lineItem;
+        if (isPro) {
+          const proPriceId = env.STRIPE_EXTRA_PRICE_ID_PRO || env.STRIPE_EXTRA_PRICE_ID || "price_1UWEc0Rynl9tIFFYhgaFcei3";
+          lineItem = proPriceId
+            ? { price: proPriceId, quantity: 1 }
+            : {
+                price_data: {
+                  currency: 'brl',
+                  unit_amount: 99, // R$ 0,99
+                  product_data: {
+                    name: 'Geração Extra de Baralho Pro (IA)',
+                    description: '1 geração adicional de baralho com IA para assinante Pro'
+                  }
+                },
+                quantity: 1
+              };
+        } else {
+          const nonProPriceId = env.STRIPE_EXTRA_PRICE_ID_NON_PRO || env.STRIPE_PRICE_NON_PRO;
+          lineItem = nonProPriceId
+            ? { price: nonProPriceId, quantity: 1 }
+            : {
+                price_data: {
+                  currency: 'brl',
+                  unit_amount: 149, // R$ 1,49
+                  product_data: {
+                    name: 'Geração de Baralho com IA (Avulsa)',
+                    description: '1 geração avulsa de baralho com IA de alta precisão (Gemini Flash Thinking)'
+                  }
+                },
+                quantity: 1
+              };
+        }
 
         const sessionParams = {
           mode,
@@ -993,7 +1017,7 @@ export default {
             } else {
               return jsonResponse({
                 error: 'quota_exceeded',
-                message: 'Você atingiu o limite de 4 baralhos por IA este mês. Adquira gerações extras por R$ 1,49 cada.',
+                message: 'Você atingiu o limite de 4 baralhos por IA este mês. Adquira gerações extras por R$ 0,99 cada.',
                 limit: 4,
                 used: monthlyUsed,
                 extra: extraGens

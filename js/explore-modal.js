@@ -367,11 +367,11 @@ function injectModalHtml() {
         <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
           <span class="material-symbols-rounded text-2xl">add_circle</span>
         </div>
-        <h2 class="text-xl font-bold text-[var(--md-sys-color-on-surface)] mb-1" data-i18n="extra_deck_title">${t('extra_deck_title')}</h2>
-        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4" data-i18n="extra_deck_subtitle">${t('extra_deck_subtitle')}</p>
+        <h2 id="extra-deck-modal-title" class="text-xl font-bold text-[var(--md-sys-color-on-surface)] mb-1" data-i18n="extra_deck_title">${t('extra_deck_title')}</h2>
+        <p id="extra-deck-modal-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4" data-i18n="extra_deck_subtitle">${t('extra_deck_subtitle')}</p>
 
         <div class="mb-4">
-          <span class="text-3xl font-extrabold text-[var(--md-sys-color-primary)]">R$ 1,49</span>
+          <span id="extra-deck-modal-price" class="text-3xl font-extrabold text-[var(--md-sys-color-primary)]">R$ 1,49</span>
           <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="per_deck">${t('per_deck')}</span>
         </div>
 
@@ -383,7 +383,7 @@ function injectModalHtml() {
           <div id="extra-deck-checkout-form"></div>
         </div>
 
-        <div class="mt-4 pt-3 border-t border-[var(--md-sys-color-outline-variant)] text-center text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1">
+        <div id="extra-deck-switch-pro-container" class="mt-4 pt-3 border-t border-[var(--md-sys-color-outline-variant)] text-center text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1">
           <div><span data-i18n="prefer_pro_plan">${t('prefer_pro_plan')}</span></div>
           <button type="button" id="switch-to-pro-from-extra-btn" class="font-bold text-[var(--md-sys-color-primary)] hover:underline cursor-pointer">
             Flashcards Pro (R$ 4,99 / mês)
@@ -1007,6 +1007,25 @@ async function mountExtraDeckEmbeddedForm() {
 export function renderExtraDeckModalContent() {
   const container = document.getElementById('extra-deck-checkout-container');
   if (!container) return;
+
+  const pro = isUserPro(currentUser, userProStatus);
+  const priceEl = document.getElementById('extra-deck-modal-price');
+  const titleEl = document.getElementById('extra-deck-modal-title');
+  const subtitleEl = document.getElementById('extra-deck-modal-subtitle');
+  const switchContainer = document.getElementById('extra-deck-switch-pro-container');
+
+  if (priceEl) {
+    priceEl.textContent = pro ? 'R$ 0,99' : 'R$ 1,49';
+  }
+  if (titleEl) {
+    titleEl.textContent = pro ? t('extra_deck_title_pro') : t('extra_deck_title');
+  }
+  if (subtitleEl) {
+    subtitleEl.textContent = pro ? t('extra_deck_subtitle_pro') : t('extra_deck_subtitle');
+  }
+  if (switchContainer) {
+    switchContainer.style.display = pro ? 'none' : 'block';
+  }
 
   if (!currentUser) {
     container.innerHTML = `
