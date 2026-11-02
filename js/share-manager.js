@@ -9,9 +9,48 @@ import { openDeckInSlots, fixSlot, getLocalSlots, saveLocalSlots } from './slot-
 import { ROUTES, generateSecureId, escapeHtml } from './utils.js';
 
 const DELETED_NOTICE_KEY = 'flashcards_deleted_deck_notice';
+let sharedSyncTimeouts = {};
 
 /**
- * Share a deck to Firestore and return shareable link
+ * Automatically sync an edited/updated deck to its shared Firestore document.
+ * Debounced to batch rapid card edits or deletions.
+ */
+export async function syncSharedDeckToFirestore(shareSlug, deckData, title = null, debounceMs = 600) {
+  if (!shareSlug || !deckData) return;
+
+  const performSync = async () => {
+    try {
+      const shareDocRef = doc(db, 'shares', shareSlug);
+      const cardCount = Array.isArray(deckData.allQuestions)
+        ? deckData.allQuestions.length
+        : (Array.isArray(deckData.cards) ? deckData.cards.length : (Array.isArray(deckData.questionsPool) ? deckData.questionsPool.length : 0));
+
+      const payload = {
+        title: title || deckData.deckTitle || 'Baralho Compartilhado',
+        cardCount,
+        deckData,
+        updatedAt: Date.now()
+      };
+
+      await setDoc(shareDocRef, payload, { merge: true });
+    } catch (err) {
+      console.warn(`[ShareManager] Erro ao sincronizar baralho compartilhado (${shareSlug}):`, err);
+    }
+  };
+
+  if (debounceMs > 0) {
+    if (sharedSyncTimeouts[shareSlug]) {
+      clearTimeout(sharedSyncTimeouts[shareSlug]);
+    }
+    sharedSyncTimeouts[shareSlug] = setTimeout(performSync, debounceMs);
+  } else {
+    await performSync();
+  }
+}
+
+/**
+ * Share a deck to Firestore and return shareable link.
+ * Available to all users (Pro and non-Pro).
  * Rule 1.1: If sharing the file, fix it on the slot without being overwritten.
  */
 export async function shareDeckToCloud(deckData, deckName = 'Baralho Compartilhado', slotIndex = null) {
@@ -19,7 +58,19 @@ export async function shareDeckToCloud(deckData, deckName = 'Baralho Compartilha
     throw new Error('Baralho vazio não pode ser compartilhado');
   }
 
-  const shareSlug = generateSecureId('deck');
+  // Check if slot already has a shareSlug, or if Caderno has an existing shareSlug
+  let shareSlug = null;
+  const currentSlots = getLocalSlots();
+  if (slotIndex !== null && currentSlots[slotIndex]?.shareSlug) {
+    shareSlug = currentSlots[slotIndex].shareSlug;
+  } else if (slotIndex === null && deckName === 'Caderno') {
+    shareSlug = localStorage.getItem('flashcards_notebook_share_slug');
+  }
+
+  if (!shareSlug) {
+    shareSlug = generateSecureId('deck');
+  }
+
   const shareDocRef = doc(db, 'shares', shareSlug);
 
   await setDoc(shareDocRef, {
@@ -28,17 +79,22 @@ export async function shareDeckToCloud(deckData, deckName = 'Baralho Compartilha
     cardCount: deckData.allQuestions.length,
     deckData,
     deleted: false,
+    updatedAt: Date.now(),
     createdAt: Date.now()
-  });
+  }, { merge: true });
 
-  // If a slotIndex was provided, fix the slot so it's not overwritten and record shareSlug
+  // If a slotIndex was provided, fix the slot so it's not overwritten and record shareSlug & isShareOwner
   if (slotIndex !== null) {
     fixSlot(slotIndex, true);
     const slots = getLocalSlots();
     if (slots[slotIndex]) {
       slots[slotIndex].shareSlug = shareSlug;
+      slots[slotIndex].isShareOwner = true;
+      slots[slotIndex].isSharedImport = false;
       saveLocalSlots(slots);
     }
+  } else if (deckName === 'Caderno') {
+    localStorage.setItem('flashcards_notebook_share_slug', shareSlug);
   }
 
   const origin = window.location.origin;

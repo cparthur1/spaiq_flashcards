@@ -1126,6 +1126,10 @@ export const TRANSLATIONS = {
     header_stat_accuracy_sub: "{correct}/{total} corretos na sessão",
     header_stat_active_study: "Tempo de estudo ativo",
     header_stat_avg_sub: "Média sobre {count} cards",
+    notebook_goal_progress_tooltip: "{reviewed}/{goal} da meta concluídos hoje ({due} vencidos no total). Clique para alterar meta.",
+    notebook_goal_wrapper_tooltip: "Meta diária: {goal} cards ({reviewed}/{goal} hoje). Clique para alterar meta.",
+    notebook_no_goal_due_tooltip: "{count} cards vencidos para hoje. Clique para definir meta diária.",
+    notebook_set_goal_tooltip: "Clique para definir meta de cards por dia",
     pomodoro_disabled: "Pomodoro desativado",
     pomodoro_cycle_focus: "Ciclo de foco",
     pomodoro_short_break: "Pausa curta",
@@ -2229,6 +2233,11 @@ export const TRANSLATIONS = {
     "zero_selected": "0 selected",
     "zoomed_image": "Zoomed Image",
 
+    // Missing core keys
+    language: "Language",
+    detail: "Detail",
+    preference: "Preference",
+
     // CodeQL Hardening & UI Localization additions
     robot_alt: "Robot",
     comment_alt: "Comment",
@@ -2284,6 +2293,10 @@ export const TRANSLATIONS = {
     header_stat_accuracy_sub: "{correct}/{total} correct in session",
     header_stat_active_study: "Active study time",
     header_stat_avg_sub: "Average over {count} cards",
+    notebook_goal_progress_tooltip: "{reviewed}/{goal} of daily goal completed today ({due} total due). Click to change goal.",
+    notebook_goal_wrapper_tooltip: "Daily goal: {goal} cards ({reviewed}/{goal} today). Click to change goal.",
+    notebook_no_goal_due_tooltip: "{count} cards due today. Click to set daily goal.",
+    notebook_set_goal_tooltip: "Click to set daily cards goal",
     pomodoro_disabled: "Pomodoro disabled",
     pomodoro_cycle_focus: "Focus cycle",
     pomodoro_short_break: "Short break",

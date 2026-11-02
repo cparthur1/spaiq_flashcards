@@ -107,20 +107,6 @@
         <div class="px-1 py-1 space-y-0.5" role="group" aria-label="Quick settings">
             <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1" data-i18n="quick_settings">Quick settings</span>
 
-            <!-- Configurações (Abre o Modal Completo de Configurações: Acessibilidade, Pomodoro, IA, Metas) -->
-            <button type="button" id="open-settings-modal-btn"
-                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
-                title="Abrir Configurações do Aplicativo" data-i18n-title="open_app_settings">
-                <div class="flex items-center gap-3 min-w-0">
-                    <img id="settings-menu-icon" src="../assets/img/settings.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Configurações" data-i18n-alt="settings">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="settings">Configurações</p>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="settings_subtitle">Acessibilidade, Pomodoro, IA e metas</p>
-                    </div>
-                </div>
-                <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
-            </button>
-
             <!-- Account / Login Button -->
             <button type="button" id="menu-account-btn"
                 class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
@@ -131,6 +117,20 @@
                     <div class="flex-1 min-w-0">
                         <p id="menu-account-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="my_account">Minha Conta</p>
                         <p id="menu-account-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="my_account_subtitle">Sincronização e Plano Pro</p>
+                    </div>
+                </div>
+                <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+            </button>
+
+            <!-- Configurações (Abre o Modal Completo de Configurações: Acessibilidade, Pomodoro, IA, Metas) -->
+            <button type="button" id="open-settings-modal-btn"
+                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
+                title="Abrir Configurações do Aplicativo" data-i18n-title="open_app_settings">
+                <div class="flex items-center gap-3 min-w-0">
+                    <img id="settings-menu-icon" src="../assets/img/settings.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Configurações" data-i18n-alt="settings">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="settings">Configurações</p>
+                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="settings_subtitle">Acessibilidade, Pomodoro, IA e metas</p>
                     </div>
                 </div>
                 <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
@@ -254,7 +254,7 @@
                 class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
                 title="Send feedback" data-i18n-title="send_feedback_title">
                 <div class="flex items-center gap-3 min-w-0">
-                    <span class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover:scale-110">feedback</span>
+                    <img src="../assets/img/feedback.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Feedback" data-i18n-alt="send_feedback">
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="send_feedback">Send feedback</p>
                         <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="send_feedback_desc">I actually listen to this</p>
@@ -370,14 +370,14 @@
                 <div id="header-pinned-stats-container" class="flex items-center gap-2.5 sm:gap-3.5">
                     <!-- Default fallback structure for initial SSR / fast layout -->
                     <div id="counter-left-wrapper" class="block select-none" data-stat-id="remaining">
-                        <p id="counter-left-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none" data-i18n="remaining">
+                        <p id="counter-left-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none" data-i18n="stat_remaining_label">
                             Restantes</p>
                         <p id="questions-left" class="text-xs sm:text-sm font-bold text-blue-600 text-center">0</p>
                     </div>
                     <div class="h-6 sm:h-7 w-[1px] bg-gray-200/80 mx-0.5 block flex-shrink-0"></div>
                     <div id="score-wrapper" class="flex items-center min-w-[42px] justify-center" data-stat-id="score">
                         <div id="score-container" class="block">
-                            <p id="score-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none" data-i18n="score">
+                            <p id="score-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none" data-i18n="stat_score_label">
                                 Score</p>
                             <p id="score" class="text-xs sm:text-sm font-bold text-gray-900 text-center">0</p>
                         </div>

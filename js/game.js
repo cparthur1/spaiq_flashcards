@@ -2408,9 +2408,11 @@ const AVAILABLE_HEADER_STATS = [
                 const dueInfo = getNotebookDueCounts(allQuestions);
                 const dailyGoal = getNotebookDailyGoal();
                 const reviewedToday = dueInfo.reviewedToday || 0;
-                return dailyGoal > 0 ? `Meta: ${reviewedToday}/${dailyGoal} hoje` : `${dueInfo.dueToday} vencidos hoje`;
+                return dailyGoal > 0
+                    ? t('header_stat_goal_sub', { reviewed: reviewedToday, goal: dailyGoal })
+                    : t('header_stat_due_today_sub', { count: dueInfo.dueToday || 0 });
             }
-            return `${questionsPool.length} cartas restantes`;
+            return t('stat_cards_remaining', { count: questionsPool.length });
         }
     },
     {
@@ -2638,17 +2640,22 @@ function checkAndCelebrateNotebookDailyGoal(isFromAnsweringCard = false) {
     showNotificationPill(t('notebook_daily_goal_done_toast'), 'collection.svg');
 }
 
-function renderHeaderPinnedStats() {
+let currentRenderedStatsMode = null;
+
+function renderHeaderPinnedStats(forceRerender = false) {
     if (!headerPinnedStatsContainer) return;
     const pinnedIds = getPinnedHeaderStats();
 
     const currentRenderedIds = Array.from(headerPinnedStatsContainer.querySelectorAll('[data-stat-id]'))
         .map(el => el.getAttribute('data-stat-id'));
 
-    const needsFullRerender = currentRenderedIds.length !== pinnedIds.length ||
+    const needsFullRerender = forceRerender ||
+        currentRenderedStatsMode !== activeMode ||
+        currentRenderedIds.length !== pinnedIds.length ||
         !pinnedIds.every((id, idx) => id === currentRenderedIds[idx]);
 
     if (needsFullRerender) {
+        currentRenderedStatsMode = activeMode;
         headerPinnedStatsContainer.innerHTML = '';
         pinnedIds.forEach((statId, index) => {
             const statDef = AVAILABLE_HEADER_STATS.find(s => s.id === statId);
@@ -2662,13 +2669,19 @@ function renderHeaderPinnedStats() {
 
             const statWrapper = document.createElement('div');
             statWrapper.setAttribute('data-stat-id', statId);
+            const statI18n = getStatI18n(statId);
+            const statLabel = activeMode === 'notebook'
+                ? (statI18n.notebookLabel || statDef.notebookLabel)
+                : (statI18n.label || statDef.label);
+            const statTitle = statI18n.title || statDef.title;
 
             if (statId === 'remaining') {
                 statWrapper.id = 'counter-left-wrapper';
                 statWrapper.className = 'block select-none';
+                statWrapper.title = statTitle;
                 statWrapper.innerHTML = `
                     <p id="counter-left-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none text-center">
-                        ${activeMode === 'notebook' ? statDef.notebookLabel : statDef.label}
+                        ${statLabel}
                     </p>
                     <p id="questions-left" class="text-xs sm:text-sm font-bold ${statDef.colorClass} text-center">
                         ${statDef.getValue()}
@@ -2683,10 +2696,11 @@ function renderHeaderPinnedStats() {
             } else if (statId === 'score') {
                 statWrapper.id = 'score-wrapper';
                 statWrapper.className = 'flex items-center min-w-[38px] justify-center select-none';
+                statWrapper.title = statTitle;
                 statWrapper.innerHTML = `
                     <div id="score-container" class="block">
                         <p id="score-label" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none text-center">
-                            ${activeMode === 'notebook' ? statDef.notebookLabel : statDef.label}
+                            ${statLabel}
                         </p>
                         <p id="score" class="text-xs sm:text-sm font-bold ${statDef.colorClass} text-center">
                             ${statDef.getValue()}
@@ -2694,9 +2708,8 @@ function renderHeaderPinnedStats() {
                     </div>
                 `;
             } else {
-                const statI18n = getStatI18n(statId);
-                const statLabel = activeMode === 'notebook' ? (statI18n.notebookLabel || statDef.notebookLabel) : (statI18n.label || statDef.label);
                 statWrapper.className = 'block select-none min-w-[38px]';
+                statWrapper.title = statTitle;
                 statWrapper.innerHTML = `
                     <p id="stat-label-${statId}" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none text-center">
                         ${statLabel}
@@ -2725,29 +2738,45 @@ function updateHeaderPinnedStatsValues() {
         const cntWrapper = document.getElementById('counter-left-wrapper');
         const cntLabel = document.getElementById('counter-left-label');
         const scLabel = document.getElementById('score-label');
+        const scWrapper = document.getElementById('score-wrapper');
 
-        if (cntLabel) cntLabel.textContent = "Para Hoje";
-        if (scLabel) scLabel.textContent = t('revisions_count_label');
+        const remI18n = getStatI18n('remaining');
+        const scI18n = getStatI18n('score');
+
+        if (cntLabel) cntLabel.textContent = remI18n.notebookLabel || "Para Hoje";
+        if (scLabel) scLabel.textContent = scI18n.notebookLabel || t('revisions_count_label');
 
         if (dailyGoal > 0) {
             const rem = Math.max(0, dailyGoal - reviewedToday);
             if (qLeft) {
                 qLeft.textContent = rem;
-                qLeft.title = `${reviewedToday}/${dailyGoal} da meta concluídos hoje (${dueInfo.dueToday} vencidos no total). Clique para alterar meta.`;
+                qLeft.title = t('notebook_goal_progress_tooltip', {
+                    reviewed: reviewedToday,
+                    goal: dailyGoal,
+                    due: dueInfo.dueToday || 0
+                });
             }
             if (cntWrapper) {
-                cntWrapper.title = `Meta diária: ${dailyGoal} cards (${reviewedToday}/${dailyGoal} hoje). Clique para alterar meta.`;
+                cntWrapper.title = t('notebook_goal_wrapper_tooltip', {
+                    goal: dailyGoal,
+                    reviewed: reviewedToday
+                });
                 cntWrapper.classList.add('cursor-pointer', 'hover:opacity-80', 'transition');
             }
         } else {
             if (qLeft) {
-                qLeft.textContent = dueInfo.dueToday;
-                qLeft.title = `${dueInfo.dueToday} cards vencidos para hoje. Clique para definir meta diária.`;
+                qLeft.textContent = dueInfo.dueToday || 0;
+                qLeft.title = t('notebook_no_goal_due_tooltip', {
+                    count: dueInfo.dueToday || 0
+                });
             }
             if (cntWrapper) {
-                cntWrapper.title = "Clique para definir meta de cards por dia";
+                cntWrapper.title = t('notebook_set_goal_tooltip');
                 cntWrapper.classList.add('cursor-pointer', 'hover:opacity-80', 'transition');
             }
+        }
+        if (scWrapper) {
+            scWrapper.title = scI18n.title || "";
         }
         const scVal = document.getElementById('score');
         if (scVal) scVal.textContent = notebookReviewsCount;
@@ -2757,17 +2786,24 @@ function updateHeaderPinnedStatsValues() {
         const qLeft = document.getElementById('questions-left');
         const scVal = document.getElementById('score');
         const cntWrapper = document.getElementById('counter-left-wrapper');
+        const scWrapper = document.getElementById('score-wrapper');
 
-        if (cntLabel) cntLabel.textContent = "Restantes";
-        if (scLabel) scLabel.textContent = "Score";
+        const remI18n = getStatI18n('remaining');
+        const scI18n = getStatI18n('score');
+
+        if (cntLabel) cntLabel.textContent = remI18n.label || "Restantes";
+        if (scLabel) scLabel.textContent = scI18n.label || "Score";
         if (qLeft) {
             qLeft.textContent = questionsPool.length;
             qLeft.title = "";
         }
         if (scVal) scVal.textContent = score;
         if (cntWrapper) {
-            cntWrapper.title = "";
+            cntWrapper.title = remI18n.title || "";
             cntWrapper.classList.remove('cursor-pointer', 'hover:opacity-80');
+        }
+        if (scWrapper) {
+            scWrapper.title = scI18n.title || "";
         }
     }
 
@@ -2776,13 +2812,20 @@ function updateHeaderPinnedStatsValues() {
         const statDef = AVAILABLE_HEADER_STATS.find(s => s.id === statId);
         if (!statDef) return;
 
+        const statI18n = getStatI18n(statId);
         const valEl = document.getElementById(`stat-val-${statId}`);
         const lblEl = document.getElementById(`stat-label-${statId}`);
+        const wrapEl = headerPinnedStatsContainer.querySelector(`[data-stat-id="${statId}"]`);
         if (lblEl) {
-            lblEl.textContent = activeMode === 'notebook' ? statDef.notebookLabel : statDef.label;
+            lblEl.textContent = activeMode === 'notebook'
+                ? (statI18n.notebookLabel || statDef.notebookLabel)
+                : (statI18n.label || statDef.label);
         }
         if (valEl) {
             valEl.textContent = statDef.getValue();
+        }
+        if (wrapEl) {
+            wrapEl.title = statI18n.title || statDef.title;
         }
     });
 
@@ -4736,7 +4779,7 @@ settingLanguageSelect?.addEventListener('change', () => {
 
 window.addEventListener('flashcards:language-change', () => {
     applyTranslations();
-    renderHeaderPinnedStats();
+    renderHeaderPinnedStats(true);
     if (settingLanguageSelect) {
         settingLanguageSelect.value = getLanguagePreference();
     }

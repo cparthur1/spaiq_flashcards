@@ -1,3 +1,19 @@
+CHANGELOG: PINNED STATS LOCALIZATION & FULL DICTIONARY KEY PARITY (v15.5)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Dynamic Localization of Pinned Header Stats:
+   - Updated `AVAILABLE_HEADER_STATS` in `js/game.js` to dynamic internationalization using `t('header_stat_goal_sub')`, `t('header_stat_due_today_sub')`, and `t('stat_cards_remaining')`.
+   - Updated `renderHeaderPinnedStats` and `updateHeaderPinnedStatsValues` in `js/game.js` to dynamically look up stat labels (`getStatI18n`) for remaining, score, and all pinned metrics across Deck and Notebook modes (e.g. "Restantes" / "Remaining", "Para Hoje" / "Due Today", "Score", "Revisões" / "Reviews", "Precisão" / "Accuracy", "Previsão" / "Estimate", "Tempo Total" / "Total Time", "Tempo / Card" / "Time / Card").
+   - Added mode-switch tracking (`currentRenderedStatsMode`) and forced re-render on language-change events so chips and tooltips instantly update upon switching language.
+   - Internationalized interactive daily goal tooltips (`notebook_goal_progress_tooltip`, `notebook_goal_wrapper_tooltip`, `notebook_no_goal_due_tooltip`, `notebook_set_goal_tooltip`).
+2. 100% Dictionary Key Parity in `js/i18n.js`:
+   - Added missing core keys (`language`, `detail`, `preference`) and notebook goal tooltips to `en-US` and `pt-BR`.
+   - Attained exact 1:1 key parity (1,096 keys in pt-BR, 1,096 keys in en-US).
+3. Cache bumped to `flashcards-v15.5` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: CODEQL SECURITY HARDENING & COMPREHENSIVE UI LOCALIZATION (v15.4)
 Date: 2026-11-02
 
