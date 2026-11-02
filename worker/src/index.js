@@ -218,38 +218,44 @@ export default {
         const mode = "payment";
 
         // Pro users pay R$ 0,99 (99 centavos), Non-Pro users pay R$ 1,49 (149 centavos)
-        let lineItem;
-        if (isPro) {
-          const proPriceId = env.STRIPE_EXTRA_PRICE_ID_PRO || env.STRIPE_EXTRA_PRICE_ID || "price_1UWEc0Rynl9tIFFYhgaFcei3";
-          lineItem = proPriceId
-            ? { price: proPriceId, quantity: 1 }
-            : {
-                price_data: {
-                  currency: 'brl',
-                  unit_amount: 99, // R$ 0,99
-                  product_data: {
-                    name: 'Geração Extra de Baralho Pro (IA)',
-                    description: '1 geração adicional de baralho com IA para assinante Pro'
-                  }
-                },
-                quantity: 1
-              };
-        } else {
-          const nonProPriceId = env.STRIPE_EXTRA_PRICE_ID_NON_PRO || env.STRIPE_PRICE_NON_PRO;
-          lineItem = nonProPriceId
-            ? { price: nonProPriceId, quantity: 1 }
-            : {
-                price_data: {
-                  currency: 'brl',
-                  unit_amount: 149, // R$ 1,49
-                  product_data: {
-                    name: 'Geração de Baralho com IA (Avulsa)',
-                    description: '1 geração avulsa de baralho com IA de alta precisão (Gemini Flash Thinking)'
-                  }
-                },
-                quantity: 1
-              };
+        // Supports Stripe Price IDs (price_...) and Stripe Product IDs (prod_...)
+        function resolveStripeLineItem(targetId, isProUser) {
+          const unitAmount = isProUser ? 99 : 149;
+          const cleanId = (targetId && typeof targetId === 'string') ? targetId.trim() : '';
+
+          if (cleanId.startsWith('price_') || cleanId.startsWith('plan_')) {
+            return { price: cleanId, quantity: 1 };
+          }
+
+          if (cleanId.startsWith('prod_')) {
+            return {
+              price_data: {
+                currency: 'brl',
+                unit_amount: unitAmount,
+                product: cleanId
+              },
+              quantity: 1
+            };
+          }
+
+          return {
+            price_data: {
+              currency: 'brl',
+              unit_amount: unitAmount,
+              product_data: {
+                name: isProUser ? 'Geração Extra de Baralho Pro (IA)' : 'Geração de Baralho com IA (Avulsa)',
+                description: isProUser
+                  ? '1 geração adicional de baralho com IA para assinante Pro'
+                  : '1 geração avulsa de baralho com IA de alta precisão (Gemini Flash Thinking)'
+              }
+            },
+            quantity: 1
+          };
         }
+
+        const proId = env.STRIPE_EXTRA_PRICE_ID_PRO || env.STRIPE_EXTRA_PRICE_ID || "prod_VXJEx9xIR4hKWR";
+        const nonProId = env.STRIPE_EXTRA_PRICE_ID_NON_PRO || env.STRIPE_PRICE_NON_PRO || "prod_VYSOFAreE9zDHt";
+        const lineItem = resolveStripeLineItem(isPro ? proId : nonProId, isPro);
 
         const sessionParams = {
           mode,
