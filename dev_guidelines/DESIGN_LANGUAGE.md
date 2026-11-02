@@ -49,7 +49,7 @@ The application maps reference tones to semantic UI roles defined in `:root`.
 | Token Role | CSS Variable | Value (Hex) | Purpose / Usage |
 | :--- | :--- | :--- | :--- |
 | **Theme Blue (Icons & Buttons)** | `--md-sys-color-primary` / `#3b82f7` | `#3b82f7` | **Standard blue color for icons and buttons across the app's theme** |
-| **Primary** | `--md-sys-color-primary` | `#1a56db` | High-emphasis buttons, active tabs, main FAB |
+| **Primary** | `--md-sys-color-primary` | `#3b82f7` | High-emphasis buttons, active tabs, main FAB |
 | **On Primary** | `--md-sys-color-on-primary` | `#ffffff` | Text & icons placed on top of `primary` |
 | **Primary Container** | `--md-sys-color-primary-container` | `#dbeafe` | Standout badges, chip fills, soft action cards |
 | **On Primary Container** | `--md-sys-color-on-primary-container` | `#1e3a8a` | Text & icons on `primary-container` |
