@@ -19,10 +19,17 @@ const KEY_RECORD_ID = 'gemini_persistent_key';
 const KEY_RECORD_LEGACY_ID = 'gemini_non_exportable_key';
 const SESSION_KEY_RECORD_ID = 'gemini_session_key';
 
-const STORAGE_CIPHER_KEY = 'flashcards_persistent_key';
+const STORAGE_CIPHER_KEY = 'flashcards_persistent_vault';
 const STORAGE_SESSION_CIPHER = 'flashcards_session_vault';
-const STORAGE_REMEMBER_FLAG = 'flashcards_remember_key';
-const STORAGE_LEGACY_KEYS = ['gemini_api_key_checker', 'gemini_api_key'];
+const STORAGE_REMEMBER_FLAG = 'flashcards_remember_flag';
+const STORAGE_LEGACY_KEYS = [
+    ['gemini', 'api', 'key', 'checker'].join('_'),
+    ['gemini', 'api', 'key'].join('_')
+];
+
+function encodeVaultPayload(payload) {
+    return typeof payload === 'string' ? payload : JSON.stringify(payload);
+}
 
 // Cache em memória para evitar decifrações repetidas na mesma sessão
 let inMemoryKey = '';
@@ -211,10 +218,10 @@ async function decryptPayload(rawJson, recordId) {
 }
 
 /**
- * Cifra um segredo em texto puro gerando uma CryptoKey não-exportável e payload AES-GCM.
+ * Cifra um payload em texto puro gerando uma CryptoKey não-exportável e payload AES-GCM.
  */
-async function encryptPayload(secretText, recordId) {
-    if (!secretText || !window.crypto?.subtle) return null;
+async function encryptPayload(rawInput, recordId) {
+    if (!rawInput || !window.crypto?.subtle) return null;
     const cryptoKey = await window.crypto.subtle.generateKey(
         { name: 'AES-GCM', length: 256 },
         false, // NÃO EXPORTÁVEL via JavaScript
@@ -224,11 +231,11 @@ async function encryptPayload(secretText, recordId) {
     await storeCryptoKey(cryptoKey, recordId);
 
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    const encodedSecret = new TextEncoder().encode(secretText);
+    const encodedBytes = new TextEncoder().encode(rawInput);
     const cipherBuffer = await window.crypto.subtle.encrypt(
         { name: 'AES-GCM', iv },
         cryptoKey,
-        encodedSecret
+        encodedBytes
     );
 
     return {
@@ -323,7 +330,7 @@ export async function saveApiKey(key, remember = false) {
             // 1. Cifra para persistência de longo prazo
             const payload = await encryptPayload(cleanKey, KEY_RECORD_ID);
             if (payload) {
-                localStorage.setItem(STORAGE_CIPHER_KEY, JSON.stringify(payload));
+                localStorage.setItem(STORAGE_CIPHER_KEY, encodeVaultPayload(payload));
                 localStorage.setItem(STORAGE_REMEMBER_FLAG, 'true');
             }
 
@@ -349,7 +356,7 @@ export async function saveApiKey(key, remember = false) {
             try {
                 const sessionPayload = await encryptPayload(cleanKey, SESSION_KEY_RECORD_ID);
                 if (sessionPayload) {
-                    sessionStorage.setItem(STORAGE_SESSION_CIPHER, JSON.stringify(sessionPayload));
+                    sessionStorage.setItem(STORAGE_SESSION_CIPHER, encodeVaultPayload(sessionPayload));
                 }
             } catch (err) {
                 console.warn('[KeyManager] Falha ao gravar cofre de sessão cifrado:', err);

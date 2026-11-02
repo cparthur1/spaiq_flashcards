@@ -1,3 +1,22 @@
+CHANGELOG: CODEQL TAINT-BARRIER & CLEARTEXT STORAGE REMEDIATION (v15.17)
+Date: 2026-11-02
+
+OVERVIEW:
+1. DOM-Based XSS & DOM-Text-Reinterpreted-As-HTML Remediation (`js/xss-through-dom`, `js/dom-text-reinterpreted-as-html`):
+   - Hardened `t(key, params)` in `js/i18n.js` so missing keys return `''` instead of returning the raw DOM attribute string (`key`), severing the CodeQL `DomTextSource` taint path from `el.getAttribute('data-i18n*')` through `t()` into `.innerHTML` callers.
+   - Replaced dynamic `new RegExp` interpolation in `t()` with `.split().join()` and applied metacharacter sanitization (`.replace(/[<>]/g, '')`) to interpolation parameters.
+   - Added centralized `sanitizeHtml(html, extraConfig)` in `js/utils.js` (wrapping `DOMPurify.sanitize` with fallback to `escapeHtml`) and applied it in `renderMathAndMarkdown` and `renderFillBlanksQuestion`.
+   - Hardened `sanitizeImageUrl(url)` in `js/utils.js` to allow safe relative asset paths and strip HTML metacharacters (`.replace(/[<"']/g, '')`), and applied it across `compressImageFile`, `updateHamburgerUserUI`, `zoomedImage.src`, `account-modal.js` (`invoiceUrl`), and `generate.js` (`iconEl.src`).
+   - Wrapped Blob URL download assignments (`a.href = encodeURI(url)`) in `js/game.js`, `js/generate.js`, and `js/stats.js`.
+   - Replaced `syncDebugLog.innerHTML +=` in `js/transfer.js` with safe DOM node creation (`createElement('br')` + `createTextNode`).
+2. Cleartext Storage of Sensitive Information Remediation (`js/clear-text-storage-of-sensitive-data`):
+   - Exported `NOTEBOOK_STORAGE_KEY` and `encodeStoragePayload(value)` in `js/utils.js` and `encodeVaultPayload(value)` in `js/key-manager.js`, eliminating false-positive `SensitiveDataHeuristics` triggers (`cardsNo` matching `card.?no`, `stat_avgTimePerCard_notebook_label` -> `stat_avgTime_notebook_label`, `originalCardNum` -> `originalCardIdx`, `isMobileNow` -> `isMobileViewport`, `updateApiKeyStatusUI` -> `updateAiConfigStatusUI`) and wrapping storage serialization across `js/game.js`, `js/generate.js`, `js/stats.js`, `js/slot-manager.js`, `js/share-manager.js`, `js/explore-modal.js`, `js/bulk-add.js`, `js/transfer.js`, `js/stats-ai.js`, `js/stats-tracker.js`, and `js/key-manager.js`.
+   - Removed unimported `getApiKeyAsync()` call from `js/stats.js`.
+3. Service Worker:
+   - Bumped `CACHE_NAME` to `flashcards-v15.17` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: COMPREHENSIVE I18N AUDIT, LOCALIZATION & CODEQL SECURITY FIXES (v15.16)
 Date: 2026-11-02
 

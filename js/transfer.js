@@ -5,7 +5,7 @@
  */
 
 import { t } from './i18n.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 
 // --- ELEMENTS ---
 const transferModal = document.getElementById('transfer-modal');
@@ -25,7 +25,8 @@ let html5QrCode = null;
 
 function logSync(msg) {
     if (syncDebugLog) {
-        syncDebugLog.innerHTML += `<br>> ${escapeHtml(msg || '')}`;
+        syncDebugLog.appendChild(document.createElement('br'));
+        syncDebugLog.appendChild(document.createTextNode(`> ${msg || ''}`));
         syncDebugLog.scrollTop = syncDebugLog.scrollHeight;
     }
     console.log("[SyncLog] " + msg);
@@ -78,7 +79,7 @@ function closeTransferModal() {
  */
 function getActiveStorageKey() {
     const mode = localStorage.getItem('flashcardsActiveMode');
-    if (mode === 'notebook') return 'flashcardsNotebook';
+    if (mode === 'notebook') return NOTEBOOK_STORAGE_KEY;
     if (mode === 'exam') return 'flashcardsExam';
     return 'flashcardsSave';
 }
@@ -204,7 +205,7 @@ function applyProgress(stateString) {
         }
         localData.questionsPool = newPool;
 
-        localStorage.setItem(storageKey, JSON.stringify(localData));
+        localStorage.setItem(storageKey, encodeStoragePayload(localData));
         
         logSync(t('synced_restarting'));
         setTimeout(() => {

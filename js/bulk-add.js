@@ -5,7 +5,7 @@
  * transferência direta com animações de física Material You Expressive, e edição/exclusão.
  */
 
-import { renderMathAndMarkdown, escapeHtml, sanitizeImageUrl, generateSecureId, stripHtml, ROUTES } from './utils.js';
+import { renderMathAndMarkdown, escapeHtml, sanitizeImageUrl, generateSecureId, stripHtml, ROUTES, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { triggerHaptic } from './engine/effects.js';
 import { isPlayableCard } from './engine/scheduler.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
@@ -115,7 +115,7 @@ window.addEventListener('flashcards:language-change', () => {
 
 function getNotebookDataFromStorage() {
     try {
-        const raw = localStorage.getItem('flashcardsNotebook');
+        const raw = localStorage.getItem(NOTEBOOK_STORAGE_KEY);
         if (!raw) return { allQuestions: [], questionsPool: [], score: 0, notebookReviewsCount: 0, deckTitle: "Caderno" };
         const parsed = JSON.parse(raw);
         return {
@@ -126,18 +126,18 @@ function getNotebookDataFromStorage() {
             deckTitle: parsed.deckTitle || "Caderno"
         };
     } catch (e) {
-        console.error("[BulkAdd] Erro ao ler flashcardsNotebook:", e);
+        console.error("[BulkAdd] Erro ao ler caderno:", e);
         return { allQuestions: [], questionsPool: [], score: 0, notebookReviewsCount: 0, deckTitle: "Caderno" };
     }
 }
 
 function saveNotebookDataToStorage(data) {
     try {
-        localStorage.setItem('flashcardsNotebook', JSON.stringify(data));
+        localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(data));
         updateNotebookHeaderBadge();
         debouncedSyncSlotsToCloud(1200);
     } catch (e) {
-        console.error("[BulkAdd] Erro ao salvar flashcardsNotebook:", e);
+        console.error("[BulkAdd] Erro ao salvar caderno:", e);
         showNotification(t('error_saving_storage'), "warning");
     }
 }

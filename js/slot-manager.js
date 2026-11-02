@@ -9,7 +9,7 @@ import { getCloudSlots, saveCloudSlots } from './backend-api.js';
 import { isUserPro } from './explore-modal.js';
 import { syncSharedDeckToFirestore } from './share-manager.js';
 import { t } from './i18n.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 
 let syncTimeout = null;
 
@@ -26,7 +26,7 @@ export function debouncedSyncSlotsToCloud(delay = 2500) {
 const SLOTS_STORAGE_KEY = 'flashcards_deck_slots';
 const ACTIVE_MODE_KEY = 'flashcardsActiveMode';
 const SAVE_KEY = 'flashcardsSave';
-const NOTEBOOK_KEY = 'flashcardsNotebook';
+const NOTEBOOK_KEY = NOTEBOOK_STORAGE_KEY;
 
 /**
  * Default empty 3 slots
@@ -62,7 +62,7 @@ export function getLocalSlots() {
  */
 export function saveLocalSlots(slots) {
   try {
-    localStorage.setItem(SLOTS_STORAGE_KEY, JSON.stringify(slots));
+    localStorage.setItem(SLOTS_STORAGE_KEY, encodeStoragePayload(slots));
   } catch (e) {
     console.error('Erro ao salvar slots locais:', e);
   }
@@ -131,10 +131,10 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
     saveLocalSlots(slots);
 
     if (isExam) {
-      localStorage.setItem('flashcardsExam', JSON.stringify(deckData));
+      localStorage.setItem('flashcardsExam', encodeStoragePayload(deckData));
       localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
     } else {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(deckData));
+      localStorage.setItem(SAVE_KEY, encodeStoragePayload(deckData));
       localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
     }
 
@@ -168,10 +168,10 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
     saveLocalSlots(slots);
 
     if (isExam) {
-      localStorage.setItem('flashcardsExam', JSON.stringify(deckData));
+      localStorage.setItem('flashcardsExam', encodeStoragePayload(deckData));
       localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
     } else {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(deckData));
+      localStorage.setItem(SAVE_KEY, encodeStoragePayload(deckData));
       localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
     }
 
@@ -209,10 +209,10 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
     // As warned: the current session won't be synced if they don't delete a shared slot.
     // The opened deck runs in the current local session without overwriting shared slots and without pushing to cloud slots.
     if (isExam) {
-      localStorage.setItem('flashcardsExam', JSON.stringify(deckData));
+      localStorage.setItem('flashcardsExam', encodeStoragePayload(deckData));
       localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
     } else {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(deckData));
+      localStorage.setItem(SAVE_KEY, encodeStoragePayload(deckData));
       localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
     }
     return -1;
@@ -316,10 +316,10 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
 
   // Save to active game session
   if (isExam) {
-    localStorage.setItem('flashcardsExam', JSON.stringify(deckData));
+    localStorage.setItem('flashcardsExam', encodeStoragePayload(deckData));
     localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
   } else {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(deckData));
+    localStorage.setItem(SAVE_KEY, encodeStoragePayload(deckData));
     localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
   }
 
@@ -620,7 +620,7 @@ export function importNotebookBackupData(parsedData) {
     updatedAt: Date.now()
   };
 
-  localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(notebookState));
+  localStorage.setItem(NOTEBOOK_KEY, encodeStoragePayload(notebookState));
   syncSlotsToCloud();
   return cards.length;
 }
@@ -727,20 +727,20 @@ export function applyCloudSettings(cloudSettings) {
     }
   }
   if (cloudSettings.pomodoroSettings && typeof cloudSettings.pomodoroSettings === 'object') {
-    localStorage.setItem('flashcards_pomodoro_settings', JSON.stringify(cloudSettings.pomodoroSettings));
+    localStorage.setItem('flashcards_pomodoro_settings', encodeStoragePayload(cloudSettings.pomodoroSettings));
     changed = true;
   }
   if (cloudSettings.notificationsSettings && typeof cloudSettings.notificationsSettings === 'object') {
-    localStorage.setItem('flashcards_notifications_settings', JSON.stringify(cloudSettings.notificationsSettings));
+    localStorage.setItem('flashcards_notifications_settings', encodeStoragePayload(cloudSettings.notificationsSettings));
     changed = true;
   }
   if (cloudSettings.pinnedStatsDeck && Array.isArray(cloudSettings.pinnedStatsDeck)) {
-    localStorage.setItem('flashcards_header_pinned_stats_deck', JSON.stringify(cloudSettings.pinnedStatsDeck));
-    localStorage.setItem('flashcards_header_pinned_stats', JSON.stringify(cloudSettings.pinnedStatsDeck));
+    localStorage.setItem('flashcards_header_pinned_stats_deck', encodeStoragePayload(cloudSettings.pinnedStatsDeck));
+    localStorage.setItem('flashcards_header_pinned_stats', encodeStoragePayload(cloudSettings.pinnedStatsDeck));
     changed = true;
   }
   if (cloudSettings.pinnedStatsNotebook && Array.isArray(cloudSettings.pinnedStatsNotebook)) {
-    localStorage.setItem('flashcards_header_pinned_stats_notebook', JSON.stringify(cloudSettings.pinnedStatsNotebook));
+    localStorage.setItem('flashcards_header_pinned_stats_notebook', encodeStoragePayload(cloudSettings.pinnedStatsNotebook));
     changed = true;
   }
   if (cloudSettings.aiCategories && typeof cloudSettings.aiCategories === 'object') {
@@ -750,7 +750,7 @@ export function applyCloudSettings(cloudSettings) {
       if (raw) localCategories = JSON.parse(raw);
     } catch (e) {}
     const mergedCategories = { ...localCategories, ...cloudSettings.aiCategories };
-    localStorage.setItem('flashcards_ai_categories', JSON.stringify(mergedCategories));
+    localStorage.setItem('flashcards_ai_categories', encodeStoragePayload(mergedCategories));
     changed = true;
   }
   if (cloudSettings.notebookDailyGoal !== undefined) {
@@ -1117,10 +1117,10 @@ export function applyCloudSlotsData(cloudData) {
 
             if (cloudSlot.isCurrent) {
               if (isExam) {
-                localStorage.setItem('flashcardsExam', JSON.stringify(cloudSlot.deckData));
+                localStorage.setItem('flashcardsExam', encodeStoragePayload(cloudSlot.deckData));
                 localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
               } else {
-                localStorage.setItem(SAVE_KEY, JSON.stringify(cloudSlot.deckData));
+                localStorage.setItem(SAVE_KEY, encodeStoragePayload(cloudSlot.deckData));
                 localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
               }
             }
@@ -1178,7 +1178,7 @@ export function applyCloudSlotsData(cloudData) {
   if (cloudData.notebookSlot?.deckData) {
     const cloudNotebookUpdated = cloudData.notebookSlot.deckData.updatedAt || cloudData.notebookSlot.updatedAt || cloudData.lastSyncedAt || 0;
     if (!localNotebook?.deckData || cloudNotebookUpdated >= localNotebookUpdated) {
-      localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(cloudData.notebookSlot.deckData));
+      localStorage.setItem(NOTEBOOK_KEY, encodeStoragePayload(cloudData.notebookSlot.deckData));
       localStorage.removeItem('flashcards_notebook_deleted_at');
       hasSlotChanges = true;
     }
@@ -1200,7 +1200,7 @@ export function applyCloudSlotsData(cloudData) {
       if (streakRaw) localStreak = JSON.parse(streakRaw);
 
       const mergedStreak = mergeDailyStreaks(localStreak, cloudData.dailyStreak);
-      localStorage.setItem('flashcards_daily_streak', JSON.stringify(mergedStreak));
+      localStorage.setItem('flashcards_daily_streak', encodeStoragePayload(mergedStreak));
       hasSlotChanges = true;
     } catch (e) {
       console.warn('Erro ao sincronizar streak diário:', e);
@@ -1217,8 +1217,8 @@ export function applyCloudSlotsData(cloudData) {
       if (statsRaw) localStats = JSON.parse(statsRaw);
 
       const mergedStats = mergeStatsData(localStats, cloudData.stats);
-      localStorage.setItem('flashcards_stats', JSON.stringify(mergedStats));
-      localStorage.setItem('flashcardsStats', JSON.stringify(mergedStats));
+      localStorage.setItem('flashcards_stats', encodeStoragePayload(mergedStats));
+      localStorage.setItem('flashcardsStats', encodeStoragePayload(mergedStats));
       hasSlotChanges = true;
     } catch (e) {
       console.warn('Erro ao sincronizar estatísticas:', e);

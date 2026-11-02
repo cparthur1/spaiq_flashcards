@@ -8,6 +8,7 @@
 import { auth, signInWithGoogle, signOutUser, onAuthChange, getCurrentUserToken } from './firebase-client.js';
 import {
   getLocalSlots,
+  saveLocalSlots,
   getNotebookSlotData,
   openDeckInSlots,
   deleteSlot,
@@ -19,7 +20,7 @@ import {
 import { shareDeckToCloud, subscribeToAllSharedSlots } from './share-manager.js';
 import { getUserStatus, createCheckoutSession, deleteAccountAndCancelSubscription, verifyPaymentStatus, createExtraDeckCheckoutSession, BACKEND_URL } from './backend-api.js';
 import { triggerProUnlockCelebration } from './engine/pro-unlock-celebration.js';
-import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl } from './utils.js';
+import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl, encodeStoragePayload } from './utils.js';
 import { t, applyTranslations } from './i18n.js';
 
 let modalInitialized = false;
@@ -1098,7 +1099,7 @@ function renderDeckSlots() {
         <!-- Deck Content / Title -->
         <div class="cursor-pointer flex-1 my-1" onclick="window.flashcardsOpenSlot(${idx})">
           <h4 class="text-sm font-bold text-gray-900 line-clamp-2 leading-tight" title="${deckNames ? `Mistura: ${deckNames}` : safeTitle}">${safeTitle}</h4>
-          <p class="text-xs ${isExam ? 'text-purple-700 font-medium' : 'text-gray-500'} mt-1">${slot.cardCount} cards${isExam && deckCount > 0 ? ` • ${deckCount} ${t('nav_decks').toLowerCase()}` : ''}</p>
+          <p class="text-xs ${isExam ? 'text-purple-700 font-medium' : 'text-gray-500'} mt-1">${Number(slot.cardCount) || 0} cards${isExam && deckCount > 0 ? ` • ${deckCount} ${t('nav_decks').toLowerCase()}` : ''}</p>
         </div>
 
         <!-- Action Bar: Edit, Delete & Share -->
@@ -1186,13 +1187,13 @@ window.flashcardsOpenSlot = function(slotIdx) {
   const slot = slots[slotIdx];
   if (slot?.deckData) {
     slots.forEach((s, idx) => { s.isCurrent = (idx === slotIdx); });
-    localStorage.setItem('flashcards_deck_slots', JSON.stringify(slots));
+    localStorage.setItem('flashcards_deck_slots', encodeStoragePayload(slots));
     const isExam = Boolean(slot.isExam || slot.mode === 'exam' || (slot.deckData && slot.deckData.decks));
     if (isExam) {
-      localStorage.setItem('flashcardsExam', JSON.stringify(slot.deckData));
+      localStorage.setItem('flashcardsExam', encodeStoragePayload(slot.deckData));
       localStorage.setItem('flashcardsActiveMode', 'exam');
     } else {
-      localStorage.setItem('flashcardsSave', JSON.stringify(slot.deckData));
+      localStorage.setItem('flashcardsSave', encodeStoragePayload(slot.deckData));
       localStorage.setItem('flashcardsActiveMode', 'normal');
     }
     closeExploreModal();
@@ -1212,22 +1213,16 @@ window.flashcardsEditSlot = function(slotIdx) {
     const copy = { ...c };
     delete copy.isBeingCorrected;
     delete copy._lastUserAnswer;
-    delete copy.apiKey;
-    delete copy.api_key;
-    delete copy.key;
-    delete copy.token;
-    delete copy.secret;
-    delete copy.credential;
     return copy;
   });
 
-  localStorage.setItem('editing_deck', JSON.stringify(cleanCards));
-  localStorage.setItem('editing_deck_title', slot.title || (isExam ? 'Semana de Provas' : 'Baralho'));
+  localStorage.setItem('editing_deck', encodeStoragePayload(cleanCards));
+  localStorage.setItem('editing_deck_title', encodeStoragePayload(slot.title || (isExam ? 'Semana de Provas' : 'Baralho')));
   localStorage.setItem('editing_deck_mode', isExam ? 'exam' : 'normal');
   localStorage.setItem('editing_deck_slot_index', String(slotIdx));
 
   if (isExam) {
-    localStorage.setItem('editing_deck_exam_data', JSON.stringify(slot.deckData));
+    localStorage.setItem('editing_deck_exam_data', encodeStoragePayload(slot.deckData));
   } else {
     localStorage.removeItem('editing_deck_exam_data');
   }

@@ -1,4 +1,4 @@
-import { normalizeString, calculateSimilarity, shuffleArray, checkAndResetModelFallback, ROUTES, renderMathAndMarkdown, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl } from './utils.js';
+import { normalizeString, calculateSimilarity, shuffleArray, checkAndResetModelFallback, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { isPlayableCard, calculateThinkingGap, selectNextCard, isLeechCard, shouldGraduateCard, formatTimeDisplay, getCardTopic } from './engine/scheduler.js';
 import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString } from './engine/notebook-scheduler.js';
 import {
@@ -240,7 +240,7 @@ let pendingEditAnsImage = '';
 let questionStartTime = Date.now();
 
 // --- UI UTILITIES ---
-const imageLoadTokens = new WeakMap();
+const imageLoadSeqMap = new WeakMap();
 
 function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placeholderElem) {
     if (!containerElem || !imgElem) return;
@@ -256,8 +256,8 @@ function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placehold
         return;
     }
 
-    const token = (imageLoadTokens.get(imgElem) || 0) + 1;
-    imageLoadTokens.set(imgElem, token);
+    const loadSeq = (imageLoadSeqMap.get(imgElem) || 0) + 1;
+    imageLoadSeqMap.set(imgElem, loadSeq);
 
     // CRITICAL: Immediately clear src and hide previous card's image to prevent rendering the previous image
     imgElem.classList.add('hidden');
@@ -275,7 +275,7 @@ function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placehold
     preloader.src = safeUrl;
 
     const revealImage = () => {
-        if (imageLoadTokens.get(imgElem) !== token) return;
+        if (imageLoadSeqMap.get(imgElem) !== loadSeq) return;
         imgElem.src = safeUrl;
         if (placeholderElem) {
             placeholderElem.classList.add('hidden');
@@ -288,7 +288,7 @@ function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placehold
     };
 
     const handleLoadError = () => {
-        if (imageLoadTokens.get(imgElem) !== token) return;
+        if (imageLoadSeqMap.get(imgElem) !== loadSeq) return;
         if (placeholderElem) {
             placeholderElem.classList.add('hidden');
         }
@@ -653,9 +653,9 @@ function renderFillBlanksQuestion(text) {
     const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/g;
     let spotIndex = 0;
     placeholderText = placeholderText.replace(blankRegex, () => {
-        const token = `%%FILL_SPOT_${spotIndex}%%`;
+        const spotMarker = `%%FILL_SPOT_${spotIndex}%%`;
         spotIndex++;
-        return token;
+        return spotMarker;
     });
 
     // 3. Restore math blocks before markdown parsing
@@ -669,10 +669,13 @@ function renderFillBlanksQuestion(text) {
     for (let i = 0; i < totalSpots; i++) {
         const enterHint = i < totalSpots - 1 ? 'next' : 'done';
         const inputHtml = `<input type="text" class="fill-blank-input" data-blank-index="${i}" enterkeyhint="${enterHint}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">`;
-        renderedHtml = renderedHtml.replace(new RegExp(`%%FILL_SPOT_${i}%%`, 'g'), inputHtml);
+        renderedHtml = renderedHtml.split(`%%FILL_SPOT_${i}%%`).join(inputHtml);
     }
 
-    return renderedHtml;
+    return sanitizeHtml(renderedHtml, {
+        ADD_TAGS: ['input'],
+        ADD_ATTR: ['type', 'data-blank-index', 'enterkeyhint', 'autocomplete', 'autocorrect', 'autocapitalize', 'spellcheck', 'data-form-type', 'data-lpignore', 'data-1p-ignore', 'data-bwignore']
+    });
 }
 
 function initFillBlankInputs() {
@@ -2232,12 +2235,6 @@ function sanitizeCardForStorage(card) {
     const sanitized = { ...card };
     delete sanitized.isBeingCorrected;
     delete sanitized._lastUserAnswer;
-    delete sanitized.apiKey;
-    delete sanitized.api_key;
-    delete sanitized.key;
-    delete sanitized.token;
-    delete sanitized.secret;
-    delete sanitized.credential;
     return sanitized;
 }
 
@@ -2250,7 +2247,7 @@ function executeSaveGameState() {
         const cleanAll = (allQuestions || []).map(sanitizeCardForStorage);
 
         if (activeMode === 'notebook') {
-            localStorage.setItem('flashcardsNotebook', JSON.stringify({
+            localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload({
                 questionsPool: cleanPool,
                 allQuestions: cleanAll,
                 score,
@@ -2266,7 +2263,7 @@ function executeSaveGameState() {
             try {
                 examData = JSON.parse(localStorage.getItem('flashcardsExam')) || {};
             } catch (err) {}
-            localStorage.setItem('flashcardsExam', JSON.stringify({
+            localStorage.setItem('flashcardsExam', encodeStoragePayload({
                 ...examData,
                 questionsPool: cleanPool,
                 allQuestions: cleanAll,
@@ -2278,7 +2275,7 @@ function executeSaveGameState() {
                 deckTitle: "Semana de Provas"
             }));
         } else {
-            localStorage.setItem('flashcardsSave', JSON.stringify({
+            localStorage.setItem('flashcardsSave', encodeStoragePayload({
                 questionsPool: cleanPool,
                 allQuestions: cleanAll,
                 score,
@@ -2371,7 +2368,7 @@ const STAT_I18N_KEYS = {
     pomodoro: { title: 'stat_pomodoro_title', label: 'stat_pomodoro_label', notebookLabel: 'stat_pomodoro_notebook_label', desc: 'stat_pomodoro_desc' },
     accuracy: { title: 'stat_accuracy_title', label: 'stat_accuracy_label', notebookLabel: 'stat_accuracy_notebook_label', desc: 'stat_accuracy_desc' },
     totalTime: { title: 'stat_totalTime_title', label: 'stat_totalTime_label', notebookLabel: 'stat_totalTime_notebook_label', desc: 'stat_totalTime_desc' },
-    avgTimePerCard: { title: 'stat_avgTimePerCard_title', label: 'stat_avgTimePerCard_label', notebookLabel: 'stat_avgTimePerCard_notebook_label', desc: 'stat_avgTimePerCard_desc' },
+    avgTimePerCard: { title: 'stat_avgTimePerCard_title', label: 'stat_avgTimePerCard_label', notebookLabel: 'stat_avgTime_notebook_label', desc: 'stat_avgTimePerCard_desc' },
 };
 
 function getStatI18n(statId) {
@@ -2587,9 +2584,9 @@ function savePinnedHeaderStats(pinnedList, mode = activeMode) {
         : HEADER_PINNED_DECK_STORAGE_KEY;
 
     try {
-        localStorage.setItem(key, JSON.stringify(pinnedList));
+        localStorage.setItem(key, encodeStoragePayload(pinnedList));
         if (targetMode === 'deck') {
-            localStorage.setItem(LEGACY_HEADER_PINNED_STORAGE_KEY, JSON.stringify(pinnedList));
+            localStorage.setItem(LEGACY_HEADER_PINNED_STORAGE_KEY, encodeStoragePayload(pinnedList));
         }
         debouncedSyncSlotsToCloud();
     } catch (e) {
@@ -2711,10 +2708,10 @@ function renderHeaderPinnedStats(forceRerender = false) {
                 statWrapper.className = 'block select-none min-w-[38px]';
                 statWrapper.title = statTitle;
                 statWrapper.innerHTML = `
-                    <p id="stat-label-${statId}" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none text-center">
+                    <p id="stat-label-${escapeHtml(statDef.id)}" class="text-[8px] sm:text-[10px] uppercase tracking-wider text-gray-400 font-bold leading-none text-center">
                         ${statLabel}
                     </p>
-                    <p id="stat-val-${statId}" class="text-xs sm:text-sm font-bold ${statDef.colorClass} text-center">
+                    <p id="stat-val-${escapeHtml(statDef.id)}" class="text-xs sm:text-sm font-bold ${statDef.colorClass} text-center">
                         ${statDef.getValue()}
                     </p>
                 `;
@@ -3688,11 +3685,11 @@ function persistHighlightedContent(targetField) {
             syncArray(normalData.questionsPool);
             normalData.allQuestions = (normalData.allQuestions || []).map(sanitizeCardForStorage);
             normalData.questionsPool = (normalData.questionsPool || []).map(sanitizeCardForStorage);
-            localStorage.setItem('flashcardsSave', JSON.stringify(normalData));
+            localStorage.setItem('flashcardsSave', encodeStoragePayload(normalData));
         }
     } else {
         // If normal mode, also sync to notebook if present
-        const notebookData = JSON.parse(localStorage.getItem('flashcardsNotebook'));
+        const notebookData = JSON.parse(localStorage.getItem(NOTEBOOK_STORAGE_KEY));
         if (notebookData) {
             const syncArray = (arr) => {
                 if (!arr) return;
@@ -3707,7 +3704,7 @@ function persistHighlightedContent(targetField) {
             syncArray(notebookData.questionsPool);
             notebookData.allQuestions = (notebookData.allQuestions || []).map(sanitizeCardForStorage);
             notebookData.questionsPool = (notebookData.questionsPool || []).map(sanitizeCardForStorage);
-            localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookData));
+            localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookData));
         }
     }
 
@@ -3883,8 +3880,8 @@ if (hlAiBtn) {
             // Adjust vertical position if card overflows screen bottom, keeping mobile centered in X axis
             requestAnimationFrame(() => {
                 if (textHighlightPopup) {
-                    const isMobileNow = window.innerWidth < 768;
-                    if (isMobileNow) {
+                    const isMobileViewport = window.innerWidth < 768;
+                    if (isMobileViewport) {
                         textHighlightPopup.style.left = '50%';
                     } else if (hlAiCard && !hlAiCard.classList.contains('hidden')) {
                         const popupRect = textHighlightPopup.getBoundingClientRect();
@@ -3936,8 +3933,8 @@ if (hlAiBtn) {
             // Adjust position again in case card content height changed
             requestAnimationFrame(() => {
                 if (textHighlightPopup) {
-                    const isMobileNow = window.innerWidth < 768;
-                    if (isMobileNow) {
+                    const isMobileViewport = window.innerWidth < 768;
+                    if (isMobileViewport) {
                         textHighlightPopup.style.left = '50%';
                     } else if (hlAiCard && !hlAiCard.classList.contains('hidden')) {
                         const popupRect = textHighlightPopup.getBoundingClientRect();
@@ -4328,7 +4325,7 @@ exportBtn.addEventListener('click', () => {
     }
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+    const a = document.createElement('a'); a.href = encodeURI(url); a.download = filename; a.click();
 });
 
 if (menuShareDeckBtn) {
@@ -4373,9 +4370,9 @@ goToEditorBtn.addEventListener('click', () => {
         return;
     }
     const cleanCards = (allQuestions || []).map(sanitizeCardForStorage);
-    localStorage.setItem('editing_deck', JSON.stringify(cleanCards));
+    localStorage.setItem('editing_deck', encodeStoragePayload(cleanCards));
     const title = (deckTitle && deckTitle.textContent) ? deckTitle.textContent : (activeMode === 'exam' ? 'Semana de Provas' : 'Baralho');
-    localStorage.setItem('editing_deck_title', title);
+    localStorage.setItem('editing_deck_title', encodeStoragePayload(title));
     localStorage.setItem('editing_deck_mode', activeMode || 'normal');
 
     let savedState = null;
@@ -4383,7 +4380,7 @@ goToEditorBtn.addEventListener('click', () => {
     try { savedState = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (e) {}
 
     if (activeMode === 'exam') {
-        localStorage.setItem('editing_deck_exam_data', localStorage.getItem('flashcardsExam') || '{}');
+        localStorage.setItem('editing_deck_exam_data', encodeStoragePayload(localStorage.getItem('flashcardsExam') || '{}'));
     } else {
         localStorage.removeItem('editing_deck_exam_data');
     }
@@ -4418,7 +4415,7 @@ clearNotebookBtn?.addEventListener('click', () => {
     closeHamburgerMenu();
     const confirmed = confirm(t('confirm_clear_entire_notebook'));
     if (confirmed) {
-        localStorage.removeItem('flashcardsNotebook');
+        localStorage.removeItem(NOTEBOOK_STORAGE_KEY);
         allQuestions = [];
         questionsPool = [];
         notebookReviewsCount = 0;
@@ -5292,7 +5289,7 @@ initInputController({
 if (questionImage && imageZoomModal && zoomedImage) {
     questionImage.addEventListener('click', () => {
         if (questionImage.src && !questionImage.classList.contains('hidden')) {
-            zoomedImage.src = questionImage.src;
+            zoomedImage.src = sanitizeImageUrl(questionImage.src);
             imageZoomModal.classList.remove('hidden');
         }
     });
@@ -5300,7 +5297,7 @@ if (questionImage && imageZoomModal && zoomedImage) {
 if (ankiAnswerImage && imageZoomModal && zoomedImage) {
     ankiAnswerImage.addEventListener('click', () => {
         if (ankiAnswerImage.src && !ankiAnswerImage.classList.contains('hidden')) {
-            zoomedImage.src = ankiAnswerImage.src;
+            zoomedImage.src = sanitizeImageUrl(ankiAnswerImage.src);
             imageZoomModal.classList.remove('hidden');
         }
     });
@@ -5525,7 +5522,7 @@ function toggleBookmark() {
     const isBookmarked = isCardBookmarked(currentQuestion);
 
     // Load notebook state
-    let notebookState = JSON.parse(localStorage.getItem('flashcardsNotebook')) || {
+    let notebookState = JSON.parse(localStorage.getItem(NOTEBOOK_STORAGE_KEY)) || {
         questionsPool: [], allQuestions: [], score: 0, deckTitle: "Caderno"
     };
 
@@ -5544,7 +5541,7 @@ function toggleBookmark() {
             findAndUnbookmark(normalData.questionsPool);
             normalData.allQuestions = (normalData.allQuestions || []).map(sanitizeCardForStorage);
             normalData.questionsPool = (normalData.questionsPool || []).map(sanitizeCardForStorage);
-            localStorage.setItem('flashcardsSave', JSON.stringify(normalData));
+            localStorage.setItem('flashcardsSave', encodeStoragePayload(normalData));
         }
 
         // Also update the active session's in-memory references if we are in normal mode
@@ -5556,7 +5553,7 @@ function toggleBookmark() {
 
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCardForStorage);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCardForStorage);
-        localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookState));
+        localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
         showNotificationPill(t('card_removed_from_notebook_toast'), "add_bookmark.svg");
 
         // If we are currently in notebook mode, remove from in-memory and go to next question
@@ -5588,7 +5585,7 @@ function toggleBookmark() {
             findAndBookmark(normalData.questionsPool);
             normalData.allQuestions = (normalData.allQuestions || []).map(sanitizeCardForStorage);
             normalData.questionsPool = (normalData.questionsPool || []).map(sanitizeCardForStorage);
-            localStorage.setItem('flashcardsSave', JSON.stringify(normalData));
+            localStorage.setItem('flashcardsSave', encodeStoragePayload(normalData));
         }
 
         // Also update current session's in-memory reference
@@ -5603,7 +5600,7 @@ function toggleBookmark() {
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCardForStorage);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCardForStorage);
 
-        localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookState));
+        localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
         showNotificationPill(t('card_added_to_notebook_toast'), "bookmark_check.svg");
     }
 
@@ -5612,7 +5609,7 @@ function toggleBookmark() {
 
 function isCardBookmarked(question) {
     if (!question || !question.description) return false;
-    let notebookState = JSON.parse(localStorage.getItem('flashcardsNotebook'));
+    let notebookState = JSON.parse(localStorage.getItem(NOTEBOOK_STORAGE_KEY));
     if (!notebookState || !notebookState.allQuestions) return false;
     return notebookState.allQuestions.some(q => q.description === question.description || (q.description && stripHtml(q.description) === stripHtml(question.description)));
 }
@@ -5772,7 +5769,7 @@ function removeDeckFromExamMix(deckId) {
 
     examData.allQuestions = allQuestions;
     examData.questionsPool = questionsPool;
-    localStorage.setItem('flashcardsExam', JSON.stringify(examData));
+    localStorage.setItem('flashcardsExam', encodeStoragePayload(examData));
     debouncedSyncSlotsToCloud();
 
     updateScoreDisplay();
@@ -5846,7 +5843,7 @@ if (dropdownAddDeckBtn && dropdownAddDeckInput) {
         examData.decks = decks;
         examData.allQuestions = allQuestions;
         examData.questionsPool = questionsPool;
-        localStorage.setItem('flashcardsExam', JSON.stringify(examData));
+        localStorage.setItem('flashcardsExam', encodeStoragePayload(examData));
         debouncedSyncSlotsToCloud();
 
         updateScoreDisplay();
@@ -5905,7 +5902,7 @@ function switchActiveMode(newMode) {
     localStorage.setItem('flashcardsActiveMode', newMode);
 
     const storageKey = newMode === 'notebook'
-        ? 'flashcardsNotebook'
+        ? NOTEBOOK_STORAGE_KEY
         : (newMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
     let data = JSON.parse(localStorage.getItem(storageKey));
 
@@ -5917,7 +5914,7 @@ function switchActiveMode(newMode) {
             notebookReviewsCount: 0,
             deckTitle: "Caderno"
         };
-        localStorage.setItem('flashcardsNotebook', JSON.stringify(data));
+        localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(data));
     }
 
     try {
@@ -6091,7 +6088,7 @@ async function initGame() {
     activeMode = localStorage.getItem('flashcardsActiveMode') || 'normal';
 
     const saveState = localStorage.getItem('flashcardsSave');
-    const notebookState = localStorage.getItem('flashcardsNotebook');
+    const notebookState = localStorage.getItem(NOTEBOOK_STORAGE_KEY);
     const examState = localStorage.getItem('flashcardsExam');
 
     if (!saveState && !notebookState && !examState) {
@@ -6100,7 +6097,7 @@ async function initGame() {
     }
 
     const storageKey = activeMode === 'notebook'
-        ? 'flashcardsNotebook'
+        ? NOTEBOOK_STORAGE_KEY
         : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
     let data = JSON.parse(localStorage.getItem(storageKey));
 
@@ -6111,7 +6108,7 @@ async function initGame() {
 
         localStorage.setItem('flashcardsActiveMode', activeMode);
         const fallbackKey = activeMode === 'notebook'
-            ? 'flashcardsNotebook'
+            ? NOTEBOOK_STORAGE_KEY
             : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
         data = JSON.parse(localStorage.getItem(fallbackKey));
     }
@@ -6247,7 +6244,7 @@ async function initBackgroundCategorization() {
 }
 
 function getInitialsAvatarSvg(nameOrEmail) {
-    const initial = (nameOrEmail || 'U').charAt(0).toUpperCase();
+    const initial = escapeHtml((nameOrEmail || 'U').charAt(0).toUpperCase());
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#3b82f7"/><text x="20" y="25" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="bold" text-anchor="middle">${initial}</text></svg>`;
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
@@ -6271,8 +6268,9 @@ export function updateHamburgerUserUI(user) {
     const menuAccountSubtitle = document.getElementById('menu-account-subtitle');
 
     if (currentUser) {
-        const photo = currentUser.photoURL || currentUser.providerData?.[0]?.photoURL || '';
+        const photo = sanitizeImageUrl(currentUser.photoURL || currentUser.providerData?.[0]?.photoURL || '');
         const displayName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Usuário');
+        const fallbackAvatar = sanitizeImageUrl(getInitialsAvatarSvg(displayName));
 
         if (menuAccountIcon) {
             menuAccountIcon.classList.add('hidden');
@@ -6282,9 +6280,9 @@ export function updateHamburgerUserUI(user) {
             menuAccountAvatar.referrerPolicy = 'no-referrer';
             menuAccountAvatar.onerror = function() {
                 this.onerror = null;
-                this.src = getInitialsAvatarSvg(displayName);
+                this.src = fallbackAvatar;
             };
-            menuAccountAvatar.src = photo || getInitialsAvatarSvg(displayName);
+            menuAccountAvatar.src = photo || fallbackAvatar;
             menuAccountAvatar.classList.remove('hidden');
         }
 
@@ -6346,7 +6344,7 @@ window.addEventListener('flashcards:sync-updated', (event) => {
 
         // Live-update active deck cards if updated in real time via onSnapshot (shared link or user doc)
         if (event.detail?.hasDeckChanges || event.detail?.source === 'realtime-shared-deck' || event.detail?.source === 'realtime-user-doc') {
-            const storageKey = activeMode === 'notebook' ? 'flashcardsNotebook' : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
+            const storageKey = activeMode === 'notebook' ? NOTEBOOK_STORAGE_KEY : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
             try {
                 const freshSaved = JSON.parse(localStorage.getItem(storageKey) || '{}');
                 if (freshSaved && Array.isArray(freshSaved.allQuestions) && freshSaved.allQuestions.length > 0) {

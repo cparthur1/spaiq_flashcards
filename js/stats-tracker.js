@@ -5,7 +5,7 @@
  */
 
 import { getCardSignature, getStoredAiCategories } from './stats-ai.js';
-import { stripHtml } from './utils.js';
+import { stripHtml, encodeStoragePayload } from './utils.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
 
 const STATS_KEY = 'flashcards_stats';
@@ -53,7 +53,7 @@ export function saveStatsStorage(data) {
         if (data && typeof data === 'object') {
             data.updatedAt = Date.now();
         }
-        const json = JSON.stringify(data);
+        const json = encodeStoragePayload(data);
         localStorage.setItem(STATS_KEY, json);
         localStorage.setItem('flashcardsStats', json);
         debouncedSyncSlotsToCloud();

@@ -1,4 +1,4 @@
-import { callWithRetry, checkAndResetModelFallback, sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId } from './utils.js';
+import { callWithRetry, checkAndResetModelFallback, sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserProStatus, refreshUserProStatus } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
@@ -251,12 +251,6 @@ function syncCurrentDeckToSlotAndCloud() {
         const copy = { ...card };
         delete copy.isBeingCorrected;
         delete copy._lastUserAnswer;
-        delete copy.apiKey;
-        delete copy.api_key;
-        delete copy.key;
-        delete copy.token;
-        delete copy.secret;
-        delete copy.credential;
         return copy;
     };
 
@@ -295,10 +289,10 @@ function syncCurrentDeckToSlotAndCloud() {
         gameState.mode = 'exam';
         currentEditingExamData = gameState;
 
-        localStorage.setItem('flashcardsExam', JSON.stringify(gameState));
+        localStorage.setItem('flashcardsExam', encodeStoragePayload(gameState));
         localStorage.setItem('flashcardsActiveMode', 'exam');
     } else {
-        localStorage.setItem('flashcardsSave', JSON.stringify(gameState));
+        localStorage.setItem('flashcardsSave', encodeStoragePayload(gameState));
         localStorage.setItem('flashcardsActiveMode', 'normal');
     }
 
@@ -680,7 +674,7 @@ const toolFunctions = {
 };
 
 // --- HELPER FUNCTIONS ---
-function updateApiKeyStatusUI() {
+function updateAiConfigStatusUI() {
     if (dashboardProStatus) {
         dashboardProStatus.textContent = isUserPro() ? "Flashcards Pro ✓" : "Flashcards Pro";
     }
@@ -2426,7 +2420,7 @@ function selectCardType(type, triggerChange = true) {
         const iconEl = document.getElementById('creator-type-selected-icon');
         if (labelEl) labelEl.textContent = matchedItem.dataset.label;
         if (iconEl) {
-            iconEl.src = matchedItem.dataset.icon;
+            iconEl.src = sanitizeImageUrl(matchedItem.dataset.icon || '');
             iconEl.alt = matchedItem.dataset.label;
         }
     }
@@ -3979,7 +3973,7 @@ downloadDeckBtn.addEventListener('click', () => {
     const blob = new Blob([jsonStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = encodeURI(url);
     const safeTitle = deckTitleDisplay.value.trim().replace(/[^a-z0-9]/gi, '_').toLowerCase();
     a.download = `${safeTitle || 'flashcards'}.json`;
     document.body.appendChild(a);
@@ -4000,12 +3994,6 @@ playDeckBtn.addEventListener('click', async () => {
         const copy = { ...card };
         delete copy.isBeingCorrected;
         delete copy._lastUserAnswer;
-        delete copy.apiKey;
-        delete copy.api_key;
-        delete copy.key;
-        delete copy.token;
-        delete copy.secret;
-        delete copy.credential;
         return copy;
     };
 
@@ -4034,7 +4022,7 @@ playDeckBtn.addEventListener('click', async () => {
 
     try {
         if (title === "Caderno") {
-            localStorage.setItem('flashcardsNotebook', JSON.stringify(gameState));
+            localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(gameState));
             localStorage.setItem('flashcardsActiveMode', 'notebook');
             syncSlotsToCloud();
         } else if (currentEditingMode === 'exam') {
@@ -4048,13 +4036,13 @@ playDeckBtn.addEventListener('click', async () => {
             gameState.mode = 'exam';
             const res = await openDeckInSlots(gameState, title, 'exam', currentEditingSlotIndex);
             if (res === null) return;
-            localStorage.setItem('flashcardsExam', JSON.stringify(gameState));
+            localStorage.setItem('flashcardsExam', encodeStoragePayload(gameState));
             localStorage.setItem('flashcardsActiveMode', 'exam');
             syncSlotsToCloud();
         } else {
             const res = await openDeckInSlots(gameState, title, 'normal', currentEditingSlotIndex);
             if (res === null) return;
-            localStorage.setItem('flashcardsSave', JSON.stringify(gameState));
+            localStorage.setItem('flashcardsSave', encodeStoragePayload(gameState));
             localStorage.setItem('flashcardsActiveMode', 'normal');
             syncSlotsToCloud();
         }
@@ -4075,7 +4063,7 @@ window.addEventListener('flashcards:pro-updated', () => {
 
 window.addEventListener('DOMContentLoaded', async () => {
     checkAndResetModelFallback();
-    updateApiKeyStatusUI();
+    updateAiConfigStatusUI();
 
     // Check if loading an existing deck for editing
     const savedDeck = localStorage.getItem('editing_deck');

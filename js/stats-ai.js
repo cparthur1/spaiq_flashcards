@@ -5,7 +5,7 @@
  * with the minimal possible number of categories for clear, aggregated analytics.
  */
 
-import { stripHtml } from './utils.js';
+import { stripHtml, encodeStoragePayload } from './utils.js';
 import { BACKEND_URL } from './backend-api.js';
 import { getCurrentUserToken } from './firebase-client.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
@@ -67,7 +67,7 @@ export function getStoredAiCategories() {
 
 export function saveStoredAiCategories(data) {
     try {
-        localStorage.setItem(AI_CATEGORIES_KEY, JSON.stringify(data));
+        localStorage.setItem(AI_CATEGORIES_KEY, encodeStoragePayload(data));
         debouncedSyncSlotsToCloud();
     } catch (e) {
         console.error("Erro ao salvar categorias de IA no localStorage:", e);

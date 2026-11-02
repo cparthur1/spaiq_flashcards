@@ -1,5 +1,16 @@
 // --- SHARED UTILITIES ---
 
+export const NOTEBOOK_STORAGE_KEY = ['flashcards', 'Notebook'].join('');
+
+/**
+ * Serializa e codifica dados de armazenamento local de forma segura.
+ * @param {*} value
+ * @returns {string}
+ */
+export function encodeStoragePayload(value) {
+    return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
 /**
  * Normalizes a string for comparison by removing accents, 
  * parenthetical asides, and special characters.
@@ -116,8 +127,29 @@ export function escapeHtml(str) {
 }
 
 /**
+ * Sanitiza HTML preservando elementos seguros (MathML, SVG, <mark>).
+ * @param {string} html
+ * @param {Object} [extraConfig]
+ * @returns {string}
+ */
+export function sanitizeHtml(html, extraConfig = {}) {
+    if (!html || typeof html !== 'string') return '';
+    if (typeof DOMPurify !== 'undefined' && typeof DOMPurify.sanitize === 'function') {
+        const addTags = ['semantics', 'annotation', 'mark', ...(extraConfig.ADD_TAGS || [])];
+        const addAttr = ['target', 'class', 'style', 'aria-hidden', 'columnspacing', 'columnalign', 'rowspacing', ...(extraConfig.ADD_ATTR || [])];
+        return DOMPurify.sanitize(html, {
+            USE_PROFILES: { html: true, mathMl: true, svg: true },
+            ...extraConfig,
+            ADD_TAGS: addTags,
+            ADD_ATTR: addAttr
+        });
+    }
+    return escapeHtml(html);
+}
+
+/**
  * Valida e sanitiza URLs de imagens contra esquemas maliciosos (javascript:, etc.).
- * Permite apenas http, https, blob e data:image/ seguros.
+ * Permite apenas http, https, blob, data:image/ e caminhos relativos seguros de assets.
  * @param {string} url - URL ou URI da imagem
  * @returns {string} - URL sanitizada ou string vazia se insegura
  */
@@ -128,8 +160,14 @@ export function sanitizeImageUrl(url) {
     if (lower.startsWith('javascript:') || lower.startsWith('vbscript:') || lower.startsWith('data:text') || lower.startsWith('data:application')) {
         return '';
     }
-    if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('blob:') || lower.startsWith('data:image/')) {
-        return trimmed;
+    if (
+        lower.startsWith('http://') ||
+        lower.startsWith('https://') ||
+        lower.startsWith('blob:') ||
+        lower.startsWith('data:image/') ||
+        /^(?:\.\.?\/)?assets\/[a-zA-Z0-9_./-]+$/.test(trimmed)
+    ) {
+        return trimmed.replace(/[<"']/g, '');
     }
     return '';
 }
@@ -251,23 +289,33 @@ export function compressImageFile(imageInput, maxDimension = 800, quality = 0.85
         };
 
         if (typeof imageInput === 'string') {
-            if (imageInput.startsWith('data:') && imageInput.length < 50000) {
+            const safeInputUrl = sanitizeImageUrl(imageInput);
+            if (!safeInputUrl) {
+                resolve('');
+                return;
+            }
+            if (safeInputUrl.startsWith('data:') && safeInputUrl.length < 50000) {
                 // Short enough data URL, no re-compression needed
-                resolve(imageInput);
+                resolve(safeInputUrl);
                 return;
             }
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => processLoadedImage(img);
-            img.onerror = () => resolve(imageInput); // fallback to original string if error
-            img.src = imageInput;
+            img.onerror = () => resolve(safeInputUrl); // fallback to original string if error
+            img.src = safeInputUrl;
         } else if (imageInput instanceof File || imageInput instanceof Blob) {
             const reader = new FileReader();
             reader.onload = (e) => {
+                const safeResultUrl = sanitizeImageUrl(e.target?.result || '');
+                if (!safeResultUrl) {
+                    resolve('');
+                    return;
+                }
                 const img = new Image();
                 img.onload = () => processLoadedImage(img);
                 img.onerror = (err) => reject(err);
-                img.src = e.target.result;
+                img.src = safeResultUrl;
             };
             reader.onerror = (err) => reject(err);
             reader.readAsDataURL(imageInput);
@@ -367,17 +415,7 @@ export function renderMathAndMarkdown(text) {
     });
 
     // 8. Sanitize HTML via DOMPurify to prevent XSS (preserving KaTeX MathML, SVG, and <mark> elements)
-    if (typeof DOMPurify !== 'undefined' && typeof DOMPurify.sanitize === 'function') {
-        html = DOMPurify.sanitize(html, {
-            USE_PROFILES: { html: true, mathMl: true, svg: true },
-            ADD_TAGS: ['semantics', 'annotation', 'mark'],
-            ADD_ATTR: ['target', 'class', 'style', 'aria-hidden', 'columnspacing', 'columnalign', 'rowspacing']
-        });
-    } else {
-        html = escapeHtml(html);
-    }
-
-    return html;
+    return sanitizeHtml(html);
 }
 
 

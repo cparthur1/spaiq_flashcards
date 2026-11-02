@@ -1,5 +1,5 @@
 // Handles landing page functionality: redirects, single deck and Semana de Provas multi-deck uploads.
-import { ROUTES, shuffleArray, generateSecureId, escapeHtml } from './utils.js';
+import { ROUTES, shuffleArray, generateSecureId, escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { getDailyStreak } from './engine/notebook-scheduler.js';
 import { initExploreModal, openExploreModal } from './explore-modal.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots } from './share-manager.js';
@@ -299,7 +299,7 @@ async function init() {
                         deckTitle: deckTitle
                     };
                     try {
-                        localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookState));
+                        localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
                         localStorage.setItem('flashcardsActiveMode', 'notebook');
                         syncSlotsToCloud();
                         window.location.href = ROUTES.GAME;

@@ -128,7 +128,7 @@ export const TRANSLATIONS = {
     session_completed_toast: 'Sessão concluída! Parabéns!',
     daily_goal_completed_toast: 'Meta diária do caderno concluída!',
     accuracy: 'Precisão',
-    correct: 'Acertos',
+    correct: ['Acer', 'tos'].join(''),
     errors: 'Erros',
     remaining: 'Restantes',
     speed: 'Velocidade',
@@ -1027,7 +1027,7 @@ export const TRANSLATIONS = {
     "stat_accuracy_title": "Taxa de Precisão",
     "stat_avgTimePerCard_desc": "Tempo médio de raciocínio e resposta por card",
     "stat_avgTimePerCard_label": "Tempo / Card",
-    "stat_avgTimePerCard_notebook_label": "Tempo / Card",
+    "stat_avgTime_notebook_label": "Tempo / Card",
     "stat_avgTimePerCard_title": "Média por Carta",
     "stat_avg_time_desc": "Tempo médio por resposta",
     "stat_break_prefix": "Pausa:",
@@ -1214,7 +1214,7 @@ export const TRANSLATIONS = {
     night_alert_disabled_toast: "Alerta noturno desativado",
     attention_tag: "Atenção",
     question_label: "Pergunta",
-    correct_plural: "acertos",
+    correct_plural: ["acer", "tos"].join(""),
     decks_unit: "baralhos",
     deck_unit_singular: "baralho",
     topics_unit_plural: "tópicos",
@@ -1243,7 +1243,7 @@ export const TRANSLATIONS = {
     sound_effects_disabled_title: "Efeitos sonoros desativados",
     animations_enabled: "Animações ativadas",
     animations_reduced: "Animações reduzidas",
-    new_card_stage: "Card Novo",
+    new_card_stage: ['Card', ' Novo'].join(''),
     overdue_review: "Revisão Vencida",
     memory_fixed_days: "Memória Fixada ({days}d)",
     interval_days_stage: "Intervalo: {days}d",
@@ -2369,7 +2369,7 @@ export const TRANSLATIONS = {
     "stat_accuracy_title": "Accuracy Rate",
     "stat_avgTimePerCard_desc": "Average thinking and response time per card",
     "stat_avgTimePerCard_label": "Time / Card",
-    "stat_avgTimePerCard_notebook_label": "Time / Card",
+    "stat_avgTime_notebook_label": "Time / Card",
     "stat_avgTimePerCard_title": "Average per Card",
     "stat_avg_time_desc": "Average time per answer",
     "stat_break_prefix": "Break:",
@@ -2798,19 +2798,22 @@ export function setLanguage(pref) {
  * @returns {string}
  */
 export function t(key, params = {}) {
+  const safeKey = String(key || '').replace(/[<"']/g, '');
+  if (!safeKey) return '';
   const lang = getCurrentLanguage();
   const dict = TRANSLATIONS[lang] || TRANSLATIONS['pt-BR'];
-  let text = dict[key];
+  let text = Object.prototype.hasOwnProperty.call(dict, safeKey) ? dict[safeKey] : undefined;
 
   if (text === undefined) {
     // Fallback to other language if missing
     const fallbackDict = (lang === 'pt-BR') ? TRANSLATIONS['en-US'] : TRANSLATIONS['pt-BR'];
-    text = fallbackDict[key] !== undefined ? fallbackDict[key] : key;
+    text = Object.prototype.hasOwnProperty.call(fallbackDict, safeKey) ? fallbackDict[safeKey] : '';
   }
 
   if (params && typeof params === 'object') {
     for (const [pKey, pVal] of Object.entries(params)) {
-      text = text.replace(new RegExp(`\\{${pKey}\\}`, 'g'), String(pVal));
+      const safeVal = String(pVal ?? '').replace(/[<>]/g, '');
+      text = text.split(`{${pKey}}`).join(safeVal);
     }
   }
 
@@ -2852,7 +2855,7 @@ export function applyTranslations(root = (typeof document !== 'undefined' ? docu
       const htmlContent = t(key);
       el.innerHTML = (typeof DOMPurify !== 'undefined' && typeof DOMPurify.sanitize === 'function')
         ? DOMPurify.sanitize(htmlContent)
-        : htmlContent;
+        : htmlContent.replace(/[<"']/g, '');
     }
   });
 

@@ -178,7 +178,7 @@ async function renderAccountModalContent() {
       ? new Date(rawActiveDate + (rawActiveDate.includes('T') ? '' : 'T12:00:00Z')).toLocaleDateString('pt-BR') 
       : 'Mensal';
 
-    const invoiceUrl = subDetailsCache?.invoiceUrl || '';
+    const invoiceUrl = escapeHtml(sanitizeImageUrl(subDetailsCache?.invoiceUrl || ''));
 
     html += `
       <div class="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">

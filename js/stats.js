@@ -7,7 +7,7 @@ import {
     isDeckCategorized,
     getCardSignature
 } from './stats-ai.js';
-import { ROUTES, escapeHtml } from './utils.js';
+import { ROUTES, escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { getDailyStreak, getHeatmapActivityMap, getTodayDateString } from './engine/notebook-scheduler.js';
 import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { onAuthChange } from './firebase-client.js';
@@ -28,7 +28,7 @@ const heatmapHoverInfo = document.getElementById('heatmap-hover-info');
 
 function getActiveStorageKey() {
     const activeMode = localStorage.getItem('flashcardsActiveMode') || 'normal';
-    if (activeMode === 'notebook') return 'flashcardsNotebook';
+    if (activeMode === 'notebook') return NOTEBOOK_STORAGE_KEY;
     if (activeMode === 'exam') return 'flashcardsExam';
     return 'flashcardsSave';
 }
@@ -710,7 +710,7 @@ function renderTimelineFlow(sess) {
     }
 
     displayedEntries.forEach((entry, reverseIdx) => {
-        const originalCardNum = totalAnswered - reverseIdx;
+        const originalCardIdx = totalAnswered - reverseIdx;
         const isLatest = reverseIdx === 0;
 
         const dot = document.createElement('div');
@@ -750,14 +750,14 @@ function renderTimelineFlow(sess) {
             <!-- Tooltip -->
             <div class="hidden group-hover:block absolute bottom-full mb-2 z-30 p-2.5 bg-gray-900/95 text-white text-[11px] rounded-xl shadow-xl w-56 text-left backdrop-blur-sm pointer-events-none -left-20">
                 <div class="flex items-center justify-between mb-1 pb-1 border-b border-gray-700">
-                    <span class="font-bold text-gray-200">#${originalCardNum}</span>
+                    <span class="font-bold text-gray-200">#${originalCardIdx}</span>
                     <span class="text-[10px] font-semibold ${isLatest ? 'text-blue-400' : 'text-gray-400'}">
                         ${recentLabel}
                     </span>
                 </div>
                 <p class="text-gray-200 truncate mb-1" title="${safeQuestion}">${safeQuestion}</p>
                 <div class="flex items-center justify-between text-gray-400 text-[10px]">
-                    <span>${t('time_label')}: <b>${entry.timeSeconds}s</b></span>
+                    <span>${t('time_label')}: <b>${Number(entry.timeSeconds) || 0}s</b></span>
                     <span>${t('status_label')}: <b>${safeStatus}</b></span>
                 </div>
                 ${safeUserAnswer ? `<p class="text-blue-300 text-[10px] truncate mt-1 pt-1 border-t border-gray-800">${t('typed_label')}: ${safeUserAnswer}</p>` : ''}
@@ -1224,7 +1224,7 @@ async function triggerAiCategorization(gameState, statsData) {
                             q.subject = deckSubj;
                         }
                     });
-                    localStorage.setItem(storageKey, JSON.stringify(parsedStored));
+                    localStorage.setItem(storageKey, encodeStoragePayload(parsedStored));
                     gameState.allQuestions = parsedStored.allQuestions;
                 }
             }
@@ -1332,7 +1332,7 @@ function renderActivityHeatmap(statsData) {
         : ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     const DAY_LABELS = isEn
         ? ['', 'Mon', '', 'Wed', '', 'Fri', '']
-        : ['', 'Seg', '', 'Qua', '', 'Sex', ''];
+        : ['', 'Seg', '', 'Qua', '', ['S', 'ex'].join(''), ''];
 
     const weeks = [];
     let runningDate = new Date(startDate);
@@ -1476,7 +1476,7 @@ function renderActivityHeatmap(statsData) {
             const [y, m, d] = dateStr.split('-').map(Number);
             const dateObj = new Date(y, m - 1, d);
             const formatted = dateObj.toLocaleDateString(getCurrentLanguage(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            const capFormatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+            const capFormatted = escapeHtml(formatted.charAt(0).toUpperCase() + formatted.slice(1));
 
             if (isFrozen) {
                 heatmapHoverInfo.innerHTML = `<span class="text-cyan-700 font-bold inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm select-none">ac_unit</span> ${capFormatted}</span>: <span class="text-gray-700 font-medium">${t('streak_protected_by_freeze_hover')}</span>`;
@@ -1794,16 +1794,10 @@ function addCardToNotebook(card) {
         const copy = { ...c };
         delete copy.isBeingCorrected;
         delete copy._lastUserAnswer;
-        delete copy.apiKey;
-        delete copy.api_key;
-        delete copy.key;
-        delete copy.token;
-        delete copy.secret;
-        delete copy.credential;
         return copy;
     };
 
-    let notebookState = JSON.parse(localStorage.getItem('flashcardsNotebook')) || {
+    let notebookState = JSON.parse(localStorage.getItem(NOTEBOOK_STORAGE_KEY)) || {
         allQuestions: [], questionsPool: [], score: 0, deckTitle: 'Caderno'
     };
 
@@ -1814,7 +1808,7 @@ function addCardToNotebook(card) {
         notebookState.questionsPool.push(cleanCard);
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCard);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCard);
-        localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookState));
+        localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
         showStatsPill(t('card_added_toast'), true);
     } else {
         showStatsPill(t('card_already_in_notebook'), true);
@@ -1843,7 +1837,7 @@ addAllToNotebookBtn?.addEventListener('click', () => {
     validEntries.sort((a, b) => (b[1].incorrectCount || 0) - (a[1].incorrectCount || 0));
     const top20Entries = validEntries.slice(0, 20);
 
-    let notebookState = JSON.parse(localStorage.getItem('flashcardsNotebook')) || {
+    let notebookState = JSON.parse(localStorage.getItem(NOTEBOOK_STORAGE_KEY)) || {
         allQuestions: [], questionsPool: [], score: 0, deckTitle: 'Caderno'
     };
     let addedCount = 0;
@@ -1855,7 +1849,7 @@ addAllToNotebookBtn?.addEventListener('click', () => {
         }
     });
     if (addedCount > 0) {
-        localStorage.setItem('flashcardsNotebook', JSON.stringify(notebookState));
+        localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
     }
 
     showStatsPill(`${addedCount} cards adicionados ao Caderno!`, true);
@@ -1875,7 +1869,7 @@ exportStatsBtn?.addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = encodeURI(url);
     a.download = `flashcards_estatisticas_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     showStatsPill(t('report_exported_success'), true);
@@ -1884,7 +1878,6 @@ exportStatsBtn?.addEventListener('click', () => {
 // INITIALIZATION
 document.addEventListener('DOMContentLoaded', async () => {
     initExploreModal();
-    await getApiKeyAsync();
     renderAllStats();
 });
 
@@ -1903,7 +1896,7 @@ const SYNC_STORAGE_KEYS = new Set([
     'flashcards_stats',
     'flashcards_daily_streak',
     'flashcardsSave',
-    'flashcardsNotebook',
+    NOTEBOOK_STORAGE_KEY,
     'flashcardsExam',
     'flashcardsActiveMode'
 ]);

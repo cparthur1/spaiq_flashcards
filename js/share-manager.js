@@ -6,7 +6,7 @@
 
 import { db, doc, getDoc, setDoc, updateDoc, onSnapshot } from './firebase-client.js';
 import { openDeckInSlots, fixSlot, deleteSlot, getLocalSlots, saveLocalSlots, promptSlotSelectionForReplacement } from './slot-manager.js';
-import { ROUTES, generateSecureId, escapeHtml } from './utils.js';
+import { ROUTES, generateSecureId, escapeHtml, encodeStoragePayload } from './utils.js';
 import { t } from './i18n.js';
 
 const DELETED_NOTICE_KEY = 'flashcards_deleted_deck_notice';
@@ -354,9 +354,9 @@ export async function checkAndUpdateSharedSlots() {
               if (slot.isCurrent) {
                 const activeMode = localStorage.getItem('flashcardsActiveMode') || 'normal';
                 if (activeMode === 'normal' && !slot.isExam) {
-                  localStorage.setItem('flashcardsSave', JSON.stringify(data.deckData));
+                  localStorage.setItem('flashcardsSave', encodeStoragePayload(data.deckData));
                 } else if (activeMode === 'exam' && slot.isExam) {
-                  localStorage.setItem('flashcardsExam', JSON.stringify(data.deckData));
+                  localStorage.setItem('flashcardsExam', encodeStoragePayload(data.deckData));
                 }
               }
             }
@@ -423,9 +423,9 @@ export function subscribeToSharedDeck(shareSlug, onUpdateCallback = null) {
                 isCurrentSession = true;
                 const activeMode = localStorage.getItem('flashcardsActiveMode') || 'normal';
                 if (activeMode === 'normal' && !slots[i].isExam) {
-                  localStorage.setItem('flashcardsSave', JSON.stringify(shareData.deckData));
+                  localStorage.setItem('flashcardsSave', encodeStoragePayload(shareData.deckData));
                 } else if (activeMode === 'exam' && slots[i].isExam) {
-                  localStorage.setItem('flashcardsExam', JSON.stringify(shareData.deckData));
+                  localStorage.setItem('flashcardsExam', encodeStoragePayload(shareData.deckData));
                 }
               }
             }
@@ -476,7 +476,7 @@ export function subscribeToAllSharedSlots() {
 }
 
 function handleDeletedDeckRedirect() {
-  sessionStorage.setItem(DELETED_NOTICE_KEY, t('shared_deck_deleted'));
+  sessionStorage.setItem(DELETED_NOTICE_KEY, encodeStoragePayload(t('shared_deck_deleted')));
   const cleanUrl = window.location.pathname;
   window.history.replaceState({}, document.title, cleanUrl);
 
