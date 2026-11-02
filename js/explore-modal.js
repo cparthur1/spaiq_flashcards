@@ -41,11 +41,22 @@ export function isLifetime(user) {
 export function isUserPro(user = (currentUser || auth.currentUser), status = userProStatus) {
   if (!user) return false;
   if (isLifetime(user)) return true;
-  // Crucial: ensure status actually belongs to this specific user UID!
-  if (status && status.uid && status.uid !== user.uid) {
-    return false;
+  if (user.pro === true) return true;
+
+  let currentStatus = status;
+  if (!currentStatus || (currentStatus.uid && currentStatus.uid !== user.uid)) {
+    try {
+      const cached = localStorage.getItem(`spaiq_pro_cache_${user.uid}`);
+      if (cached) {
+        currentStatus = JSON.parse(cached);
+      }
+    } catch (e) {}
   }
-  return Boolean(status?.isPro || status?.subscription?.status === 'active');
+
+  if (currentStatus && (!currentStatus.uid || currentStatus.uid === user.uid)) {
+    return Boolean(currentStatus.isPro || currentStatus.subscription?.status === 'active');
+  }
+  return false;
 }
 
 /**
@@ -65,15 +76,27 @@ export async function refreshUserProStatus(user = (currentUser || auth.currentUs
   }
   if (isLifetime(user)) {
     userProStatus = { uid: user.uid, isPro: true, isLifetimePro: true };
+    try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, JSON.stringify(userProStatus)); } catch (e) {}
+    window.dispatchEvent(new CustomEvent('flashcards:pro-updated', { detail: userProStatus }));
     return userProStatus;
   }
   if (forceTokenRefresh && typeof user.getIdToken === 'function') {
     await user.getIdToken(true).catch(() => {});
   }
-  userProStatus = await getUserStatus().catch(() => null);
+  const fetchedStatus = await getUserStatus().catch(() => null);
+  if (fetchedStatus) {
+    userProStatus = { ...fetchedStatus, uid: user.uid };
+    try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, JSON.stringify(userProStatus)); } catch (e) {}
+  } else {
+    try {
+      const cached = localStorage.getItem(`spaiq_pro_cache_${user.uid}`);
+      if (cached) userProStatus = JSON.parse(cached);
+    } catch (e) {}
+  }
   if (userProStatus?.freeAiDeckUsed) {
     localStorage.setItem('spaiq_free_ai_deck_used', 'true');
   }
+  window.dispatchEvent(new CustomEvent('flashcards:pro-updated', { detail: userProStatus }));
   return userProStatus;
 }
 

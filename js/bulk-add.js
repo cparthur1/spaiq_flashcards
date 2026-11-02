@@ -135,7 +135,7 @@ function saveNotebookDataToStorage(data) {
     try {
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(data));
         updateNotebookHeaderBadge();
-        debouncedSyncSlotsToCloud(1200);
+        debouncedSyncSlotsToCloud(300);
     } catch (e) {
         console.error("[BulkAdd] Erro ao salvar caderno:", e);
         showNotification(t('error_saving_storage'), "warning");

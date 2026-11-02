@@ -358,42 +358,86 @@ export default {
           stats = {},
           settings = {},
           dailyStreak = null,
-          activeMode = null
+          activeMode = null,
+          clientSyncId = null
         } = body;
 
-        // Clean up any previously saved deck documents that were removed or cleared
+        const now = Date.now();
+        const deckOps = [];
+
+        // 1. Clean up any previously saved deck documents that were removed or cleared
         const prevSlots = userDoc?.deckSlots || [];
         const activeDeckIds = new Set(slots.filter(s => s.deckId && s.deckData).map(s => s.deckId));
         for (const prev of prevSlots) {
           if (prev.deckId && !activeDeckIds.has(prev.deckId)) {
-            await deleteDeckDocument(serviceAccount, prev.deckId).catch(() => {});
+            deckOps.push(deleteDeckDocument(serviceAccount, prev.deckId).catch(() => {}));
           }
         }
 
-        // Prepare lightweight metadata for user doc, preserving deletion timestamps
-        const now = Date.now();
+        // 2. Save full deck documents FIRST so they are ready before user doc snapshot triggers
+        for (const slot of slots) {
+          if (slot.deckId && slot.deckData) {
+            const isExam = Boolean(slot.isExam || slot.mode === 'exam' || (slot.deckData && slot.deckData.decks));
+            deckOps.push(
+              setDocument(serviceAccount, 'decks', slot.deckId, {
+                ownerUid: user.uid,
+                title: slot.title,
+                cardCount: slot.cardCount,
+                isFixed: Boolean(slot.isFixed),
+                isExam,
+                mode: isExam ? 'exam' : 'normal',
+                deckData: slot.deckData,
+                updatedAt: slot.updatedAt || now
+              }).catch(err => console.warn(`Erro ao salvar deck ${slot.deckId}:`, err))
+            );
+          }
+        }
+
+        // 3. Save or delete notebook deck document
+        if (notebookData?.deckData) {
+          deckOps.push(
+            setDocument(serviceAccount, 'decks', `notebook_${user.uid}`, {
+              ownerUid: user.uid,
+              title: 'Caderno',
+              cardCount: notebookData.cardCount || 0,
+              deckData: notebookData.deckData,
+              updatedAt: notebookData.updatedAt || now
+            }).catch(err => console.warn('Erro ao salvar notebook:', err))
+          );
+        } else {
+          deckOps.push(deleteDeckDocument(serviceAccount, `notebook_${user.uid}`).catch(() => {}));
+        }
+
+        await Promise.all(deckOps);
+
+        // 4. Prepare lightweight metadata for user doc, preserving deletion timestamps & share info
         const deckSlotsMeta = slots.map(s => {
           const isExam = Boolean(s.isExam || s.mode === 'exam' || (s.deckData && s.deckData.decks));
           return {
             slotIndex: s.slotIndex,
-            deckId: s.deckId || null,
+            deckId: s.deckData ? (s.deckId || null) : null,
+            shareSlug: s.shareSlug || null,
+            isShareOwner: Boolean(s.isShareOwner),
+            isSharedImport: Boolean(s.isSharedImport),
             title: s.title,
-            cardCount: s.cardCount || 0,
+            cardCount: s.deckData ? (s.cardCount || 0) : 0,
             isFixed: Boolean(s.isFixed),
             isCurrent: Boolean(s.isCurrent),
             isExam,
             mode: isExam ? 'exam' : 'normal',
+            deckData: s.deckData || null,
             updatedAt: s.updatedAt || now,
-            deletedAt: s.deletedAt || (s.deckData ? null : now)
+            deletedAt: s.deckData ? null : (s.deletedAt || now)
           };
         });
 
-        // 1. Update user document
+        // 5. Update user document LAST so onSnapshot listeners see committed deck documents
         await updateUserDocument(serviceAccount, user.uid, {
           deckSlots: deckSlotsMeta,
           notebookSlot: {
             cardCount: notebookData?.deckData ? (notebookData.cardCount || 0) : 0,
             title: notebookData?.title || 'Caderno',
+            deckData: notebookData?.deckData || null,
             updatedAt: notebookData?.updatedAt || now,
             deletedAt: notebookData?.deckData ? null : (notebookData?.deletedAt || now)
           },
@@ -401,41 +445,11 @@ export default {
           settings: settings || {},
           dailyStreak: dailyStreak || null,
           activeMode: activeMode || null,
-          lastSyncedAt: now
+          lastSyncedAt: now,
+          lastClientSyncId: clientSyncId || null
         }).catch(err => console.warn('Erro ao atualizar user doc:', err));
 
-        // 2. Save full deck documents
-        for (const slot of slots) {
-          if (slot.deckId && slot.deckData) {
-            const isExam = Boolean(slot.isExam || slot.mode === 'exam' || (slot.deckData && slot.deckData.decks));
-            await setDocument(serviceAccount, 'decks', slot.deckId, {
-              ownerUid: user.uid,
-              title: slot.title,
-              cardCount: slot.cardCount,
-              isFixed: Boolean(slot.isFixed),
-              isExam,
-              mode: isExam ? 'exam' : 'normal',
-              deckData: slot.deckData,
-              updatedAt: slot.updatedAt || Date.now()
-            }).catch(err => console.warn(`Erro ao salvar deck ${slot.deckId}:`, err));
-          }
-        }
-
-        // 3. Save or delete notebook deck document
-        if (notebookData?.deckData) {
-          await setDocument(serviceAccount, 'decks', `notebook_${user.uid}`, {
-            ownerUid: user.uid,
-            title: 'Caderno',
-            cardCount: notebookData.cardCount || 0,
-            deckData: notebookData.deckData,
-            updatedAt: Date.now()
-          }).catch(err => console.warn('Erro ao salvar notebook:', err));
-        } else {
-          // Notebook was cleared: delete from decks collection
-          await deleteDeckDocument(serviceAccount, `notebook_${user.uid}`).catch(() => {});
-        }
-
-        return jsonResponse({ success: true, syncedAt: Date.now() }, 200, corsHeaders);
+        return jsonResponse({ success: true, syncedAt: now }, 200, corsHeaders);
       }
 
       // 4. Verify Payment Status & Activate Pro immediately

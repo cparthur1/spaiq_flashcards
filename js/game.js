@@ -2289,7 +2289,7 @@ function executeSaveGameState() {
 
         // Auto-update active slot and sync shared link if deck is shared
         syncActiveSlotState();
-        debouncedSyncSlotsToCloud();
+        debouncedSyncSlotsToCloud(300);
     } catch (e) {
         console.error("Erro ao salvar estado do jogo no localStorage:", e);
     }
@@ -3708,7 +3708,8 @@ function persistHighlightedContent(targetField) {
         }
     }
 
-    saveGameState();
+    saveGameState(true);
+    syncSlotsToCloud();
 }
 
 function handleTextSelection(e) {
@@ -5190,7 +5191,8 @@ const handleDelete = () => {
     if (!confirm(t('confirm_delete_card_simple'))) return;
     allQuestions = allQuestions.filter(q => q !== currentQuestion);
     questionsPool.splice(currentQuestionIndexInPool, 1);
-    saveGameState();
+    saveGameState(true);
+    syncSlotsToCloud();
     if (questionsPool.length === 0) {
         clearBalls();
         updateScoreDisplay();
@@ -5507,7 +5509,8 @@ saveEditBtn.addEventListener('click', () => {
         delete currentQuestion.image;
     }
 
-    saveGameState();
+    saveGameState(true);
+    syncSlotsToCloud();
     editModal.classList.add('hidden');
     updateFeedbackText();
     animateCardToBack(() => {
@@ -5605,6 +5608,7 @@ function toggleBookmark() {
     }
 
     renderBookmarkIcon();
+    syncSlotsToCloud();
 }
 
 function isCardBookmarked(question) {
@@ -6347,14 +6351,65 @@ window.addEventListener('flashcards:sync-updated', (event) => {
             const storageKey = activeMode === 'notebook' ? NOTEBOOK_STORAGE_KEY : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
             try {
                 const freshSaved = JSON.parse(localStorage.getItem(storageKey) || '{}');
-                if (freshSaved && Array.isArray(freshSaved.allQuestions) && freshSaved.allQuestions.length > 0) {
-                    const freshIds = new Set(freshSaved.allQuestions.map(q => q.description));
-                    allQuestions = freshSaved.allQuestions;
-                    questionsPool = (questionsPool || []).filter(q => freshIds.has(q.description));
-                    if (freshSaved.deckTitle && deckTitle) {
-                        deckTitle.textContent = freshSaved.deckTitle;
+                if (!freshSaved || !Array.isArray(freshSaved.allQuestions) || freshSaved.allQuestions.length === 0) {
+                    // Current deck was deleted on another device: switch to next available slot or go home
+                    const slots = getLocalSlots();
+                    const nextSlot = slots.find(s => s && s.deckData && s.cardCount > 0);
+                    if (nextSlot) {
+                        const isExam = Boolean(nextSlot.isExam || nextSlot.mode === 'exam');
+                        switchActiveMode(isExam ? 'exam' : 'normal');
+                    } else if (activeMode === 'notebook') {
+                        allQuestions = [];
+                        questionsPool = [];
+                        loadQuestion();
+                    } else {
+                        window.location.href = ROUTES.HOME;
                     }
-                    if (currentQuestion && !freshIds.has(currentQuestion.description)) {
+                    return;
+                }
+
+                allQuestions = freshSaved.allQuestions;
+
+                if (freshSaved.score !== undefined) {
+                    score = freshSaved.score;
+                }
+                if (freshSaved.currentStreak !== undefined) {
+                    currentStreak = freshSaved.currentStreak;
+                    updateStreakUI(false);
+                }
+                if (freshSaved.currentStep !== undefined) {
+                    currentStep = freshSaved.currentStep;
+                }
+                if (freshSaved.notebookReviewsCount !== undefined) {
+                    notebookReviewsCount = freshSaved.notebookReviewsCount;
+                }
+                if (freshSaved.deckTitle && deckTitle) {
+                    deckTitle.textContent = freshSaved.deckTitle;
+                    document.title = `${freshSaved.deckTitle} | Flashcards`;
+                }
+
+                if (Array.isArray(freshSaved.questionsPool)) {
+                    questionsPool = freshSaved.questionsPool
+                        .map(pq => allQuestions.find(aq => aq.description === pq.description) || pq)
+                        .filter(isPlayableCard);
+                } else {
+                    questionsPool = (allQuestions || []).filter(isPlayableCard);
+                }
+
+                if (currentQuestion) {
+                    const updatedCurrent = allQuestions.find(q => q === currentQuestion || q.description === currentQuestion.description);
+                    if (updatedCurrent) {
+                        Object.assign(currentQuestion, updatedCurrent);
+                        ensureQuestionStructure();
+                        const bodyElem = document.getElementById('question-body-text');
+                        if (bodyElem && !bodyElem.innerHTML.includes('notebook-empty-back-btn')) {
+                            const formatted = currentQuestion.type === 'fill'
+                                ? renderFillBlanksQuestion(currentQuestion.description || '')
+                                : renderMathAndMarkdown(currentQuestion.description || '');
+                            bodyElem.innerHTML = formatted;
+                        }
+                        setupCardImageWithPlaceholder(currentQuestion.image, questionImage, questionImageContainer, questionImagePlaceholder);
+                    } else {
                         if (questionsPool.length > 0) {
                             loadQuestion();
                         } else {
@@ -6362,8 +6417,12 @@ window.addEventListener('flashcards:sync-updated', (event) => {
                             showDeckCompletionScreen();
                         }
                     }
-                    showNotificationPill(t('deck_updated_realtime') || "Baralho atualizado em tempo real", "uploaded.svg");
+                } else if (questionsPool.length > 0) {
+                    loadQuestion();
                 }
+
+                updateScoreDisplay();
+                renderBookmarkIcon();
             } catch (err) {}
         }
     } catch (e) {

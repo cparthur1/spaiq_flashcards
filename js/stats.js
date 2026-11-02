@@ -10,6 +10,7 @@ import {
 import { ROUTES, escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { getDailyStreak, getHeatmapActivityMap, getTodayDateString } from './engine/notebook-scheduler.js';
 import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
+import { syncSlotsToCloud } from './slot-manager.js';
 import { onAuthChange } from './firebase-client.js';
 import { t, getCurrentLanguage } from './i18n.js';
 
@@ -1809,6 +1810,7 @@ function addCardToNotebook(card) {
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCard);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCard);
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
+        syncSlotsToCloud();
         showStatsPill(t('card_added_toast'), true);
     } else {
         showStatsPill(t('card_already_in_notebook'), true);
@@ -1850,6 +1852,7 @@ addAllToNotebookBtn?.addEventListener('click', () => {
     });
     if (addedCount > 0) {
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
+        syncSlotsToCloud();
     }
 
     showStatsPill(`${addedCount} cards adicionados ao Caderno!`, true);
@@ -1859,6 +1862,7 @@ addAllToNotebookBtn?.addEventListener('click', () => {
 clearStatsBtn?.addEventListener('click', () => {
     if (confirm(t('clear_stats_confirm'))) {
         resetAllStats();
+        syncSlotsToCloud();
         showStatsPill(t('stats_reset_success'), true);
         renderAllStats();
     }

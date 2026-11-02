@@ -18,6 +18,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   collection,
   serverTimestamp
@@ -91,6 +92,7 @@ export {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   collection,
   serverTimestamp

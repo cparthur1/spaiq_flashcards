@@ -4,19 +4,22 @@
  * Manages the 3 deck slots, the dedicated notebook slot, and cloud synchronization
  */
 
-import { auth, db, doc, getDoc, setDoc, updateDoc, onSnapshot, onAuthChange } from './firebase-client.js';
+import { auth, db, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, onAuthChange } from './firebase-client.js';
 import { getCloudSlots, saveCloudSlots } from './backend-api.js';
 import { isUserPro } from './explore-modal.js';
 import { syncSharedDeckToFirestore } from './share-manager.js';
 import { t } from './i18n.js';
-import { escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import { escapeHtml, generateSecureId, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 
+const DEVICE_INSTANCE_ID = generateSecureId('dev');
 let syncTimeout = null;
+let isSyncInFlight = false;
+let hasPendingSync = false;
 
 /**
- * Debounced sync to avoid excessive requests during rapid card review
+ * Debounced sync to coalesce rapid updates while feeling instantaneous
  */
-export function debouncedSyncSlotsToCloud(delay = 2500) {
+export function debouncedSyncSlotsToCloud(delay = 300) {
   if (syncTimeout) clearTimeout(syncTimeout);
   syncTimeout = setTimeout(() => {
     syncSlotsToCloud();
@@ -360,6 +363,13 @@ export function deleteSlot(slotIndex) {
       } catch (e) {}
     }
 
+    // Delete deck document from Firestore immediately if Pro user
+    if (targetDeckId && auth.currentUser && isUserPro(auth.currentUser)) {
+      try {
+        deleteDoc(doc(db, 'decks', targetDeckId)).catch(() => {});
+      } catch (e) {}
+    }
+
     const now = Date.now();
     slots[slotIndex] = {
       slotIndex,
@@ -386,7 +396,24 @@ export function deleteSlot(slotIndex) {
       } else {
         localStorage.removeItem(SAVE_KEY);
       }
-      localStorage.removeItem(ACTIVE_MODE_KEY);
+
+      // Promote next available occupied slot if one exists
+      const nextActiveIdx = slots.findIndex((s, idx) => idx !== slotIndex && s && s.deckData && s.cardCount > 0);
+      if (nextActiveIdx !== -1) {
+        slots[nextActiveIdx].isCurrent = true;
+        slots[nextActiveIdx].updatedAt = now;
+        const nextSlot = slots[nextActiveIdx];
+        const nextIsExam = Boolean(nextSlot.isExam || nextSlot.mode === 'exam' || (nextSlot.deckData && nextSlot.deckData.decks));
+        if (nextIsExam) {
+          localStorage.setItem('flashcardsExam', encodeStoragePayload(nextSlot.deckData));
+          localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
+        } else {
+          localStorage.setItem(SAVE_KEY, encodeStoragePayload(nextSlot.deckData));
+          localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
+        }
+      } else {
+        localStorage.removeItem(ACTIVE_MODE_KEY);
+      }
     } else if (isExam) {
       try {
         const savedExam = JSON.parse(localStorage.getItem('flashcardsExam') || '{}');
@@ -397,6 +424,16 @@ export function deleteSlot(slotIndex) {
     }
 
     saveLocalSlots(slots);
+    try {
+      window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
+        detail: {
+          hasSlotChanges: true,
+          hasDeckChanges: wasCurrent,
+          deletedSlotIndex: slotIndex,
+          source: 'local-slot-delete'
+        }
+      }));
+    } catch (e) {}
     syncSlotsToCloud();
   }
 }
@@ -579,8 +616,22 @@ export function clearNotebookSlot() {
     } catch (e) {}
     localStorage.removeItem('flashcards_notebook_share_slug');
   }
+  if (auth.currentUser && isUserPro(auth.currentUser)) {
+    try {
+      deleteDoc(doc(db, 'decks', `notebook_${auth.currentUser.uid}`)).catch(() => {});
+    } catch (e) {}
+  }
   localStorage.removeItem(NOTEBOOK_KEY);
   localStorage.setItem('flashcards_notebook_deleted_at', String(now));
+  try {
+    window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
+      detail: {
+        hasSlotChanges: true,
+        hasDeckChanges: true,
+        source: 'local-notebook-clear'
+      }
+    }));
+  } catch (e) {}
   syncSlotsToCloud();
 }
 
@@ -889,7 +940,11 @@ export function syncActiveSlotState() {
   if (activeMode === 'normal' && activeSave) {
     try {
       const parsedSave = JSON.parse(activeSave);
-      let currentSlotIndex = slots.findIndex(s => s.isCurrent && !s.isExam);
+      let currentSlotIndex = -1;
+      if (parsedSave && parsedSave.deckId) {
+        currentSlotIndex = slots.findIndex(s => s && s.deckId === parsedSave.deckId);
+      }
+      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent && !s.isExam);
       if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
 
       // When all 3 slots are shared, sharing locks overwriting/auto-deleting
@@ -901,12 +956,17 @@ export function syncActiveSlotState() {
       }
 
       if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
+        const now = Date.now();
+        const deckId = slots[currentSlotIndex].deckId || parsedSave.deckId || `deck_${now}`;
+        parsedSave.deckId = deckId;
+        parsedSave.updatedAt = parsedSave.updatedAt || now;
+        slots[currentSlotIndex].deckId = deckId;
         slots[currentSlotIndex].deckData = parsedSave;
         slots[currentSlotIndex].cardCount = (parsedSave.allQuestions || []).length;
         slots[currentSlotIndex].title = parsedSave.deckTitle || slots[currentSlotIndex].title;
         slots[currentSlotIndex].isExam = false;
         slots[currentSlotIndex].mode = 'normal';
-        slots[currentSlotIndex].updatedAt = Date.now();
+        slots[currentSlotIndex].updatedAt = now;
         saveLocalSlots(slots);
         updatedSlotIndex = currentSlotIndex;
       }
@@ -914,7 +974,11 @@ export function syncActiveSlotState() {
   } else if (activeMode === 'exam' && activeExam) {
     try {
       const parsedExam = JSON.parse(activeExam);
-      let currentSlotIndex = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
+      let currentSlotIndex = -1;
+      if (parsedExam && parsedExam.deckId) {
+        currentSlotIndex = slots.findIndex(s => s && s.deckId === parsedExam.deckId);
+      }
+      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
       if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isExam || s.mode === 'exam');
       if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
 
@@ -927,12 +991,17 @@ export function syncActiveSlotState() {
       }
 
       if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
+        const now = Date.now();
+        const deckId = slots[currentSlotIndex].deckId || parsedExam.deckId || `exam_${now}`;
+        parsedExam.deckId = deckId;
+        parsedExam.updatedAt = parsedExam.updatedAt || now;
+        slots[currentSlotIndex].deckId = deckId;
         slots[currentSlotIndex].deckData = parsedExam;
         slots[currentSlotIndex].cardCount = (parsedExam.allQuestions || []).length;
         slots[currentSlotIndex].title = parsedExam.deckTitle || slots[currentSlotIndex].title || 'Semana de Provas';
         slots[currentSlotIndex].isExam = true;
         slots[currentSlotIndex].mode = 'exam';
-        slots[currentSlotIndex].updatedAt = Date.now();
+        slots[currentSlotIndex].updatedAt = now;
         saveLocalSlots(slots);
         updatedSlotIndex = currentSlotIndex;
       } else if (!allThreeShared) {
@@ -965,7 +1034,7 @@ export function syncActiveSlotState() {
 }
 
 /**
- * Synchronize slots, settings, daily streak, and user progress to Firestore via Backend Admin API
+ * Synchronize slots, settings, daily streak, and user progress to Firestore instantaneously
  */
 export async function syncSlotsToCloud() {
   if (syncTimeout) {
@@ -980,19 +1049,36 @@ export async function syncSlotsToCloud() {
   if (!user) return;
 
   // Crucial: Cloud account backup sync is exclusively for Pro users. Non-pro users use local storage + direct link shares.
-  if (!isUserPro()) {
+  if (!isUserPro(user)) {
     return;
   }
 
-  try {
-    const slots = getLocalSlots();
+  if (isSyncInFlight) {
+    hasPendingSync = true;
+    return;
+  }
 
-    // Attach deletion timestamps if slot is empty
+  isSyncInFlight = true;
+  try {
+    const now = Date.now();
+    const activeMode = localStorage.getItem(ACTIVE_MODE_KEY) || 'normal';
+    const slots = getLocalSlots();
+    let slotsModified = false;
+
+    // Attach deletion timestamps if slot is empty, and ensure deckId if occupied
     for (let i = 0; i < slots.length; i++) {
       if (!slots[i].deckData) {
-        const delAt = Number(localStorage.getItem(`flashcards_slot_${i}_deleted_at`)) || slots[i].deletedAt || slots[i].updatedAt || 0;
+        const delAt = Number(localStorage.getItem(`flashcards_slot_${i}_deleted_at`)) || slots[i].deletedAt || slots[i].updatedAt || now;
         slots[i].deletedAt = delAt;
+      } else if (!slots[i].deckId) {
+        const isExam = Boolean(slots[i].isExam || slots[i].mode === 'exam' || (slots[i].deckData && slots[i].deckData.decks));
+        slots[i].deckId = slots[i].deckData.deckId || `${isExam ? 'exam' : 'deck'}_${now}_${i}`;
+        slots[i].deckData.deckId = slots[i].deckId;
+        slotsModified = true;
       }
+    }
+    if (slotsModified) {
+      saveLocalSlots(slots);
     }
 
     const localNotebook = getNotebookSlotData();
@@ -1001,12 +1087,12 @@ export async function syncSlotsToCloud() {
       title: 'Caderno',
       cardCount: localNotebook.cardCount || 0,
       deckData: localNotebook.deckData,
-      updatedAt: localNotebook.deckData.updatedAt || Date.now()
+      updatedAt: localNotebook.deckData.updatedAt || now
     } : {
       title: 'Caderno',
       cardCount: 0,
       deckData: null,
-      deletedAt: notebookDeletedAt
+      deletedAt: notebookDeletedAt || now
     };
 
     // Stats (supports both flashcards_stats and legacy flashcardsStats)
@@ -1026,16 +1112,108 @@ export async function syncSlotsToCloud() {
     // Settings
     const settings = getLocalSettings();
 
-    await saveCloudSlots({
-      slots,
-      notebookData: notebookPayload,
-      stats,
-      settings,
-      dailyStreak,
-      activeMode
-    });
+    // 1. Direct real-time Firestore WebSocket write (completes in ~60ms and notifies other devices immediately)
+    let directWriteSucceeded = false;
+    try {
+      const deckWritePromises = [];
+      for (const slot of slots) {
+        if (slot.deckId && slot.deckData) {
+          const isExam = Boolean(slot.isExam || slot.mode === 'exam' || (slot.deckData && slot.deckData.decks));
+          deckWritePromises.push(
+            setDoc(doc(db, 'decks', slot.deckId), {
+              ownerUid: user.uid,
+              title: slot.title,
+              cardCount: slot.cardCount || 0,
+              isFixed: Boolean(slot.isFixed),
+              isExam,
+              mode: isExam ? 'exam' : 'normal',
+              deckData: slot.deckData,
+              updatedAt: slot.updatedAt || now
+            })
+          );
+        }
+      }
+
+      if (notebookPayload.deckData) {
+        deckWritePromises.push(
+          setDoc(doc(db, 'decks', `notebook_${user.uid}`), {
+            ownerUid: user.uid,
+            title: 'Caderno',
+            cardCount: notebookPayload.cardCount || 0,
+            deckData: notebookPayload.deckData,
+            updatedAt: notebookPayload.updatedAt || now
+          })
+        );
+      } else {
+        deckWritePromises.push(
+          deleteDoc(doc(db, 'decks', `notebook_${user.uid}`)).catch(() => {})
+        );
+      }
+
+      await Promise.all(deckWritePromises);
+
+      const deckSlotsMeta = slots.map(s => {
+        const isExam = Boolean(s.isExam || s.mode === 'exam' || (s.deckData && s.deckData.decks));
+        return {
+          slotIndex: s.slotIndex,
+          deckId: s.deckData ? (s.deckId || null) : null,
+          shareSlug: s.shareSlug || null,
+          isShareOwner: Boolean(s.isShareOwner),
+          isSharedImport: Boolean(s.isSharedImport),
+          title: s.title,
+          cardCount: s.deckData ? (s.cardCount || 0) : 0,
+          isFixed: Boolean(s.isFixed),
+          isCurrent: Boolean(s.isCurrent),
+          isExam,
+          mode: isExam ? 'exam' : 'normal',
+          deckData: s.deckData || null,
+          updatedAt: s.updatedAt || now,
+          deletedAt: s.deckData ? null : (s.deletedAt || now)
+        };
+      });
+
+      await setDoc(doc(db, 'users', user.uid), {
+        deckSlots: deckSlotsMeta,
+        notebookSlot: {
+          cardCount: notebookPayload.deckData ? (notebookPayload.cardCount || 0) : 0,
+          title: notebookPayload.title || 'Caderno',
+          deckData: notebookPayload.deckData || null,
+          updatedAt: notebookPayload.updatedAt || now,
+          deletedAt: notebookPayload.deckData ? null : (notebookPayload.deletedAt || now)
+        },
+        stats: stats || {},
+        settings: settings || {},
+        dailyStreak: dailyStreak || null,
+        activeMode: activeMode || null,
+        lastSyncedAt: now,
+        lastClientSyncId: DEVICE_INSTANCE_ID
+      }, { merge: true });
+
+      directWriteSucceeded = true;
+    } catch (directErr) {
+      console.warn('[CloudSync] Direct Firestore write fallback to backend:', directErr);
+    }
+
+    // 2. If direct write failed, fall back to backend API (or let backend clean up orphaned deck docs in background)
+    if (!directWriteSucceeded) {
+      await saveCloudSlots({
+        slots,
+        notebookData: notebookPayload,
+        stats,
+        settings,
+        dailyStreak,
+        activeMode,
+        clientSyncId: DEVICE_INSTANCE_ID
+      });
+    }
   } catch (err) {
-    console.warn('Erro ao sincronizar com nuvem via backend:', err);
+    console.warn('Erro ao sincronizar com nuvem:', err);
+  } finally {
+    isSyncInFlight = false;
+    if (hasPendingSync) {
+      hasPendingSync = false;
+      syncSlotsToCloud();
+    }
   }
 }
 
@@ -1047,7 +1225,7 @@ export async function loadSlotsFromCloud() {
   if (!user) return false;
 
   // Crucial: Only load from cloud if user is PRO! Non-pro users use local-only webapp features.
-  if (!isUserPro()) {
+  if (!isUserPro(user)) {
     return false;
   }
 
@@ -1062,6 +1240,7 @@ export async function loadSlotsFromCloud() {
       window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
         detail: {
           hasSlotChanges,
+          hasDeckChanges: hasSlotChanges,
           hasChanges: hasSlotChanges,
           lastSyncedAt: cloudData.lastSyncedAt || Date.now(),
           source: 'cloud-load'
@@ -1080,7 +1259,7 @@ export async function loadSlotsFromCloud() {
  * Apply remote cloud data into local storage slots, notebook, streak and settings.
  * Reusable across initial load and real-time onSnapshot events.
  */
-export function applyCloudSlotsData(cloudData) {
+export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
   if (!cloudData || cloudData.syncDisabled) return false;
 
   let hasSlotChanges = false;
@@ -1097,16 +1276,21 @@ export function applyCloudSlotsData(cloudData) {
         const cloudDeletedAt = cloudSlot.deletedAt || (cloudSlot.deckData ? 0 : cloudUpdatedAt);
 
         if (cloudSlot.deckData) {
-          // Cloud has an active deck or exam mix: load if local is empty or cloud is newer/equal
-          if (!localSlot?.deckData || cloudUpdatedAt >= localUpdatedAt) {
+          // Cloud has an active deck or exam mix: load if local is empty, cloud is newer/equal, or real-time update differs
+          if (!localSlot?.deckData || cloudUpdatedAt >= localUpdatedAt || (isRealtime && cloudUpdatedAt !== localUpdatedAt)) {
             const isExam = Boolean(cloudSlot.isExam || cloudSlot.mode === 'exam' || (cloudSlot.deckData && cloudSlot.deckData.decks));
+            const wasLocalCurrent = Boolean(localSlot?.isCurrent);
+            const isNowCurrent = Boolean(cloudSlot.isCurrent);
             localSlots[i] = {
               slotIndex: i,
               deckId: cloudSlot.deckId,
+              shareSlug: cloudSlot.shareSlug || localSlot?.shareSlug || cloudSlot.deckData?.shareSlug || null,
+              isShareOwner: cloudSlot.isShareOwner !== undefined ? Boolean(cloudSlot.isShareOwner) : Boolean(localSlot?.isShareOwner),
+              isSharedImport: cloudSlot.isSharedImport !== undefined ? Boolean(cloudSlot.isSharedImport) : Boolean(localSlot?.isSharedImport),
               title: cloudSlot.title,
               cardCount: cloudSlot.cardCount,
               isFixed: Boolean(cloudSlot.isFixed),
-              isCurrent: Boolean(cloudSlot.isCurrent),
+              isCurrent: isNowCurrent,
               isExam,
               mode: isExam ? 'exam' : 'normal',
               deckData: cloudSlot.deckData,
@@ -1115,19 +1299,19 @@ export function applyCloudSlotsData(cloudData) {
             localStorage.removeItem(`flashcards_slot_${i}_deleted_at`);
             hasSlotChanges = true;
 
-            if (cloudSlot.isCurrent) {
+            if (isNowCurrent || wasLocalCurrent) {
               if (isExam) {
                 localStorage.setItem('flashcardsExam', encodeStoragePayload(cloudSlot.deckData));
-                localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
+                if (isNowCurrent) localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
               } else {
                 localStorage.setItem(SAVE_KEY, encodeStoragePayload(cloudSlot.deckData));
-                localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
+                if (isNowCurrent) localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
               }
             }
           }
         } else {
           // Cloud slot is EMPTY or DELETED: propagate deletion if local has a deck/mix!
-          if (localSlot?.deckData && cloudDeletedAt >= localUpdatedAt) {
+          if (localSlot?.deckData && (cloudDeletedAt >= localUpdatedAt || isRealtime)) {
             const wasExam = Boolean(localSlot.isExam || localSlot.mode === 'exam');
             if (localSlot.isCurrent) {
               if (wasExam) {
@@ -1141,6 +1325,8 @@ export function applyCloudSlotsData(cloudData) {
               slotIndex: i,
               deckId: null,
               shareSlug: null,
+              isShareOwner: false,
+              isSharedImport: false,
               title: `Slot ${i + 1} (Vazio)`,
               cardCount: 0,
               isFixed: false,
@@ -1155,6 +1341,19 @@ export function applyCloudSlotsData(cloudData) {
             hasSlotChanges = true;
           }
         }
+      }
+    }
+
+    // If active slot was deleted and another slot is now current or available, ensure active storage is populated
+    const currentSlotAfter = localSlots.find(s => s && s.isCurrent && s.deckData);
+    if (currentSlotAfter) {
+      const isExam = Boolean(currentSlotAfter.isExam || currentSlotAfter.mode === 'exam' || (currentSlotAfter.deckData && currentSlotAfter.deckData.decks));
+      if (isExam && !localStorage.getItem('flashcardsExam')) {
+        localStorage.setItem('flashcardsExam', encodeStoragePayload(currentSlotAfter.deckData));
+        localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
+      } else if (!isExam && !localStorage.getItem(SAVE_KEY)) {
+        localStorage.setItem(SAVE_KEY, encodeStoragePayload(currentSlotAfter.deckData));
+        localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
       }
     }
 
@@ -1177,15 +1376,15 @@ export function applyCloudSlotsData(cloudData) {
 
   if (cloudData.notebookSlot?.deckData) {
     const cloudNotebookUpdated = cloudData.notebookSlot.deckData.updatedAt || cloudData.notebookSlot.updatedAt || cloudData.lastSyncedAt || 0;
-    if (!localNotebook?.deckData || cloudNotebookUpdated >= localNotebookUpdated) {
+    if (!localNotebook?.deckData || cloudNotebookUpdated >= localNotebookUpdated || (isRealtime && cloudNotebookUpdated !== localNotebookUpdated)) {
       localStorage.setItem(NOTEBOOK_KEY, encodeStoragePayload(cloudData.notebookSlot.deckData));
       localStorage.removeItem('flashcards_notebook_deleted_at');
       hasSlotChanges = true;
     }
-  } else if (localNotebook?.deckData) {
+  } else if (localNotebook?.deckData && (cloudData.notebookSlot?.deletedAt || (cloudData.notebookSlot && cloudData.notebookSlot.cardCount === 0))) {
     // Cloud notebook is deleted/empty: check deletion timestamp
     const cloudNotebookDeletedAt = cloudData.notebookSlot?.deletedAt || cloudData.lastSyncedAt || 0;
-    if (cloudNotebookDeletedAt >= localNotebookUpdated) {
+    if (cloudNotebookDeletedAt >= localNotebookUpdated || isRealtime) {
       localStorage.removeItem(NOTEBOOK_KEY);
       localStorage.setItem('flashcards_notebook_deleted_at', String(cloudNotebookDeletedAt));
       hasSlotChanges = true;
@@ -1240,7 +1439,7 @@ export function applyCloudSlotsData(cloudData) {
   // Synchronize Active Mode
   if (cloudData.activeMode && (cloudData.activeMode === 'normal' || cloudData.activeMode === 'exam' || cloudData.activeMode === 'notebook')) {
     const currentActive = localStorage.getItem(ACTIVE_MODE_KEY);
-    if (!currentActive) {
+    if (!currentActive || isRealtime) {
       localStorage.setItem(ACTIVE_MODE_KEY, cloudData.activeMode);
       hasSlotChanges = true;
     }
@@ -1249,49 +1448,179 @@ export function applyCloudSlotsData(cloudData) {
   return hasSlotChanges;
 }
 
+/**
+ * Hydrate raw users/{uid} Firestore snapshot with full deckData from decks/{deckId} and decks/notebook_{uid}
+ */
+async function hydrateCloudUserDoc(userDocData, uid) {
+  const hydrated = { ...userDocData };
+  const localSlots = getLocalSlots();
+
+  if (Array.isArray(userDocData.deckSlots)) {
+    hydrated.deckSlots = await Promise.all(
+      userDocData.deckSlots.map(async (slot) => {
+        const clonedSlot = { ...slot };
+        if (clonedSlot.deckData) {
+          return clonedSlot;
+        }
+        if (clonedSlot.deckId && !clonedSlot.deletedAt) {
+          const localMatch = localSlots.find(ls => ls && ls.slotIndex === clonedSlot.slotIndex);
+          const canReuseLocal = Boolean(
+            localMatch?.deckData &&
+            localMatch.deckId === clonedSlot.deckId &&
+            localMatch.updatedAt === clonedSlot.updatedAt &&
+            localMatch.cardCount === clonedSlot.cardCount
+          );
+
+          if (canReuseLocal) {
+            clonedSlot.deckData = localMatch.deckData;
+          } else {
+            try {
+              const deckSnap = await getDoc(doc(db, 'decks', clonedSlot.deckId));
+              if (deckSnap.exists()) {
+                clonedSlot.deckData = deckSnap.data().deckData || null;
+              }
+            } catch (err) {
+              if (localMatch?.deckData && localMatch.deckId === clonedSlot.deckId) {
+                clonedSlot.deckData = localMatch.deckData;
+              }
+            }
+          }
+        } else {
+          clonedSlot.deckData = null;
+        }
+        return clonedSlot;
+      })
+    );
+  }
+
+  if (userDocData.notebookSlot) {
+    const nbMeta = { ...userDocData.notebookSlot };
+    if (nbMeta.deckData) {
+      hydrated.notebookSlot = nbMeta;
+    } else if (!nbMeta.deletedAt && (nbMeta.cardCount || 0) > 0) {
+      const localNb = getNotebookSlotData();
+      const localNbUpdated = localNb?.deckData?.updatedAt || 0;
+      const canReuseNb = Boolean(
+        localNb?.deckData &&
+        localNbUpdated === nbMeta.updatedAt &&
+        localNb.cardCount === nbMeta.cardCount
+      );
+
+      if (canReuseNb) {
+        nbMeta.deckData = localNb.deckData;
+      } else {
+        try {
+          const nbSnap = await getDoc(doc(db, 'decks', `notebook_${uid}`));
+          if (nbSnap.exists()) {
+            nbMeta.deckData = nbSnap.data().deckData || null;
+          }
+        } catch (err) {
+          if (localNb?.deckData) {
+            nbMeta.deckData = localNb.deckData;
+          }
+        }
+      }
+    } else {
+      nbMeta.deckData = null;
+    }
+    hydrated.notebookSlot = nbMeta;
+  }
+
+  return hydrated;
+}
+
 let userDocUnsubscribe = null;
+let subscribedUserUid = null;
+let realtimeAuthListenerRegistered = false;
+
+function attachRealtimeUserSnapshot(user) {
+  if (!user || !isUserPro(user)) {
+    if (userDocUnsubscribe) {
+      userDocUnsubscribe();
+      userDocUnsubscribe = null;
+      subscribedUserUid = null;
+    }
+    return;
+  }
+
+  if (userDocUnsubscribe && subscribedUserUid === user.uid) {
+    return;
+  }
+
+  if (userDocUnsubscribe) {
+    userDocUnsubscribe();
+    userDocUnsubscribe = null;
+    subscribedUserUid = null;
+  }
+
+  try {
+    subscribedUserUid = user.uid;
+    const userDocRef = doc(db, 'users', user.uid);
+    userDocUnsubscribe = onSnapshot(userDocRef, async (snap) => {
+      // Ignore local optimistic writes
+      if (snap.metadata?.hasPendingWrites) return;
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      if (!data || data.syncDisabled) return;
+
+      // Ignore echoes originating from this exact browser tab/session
+      if (data.lastClientSyncId && data.lastClientSyncId === DEVICE_INSTANCE_ID) {
+        return;
+      }
+
+      try {
+        const hydratedData = await hydrateCloudUserDoc(data, user.uid);
+        const hasChanges = applyCloudSlotsData(hydratedData, { isRealtime: true });
+        if (hasChanges) {
+          window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
+            detail: {
+              hasSlotChanges: true,
+              hasDeckChanges: true,
+              source: 'realtime-user-doc'
+            }
+          }));
+        }
+      } catch (hydrateErr) {
+        console.warn('[RealtimeSync] Failed to hydrate user snapshot:', hydrateErr);
+      }
+    }, (err) => {
+      console.warn('[RealtimeSync] Snapshot listener error on user doc:', err);
+    });
+  } catch (e) {
+    console.warn('[RealtimeSync] Could not attach user snapshot listener:', e);
+  }
+}
 
 /**
  * Real-time listener (onSnapshot) for the authenticated PRO user document in Firestore.
  * When the same user edits or plays decks on Device A, Device B receives updates live!
  */
 export function initRealtimeCloudSync() {
+  if (auth.currentUser && isUserPro(auth.currentUser)) {
+    attachRealtimeUserSnapshot(auth.currentUser);
+  }
+
+  if (realtimeAuthListenerRegistered) return;
+  realtimeAuthListenerRegistered = true;
+
   onAuthChange(async (user) => {
-    if (userDocUnsubscribe) {
-      userDocUnsubscribe();
-      userDocUnsubscribe = null;
+    if (!user) {
+      attachRealtimeUserSnapshot(null);
+      return;
     }
-
-    if (!user) return;
-    if (!isUserPro()) return;
-
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      userDocUnsubscribe = onSnapshot(userDocRef, (snap) => {
-        // Ignore local optimistic writes
-        if (snap.metadata?.hasPendingWrites) return;
-        if (!snap.exists()) return;
-
-        const data = snap.data();
-        if (!data || data.syncDisabled) return;
-
-        const hasChanges = applyCloudSlotsData(data);
-        if (hasChanges) {
-          try {
-            window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
-              detail: {
-                hasSlotChanges: true,
-                hasDeckChanges: true,
-                source: 'realtime-user-doc'
-              }
-            }));
-          } catch (e) {}
-        }
-      }, (err) => {
-        console.warn('[RealtimeSync] Snapshot listener error on user doc:', err);
-      });
-    } catch (e) {
-      console.warn('[RealtimeSync] Could not attach user snapshot listener:', e);
+    if (isUserPro(user)) {
+      attachRealtimeUserSnapshot(user);
     }
   });
+
+  window.addEventListener('flashcards:pro-updated', () => {
+    if (auth.currentUser && isUserPro(auth.currentUser)) {
+      attachRealtimeUserSnapshot(auth.currentUser);
+    }
+  });
+}
+
+// Auto-initialize real-time sync immediately on module load
+initRealtimeCloudSync();
 }

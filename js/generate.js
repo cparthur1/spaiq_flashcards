@@ -309,7 +309,7 @@ function syncCurrentDeckToSlotAndCloud() {
             } else {
                 // All 3 slots are currently in use! Do not overwrite any existing deck silently.
                 // The deck remains safely stored in localStorage as active editing state.
-                debouncedSyncSlotsToCloud(1200);
+                debouncedSyncSlotsToCloud(300);
                 return;
             }
         }
@@ -335,7 +335,7 @@ function syncCurrentDeckToSlotAndCloud() {
         console.warn('Erro ao atualizar slots do baralho:', e);
     }
 
-    debouncedSyncSlotsToCloud(1200);
+    debouncedSyncSlotsToCloud(300);
     try {
         window.dispatchEvent(new CustomEvent('flashcards:sync-updated', { detail: { hasSlotChanges: true } }));
     } catch (e) {}

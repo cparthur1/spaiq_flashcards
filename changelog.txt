@@ -1,3 +1,25 @@
+CHANGELOG: REAL-TIME CROSS-DEVICE CLOUD SYNC & SILENT AUTOSAVE (v15.18)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Silent Real-time Experience ("It Just Works"):
+   - Removed intrusive "deck updated in real time" / "Baralho atualizado em tempo real" notification toast in `js/game.js`, ensuring all cross-device updates happen invisibly in the background.
+2. Instantaneous Cloud Autosave for Pro Users:
+   - Optimized cloud synchronization to save progress, card modifications, card deletions, and deck operations instantaneously across Firestore and Cloudflare Worker.
+   - Reduced debounce latency to 300ms across all editing flows in `js/slot-manager.js`, `js/game.js`, `js/generate.js`, and `js/bulk-add.js`.
+   - Wired immediate cloud saves (`syncSlotsToCloud()`) on card edits, card deletions, text highlighting, notebook bookmarks, slot deletions, and notebook clearances.
+   - Connected `syncSlotsToCloud()` to `js/stats.js` for struggling card additions and stats resets.
+3. Real-Time Cross-Device Loading & State Propagation:
+   - Resolved Pro status initialization race condition by caching verified Pro status synchronously in `localStorage` (`spaiq_pro_cache_${uid}`) in `js/explore-modal.js`.
+   - Embedded full `deckData` directly inside `users/{uid}` in addition to standalone `decks/{deckId}` collections in both `js/slot-manager.js` and `worker/src/index.js`, enabling instant snapshot reception on Device B without multi-query waterfall delays.
+   - Implemented automatic slot recovery in `js/game.js`: if a deck is deleted remotely, the app seamlessly switches to the next available occupied slot or returns to home without crashing or remaining stuck.
+   - Auto-initialized `initRealtimeCloudSync()` globally in `js/slot-manager.js` so all application pages immediately listen for live Firestore snapshot updates.
+4. Deployment:
+   - Deployed updated Cloudflare Worker `flashcards-backend` (Version ID: `f27c551b-5961-4685-bbfe-1a01ed27a96e`).
+   - Bumped `CACHE_NAME` to `flashcards-v15.18` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: CODEQL TAINT-BARRIER & CLEARTEXT STORAGE REMEDIATION (v15.17)
 Date: 2026-11-02
 
