@@ -1890,144 +1890,93 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
         let fullText = "";
         const seenSignatures = new Set();
 
-        if (!apiKey) {
-            let token = await getCurrentUserToken();
-            if (!token) {
-                updateGeneratingStatus("Conectando com o Google para liberar sua geração gratuita...");
-                try {
-                    const user = await signInWithGoogle();
-                    if (!user) throw new Error("Login necessário para gerar baralho com IA.");
-                    token = await getCurrentUserToken();
-                } catch (authErr) {
-                    throw new Error("Faça login com sua conta Google para liberar sua geração gratuita com IA.");
-                }
+        let token = await getCurrentUserToken();
+        if (!token) {
+            updateGeneratingStatus("Conectando com o Google para liberar sua geração gratuita...");
+            try {
+                const user = await signInWithGoogle();
+                if (!user) throw new Error("Login necessário para gerar baralho com IA.");
+                token = await getCurrentUserToken();
+            } catch (authErr) {
+                throw new Error("Faça login com sua conta Google para liberar sua geração gratuita com IA.");
             }
+        }
 
-            const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
-            if (isTrial) {
-                window.currentDeckIsFreeAiTrial = true;
-            }
+        const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
+        if (isTrial) {
+            window.currentDeckIsFreeAiTrial = true;
+        }
 
-            const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    model: currentEditorModel || "gemini-flash-latest",
-                    contents: [{ role: 'user', parts }],
-                    systemInstruction: { parts: [{ text: generationSystemInstruction }] },
-                    generationConfig: {
-                        thinkingConfig: {
-                            thinkingLevel: "HIGH"
-                        },
-                        responseMimeType: "application/json"
-                    },
-                    stream: true,
-                    isNewDeck: true
-                })
-            });
-
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                if (errData.error === 'quota_exceeded') {
-                    const promptMsg = isUserPro() ? t('alert_pro_monthly_limit') : t('alert_non_pro_limit');
-                    if (confirm(promptMsg)) {
-                        if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
-                            window.flashcardsOpenExtraDeckModal();
-                        }
-                    }
-                }
-                throw new Error(errData.message || `Erro no servidor (${res.status})`);
-            }
-
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const jsonStr = line.slice(6).trim();
-                        if (jsonStr === '[DONE]') continue;
-                        try {
-                            const parsed = JSON.parse(jsonStr);
-                            const chunkText = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                            if (chunkText) {
-                                fullText += chunkText;
-                                const streamObjects = extractBalancedJsonObjects(fullText);
-                                for (const rawObj of streamObjects) {
-                                    const card = normalizeCard(rawObj);
-                                    if (card) {
-                                        const sig = `${card.type}::${card.description}::${card.answer}`;
-                                        if (!seenSignatures.has(sig)) {
-                                            seenSignatures.add(sig);
-                                            deckCards.push(card);
-                                            updateGeneratingProgress(deckCards.length);
-                                            renderCardsList();
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (e) {}
-                    }
-                }
-            }
-        } else {
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const genModel = genAI.getGenerativeModel({
+        const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
                 model: currentEditorModel || "gemini-flash-latest",
-                systemInstruction: generationSystemInstruction,
+                contents: [{ role: 'user', parts }],
+                systemInstruction: { parts: [{ text: generationSystemInstruction }] },
                 generationConfig: {
                     thinkingConfig: {
                         thinkingLevel: "HIGH"
                     },
                     responseMimeType: "application/json"
+                },
+                stream: true,
+                isNewDeck: true
+            })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            if (errData.error === 'quota_exceeded') {
+                const promptMsg = isUserPro() ? t('alert_pro_monthly_limit') : t('alert_non_pro_limit');
+                if (confirm(promptMsg)) {
+                    if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
+                        window.flashcardsOpenExtraDeckModal();
+                    }
                 }
-            });
+            }
+            throw new Error(errData.message || `Erro no servidor (${res.status})`);
+        }
 
-            const result = await callWithRetry(() => genModel.generateContentStream(parts));
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
 
-            for await (const chunk of result.stream) {
-                let chunkText = "";
-                try {
-                    chunkText = chunk.text();
-                } catch (e) {
-                    if (chunk.candidates?.[0]?.content?.parts) {
-                        for (const part of chunk.candidates[0].content.parts) {
-                            if (part.text && !part.thought) chunkText += part.text;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const jsonStr = line.slice(6).trim();
+                    if (jsonStr === '[DONE]') continue;
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        const chunkText = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                        if (chunkText) {
+                            fullText += chunkText;
+                            const streamObjects = extractBalancedJsonObjects(fullText);
+                            for (const rawObj of streamObjects) {
+                                const card = normalizeCard(rawObj);
+                                if (card) {
+                                    const sig = `${card.type}::${card.description}::${card.answer}`;
+                                    if (!seenSignatures.has(sig)) {
+                                        seenSignatures.add(sig);
+                                        deckCards.push(card);
+                                        updateGeneratingProgress(deckCards.length);
+                                        renderCardsList();
+                                    }
+                                }
+                            }
                         }
-                    }
-                }
-                if (!chunkText && chunk.candidates?.[0]?.content?.parts) {
-                    for (const part of chunk.candidates[0].content.parts) {
-                        if (part.text && !part.thought) chunkText += part.text;
-                    }
-                }
-
-                fullText += chunkText;
-
-                // Extract balanced JSON objects in real-time as stream arrives
-                const streamObjects = extractBalancedJsonObjects(fullText);
-                for (const rawObj of streamObjects) {
-                    const card = normalizeCard(rawObj);
-                    if (card) {
-                        const sig = `${card.type}::${card.description}::${card.answer}`;
-                        if (!seenSignatures.has(sig)) {
-                            seenSignatures.add(sig);
-                            deckCards.push(card);
-                            updateGeneratingProgress(deckCards.length);
-                            renderCardsList();
-                        }
-                    }
+                    } catch (e) {}
                 }
             }
         }
@@ -2065,13 +2014,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
         }
 
         // Initialize chat session for subsequent agentic edits in the sidebar
-        const chatModel = genAI.getGenerativeModel({
-            model: currentEditorModel || "gemini-flash-lite-latest",
-            systemInstruction,
-            tools: deckToolsWithHandoff
-        });
-        currentGenModel = chatModel;
-        geminiChatSession = chatModel.startChat({ history: [] });
+        geminiChatSession = { _history: [] };
 
     } catch (err) {
         console.error("Erro na geração 2.1:", err);
