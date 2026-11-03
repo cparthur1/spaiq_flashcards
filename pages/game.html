@@ -1229,33 +1229,20 @@
     <!-- AI Chat Container (Gemini Visual Design) -->
     <div id="ai-chat-container"
         class="fixed bottom-0 right-0 w-full md:w-[420px] bg-[var(--md-sys-color-surface-container-lowest)] shadow-2xl rounded-t-3xl md:rounded-l-3xl md:rounded-tr-none z-50 flex flex-col transition-all duration-300 transform translate-y-full md:translate-y-0 md:translate-x-full border border-[var(--md-sys-color-outline-variant)] overflow-hidden">
-        <!-- SVG Gradient Defs for Gemini Assets -->
-        <svg class="sr-only" aria-hidden="true">
-            <defs>
-                <linearGradient id="gemini-sparkle-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#3b82f7" />
-                    <stop offset="50%" stop-color="#8b5cf6" />
-                    <stop offset="100%" stop-color="#ec4899" />
-                </linearGradient>
-            </defs>
-        </svg>
+        
+        <!-- Ambient Gemini Thinking Glow (Lights up from bottom when thinking) -->
+        <div id="gemini-thinking-glow" class="gemini-thinking-glow" aria-hidden="true">
+            <div class="gemini-glow-orb gemini-glow-blue"></div>
+            <div class="gemini-glow-orb gemini-glow-purple"></div>
+            <div class="gemini-glow-orb gemini-glow-center"></div>
+        </div>
 
-        <!-- Top Spectrum Dynamic Aura Bar -->
-        <div class="gemini-spectrum-aura"></div>
-
-        <!-- Gemini Header -->
-        <div class="px-4 py-3 border-b border-[var(--md-sys-color-outline-variant)]/80 flex justify-between items-center bg-[var(--md-sys-color-surface-container-lowest)]">
+        <!-- Chat Header -->
+        <div class="px-4 py-3 border-b border-[var(--md-sys-color-outline-variant)]/80 flex justify-between items-center bg-[var(--md-sys-color-surface-container-lowest)]/90 backdrop-blur-md z-10 relative">
             <div class="flex items-center gap-2.5">
-                <div class="gemini-header-sparkle-container">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="url(#gemini-sparkle-gradient)" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z" />
-                    </svg>
-                </div>
+                <img src="../assets/img/ask.svg" class="w-6 h-6 flex-shrink-0" alt="Tutor" data-i18n-alt="ai_tutor_title">
                 <div class="flex flex-col">
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-sm tracking-tight text-[var(--md-sys-color-on-surface)]" data-i18n="ai_tutor_title">Explicação da IA</span>
-                        <span class="gemini-badge" data-i18n="gemini_flash_badge">Flash Thinking</span>
-                    </div>
+                    <span class="font-bold text-sm tracking-tight text-[var(--md-sys-color-on-surface)]" data-i18n="ai_tutor_title">Explicação da IA</span>
                     <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-tight" data-i18n="ai_tutor_subtitle">Tutor Gemini</span>
                 </div>
             </div>
@@ -1265,24 +1252,14 @@
         </div>
 
         <!-- Chat Messages -->
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar flex flex-col bg-[var(--md-sys-color-surface)]/40">
-            <div class="chat-message-ai">
-                <div class="chat-message-ai-header">
-                    <span class="gemini-avatar-sparkle">
-                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="url(#gemini-sparkle-gradient)">
-                            <path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z" />
-                        </svg>
-                    </span>
-                    <span class="gemini-avatar-name">Gemini</span>
-                </div>
-                <div class="chat-message-ai-body" data-i18n="ai_tutor_greeting">
-                    Olá! Como posso ajudar você a entender melhor esta questão?
-                </div>
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar flex flex-col bg-transparent z-10 relative">
+            <div class="chat-message-ai" data-i18n="ai_tutor_greeting">
+                Olá! Como posso ajudar você a entender melhor esta questão?
             </div>
         </div>
 
         <!-- Quick Action Prompt Chips (Gemini Context Starters) -->
-        <div id="chat-quick-chips" class="px-3.5 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-t border-[var(--md-sys-color-outline-variant)]/60 bg-[var(--md-sys-color-surface-container-lowest)]">
+        <div id="chat-quick-chips" class="px-3.5 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-t border-[var(--md-sys-color-outline-variant)]/60 bg-[var(--md-sys-color-surface-container-lowest)]/80 backdrop-blur-md z-10 relative">
             <button type="button" class="gemini-chip" data-prompt-key="tutor_prompt_simplify">
                 <span class="material-symbols-rounded text-sm text-[#3b82f7]">lightbulb</span>
                 <span data-i18n="tutor_chip_simplify">Explicar simples</span>
@@ -1298,7 +1275,7 @@
         </div>
 
         <!-- Input Capsule -->
-        <div class="p-3 border-t border-[var(--md-sys-color-outline-variant)]/80 bg-[var(--md-sys-color-surface-container-lowest)]">
+        <div class="p-3 border-t border-[var(--md-sys-color-outline-variant)]/80 bg-[var(--md-sys-color-surface-container-lowest)]/90 backdrop-blur-md z-10 relative">
             <div class="flex items-center gap-2 p-1.5 pl-3.5 border border-[var(--md-sys-color-outline-variant)] rounded-full bg-[var(--md-sys-color-surface-container-low)] focus-within:bg-[var(--md-sys-color-surface-container-lowest)] focus-within:border-[#3b82f7] focus-within:ring-2 focus-within:ring-[#3b82f7]/20 transition-all duration-200">
                 <input type="text" id="chat-input" placeholder="Escreva sua dúvida..." data-i18n-placeholder="ai_tutor_input_placeholder"
                     class="flex-1 bg-transparent text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus:outline-none text-sm py-1">
