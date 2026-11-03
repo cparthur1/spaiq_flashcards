@@ -1166,7 +1166,6 @@ export async function syncSlotsToCloud() {
           isCurrent: Boolean(s.isCurrent),
           isExam,
           mode: isExam ? 'exam' : 'normal',
-          deckData: s.deckData || null,
           updatedAt: s.updatedAt || now,
           deletedAt: s.deckData ? null : (s.deletedAt || now)
         };
@@ -1177,7 +1176,6 @@ export async function syncSlotsToCloud() {
         notebookSlot: {
           cardCount: notebookPayload.deckData ? (notebookPayload.cardCount || 0) : 0,
           title: notebookPayload.title || 'Caderno',
-          deckData: notebookPayload.deckData || null,
           updatedAt: notebookPayload.updatedAt || now,
           deletedAt: notebookPayload.deckData ? null : (notebookPayload.deletedAt || now)
         },

@@ -425,7 +425,6 @@ export default {
             isCurrent: Boolean(s.isCurrent),
             isExam,
             mode: isExam ? 'exam' : 'normal',
-            deckData: s.deckData || null,
             updatedAt: s.updatedAt || now,
             deletedAt: s.deckData ? null : (s.deletedAt || now)
           };
@@ -437,7 +436,6 @@ export default {
           notebookSlot: {
             cardCount: notebookData?.deckData ? (notebookData.cardCount || 0) : 0,
             title: notebookData?.title || 'Caderno',
-            deckData: notebookData?.deckData || null,
             updatedAt: notebookData?.updatedAt || now,
             deletedAt: notebookData?.deckData ? null : (notebookData?.deletedAt || now)
           },

@@ -237,9 +237,7 @@ export function sanitizeChatHistory(target) {
     list.forEach(item => {
         if (!item || !Array.isArray(item.parts)) return;
         const hasFunctionResponse = item.parts.some(p => p && !!p.functionResponse);
-        if (hasFunctionResponse) {
-            item.role = 'function';
-        } else if (item.role === 'function') {
+        if (hasFunctionResponse || item.role === 'function') {
             item.role = 'user';
         }
     });

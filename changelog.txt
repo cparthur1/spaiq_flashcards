@@ -1,3 +1,20 @@
+CHANGELOG: GEMINI AGENT ROLE SANITIZATION & FIRESTORE 1MB LIMIT REMEDIATION (v15.20)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Gemini Agent Multi-turn Role Fix (`Role 'function' is not supported`):
+   - Fixed `sanitizeChatHistory` in `js/utils.js`: mapped tool function responses and any legacy function roles to `role: 'user'` as strictly required by Google Generative AI / Gemini API.
+   - Added server-side role sanitization in `worker/src/gemini.js` within `callGemini` to ensure any incoming request with `function` roles or `functionResponse` parts is normalized to `role: 'user'`.
+2. Firestore 1 MiB Document Size Limit Remediation:
+   - Removed bulky `deckData` embedding from `users/{uid}` in both `js/slot-manager.js` and `worker/src/index.js`.
+   - Restored metadata-only schema for `deckSlots` and `notebookSlot` in `users/{uid}` (~2 KB document size), completely preventing the `FirebaseError: Document size exceeds 1,048,576 bytes` error.
+   - Individual full deck contents continue to be saved independently to `decks/{deckId}` and `decks/notebook_{uid}`, each with their own 1 MiB limit.
+3. Deployment & Cache:
+   - Deployed updated Cloudflare Worker.
+   - Bumped `CACHE_NAME` to `flashcards-v15.20` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: SYNTAX ERROR & CLOUD HYDRATION SAFEGUARDS FIX (v15.19)
 Date: 2026-11-02
 

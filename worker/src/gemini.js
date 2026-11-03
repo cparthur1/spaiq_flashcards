@@ -37,13 +37,19 @@ export async function callGemini({
   const url = `${GEMINI_API_BASE}/models/${model}:${action}${queryString}`;
 
   // Normalize contents and parts so strings are cleanly wrapped in { text: string }
+  // and map any 'function' roles to 'user' as strictly required by Google Gemini API
   const normalizedContents = (Array.isArray(contents) ? contents : [contents]).filter(Boolean).map(item => {
     if (typeof item === 'string') {
       return { role: 'user', parts: [{ text: item }] };
     }
     if (item && Array.isArray(item.parts)) {
+      let role = item.role;
+      if (role === 'function' || item.parts.some(p => p && !!p.functionResponse)) {
+        role = 'user';
+      }
       return {
         ...item,
+        role,
         parts: item.parts.map(part => {
           if (typeof part === 'string') {
             return { text: part };
