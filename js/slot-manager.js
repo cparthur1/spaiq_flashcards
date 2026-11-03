@@ -835,10 +835,11 @@ export function mergeDailyStreaks(local, cloud) {
   }
 
   const mergedFrozenDates = Array.from(new Set([...(local.frozenDates || []), ...(cloud.frozenDates || [])]));
+  const mergedGoalMetDates = Array.from(new Set([...(local.goalMetDates || []), ...(cloud.goalMetDates || [])]));
   
   const localUpdated = Number(local.updatedAt) || 0;
   const cloudUpdated = Number(cloud.updatedAt) || 0;
-  const useCloudAsBase = cloudUpdated >= localUpdated;
+  const useCloudAsBase = cloudUpdated > localUpdated;
 
   const streak = Math.max(Number(local.streak) || 0, Number(cloud.streak) || 0);
   const bestStreak = Math.max(Number(local.bestStreak) || 0, Number(cloud.bestStreak) || 0, streak);
@@ -852,8 +853,10 @@ export function mergeDailyStreaks(local, cloud) {
     lastStudiedDate,
     freezesAvailable: useCloudAsBase ? cloud.freezesAvailable : local.freezesAvailable,
     frozenDates: mergedFrozenDates,
+    goalMetDates: mergedGoalMetDates,
     history: mergedHistory,
     lastFreezeAwardedStreak: Math.max(Number(local.lastFreezeAwardedStreak) || 0, Number(cloud.lastFreezeAwardedStreak) || 0),
+    lastGoalFreezeAwardedCount: Math.max(Number(local.lastGoalFreezeAwardedCount) || 0, Number(cloud.lastGoalFreezeAwardedCount) || 0),
     updatedAt: Math.max(localUpdated, cloudUpdated, Date.now())
   };
 }
@@ -1021,6 +1024,16 @@ export function syncActiveSlotState() {
 
   // If notebook is active and shared, sync changes to notebook share
   if (activeMode === 'notebook') {
+    const rawNb = localStorage.getItem(NOTEBOOK_KEY);
+    if (rawNb) {
+      try {
+        const parsedNb = JSON.parse(rawNb);
+        if (parsedNb && !parsedNb.updatedAt) {
+          parsedNb.updatedAt = Date.now();
+          localStorage.setItem(NOTEBOOK_KEY, encodeStoragePayload(parsedNb));
+        }
+      } catch (e) {}
+    }
     const notebookShareSlug = localStorage.getItem('flashcards_notebook_share_slug');
     if (notebookShareSlug) {
       const localNotebook = getNotebookSlotData();
@@ -1083,10 +1096,17 @@ export async function syncSlotsToCloud() {
 
     const localNotebook = getNotebookSlotData();
     const notebookDeletedAt = Number(localStorage.getItem('flashcards_notebook_deleted_at')) || 0;
+    if (localNotebook?.deckData && !localNotebook.deckData.updatedAt) {
+      localNotebook.deckData.updatedAt = now;
+      localStorage.setItem(NOTEBOOK_KEY, encodeStoragePayload(localNotebook.deckData));
+    }
     const notebookPayload = localNotebook?.deckData ? {
       title: 'Caderno',
       cardCount: localNotebook.cardCount || 0,
-      deckData: localNotebook.deckData,
+      deckData: {
+        ...localNotebook.deckData,
+        updatedAt: localNotebook.deckData.updatedAt || now
+      },
       updatedAt: localNotebook.deckData.updatedAt || now
     } : {
       title: 'Caderno',
@@ -1373,18 +1393,21 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
 
   // Load cloud notebook or propagate notebook deletion
   const localNotebook = getNotebookSlotData();
-  const localNotebookUpdated = localNotebook?.deckData?.updatedAt || 0;
+  const localNotebookUpdated = Number(localNotebook?.deckData?.updatedAt) || 0;
 
   if (cloudData.notebookSlot?.deckData) {
-    const cloudNotebookUpdated = cloudData.notebookSlot.deckData.updatedAt || cloudData.notebookSlot.updatedAt || cloudData.lastSyncedAt || 0;
-    if (!localNotebook?.deckData || cloudNotebookUpdated >= localNotebookUpdated || (isRealtime && cloudNotebookUpdated !== localNotebookUpdated)) {
+    const cloudNotebookUpdated = Number(cloudData.notebookSlot.deckData.updatedAt || cloudData.notebookSlot.updatedAt || cloudData.lastSyncedAt) || 0;
+    if (!localNotebook?.deckData || cloudNotebookUpdated > localNotebookUpdated) {
       localStorage.setItem(NOTEBOOK_KEY, encodeStoragePayload(cloudData.notebookSlot.deckData));
       localStorage.removeItem('flashcards_notebook_deleted_at');
       hasSlotChanges = true;
+    } else if (localNotebook?.deckData && localNotebookUpdated > cloudNotebookUpdated) {
+      // Local has newer un-synced progress: push to cloud!
+      debouncedSyncSlotsToCloud(500);
     }
   } else if (localNotebook?.deckData && (cloudData.notebookSlot?.deletedAt || (cloudData.notebookSlot && !cloudData.notebookSlot.deckId && (cloudData.notebookSlot.cardCount || 0) === 0))) {
     // Cloud notebook is deleted/empty: check deletion timestamp
-    const cloudNotebookDeletedAt = cloudData.notebookSlot?.deletedAt || 0;
+    const cloudNotebookDeletedAt = Number(cloudData.notebookSlot?.deletedAt) || 0;
     if (cloudNotebookDeletedAt > 0 && cloudNotebookDeletedAt >= localNotebookUpdated) {
       localStorage.removeItem(NOTEBOOK_KEY);
       localStorage.setItem('flashcards_notebook_deleted_at', String(cloudNotebookDeletedAt));
@@ -1505,10 +1528,10 @@ async function hydrateCloudUserDoc(userDocData, uid) {
       hydrated.notebookSlot = nbMeta;
     } else if (!nbMeta.deletedAt && (nbMeta.cardCount || 0) > 0) {
       const localNb = getNotebookSlotData();
-      const localNbUpdated = localNb?.deckData?.updatedAt || 0;
+      const localNbUpdated = Number(localNb?.deckData?.updatedAt) || 0;
       const canReuseNb = Boolean(
         localNb?.deckData &&
-        localNbUpdated === nbMeta.updatedAt &&
+        localNbUpdated >= (nbMeta.updatedAt || 0) &&
         localNb.cardCount === nbMeta.cardCount
       );
 

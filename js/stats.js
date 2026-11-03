@@ -1274,6 +1274,9 @@ function formatCellTitle(day) {
     const [y, m, d] = day.dateStr.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     const formatted = dateObj.toLocaleDateString(getCurrentLanguage(), { weekday: 'short', day: 'numeric', month: 'short' });
+    if (day.isGoalMet) {
+        return `${formatted}: ${day.count} ${day.count === 1 ? t('card_solved_singular') : t('cards_solved_plural')} (${t('heatmap_goal_met')})`;
+    }
     if (day.isFrozen) {
         return `${formatted}: ${t('streak_protected_by_freeze_cell')}`;
     }
@@ -1290,10 +1293,22 @@ function renderActivityHeatmap(statsData) {
     const streakVal = Number(streakData.streak) || 0;
     const freezesAvail = typeof streakData.freezesAvailable === 'number' ? streakData.freezesAvailable : 1;
     const frozenDatesSet = new Set(streakData.frozenDates || []);
+    const goalMetDatesSet = new Set(streakData.goalMetDates || []);
 
     // 1. Atualiza badge de sequência diária no cabeçalho
     if (heatmapStreakVal) {
         heatmapStreakVal.textContent = `${streakVal} ${streakVal === 1 ? t('day') : t('days')}`;
+        const streakFireIcon = document.getElementById('heatmap-streak-fire-icon');
+        const isTodayGoalMet = goalMetDatesSet.has(getTodayDateString());
+        if (streakFireIcon) {
+            if (isTodayGoalMet) {
+                streakFireIcon.className = 'material-symbols-rounded text-sm text-purple-600 select-none';
+                streakFireIcon.textContent = 'local_fire_department';
+            } else {
+                streakFireIcon.className = 'material-symbols-rounded text-sm text-amber-500 select-none';
+                streakFireIcon.textContent = 'local_fire_department';
+            }
+        }
     }
 
     // 2. Atualiza status de Streak Freeze no cabeçalho
@@ -1359,9 +1374,10 @@ function renderActivityHeatmap(statsData) {
             const isFuture = (runningDate > now && !isToday);
             const count = Number(activityMap[dateStr]) || 0;
             const isFrozen = frozenDatesSet.has(dateStr);
+            const isGoalMet = goalMetDatesSet.has(dateStr);
 
             if (!isFuture) {
-                if (count > 0) {
+                if (count > 0 || isGoalMet) {
                     totalActiveDays++;
                     totalPeriodCards += count;
                 } else if (isFrozen) {
@@ -1375,6 +1391,7 @@ function renderActivityHeatmap(statsData) {
                 dayOfWeek: d,
                 count,
                 isFrozen,
+                isGoalMet,
                 isToday,
                 isFuture
             });
@@ -1424,7 +1441,10 @@ function renderActivityHeatmap(statsData) {
             let colorClasses = 'bg-gray-100 border border-gray-200/50 hover:bg-gray-200';
             let cellContent = '';
 
-            if (day.isFrozen) {
+            if (day.isGoalMet) {
+                colorClasses = 'bg-purple-100 text-purple-700 border-2 border-purple-400 font-bold text-[8px] flex items-center justify-center';
+                cellContent = '<span class="material-symbols-rounded text-[11px] text-purple-600 select-none leading-none">local_fire_department</span>';
+            } else if (day.isFrozen) {
                 colorClasses = 'bg-cyan-100 text-cyan-800 border-2 border-cyan-400 font-bold text-[8px] flex items-center justify-center';
                 cellContent = '<span class="material-symbols-rounded text-[10px] select-none leading-none">ac_unit</span>';
             } else if (day.count >= 30) {
@@ -1444,6 +1464,7 @@ function renderActivityHeatmap(statsData) {
                 data-date="${day.dateStr}"
                 data-count="${day.count}"
                 data-frozen="${day.isFrozen}"
+                data-goal-met="${day.isGoalMet}"
                 data-today="${day.isToday}"
                 title="${formatCellTitle(day)}"
             >${cellContent}</div>`;
@@ -1470,6 +1491,7 @@ function renderActivityHeatmap(statsData) {
         const dateStr = cell.getAttribute('data-date');
         const count = Number(cell.getAttribute('data-count')) || 0;
         const isFrozen = cell.getAttribute('data-frozen') === 'true';
+        const isGoalMet = cell.getAttribute('data-goal-met') === 'true';
         const isToday = cell.getAttribute('data-today') === 'true';
 
         const showDetail = () => {
@@ -1479,7 +1501,9 @@ function renderActivityHeatmap(statsData) {
             const formatted = dateObj.toLocaleDateString(getCurrentLanguage(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             const capFormatted = escapeHtml(formatted.charAt(0).toUpperCase() + formatted.slice(1));
 
-            if (isFrozen) {
+            if (isGoalMet) {
+                heatmapHoverInfo.innerHTML = `<span class="text-purple-700 font-bold inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm select-none">local_fire_department</span> ${capFormatted}</span>: <span class="text-purple-900 font-extrabold">${count} ${count === 1 ? t('card_solved_singular') : t('cards_solved_plural')}</span> <span class="text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded">${t('heatmap_goal_met')}</span>${isToday ? ` <span class="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">${t('today_badge')}</span>` : ''}`;
+            } else if (isFrozen) {
                 heatmapHoverInfo.innerHTML = `<span class="text-cyan-700 font-bold inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm select-none">ac_unit</span> ${capFormatted}</span>: <span class="text-gray-700 font-medium">${t('streak_protected_by_freeze_hover')}</span>`;
             } else if (count > 0) {
                 heatmapHoverInfo.innerHTML = `<span class="text-gray-900 font-bold">${capFormatted}</span>: <span class="text-emerald-600 font-extrabold">${count} ${count === 1 ? t('card_solved_singular') : t('cards_solved_plural')}</span>${isToday ? ` <span class="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">${t('today_badge')}</span>` : ''}`;
@@ -1792,9 +1816,12 @@ function ignoreCardFromStruggling(cardKey) {
 function addCardToNotebook(card) {
     const sanitizeCard = (c) => {
         if (!c || typeof c !== 'object') return c;
-        const copy = { ...c };
-        delete copy.isBeingCorrected;
-        delete copy._lastUserAnswer;
+        const copy = {};
+        for (const [k, v] of Object.entries(c)) {
+            if (v !== undefined && k !== 'isBeingCorrected' && k !== '_lastUserAnswer') {
+                copy[k] = v;
+            }
+        }
         return copy;
     };
 
@@ -1809,6 +1836,7 @@ function addCardToNotebook(card) {
         notebookState.questionsPool.push(cleanCard);
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCard);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCard);
+        notebookState.updatedAt = Date.now();
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
         syncSlotsToCloud();
         showStatsPill(t('card_added_toast'), true);
@@ -1851,6 +1879,7 @@ addAllToNotebookBtn?.addEventListener('click', () => {
         }
     });
     if (addedCount > 0) {
+        notebookState.updatedAt = Date.now();
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
         syncSlotsToCloud();
     }

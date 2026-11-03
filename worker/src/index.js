@@ -394,6 +394,7 @@ export default {
         }
 
         // 3. Save or delete notebook deck document
+        let notebookSaveFailed = false;
         if (notebookData?.deckData) {
           deckOps.push(
             setDocument(serviceAccount, 'decks', `notebook_${user.uid}`, {
@@ -402,13 +403,20 @@ export default {
               cardCount: notebookData.cardCount || 0,
               deckData: notebookData.deckData,
               updatedAt: notebookData.updatedAt || now
-            }).catch(err => console.warn('Erro ao salvar notebook:', err))
+            }).catch(err => {
+              console.warn('Erro ao salvar notebook:', err);
+              notebookSaveFailed = true;
+            })
           );
         } else {
           deckOps.push(deleteDeckDocument(serviceAccount, `notebook_${user.uid}`).catch(() => {}));
         }
 
         await Promise.all(deckOps);
+
+        const notebookUpdatedAt = notebookSaveFailed
+          ? (userDoc?.notebookSlot?.updatedAt || 0)
+          : (notebookData?.updatedAt || now);
 
         // 4. Prepare lightweight metadata for user doc, preserving deletion timestamps & share info
         const deckSlotsMeta = slots.map(s => {
@@ -436,7 +444,7 @@ export default {
           notebookSlot: {
             cardCount: notebookData?.deckData ? (notebookData.cardCount || 0) : 0,
             title: notebookData?.title || 'Caderno',
-            updatedAt: notebookData?.updatedAt || now,
+            updatedAt: notebookUpdatedAt,
             deletedAt: notebookData?.deckData ? null : (notebookData?.deletedAt || now)
           },
           stats: stats || {},

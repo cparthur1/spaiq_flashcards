@@ -450,7 +450,7 @@
                         <div class="flex items-center gap-2.5">
                             <h2 class="font-bold text-base text-gray-900" data-i18n="activity_calendar">Calendário de Atividade</h2>
                             <span id="heatmap-streak-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 inline-flex items-center gap-1">
-                                <span class="material-symbols-rounded text-sm text-amber-500">local_fire_department</span> <span id="heatmap-streak-val" data-i18n="zero_days">0 dias</span>
+                                <span id="heatmap-streak-fire-icon" class="material-symbols-rounded text-sm text-amber-500">local_fire_department</span> <span id="heatmap-streak-val" data-i18n="zero_days">0 dias</span>
                             </span>
                         </div>
                         <p class="text-xs text-gray-500 mt-0.5" data-i18n="heatmap_desc">Histórico diário de resolução e proteção de sequência</p>
@@ -484,6 +484,11 @@
                             <div class="w-3.5 h-3.5 rounded-xs bg-emerald-700 border border-emerald-800/60" title="30+ cards" data-i18n-title="cards_30_plus"></div>
                         </div>
                         <span data-i18n="heatmap_more">Mais</span>
+                        <span class="mx-1 text-gray-300">|</span>
+                        <div class="flex items-center gap-1.5 font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200/80">
+                            <span class="material-symbols-rounded text-xs text-purple-600">local_fire_department</span>
+                            <span data-i18n="heatmap_goal_met">Meta batida</span>
+                        </div>
                         <span class="mx-1 text-gray-300">|</span>
                         <div class="flex items-center gap-1.5 font-semibold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200/80">
                             <span class="material-symbols-rounded text-xs text-cyan-600">ac_unit</span>

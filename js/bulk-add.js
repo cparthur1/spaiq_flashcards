@@ -133,6 +133,9 @@ function getNotebookDataFromStorage() {
 
 function saveNotebookDataToStorage(data) {
     try {
+        if (data && typeof data === 'object') {
+            data.updatedAt = Date.now();
+        }
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(data));
         updateNotebookHeaderBadge();
         debouncedSyncSlotsToCloud(300);

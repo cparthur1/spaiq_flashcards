@@ -1,6 +1,6 @@
 import { normalizeString, calculateSimilarity, shuffleArray, checkAndResetModelFallback, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { isPlayableCard, calculateThinkingGap, selectNextCard, isLeechCard, shouldGraduateCard, formatTimeDisplay, getCardTopic } from './engine/scheduler.js';
-import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString } from './engine/notebook-scheduler.js';
+import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString, recordNotebookGoalBeaten, getNotebookDailyGoal } from './engine/notebook-scheduler.js';
 import {
     initEffects, createBall, clearBalls, setBallColor, launchCelebrationParticles,
     playCompletionShockwave, cleanShockwaveContainer, resizeCanvas, animate,
@@ -2108,6 +2108,7 @@ function showFeedback(isCorrect, element) {
 
                 saveGameState();
                 updateScoreDisplay();
+                checkAndCelebrateNotebookDailyGoal(true);
 
                 setTimeout(() => {
                     animateCardToBack(() => {
@@ -2232,9 +2233,12 @@ function updateFeedbackText() {
 
 function sanitizeCardForStorage(card) {
     if (!card || typeof card !== 'object') return card;
-    const sanitized = { ...card };
-    delete sanitized.isBeingCorrected;
-    delete sanitized._lastUserAnswer;
+    const sanitized = {};
+    for (const [key, value] of Object.entries(card)) {
+        if (value !== undefined && key !== 'isBeingCorrected' && key !== '_lastUserAnswer') {
+            sanitized[key] = value;
+        }
+    }
     return sanitized;
 }
 
@@ -2245,6 +2249,7 @@ function executeSaveGameState() {
     try {
         const cleanPool = (questionsPool || []).map(sanitizeCardForStorage);
         const cleanAll = (allQuestions || []).map(sanitizeCardForStorage);
+        const now = Date.now();
 
         if (activeMode === 'notebook') {
             localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload({
@@ -2256,7 +2261,8 @@ function executeSaveGameState() {
                 currentStep,
                 consecutiveDueCardsCount,
                 consecutiveNewCardsCount,
-                deckTitle: "Caderno"
+                deckTitle: "Caderno",
+                updatedAt: now
             }));
         } else if (activeMode === 'exam') {
             let examData = {};
@@ -2272,7 +2278,8 @@ function executeSaveGameState() {
                 currentStep,
                 consecutiveDueCardsCount,
                 consecutiveNewCardsCount,
-                deckTitle: "Semana de Provas"
+                deckTitle: "Semana de Provas",
+                updatedAt: now
             }));
         } else {
             localStorage.setItem('flashcardsSave', encodeStoragePayload({
@@ -2283,7 +2290,8 @@ function executeSaveGameState() {
                 currentStep,
                 consecutiveDueCardsCount,
                 consecutiveNewCardsCount,
-                deckTitle: deckTitle.textContent
+                deckTitle: deckTitle.textContent,
+                updatedAt: now
             }));
         }
 
@@ -2327,18 +2335,7 @@ window.addEventListener('pagehide', () => {
     syncSlotsToCloud();
 });
 
-function getNotebookDailyGoal() {
-    try {
-        const val = localStorage.getItem('flashcards_notebook_daily_goal');
-        if (val !== null && val !== '') {
-            const num = parseInt(val, 10);
-            return isNaN(num) ? 0 : Math.max(0, num);
-        }
-        return 0;
-    } catch (e) {
-        return 0;
-    }
-}
+// getNotebookDailyGoal is imported from ./engine/notebook-scheduler.js
 
 function setNotebookDailyGoal(goal) {
     try {
@@ -2616,12 +2613,15 @@ function checkAndCelebrateNotebookDailyGoal(isFromAnsweringCard = false) {
     const reviewedToday = dueInfo.reviewedToday || 0;
     if (reviewedToday < dailyGoal) return;
 
-    // Apenas celebra se a stat "para hoje" (remaining) estiver pinada no cabeçalho do caderno
+    // Registra a meta como batida para o sistema de recompensas (7 metas = +1 streak freeze) e salva o dia
+    const todayStr = getTodayDateString();
+    const goalRes = recordNotebookGoalBeaten(todayStr);
+
+    // Apenas celebra visualmente se a stat "para hoje" (remaining) estiver pinada no cabeçalho do caderno
     const pinnedIds = getPinnedHeaderStats('notebook');
     const isParaHojePinned = pinnedIds.includes('remaining');
     if (!isParaHojePinned) return;
 
-    const todayStr = getTodayDateString();
     const celebrationKey = `flashcards_daily_goal_celebrated_${todayStr}_${dailyGoal}`;
     if (localStorage.getItem(celebrationKey)) {
         return; // Já comemorou esta meta hoje
@@ -2634,7 +2634,12 @@ function checkAndCelebrateNotebookDailyGoal(isFromAnsweringCard = false) {
     launchCelebrationParticles(120);
     triggerHaptic('streakUp');
     playFeedbackSound('confirm');
-    showNotificationPill(t('notebook_daily_goal_done_toast'), 'collection.svg');
+
+    if (goalRes.freezeAwarded) {
+        showNotificationPill(t('goal_freeze_awarded_toast'), 'collection.svg');
+    } else {
+        showNotificationPill(t('notebook_daily_goal_done_toast'), 'collection.svg');
+    }
 }
 
 let currentRenderedStatsMode = null;
@@ -3704,6 +3709,7 @@ function persistHighlightedContent(targetField) {
             syncArray(notebookData.questionsPool);
             notebookData.allQuestions = (notebookData.allQuestions || []).map(sanitizeCardForStorage);
             notebookData.questionsPool = (notebookData.questionsPool || []).map(sanitizeCardForStorage);
+            notebookData.updatedAt = Date.now();
             localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookData));
         }
     }
@@ -5167,6 +5173,9 @@ if (flashcardAnswerForm) {
 [answerInput, answerInput1, answerInput2].forEach(inp => {
     inp?.addEventListener('keyup', (e) => {
         if (e.key === 'Enter') {
+            if (flashcardAnswerForm && flashcardAnswerForm.contains(inp)) {
+                return; // Já tratado pelo submit do form
+            }
             console.log("[Game] Enter detectado no input:", inp.id);
             handleOpenSubmit();
         }
@@ -5567,6 +5576,7 @@ function toggleBookmark() {
 
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCardForStorage);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCardForStorage);
+        notebookState.updatedAt = Date.now();
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
         showNotificationPill(t('card_removed_from_notebook_toast'), "add_bookmark.svg");
 
@@ -5613,6 +5623,7 @@ function toggleBookmark() {
         notebookState.questionsPool.push(sanitizeCardForStorage(currentQuestion));
         notebookState.allQuestions = (notebookState.allQuestions || []).map(sanitizeCardForStorage);
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCardForStorage);
+        notebookState.updatedAt = Date.now();
 
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
         showNotificationPill(t('card_added_to_notebook_toast'), "bookmark_check.svg");
@@ -5927,7 +5938,8 @@ function switchActiveMode(newMode) {
             questionsPool: [],
             score: 0,
             notebookReviewsCount: 0,
-            deckTitle: "Caderno"
+            deckTitle: "Caderno",
+            updatedAt: Date.now()
         };
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(data));
     }

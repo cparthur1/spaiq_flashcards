@@ -107,6 +107,7 @@ export function getDailyStreak() {
                 bestStreak: 0,
                 freezesAvailable: 1, // Usuários novos começam com 1 protetor de cortesia
                 frozenDates: [],
+                goalMetDates: [],
                 history: {},
                 streakProtectedByFreeze: false
             };
@@ -118,6 +119,7 @@ export function getDailyStreak() {
         let lastDate = String(data.lastStudiedDate || '');
         let freezesAvailable = typeof data.freezesAvailable === 'number' ? data.freezesAvailable : 1;
         let frozenDates = Array.isArray(data.frozenDates) ? [...data.frozenDates] : [];
+        let goalMetDates = Array.isArray(data.goalMetDates) ? [...data.goalMetDates] : [];
         let history = (data.history && typeof data.history === 'object') ? data.history : {};
         let streakProtectedByFreeze = false;
 
@@ -129,6 +131,7 @@ export function getDailyStreak() {
                 bestStreak,
                 freezesAvailable,
                 frozenDates,
+                goalMetDates,
                 history,
                 streakProtectedByFreeze: false
             };
@@ -145,6 +148,7 @@ export function getDailyStreak() {
                 bestStreak,
                 freezesAvailable,
                 frozenDates,
+                goalMetDates,
                 history,
                 streakProtectedByFreeze: false
             };
@@ -180,6 +184,7 @@ export function getDailyStreak() {
                     bestStreak,
                     freezesAvailable,
                     frozenDates,
+                    goalMetDates,
                     history,
                     streakProtectedByFreeze: true
                 };
@@ -194,6 +199,7 @@ export function getDailyStreak() {
             bestStreak,
             freezesAvailable,
             frozenDates,
+            goalMetDates,
             history,
             streakProtectedByFreeze: false
         };
@@ -206,6 +212,7 @@ export function getDailyStreak() {
             bestStreak: 0,
             freezesAvailable: 1,
             frozenDates: [],
+            goalMetDates: [],
             history: {},
             streakProtectedByFreeze: false
         };
@@ -739,4 +746,86 @@ export function getHeatmapActivityMap(statsHistory = [], currentSession = null) 
     }
 
     return map;
+}
+
+/**
+ * Retorna a meta diária configurada do Caderno (ou 0 se não configurada).
+ * @returns {number}
+ */
+export function getNotebookDailyGoal() {
+    try {
+        const val = localStorage.getItem('flashcards_notebook_daily_goal');
+        if (val !== null && val !== '') {
+            const num = parseInt(val, 10);
+            return isNaN(num) ? 0 : Math.max(0, num);
+        }
+        return 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+/**
+ * Registra que a meta diária do Caderno foi batida na data especificada (padrão hoje).
+ * A cada 7 metas batidas, recompensa o usuário com +1 Streak Freeze (máx 2).
+ *
+ * @param {string} [dateStr=getTodayDateString()]
+ * @returns {{
+ *   newlyAchieved: boolean,
+ *   totalGoalsMet: number,
+ *   freezeAwarded: boolean,
+ *   freezesAvailable: number
+ * }}
+ */
+export function recordNotebookGoalBeaten(dateStr = getTodayDateString()) {
+    try {
+        const raw = localStorage.getItem(DAILY_STREAK_KEY);
+        let data = {};
+        if (raw) {
+            try { data = JSON.parse(raw); } catch (e) {}
+        }
+
+        let goalMetDates = Array.isArray(data.goalMetDates) ? [...data.goalMetDates] : [];
+        let freezesAvailable = typeof data.freezesAvailable === 'number' ? data.freezesAvailable : 1;
+        let lastGoalFreezeAwardedCount = Number(data.lastGoalFreezeAwardedCount) || 0;
+        let freezeAwarded = false;
+
+        const newlyAchieved = !goalMetDates.includes(dateStr);
+        if (newlyAchieved) {
+            goalMetDates.push(dateStr);
+        }
+
+        const totalGoalsMet = goalMetDates.length;
+        if (newlyAchieved) {
+            const milestoneReached = Math.floor(totalGoalsMet / 7) * 7;
+            if (milestoneReached >= 7 && milestoneReached > lastGoalFreezeAwardedCount && freezesAvailable < MAX_FREEZES) {
+                freezesAvailable = Math.min(MAX_FREEZES, freezesAvailable + 1);
+                lastGoalFreezeAwardedCount = milestoneReached;
+                freezeAwarded = true;
+            }
+        }
+
+        data.goalMetDates = goalMetDates;
+        data.freezesAvailable = freezesAvailable;
+        data.lastGoalFreezeAwardedCount = lastGoalFreezeAwardedCount;
+        data.updatedAt = Date.now();
+
+        localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify(data));
+        debouncedSyncSlotsToCloud();
+
+        return {
+            newlyAchieved,
+            totalGoalsMet,
+            freezeAwarded,
+            freezesAvailable
+        };
+    } catch (e) {
+        console.error('[Notebook SRS] Erro ao registrar meta batida:', e);
+        return {
+            newlyAchieved: false,
+            totalGoalsMet: 0,
+            freezeAwarded: false,
+            freezesAvailable: 1
+        };
+    }
 }
