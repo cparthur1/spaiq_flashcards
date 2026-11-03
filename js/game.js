@@ -22,7 +22,7 @@ import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCu
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
 import { onAuthChange, auth } from './firebase-client.js';
-import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud } from './share-manager.js';
+import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
@@ -668,13 +668,13 @@ function renderFillBlanksQuestion(text) {
     const totalSpots = spotIndex;
     for (let i = 0; i < totalSpots; i++) {
         const enterHint = i < totalSpots - 1 ? 'next' : 'done';
-        const inputHtml = `<input type="text" class="fill-blank-input" data-blank-index="${i}" enterkeyhint="${enterHint}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">`;
+        const inputHtml = `<input type="text" class="fill-blank-input" data-blank-index="${i}" enterkeyhint="${enterHint}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">`;
         renderedHtml = renderedHtml.split(`%%FILL_SPOT_${i}%%`).join(inputHtml);
     }
 
     return sanitizeHtml(renderedHtml, {
         ADD_TAGS: ['input'],
-        ADD_ATTR: ['type', 'data-blank-index', 'enterkeyhint', 'autocomplete', 'autocorrect', 'autocapitalize', 'spellcheck', 'data-form-type', 'data-lpignore', 'data-1p-ignore', 'data-bwignore']
+        ADD_ATTR: ['type', 'data-blank-index', 'enterkeyhint', 'autocomplete', 'autocorrect', 'autocapitalize', 'spellcheck', 'aria-autocomplete', 'data-form-type', 'data-lpignore', 'data-1p-ignore', 'data-bwignore']
     });
 }
 
@@ -4355,7 +4355,7 @@ if (menuShareDeckBtn) {
         try {
             const { shareUrl } = await shareDeckToCloud(deckData, title, targetSlotIdx !== -1 ? targetSlotIdx : null);
             showNotificationPill(t('deck_shared_copied'), "link.svg");
-            alert(t('deck_shared_and_pinned', { url: shareUrl }));
+            showShareSuccessDialog({ shareUrl, title, isNotebook: activeMode === 'notebook' });
         } catch (err) {
             if (err.name === 'AbortError') {
                 return; // User cancelled slot replacement dialog cleanly
@@ -5140,6 +5140,17 @@ chatInput.addEventListener('keydown', (e) => {
         if (e.isComposing || e.keyCode === 229) return;
         sendChatMessage();
     }
+});
+
+document.querySelectorAll('#chat-quick-chips .gemini-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        const promptKey = chip.getAttribute('data-prompt-key');
+        const promptText = promptKey ? t(promptKey) : (chip.querySelector('[data-i18n]')?.textContent || '').trim();
+        if (chatInput && promptText) {
+            chatInput.value = promptText;
+            sendChatMessage();
+        }
+    });
 });
 submitBtn.addEventListener('click', () => {
     console.log("[Game] Botão #submit-btn ('Verificar Resposta') clicado.");

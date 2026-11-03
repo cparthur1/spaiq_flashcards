@@ -17,7 +17,7 @@ import {
   importNotebookBackupData,
   loadSlotsFromCloud
 } from './slot-manager.js';
-import { shareDeckToCloud, subscribeToAllSharedSlots } from './share-manager.js';
+import { shareDeckToCloud, subscribeToAllSharedSlots, showShareSuccessDialog } from './share-manager.js';
 import { getUserStatus, createCheckoutSession, deleteAccountAndCancelSubscription, verifyPaymentStatus, createExtraDeckCheckoutSession, BACKEND_URL } from './backend-api.js';
 import { triggerProUnlockCelebration } from './engine/pro-unlock-celebration.js';
 import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl, encodeStoragePayload } from './utils.js';
@@ -1188,16 +1188,16 @@ function renderNotebookSlot() {
         </div>
       </div>
 
-      <!-- Action Bar: Import, Delete, Share -->
+      <!-- Action Bar: Import, Share, Delete -->
       <div class="flex items-center gap-1 flex-shrink-0">
         <button class="p-2 rounded-xl text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="${t('import_notebook_backup_title')}" onclick="window.flashcardsImportNotebookBackup()">
           <span class="material-symbols-rounded text-xl">file_upload</span>
         </button>
-        <button class="p-2 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition cursor-pointer" title="${t('clear_notebook_title')}" onclick="window.flashcardsClearNotebook()">
-          <span class="material-symbols-rounded text-xl">delete</span>
-        </button>
         <button class="p-2 rounded-xl text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="${t('share_notebook_title')}" onclick="window.flashcardsShareNotebook()">
           <span class="material-symbols-rounded text-xl">share</span>
+        </button>
+        <button class="p-2 rounded-xl text-red-500 hover:bg-red-50 active:bg-red-100 transition cursor-pointer" title="${t('clear_notebook_title')}" onclick="window.flashcardsClearNotebook()">
+          <span class="material-symbols-rounded text-xl">delete</span>
         </button>
       </div>
     </div>
@@ -1280,7 +1280,7 @@ window.flashcardsShareSlot = async function(slotIdx) {
     const { shareUrl } = await shareDeckToCloud(slot.deckData, slot.title, slotIdx);
     fixSlot(slotIdx, true);
     renderDeckSlots();
-    alert(t('deck_shared_and_pinned', { url: shareUrl }));
+    showShareSuccessDialog({ shareUrl, title: slot.title, isNotebook: false });
   } catch (err) {
     if (err.name === 'AbortError') return;
     alert(t('error_sharing_deck'));
@@ -1309,7 +1309,7 @@ window.flashcardsShareNotebook = async function() {
   if (!notebook.deckData) return;
   try {
     const { shareUrl } = await shareDeckToCloud(notebook.deckData, 'Caderno', null);
-    alert(t('notebook_shared_copied', { url: shareUrl }));
+    showShareSuccessDialog({ shareUrl, title: t('notebook'), isNotebook: true });
   } catch (e) {
     alert(t('error_sharing_notebook'));
   }

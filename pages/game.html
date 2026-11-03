@@ -242,17 +242,6 @@
 
         <!-- SECTION 4: SAIR (EXIT) & LIMPAR CADERNO -->
         <div class="px-1 py-1 space-y-0.5">
-            <!-- Clear Notebook (Only visible when activeMode === 'notebook') -->
-            <button id="clear-notebook-btn"
-                class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
-                title="Apagar todo o conteúdo do Caderno" data-i18n-title="clear_notebook_title">
-                <img src="../assets/img/delete.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Limpar" data-i18n-alt="clear_notebook_title">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-red-600" data-i18n="clear_notebook">Limpar caderno</p>
-                    <p class="text-xs text-red-500/80" data-i18n="clear_notebook_desc">Apagar todos os cards do caderno</p>
-                </div>
-            </button>
-
             <!-- Send Feedback Link -->
             <a href="https://github.com/cparthur1/spaiq_flashcards/discussions/new/choose" target="_blank" rel="noopener noreferrer" id="menu-feedback-btn"
                 class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
@@ -266,6 +255,17 @@
                 </div>
                 <span class="material-symbols-rounded text-base text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">open_in_new</span>
             </a>
+
+            <!-- Clear Notebook (Only visible when activeMode === 'notebook') -->
+            <button id="clear-notebook-btn"
+                class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
+                title="Apagar todo o conteúdo do Caderno" data-i18n-title="clear_notebook_title">
+                <img src="../assets/img/delete.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Limpar" data-i18n-alt="clear_notebook_title">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-red-600" data-i18n="clear_notebook">Limpar caderno</p>
+                    <p class="text-xs text-red-500/80" data-i18n="clear_notebook_desc">Apagar todos os cards do caderno</p>
+                </div>
+            </button>
 
             <button id="reset-btn"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
@@ -415,7 +415,7 @@
     </header>
 
     <div id="game-container"
-        class="w-full max-w-2xl mx-auto m3-card-expressive p-4 sm:p-8 transition-all duration-300 relative">
+        class="w-full max-w-2xl mx-auto m3-card-expressive p-3.5 sm:p-6 sm:p-8 transition-all duration-300 relative">
         <!-- STREAK COUNTER PILL (Centralized on top of the deck holder) -->
         <div id="streak-pill-container" class="absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 select-none flex justify-center pointer-events-none">
             <div id="streak-pill"
@@ -429,7 +429,7 @@
         </div>
 
         <div id="question-card"
-            class="bg-[var(--md-sys-color-surface-container-low)] p-5 sm:p-7 rounded-3xl border border-[var(--md-sys-color-outline-variant)] mb-3 sm:mb-6 min-h-[100px] sm:min-h-[130px] flex flex-col items-center justify-center relative z-10 group transition-all duration-300 shadow-sm">
+            class="bg-[var(--md-sys-color-surface-container-low)] p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-[var(--md-sys-color-outline-variant)] mb-3 sm:mb-6 min-h-[90px] sm:min-h-[130px] flex flex-col items-center justify-center relative z-10 group transition-all duration-300 shadow-sm">
             <!-- Bookmark Button -->
             <button id="bookmark-card-btn"
                 class="absolute top-2 right-2 text-gray-400 hover:text-blue-500 p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] transition duration-300"
@@ -541,29 +541,29 @@
             </div>
         </div>
 
-        <!-- Flashcard Answer Form: isolated from password manager -->
+        <!-- Flashcard Answer Form: isolated from password manager & browser autofill suggestions -->
         <form id="flashcard-answer-form" autocomplete="off" onsubmit="return false;" class="m-0 p-0">
-            <div id="open-answer-area" class="relative z-10 hidden mt-3 sm:mt-6">
+            <div id="open-answer-area" class="relative z-10 hidden mt-2.5 sm:mt-6">
                 <div class="relative">
                     <input type="text" id="answer-input"
-                        class="w-full px-4 py-3 text-base sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
+                        class="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
                         placeholder="Digite sua resposta aqui..." data-i18n-placeholder="type_answer_placeholder" autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" name="study_card_answer" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+                        spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
                 </div>
             </div>
 
-            <div id="open-double-answer-area" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 relative z-10 hidden mt-3 sm:mt-6">
+            <div id="open-double-answer-area" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 relative z-10 hidden mt-2.5 sm:mt-6">
                 <div class="relative">
                     <input type="text" id="answer-input-1"
-                        class="w-full px-4 py-3 text-base sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
+                        class="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
                         placeholder="Resposta 1..." autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" name="study_card_answer_1" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_1_placeholder">
+                        spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_1_placeholder">
                 </div>
                 <div class="relative">
                     <input type="text" id="answer-input-2"
-                        class="w-full px-4 py-3 text-base sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
+                        class="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
                         placeholder="Resposta 2..." autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" name="study_card_answer_2" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_2_placeholder">
+                        spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_2_placeholder">
                 </div>
             </div>
             <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
@@ -846,7 +846,7 @@
                 <!-- CATEGORIA 1: ACESSIBILIDADE -->
                 <section class="space-y-3" aria-labelledby="settings-accessibility-heading">
                     <div class="flex items-center gap-2">
-                        <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">tune</span>
+                        <img src="../assets/img/accessibility.svg" class="w-5 h-5 flex-shrink-0" alt="Acessibilidade" data-i18n-alt="settings_accessibility_heading">
                         <h4 id="settings-accessibility-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_accessibility_heading">Acessibilidade</h4>
                     </div>
 
@@ -981,7 +981,7 @@
                 <section class="space-y-3" aria-labelledby="settings-pinned-stats-heading">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)]">tune</span>
+                            <img src="../assets/img/stats.svg" class="w-5 h-5 flex-shrink-0" alt="Estatísticas" data-i18n-alt="settings_pinned_stats_heading">
                             <div>
                                 <h4 id="settings-pinned-stats-heading" class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_pinned_stats_heading">Estatísticas no Cabeçalho</h4>
                                 <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="settings_pinned_stats_desc">Escolha quais métricas aparecem fixadas no topo</p>
@@ -1226,28 +1226,87 @@
 
 
 
-    <!-- AI Chat Container -->
+    <!-- AI Chat Container (Gemini Visual Design) -->
     <div id="ai-chat-container"
-        class="fixed bottom-0 right-0 w-full md:w-96 md:h-2/3 bg-[var(--md-sys-color-surface-container-lowest)] shadow-2xl rounded-t-3xl md:rounded-l-3xl md:rounded-tr-none z-50 flex flex-col transition-all duration-300 transform translate-y-full md:translate-y-0 md:translate-x-full border border-[var(--md-sys-color-outline-variant)]">
-        <div
-            class="p-4 border-b border-[var(--md-sys-color-outline-variant)] flex justify-between items-center bg-gradient-to-r from-purple-700 to-indigo-700 text-white rounded-t-3xl md:rounded-tl-3xl md:rounded-tr-none shadow-sm">
-            <h3 class="font-bold flex items-center gap-2"><span class="material-symbols-rounded text-xl">psychology</span> <span data-i18n="ai_tutor_title">Explicação da IA</span></h3>
-            <button id="close-chat-btn" class="p-1.5 rounded-full hover:bg-white/20 text-white transition">
+        class="fixed bottom-0 right-0 w-full md:w-[420px] bg-[var(--md-sys-color-surface-container-lowest)] shadow-2xl rounded-t-3xl md:rounded-l-3xl md:rounded-tr-none z-50 flex flex-col transition-all duration-300 transform translate-y-full md:translate-y-0 md:translate-x-full border border-[var(--md-sys-color-outline-variant)] overflow-hidden">
+        <!-- SVG Gradient Defs for Gemini Assets -->
+        <svg class="sr-only" aria-hidden="true">
+            <defs>
+                <linearGradient id="gemini-sparkle-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#3b82f7" />
+                    <stop offset="50%" stop-color="#8b5cf6" />
+                    <stop offset="100%" stop-color="#ec4899" />
+                </linearGradient>
+            </defs>
+        </svg>
+
+        <!-- Top Spectrum Dynamic Aura Bar -->
+        <div class="gemini-spectrum-aura"></div>
+
+        <!-- Gemini Header -->
+        <div class="px-4 py-3 border-b border-[var(--md-sys-color-outline-variant)]/80 flex justify-between items-center bg-[var(--md-sys-color-surface-container-lowest)]">
+            <div class="flex items-center gap-2.5">
+                <div class="gemini-header-sparkle-container">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="url(#gemini-sparkle-gradient)" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z" />
+                    </svg>
+                </div>
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-sm tracking-tight text-[var(--md-sys-color-on-surface)]" data-i18n="ai_tutor_title">Explicação da IA</span>
+                        <span class="gemini-badge" data-i18n="gemini_flash_badge">Flash Thinking</span>
+                    </div>
+                    <span class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-tight" data-i18n="ai_tutor_subtitle">Tutor Gemini</span>
+                </div>
+            </div>
+            <button id="close-chat-btn" aria-label="Fechar" class="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] transition">
                 <span class="material-symbols-rounded text-xl">close</span>
             </button>
         </div>
-        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
-            <div class="chat-message-ai" data-i18n="ai_tutor_greeting">
-                Olá! Como posso ajudar você a entender melhor esta questão?
+
+        <!-- Chat Messages -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar flex flex-col bg-[var(--md-sys-color-surface)]/40">
+            <div class="chat-message-ai">
+                <div class="chat-message-ai-header">
+                    <span class="gemini-avatar-sparkle">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="url(#gemini-sparkle-gradient)">
+                            <path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z" />
+                        </svg>
+                    </span>
+                    <span class="gemini-avatar-name">Gemini</span>
+                </div>
+                <div class="chat-message-ai-body" data-i18n="ai_tutor_greeting">
+                    Olá! Como posso ajudar você a entender melhor esta questão?
+                </div>
             </div>
         </div>
-        <div class="p-4 border-t border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex gap-2">
-            <input type="text" id="chat-input" placeholder="Escreva sua dúvida..." data-i18n-placeholder="ai_tutor_input_placeholder"
-                class="flex-1 p-2.5 border border-[var(--md-sys-color-outline-variant)] rounded-full bg-[var(--md-sys-color-surface-container-lowest)] text-[var(--md-sys-color-on-surface)] focus:outline-none focus:border-purple-500 text-sm">
-            <button id="send-chat-btn"
-                class="p-2.5 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition shadow flex items-center justify-center">
-                <span class="material-symbols-rounded text-lg">send</span>
+
+        <!-- Quick Action Prompt Chips (Gemini Context Starters) -->
+        <div id="chat-quick-chips" class="px-3.5 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-t border-[var(--md-sys-color-outline-variant)]/60 bg-[var(--md-sys-color-surface-container-lowest)]">
+            <button type="button" class="gemini-chip" data-prompt-key="tutor_prompt_simplify">
+                <span class="material-symbols-rounded text-sm text-[#3b82f7]">lightbulb</span>
+                <span data-i18n="tutor_chip_simplify">Explicar simples</span>
             </button>
+            <button type="button" class="gemini-chip" data-prompt-key="tutor_prompt_example">
+                <span class="material-symbols-rounded text-sm text-[#3b82f7]">science</span>
+                <span data-i18n="tutor_chip_example">Exemplo prático</span>
+            </button>
+            <button type="button" class="gemini-chip" data-prompt-key="tutor_prompt_mnemonic">
+                <span class="material-symbols-rounded text-sm text-[#3b82f7]">psychology</span>
+                <span data-i18n="tutor_chip_mnemonic">Dica para memorizar</span>
+            </button>
+        </div>
+
+        <!-- Input Capsule -->
+        <div class="p-3 border-t border-[var(--md-sys-color-outline-variant)]/80 bg-[var(--md-sys-color-surface-container-lowest)]">
+            <div class="flex items-center gap-2 p-1.5 pl-3.5 border border-[var(--md-sys-color-outline-variant)] rounded-full bg-[var(--md-sys-color-surface-container-low)] focus-within:bg-[var(--md-sys-color-surface-container-lowest)] focus-within:border-[#3b82f7] focus-within:ring-2 focus-within:ring-[#3b82f7]/20 transition-all duration-200">
+                <input type="text" id="chat-input" placeholder="Escreva sua dúvida..." data-i18n-placeholder="ai_tutor_input_placeholder"
+                    class="flex-1 bg-transparent text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus:outline-none text-sm py-1">
+                <button id="send-chat-btn" aria-label="Enviar"
+                    class="w-9 h-9 rounded-full bg-[#3b82f7] text-white hover:bg-blue-600 active:scale-95 transition-all shadow-sm flex items-center justify-center flex-shrink-0 cursor-pointer">
+                    <span class="material-symbols-rounded text-lg">send</span>
+                </button>
+            </div>
         </div>
     </div>
 

@@ -83,11 +83,47 @@
             border-radius: var(--md-sys-shape-corner-extra-large);
             box-shadow: var(--md-sys-elevation-level-1);
             transition: all 0.3s var(--md-sys-motion-easing-expressive);
+            position: relative;
         }
         .netflix-box:hover {
             transform: translateY(-6px) scale(1.02);
             box-shadow: var(--md-sys-elevation-level-3);
             border-color: var(--md-sys-color-primary);
+        }
+
+        /* Mode Selection Mouse-Following Blur Glow Effect */
+        .card-mouse-glow {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s var(--md-sys-motion-easing-expressive, cubic-bezier(0.05, 0.7, 0.1, 1.0));
+            z-index: 0;
+            border-radius: inherit;
+        }
+        .netflix-box:hover .card-mouse-glow {
+            opacity: 1;
+        }
+        .glow-traditional {
+            background: radial-gradient(
+                280px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                rgba(59, 130, 247, 0.28) 0%,
+                rgba(59, 130, 247, 0.10) 40%,
+                transparent 70%
+            );
+        }
+        .glow-ai {
+            background: radial-gradient(
+                280px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+                rgba(168, 85, 247, 0.28) 0%,
+                rgba(168, 85, 247, 0.10) 40%,
+                transparent 70%
+            );
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .card-mouse-glow {
+                transition: none !important;
+            }
         }
 
         /* Gemini Collapsible Bottom Sheet on Mobile */
@@ -115,12 +151,12 @@
     <script src="https://js.stripe.com/dahlia/stripe.js"></script>
 </head>
 
-<body class="bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-background)] min-h-screen p-4 sm:p-8 flex flex-col items-center overflow-y-auto">
+<body class="bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-background)] min-h-screen px-3.5 sm:px-8 py-4 sm:py-8 flex flex-col items-center overflow-y-auto">
 
     <!-- VIEW 1: NETFLIX-STYLE CREATION DASHBOARD -->
     <div id="dashboard-view" class="w-full max-w-5xl flex flex-col">
         <!-- Top Navigation Bar -->
-        <div class="flex items-center justify-between w-full mb-8 pb-4 border-b border-[var(--md-sys-color-outline-variant)]">
+        <div class="flex items-center justify-between w-full mb-6 sm:mb-8 pb-3 sm:pb-4 border-b border-[var(--md-sys-color-outline-variant)]">
             <a href="../index.html" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--md-sys-color-on-surface-variant)] hover:text-blue-600 transition">
                 <span class="material-symbols-rounded text-xl">arrow_back</span>
                 <span data-i18n="back_to_home">Voltar ao início</span>
@@ -137,35 +173,36 @@
         </div>
 
         <!-- Header Titles -->
-        <div class="mb-10 text-left">
-            <h1 class="brand-page-title text-3xl sm:text-4xl font-extrabold tracking-tight" data-i18n="generate_page_title">Criar Baralho</h1>
-            <p class="text-gray-500 text-base sm:text-lg mt-1" data-i18n="choose_creation_mode">Selecione o modo de criação para os seus flashcards</p>
+        <div class="mb-6 sm:mb-10 text-left">
+            <h1 class="brand-page-title text-2xl sm:text-4xl font-extrabold tracking-tight" data-i18n="generate_page_title">Criar Baralho</h1>
+            <p class="text-gray-500 text-sm sm:text-lg mt-1" data-i18n="choose_creation_mode">Selecione o modo de criação para os seus flashcards</p>
         </div>
 
         <!-- SECTION 1: TRADICIONAL -->
-        <section class="mb-12">
-            <div class="flex items-center gap-3 mb-6">
+        <section class="mb-8 sm:mb-12">
+            <div class="flex items-center gap-3 mb-4 sm:mb-6">
                 <div class="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-600 text-white font-bold text-sm shadow">1</div>
                 <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900" data-i18n="traditional_section">Tradicional</h2>
                 <span class="text-xs font-medium text-gray-500 bg-gray-200/70 px-2.5 py-0.5 rounded-full ml-auto" data-i18n="manual_and_direct">Manual & Direto</span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <!-- 1.1 Crie agora -->
-                <div id="card-mode-1-1" class="netflix-box group relative bg-white border-2 border-gray-200 hover:border-blue-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between cursor-pointer shadow-sm overflow-hidden">
+                <div id="card-mode-1-1" class="netflix-box group relative bg-white border-2 border-gray-200 hover:border-blue-500 rounded-3xl p-4 sm:p-8 flex flex-col justify-between cursor-pointer shadow-sm overflow-hidden">
                     <div class="absolute -right-6 -top-6 w-28 h-28 bg-blue-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-blue-500/20 transition-all"></div>
-                    <div>
+                    <div class="card-mouse-glow glow-traditional" aria-hidden="true"></div>
+                    <div class="relative z-10">
                         <div class="flex items-center justify-between mb-4">
                             <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center transition-transform group-hover:scale-110">
                                 <img src="../assets/img/new_deck_manual.svg" class="w-6 h-6" alt="Criar">
                             </div>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="create_now_title">Crie agora</h3>
+                        <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2" data-i18n="create_now_title">Crie agora</h3>
                         <p class="text-gray-600 text-sm leading-relaxed" data-i18n="create_now_desc">
                             Escreva cada cartão direto no aplicativo. Suporte para Tradicional, Resposta Dupla, Anki-like e Múltipla Escolha.
                         </p>
                     </div>
-                    <div class="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div class="relative z-10 mt-6 sm:mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
                         <span class="text-sm font-bold text-blue-600 group-hover:underline" data-i18n="open_direct_editor">Abrir editor direto</span>
                         <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:translate-x-1 transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -174,20 +211,21 @@
                 </div>
 
                 <!-- 1.2 Converta um doc -->
-                <div id="card-mode-1-2" class="netflix-box group relative bg-white border-2 border-gray-200 hover:border-blue-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between cursor-pointer shadow-sm overflow-hidden">
+                <div id="card-mode-1-2" class="netflix-box group relative bg-white border-2 border-gray-200 hover:border-blue-500 rounded-3xl p-4 sm:p-8 flex flex-col justify-between cursor-pointer shadow-sm overflow-hidden">
                     <div class="absolute -right-6 -top-6 w-28 h-28 bg-blue-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-blue-500/20 transition-all"></div>
-                    <div>
+                    <div class="card-mouse-glow glow-traditional" aria-hidden="true"></div>
+                    <div class="relative z-10">
                         <div class="flex items-center justify-between mb-4">
                             <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center transition-transform group-hover:scale-110">
                                 <img src="../assets/img/convert_deck_manual.svg" class="w-6 h-6" alt="Importar">
                             </div>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="convert_doc_title">Converta um doc</h3>
+                        <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2" data-i18n="convert_doc_title">Converta um doc</h3>
                         <p class="text-gray-600 text-sm leading-relaxed" data-i18n="convert_doc_desc">
                             Importe um txt ou word já feito (.txt, .doc, .docx). Escolha entre conversão tradicional ou no novo formato Anki-like.
                         </p>
                     </div>
-                    <div class="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div class="relative z-10 mt-6 sm:mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
                         <span class="text-sm font-bold text-blue-600 group-hover:underline" data-i18n="import_document">Importar documento</span>
                         <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:translate-x-1 transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -198,8 +236,8 @@
         </section>
 
         <!-- SECTION 2: AI POWERED -->
-        <section class="mb-12">
-            <div class="flex items-center gap-3 mb-6">
+        <section class="mb-8 sm:mb-12">
+            <div class="flex items-center gap-3 mb-4 sm:mb-6">
                 <div class="flex items-center justify-center w-7 h-7 rounded-lg bg-purple-600 text-white font-bold text-sm shadow">2</div>
                 <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
                     <span data-i18n="ai_powered">AI Powered</span>
@@ -208,23 +246,24 @@
                 <span class="text-xs font-medium text-purple-600 bg-purple-100 px-2.5 py-0.5 rounded-full ml-auto">Gemini Flash</span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <!-- 2.1 Crie de materiais -->
-                <div id="card-mode-2-1" class="netflix-box group relative bg-white border-2 border-gray-200 hover:border-purple-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between cursor-pointer shadow-sm overflow-hidden">
+                <div id="card-mode-2-1" class="netflix-box group relative bg-white border-2 border-gray-200 hover:border-purple-500 rounded-3xl p-4 sm:p-8 flex flex-col justify-between cursor-pointer shadow-sm overflow-hidden">
                     <div class="absolute -right-6 -top-6 w-28 h-28 bg-purple-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-purple-500/20 transition-all"></div>
-                    <div>
+                    <div class="card-mouse-glow glow-ai" aria-hidden="true"></div>
+                    <div class="relative z-10">
                         <div class="flex items-center justify-between mb-4">
                             <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center transition-transform group-hover:scale-110">
                                 <img src="../assets/img/new_deck_ai.svg" class="w-6 h-6" alt="Materiais">
                             </div>
                             <span class="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full" data-i18n="up_to_10_files">Até 10 arquivos</span>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="create_materials_title">Crie de materiais</h3>
+                        <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2" data-i18n="create_materials_title">Crie de materiais</h3>
                         <p class="text-gray-600 text-sm leading-relaxed" data-i18n="create_materials_desc">
                             Transforme slides, pdf, fotos... em cards. Carregue até 10 arquivos (PDF, PPTX, Imagens) e o Gemini criará os cartões técnicos automaticamente.
                         </p>
                     </div>
-                    <div class="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div class="relative z-10 mt-6 sm:mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
                         <span class="text-sm font-bold text-purple-600 group-hover:underline" data-i18n="upload_materials_btn">Enviar slides & materiais</span>
                         <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 group-hover:translate-x-1 transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -233,20 +272,21 @@
                 </div>
 
                 <!-- 2.2 Aprimore um doc -->
-                <div id="card-mode-2-2" class="netflix-box group relative bg-white border-2 border-gray-200 hover:border-purple-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between cursor-pointer shadow-sm overflow-hidden">
+                <div id="card-mode-2-2" class="netflix-box group relative bg-white border-2 border-gray-200 hover:border-purple-500 rounded-3xl p-4 sm:p-8 flex flex-col justify-between cursor-pointer shadow-sm overflow-hidden">
                     <div class="absolute -right-6 -top-6 w-28 h-28 bg-purple-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-purple-500/20 transition-all"></div>
-                    <div>
+                    <div class="card-mouse-glow glow-ai" aria-hidden="true"></div>
+                    <div class="relative z-10">
                         <div class="flex items-center justify-between mb-4">
                             <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center transition-transform group-hover:scale-110">
                                 <img src="../assets/img/upgrade_deck.svg" class="w-6 h-6" alt="Aprimorar">
                             </div>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2" data-i18n="improve_doc_title">Aprimore um doc</h3>
+                        <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2" data-i18n="improve_doc_title">Aprimore um doc</h3>
                         <p class="text-gray-600 text-sm leading-relaxed" data-i18n="improve_doc_desc">
                             A partir de um txt ou word, aprimore cartões de múltipla escolha ou resposta dupla. A IA completa alternativas plausíveis e rótulos contextuais.
                         </p>
                     </div>
-                    <div class="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div class="relative z-10 mt-6 sm:mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
                         <span class="text-sm font-bold text-purple-600 group-hover:underline" data-i18n="enhance_with_gemini">Aprimorar com Gemini</span>
                         <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 group-hover:translate-x-1 transition-transform">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -975,7 +1015,7 @@
 
     <!-- External Script Module -->
     <script src="../js/ripple.js" defer></script>
-    <script type="module" src="../js/generate.js?v=5.8"></script>
+    <script type="module" src="../js/generate.js?v=5.9"></script>
 </body>
 
 </html>

@@ -151,17 +151,36 @@ export function addMsg(sender, text, chatMessages) {
     const div = document.createElement('div');
     div.className = sender === 'ai' ? 'chat-message-ai' : 'chat-message-user';
 
-    if (sender === 'ai' && typeof marked !== 'undefined') {
-        const rendered = renderMathAndMarkdown(text);
-        if (typeof DOMPurify !== 'undefined' && typeof DOMPurify.sanitize === 'function') {
-            div.innerHTML = DOMPurify.sanitize(rendered, {
-                USE_PROFILES: { html: true, mathMl: true, svg: true },
-                ADD_TAGS: ['semantics', 'annotation', 'mark'],
-                ADD_ATTR: ['target', 'class', 'style', 'aria-hidden', 'columnspacing', 'columnalign', 'rowspacing']
-            });
+    if (sender === 'ai') {
+        const header = document.createElement('div');
+        header.className = 'chat-message-ai-header';
+        header.innerHTML = `
+            <span class="gemini-avatar-sparkle">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="url(#gemini-sparkle-gradient)">
+                    <path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z" />
+                </svg>
+            </span>
+            <span class="gemini-avatar-name">Gemini</span>
+        `;
+        div.appendChild(header);
+
+        const content = document.createElement('div');
+        content.className = 'chat-message-ai-body';
+        if (typeof marked !== 'undefined') {
+            const rendered = renderMathAndMarkdown(text);
+            if (typeof DOMPurify !== 'undefined' && typeof DOMPurify.sanitize === 'function') {
+                content.innerHTML = DOMPurify.sanitize(rendered, {
+                    USE_PROFILES: { html: true, mathMl: true, svg: true },
+                    ADD_TAGS: ['semantics', 'annotation', 'mark'],
+                    ADD_ATTR: ['target', 'class', 'style', 'aria-hidden', 'columnspacing', 'columnalign', 'rowspacing']
+                });
+            } else {
+                content.innerHTML = escapeHtml(rendered);
+            }
         } else {
-            div.innerHTML = escapeHtml(rendered);
+            content.textContent = text;
         }
+        div.appendChild(content);
     } else {
         div.textContent = text;
     }
@@ -177,9 +196,22 @@ export function showTyping(chatMessages) {
     const id = 't-' + Date.now();
     const div = document.createElement('div');
     div.id = id;
-    div.className = 'typing-indicator';
-    div.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+    div.className = 'typing-indicator gemini-thinking-state';
+    div.innerHTML = `
+        <div class="gemini-thinking-header">
+            <span class="gemini-sparkle-pulse-svg">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="url(#gemini-sparkle-gradient)">
+                    <path d="M12 2 A10 10 0 0 0 22 12 A10 10 0 0 0 12 22 A10 10 0 0 0 2 12 A10 10 0 0 0 12 2 Z" />
+                </svg>
+            </span>
+            <span class="gemini-thinking-text" data-i18n="tutor_thinking">${t('tutor_thinking')}</span>
+        </div>
+        <div class="gemini-thinking-bar">
+            <div class="gemini-thinking-shimmer"></div>
+        </div>
+    `;
     container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
     return id;
 }
 

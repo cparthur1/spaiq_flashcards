@@ -510,3 +510,129 @@ function showDeletedNoticePill(message) {
   }, 5000);
 }
 
+/**
+ * Display a Material Design 3 dialog when a deck or notebook is shared.
+ * Follows M3 Dialog specs: rounded-[28px], elevation, M3 tokens, copy button with feedback.
+ *
+ * @param {Object} options
+ * @param {string} options.shareUrl - The full URL to share
+ * @param {string} [options.title] - Deck or notebook title
+ * @param {boolean} [options.isNotebook] - Whether sharing the notebook
+ */
+export function showShareSuccessDialog({ shareUrl, title = 'Baralho Compartilhado', isNotebook = false } = {}) {
+  const existing = document.getElementById('m3-share-dialog');
+  if (existing) existing.remove();
+
+  const safeTitle = escapeHtml(title || (isNotebook ? t('notebook') : t('deck_default_title')));
+  const dialogTitle = isNotebook ? t('notebook_shared_dialog_title') : t('deck_shared_dialog_title');
+  const dialogSubtitle = isNotebook ? t('notebook_shared_dialog_subtitle') : t('deck_shared_dialog_subtitle');
+
+  const dialog = document.createElement('div');
+  dialog.id = 'm3-share-dialog';
+  dialog.className = 'fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-200';
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-modal', 'true');
+  dialog.setAttribute('aria-labelledby', 'm3-share-dialog-title');
+
+  dialog.innerHTML = `
+    <div class="m3-dialog-card w-full max-w-md bg-[var(--md-sys-color-surface-container-lowest,#ffffff)] text-[var(--md-sys-color-on-surface,#1e293b)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant,#cbd5e1)] p-5 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+      <!-- Header -->
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-[#3b82f7] flex items-center justify-center shrink-0 border border-blue-200/60 shadow-xs">
+          <span class="material-symbols-rounded text-2xl">share</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 id="m3-share-dialog-title" class="font-bold text-lg text-[var(--md-sys-color-on-surface,#0f172a)] truncate leading-tight">
+            ${escapeHtml(dialogTitle)}
+          </h3>
+          <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#64748b)] mt-0.5 truncate">
+            ${safeTitle}
+          </p>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#475569)] leading-relaxed">
+        ${escapeHtml(dialogSubtitle)}
+      </p>
+
+      <!-- URL Input & Copy Action -->
+      <div class="flex items-center gap-1.5 p-1 pl-3 bg-[var(--md-sys-color-surface-container-low,#f8fafc)] border border-[var(--md-sys-color-outline-variant,#cbd5e1)] rounded-xl">
+        <input type="text" id="m3-share-url-input" readonly value="${escapeHtml(shareUrl)}"
+          class="text-xs font-mono text-[var(--md-sys-color-on-surface,#1e293b)] flex-1 bg-transparent border-none outline-none select-all truncate"
+          aria-label="${t('copy_link')}" />
+        <button type="button" id="m3-share-copy-btn"
+          class="px-3.5 py-1.5 rounded-lg bg-[#3b82f7] hover:bg-blue-600 active:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer shrink-0">
+          <span class="material-symbols-rounded text-base" id="m3-share-copy-icon">content_copy</span>
+          <span id="m3-share-copy-text">${t('copy_link')}</span>
+        </button>
+      </div>
+
+      <!-- Pin & Sync Notice -->
+      <div class="flex items-start gap-2.5 p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/60 text-xs text-blue-900 leading-relaxed">
+        <span class="material-symbols-rounded text-base text-[#3b82f7] shrink-0 mt-0.5">lock</span>
+        <span class="text-[11px]">${t('deck_pinned_sync_notice')}</span>
+      </div>
+
+      <!-- Footer Action -->
+      <div class="pt-1 flex justify-end">
+        <button type="button" id="m3-share-close-btn"
+          class="w-full sm:w-auto px-5 py-2.5 rounded-full bg-[var(--md-sys-color-surface-container-high,#f1f5f9)] hover:bg-slate-200 active:bg-slate-300 text-slate-800 font-bold text-xs transition cursor-pointer text-center">
+          ${t('close_button_label')}
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(dialog);
+
+  // Copy Action
+  const copyBtn = dialog.querySelector('#m3-share-copy-btn');
+  const copyText = dialog.querySelector('#m3-share-copy-text');
+  const copyIcon = dialog.querySelector('#m3-share-copy-icon');
+  const urlInput = dialog.querySelector('#m3-share-url-input');
+
+  const performCopy = async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        urlInput.select();
+        document.execCommand('copy');
+      }
+      copyBtn.classList.remove('bg-[#3b82f7]', 'hover:bg-blue-600');
+      copyBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+      copyIcon.textContent = 'check';
+      copyText.textContent = t('copied_button_label');
+      setTimeout(() => {
+        copyBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+        copyBtn.classList.add('bg-[#3b82f7]', 'hover:bg-blue-600');
+        copyIcon.textContent = 'content_copy';
+        copyText.textContent = t('copy_link');
+      }, 2500);
+    } catch (e) {
+      urlInput.select();
+    }
+  };
+
+  copyBtn.addEventListener('click', performCopy);
+  urlInput.addEventListener('click', () => urlInput.select());
+
+  // Close handlers
+  const closeBtn = dialog.querySelector('#m3-share-close-btn');
+  const close = () => dialog.remove();
+
+  closeBtn.addEventListener('click', close);
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) close();
+  });
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      close();
+      window.removeEventListener('keydown', onKeyDown);
+    }
+  };
+  window.addEventListener('keydown', onKeyDown);
+}
+

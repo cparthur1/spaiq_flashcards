@@ -3,7 +3,7 @@ import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserP
 import { onAuthChange, getCurrentUserToken } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
-import { syncSharedDeckToFirestore, shareDeckToCloud } from './share-manager.js';
+import { syncSharedDeckToFirestore, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
 import { savePendingGeneration, getPendingGeneration, clearPendingGeneration, hasPendingGenerationFlag } from './pending-generation.js';
 
@@ -1710,6 +1710,47 @@ onAuthChange(() => updateProPaywalledUI());
 setTimeout(updateProPaywalledUI, 100);
 
 // --- DASHBOARD CARD HANDLERS ---
+
+// Mode Selection Cards: Interactive mouse-following blur hover effect
+function setupModeCardsGlowFollow() {
+    const cards = [cardMode11, cardMode12, cardMode21, cardMode22].filter(Boolean);
+    cards.forEach(card => {
+        let rafId = null;
+        let latestEvent = null;
+
+        const updatePosition = () => {
+            if (!latestEvent) return;
+            const rect = card.getBoundingClientRect();
+            const x = latestEvent.clientX - rect.left;
+            const y = latestEvent.clientY - rect.top;
+            card.style.setProperty('--mouse-x', `${x}px`);
+            card.style.setProperty('--mouse-y', `${y}px`);
+            rafId = null;
+        };
+
+        card.addEventListener('pointerenter', (e) => {
+            const rect = card.getBoundingClientRect();
+            card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+            card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+        });
+
+        card.addEventListener('pointermove', (e) => {
+            latestEvent = e;
+            if (!rafId) {
+                rafId = requestAnimationFrame(updatePosition);
+            }
+        });
+
+        card.addEventListener('pointerleave', () => {
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            latestEvent = null;
+        });
+    });
+}
+setupModeCardsGlowFollow();
 
 // 1.1 Crie agora — Escreva cada cartão direto no aplicativo
 cardMode11.addEventListener('click', () => {
@@ -3945,7 +3986,7 @@ if (shareDeckBtn) {
             if (allocatedSlotIndex !== undefined && allocatedSlotIndex !== null) {
                 currentEditingSlotIndex = allocatedSlotIndex;
             }
-            alert(t('deck_shared_and_pinned', { url: shareUrl }));
+            showShareSuccessDialog({ shareUrl, title, isNotebook: false });
         } catch (err) {
             if (err.name === 'AbortError') {
                 return; // User cancelled the slot replacement dialog cleanly
