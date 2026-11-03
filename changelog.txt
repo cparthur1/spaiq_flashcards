@@ -1,3 +1,19 @@
+CHANGELOG: SYNTAX ERROR & CLOUD HYDRATION SAFEGUARDS FIX (v15.19)
+Date: 2026-11-02
+
+OVERVIEW:
+1. Syntax Error Hotfix in Module Graph:
+   - Removed stray closing brace at line 1626 in `js/slot-manager.js` that caused `Uncaught SyntaxError: Unexpected token '}'` on browser module evaluation.
+   - Restored full execution of `js/index.js`, `js/game.js`, and `initExploreFilesModal()`.
+2. Cloud Slot Hydration & Preservation Safeguards:
+   - Strengthened `applyCloudSlotsData` to prevent accidental local deck wipes when cloud data is missing or unhydrated.
+   - Added explicit local retention fallbacks in `hydrateCloudUserDoc`: if a deck document cannot be retrieved from Firestore, local `deckData` is safely preserved instead of being blanked out.
+   - Reinforced notebook slot deletion checks to require confirmed deletion timestamps before clearing local notebook storage.
+3. Service Worker:
+   - Bumped `CACHE_NAME` to `flashcards-v15.19` in `sw.js` for immediate client cache updates.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: REAL-TIME CROSS-DEVICE CLOUD SYNC & SILENT AUTOSAVE (v15.18)
 Date: 2026-11-02
 

@@ -1310,8 +1310,11 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
             }
           }
         } else {
-          // Cloud slot is EMPTY or DELETED: propagate deletion if local has a deck/mix!
-          if (localSlot?.deckData && (cloudDeletedAt >= localUpdatedAt || isRealtime)) {
+          // Cloud slot is EMPTY or DELETED: propagate deletion only if explicitly deleted or confirmed empty in cloud
+          const isExplicitlyDeletedInCloud = Boolean(cloudSlot?.deletedAt && cloudDeletedAt >= localUpdatedAt);
+          const isConfirmedEmptyInCloud = Boolean(!cloudSlot?.deckId && (cloudSlot?.cardCount || 0) === 0 && cloudDeletedAt >= localUpdatedAt && cloudDeletedAt > 0);
+
+          if (localSlot?.deckData && (isExplicitlyDeletedInCloud || isConfirmedEmptyInCloud)) {
             const wasExam = Boolean(localSlot.isExam || localSlot.mode === 'exam');
             if (localSlot.isCurrent) {
               if (wasExam) {
@@ -1381,10 +1384,10 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
       localStorage.removeItem('flashcards_notebook_deleted_at');
       hasSlotChanges = true;
     }
-  } else if (localNotebook?.deckData && (cloudData.notebookSlot?.deletedAt || (cloudData.notebookSlot && cloudData.notebookSlot.cardCount === 0))) {
+  } else if (localNotebook?.deckData && (cloudData.notebookSlot?.deletedAt || (cloudData.notebookSlot && !cloudData.notebookSlot.deckId && (cloudData.notebookSlot.cardCount || 0) === 0))) {
     // Cloud notebook is deleted/empty: check deletion timestamp
-    const cloudNotebookDeletedAt = cloudData.notebookSlot?.deletedAt || cloudData.lastSyncedAt || 0;
-    if (cloudNotebookDeletedAt >= localNotebookUpdated || isRealtime) {
+    const cloudNotebookDeletedAt = cloudData.notebookSlot?.deletedAt || 0;
+    if (cloudNotebookDeletedAt > 0 && cloudNotebookDeletedAt >= localNotebookUpdated) {
       localStorage.removeItem(NOTEBOOK_KEY);
       localStorage.setItem('flashcards_notebook_deleted_at', String(cloudNotebookDeletedAt));
       hasSlotChanges = true;
@@ -1485,6 +1488,11 @@ async function hydrateCloudUserDoc(userDocData, uid) {
               }
             }
           }
+
+          // Fallback safeguard: if cloud deck document was missing/empty, retain local deckData
+          if (!clonedSlot.deckData && localMatch?.deckData && localMatch.deckId === clonedSlot.deckId) {
+            clonedSlot.deckData = localMatch.deckData;
+          }
         } else {
           clonedSlot.deckData = null;
         }
@@ -1519,6 +1527,11 @@ async function hydrateCloudUserDoc(userDocData, uid) {
             nbMeta.deckData = localNb.deckData;
           }
         }
+      }
+
+      // Fallback safeguard: retain local notebook deckData if cloud document was missing/empty
+      if (!nbMeta.deckData && localNb?.deckData) {
+        nbMeta.deckData = localNb.deckData;
       }
     } else {
       nbMeta.deckData = null;
@@ -1623,4 +1636,3 @@ export function initRealtimeCloudSync() {
 
 // Auto-initialize real-time sync immediately on module load
 initRealtimeCloudSync();
-}
