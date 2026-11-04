@@ -1,3 +1,22 @@
+CHANGELOG: CLOZE INLINE BRACES SYNTAX FOR FILL TAGS (v15.25)
+Date: 2026-11-04
+
+OVERVIEW:
+1. Cloze Braces Parsing Syntax `(fill)`:
+   - Upgraded tag conversion in `convertDocumentToCards` and `parseTxtToJSONWithPlaceholders` in `js/generate.js` to support inline cloze braces: `(fill) frase de pergunta {com} espaços e {respostas} indicadas por "{}"`.
+   - Automatically extracts each term inside `{...}` as an ordered item in `card.answers`, joins them into `card.answer` separated by `;`, and substitutes the non-empty braces with `_` in `card.description`. Empty `{}` are preserved untouched.
+   - Retained full backward compatibility with the legacy colon-separated format `(fill) resposta1;resposta2: frase com _ e _`.
+2. Seamless Model Normalization & Manual Creator Support:
+   - Updated `normalizeCard` in `js/generate.js` to recognize `{...}` in card descriptions, auto-extracting answers and normalizing the description text with `_`.
+   - Updated Creator mode manual card builder: typing `{resposta}` directly inside the question textarea automatically extracts answers without requiring separate input.
+3. Updated Guides & Demo Assets:
+   - Updated `demo/deck.txt` with the new cloze braces syntax across demo cards.
+   - Updated UI tips, special tags descriptions, and i18n keys in `pages/generate.html` and `js/i18n.js` (`pt-BR` and `en-US`).
+4. Service Worker:
+   - Bumped `CACHE_NAME` to `flashcards-v15.25` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: MOBILE CHROME AUTOFILL BAR SUPPRESSION IN GAME ANSWER INPUTS (v15.24)
 Date: 2026-11-04
 

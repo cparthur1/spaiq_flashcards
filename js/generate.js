@@ -765,10 +765,11 @@ function normalizeCard(raw) {
         else if (raw.answer2) type = 'open_double';
         else if (raw.answers && Array.isArray(raw.answers)) type = 'fill';
         else if (raw.description && /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/.test(raw.description) && (raw.answer && raw.answer.includes(';'))) type = 'fill';
+        else if (raw.description && /\{[^{}]+\}/.test(raw.description)) type = 'fill';
         else type = 'open';
     }
 
-    const description = (raw.description || raw.question || raw.pergunta || raw.frente || raw.phrase || raw.text || '').trim();
+    let description = (raw.description || raw.question || raw.pergunta || raw.frente || raw.phrase || raw.text || '').trim();
     if (!description) return null;
 
     let answer = (raw.answer || raw.resposta || raw.verso || '').trim();
@@ -781,6 +782,29 @@ function normalizeCard(raw) {
     } else if (type === 'fill' && answer) {
         answers = answer.split(';').map(a => a.trim()).filter(Boolean);
     }
+
+    // Extract {answers} in fill descriptions and normalize to '_'
+    if (type === 'fill' && /\{[^{}]+\}/.test(description)) {
+        const braceRegex = /\{([^{}]+)\}/g;
+        const braceAnswers = [];
+        let bMatch;
+        while ((bMatch = braceRegex.exec(description)) !== null) {
+            const trimmed = bMatch[1].trim();
+            if (trimmed.length > 0) braceAnswers.push(trimmed);
+        }
+        if (braceAnswers.length > 0) {
+            description = description.replace(/\{([^{}]+)\}/g, (fullMatch, inner) => {
+                return inner.trim().length > 0 ? '_' : fullMatch;
+            });
+            if (answers.length === 0) {
+                answers = braceAnswers;
+            }
+            if (!answer) {
+                answer = answers.join('; ');
+            }
+        }
+    }
+
     if (type === 'fill' && !answer && answers.length > 0) {
         answer = answers.join('; ');
     }
@@ -1145,34 +1169,59 @@ function convertDocumentToCards(text, mode = 'anki') {
 
         if (fillMatch) {
             const content = fillMatch[1].trim();
-            const colonIndex = content.indexOf(':');
-            if (colonIndex !== -1) {
-                const part1 = content.substring(0, colonIndex).trim();
-                const part2 = content.substring(colonIndex + 1).trim();
 
-                let answersPart = part1;
-                let description = part2;
-
-                const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/;
-                if (blankRegex.test(part1) && !blankRegex.test(part2)) {
-                    description = part1;
-                    answersPart = part2;
+            // 1. New braces syntax: (fill) frase de pergunta {com} espaços e {respostas} indicadas por "{}"
+            const braceRegex = /\{([^{}]+)\}/g;
+            const braceAnswers = [];
+            let bMatch;
+            while ((bMatch = braceRegex.exec(content)) !== null) {
+                const trimmed = bMatch[1].trim();
+                if (trimmed.length > 0) {
+                    braceAnswers.push(trimmed);
                 }
+            }
 
-                const answers = answersPart.split(';').map(a => a.trim()).filter(Boolean);
+            if (braceAnswers.length > 0) {
+                const description = content.replace(/\{([^{}]+)\}/g, (fullMatch, inner) => {
+                    return inner.trim().length > 0 ? '_' : fullMatch;
+                });
                 cards.push({
                     type: "fill",
-                    description: description,
-                    answers: answers,
-                    answer: answers.join('; ')
+                    description: description.trim(),
+                    answers: braceAnswers,
+                    answer: braceAnswers.join('; ')
                 });
             } else {
-                cards.push({
-                    type: "fill",
-                    description: content,
-                    answers: [],
-                    answer: ""
-                });
+                // 2. Backward-compatible fallback: colon/semicolon format (e.g. (fill) resp1; resp2: frase com _ e _)
+                const colonIndex = content.indexOf(':');
+                if (colonIndex !== -1) {
+                    const part1 = content.substring(0, colonIndex).trim();
+                    const part2 = content.substring(colonIndex + 1).trim();
+
+                    let answersPart = part1;
+                    let description = part2;
+
+                    const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/;
+                    if (blankRegex.test(part1) && !blankRegex.test(part2)) {
+                        description = part1;
+                        answersPart = part2;
+                    }
+
+                    const answers = answersPart.split(';').map(a => a.trim()).filter(Boolean);
+                    cards.push({
+                        type: "fill",
+                        description: description,
+                        answers: answers,
+                        answer: answers.join('; ')
+                    });
+                } else {
+                    cards.push({
+                        type: "fill",
+                        description: content,
+                        answers: [],
+                        answer: ""
+                    });
+                }
             }
         } else if (openDoubleMatch) {
             const content = openDoubleMatch[1].trim();
@@ -1296,34 +1345,59 @@ function parseTxtToJSONWithPlaceholders(text) {
 
         if (fillMatch) {
             const content = fillMatch[1].trim();
-            const colonIndex = content.indexOf(':');
-            if (colonIndex !== -1) {
-                const part1 = content.substring(0, colonIndex).trim();
-                const part2 = content.substring(colonIndex + 1).trim();
 
-                let answersPart = part1;
-                let description = part2;
-
-                const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/;
-                if (blankRegex.test(part1) && !blankRegex.test(part2)) {
-                    description = part1;
-                    answersPart = part2;
+            // 1. New braces syntax: (fill) frase de pergunta {com} espaços e {respostas} indicadas por "{}"
+            const braceRegex = /\{([^{}]+)\}/g;
+            const braceAnswers = [];
+            let bMatch;
+            while ((bMatch = braceRegex.exec(content)) !== null) {
+                const trimmed = bMatch[1].trim();
+                if (trimmed.length > 0) {
+                    braceAnswers.push(trimmed);
                 }
+            }
 
-                const answers = answersPart.split(';').map(a => a.trim()).filter(Boolean);
+            if (braceAnswers.length > 0) {
+                const description = content.replace(/\{([^{}]+)\}/g, (fullMatch, inner) => {
+                    return inner.trim().length > 0 ? '_' : fullMatch;
+                });
                 card = {
                     type: "fill",
-                    description: description,
-                    answers: answers,
-                    answer: answers.join('; ')
+                    description: description.trim(),
+                    answers: braceAnswers,
+                    answer: braceAnswers.join('; ')
                 };
             } else {
-                card = {
-                    type: "fill",
-                    description: content,
-                    answers: ["[GEMINI]"],
-                    answer: "[GEMINI]"
-                };
+                // 2. Backward-compatible fallback: colon/semicolon format
+                const colonIndex = content.indexOf(':');
+                if (colonIndex !== -1) {
+                    const part1 = content.substring(0, colonIndex).trim();
+                    const part2 = content.substring(colonIndex + 1).trim();
+
+                    let answersPart = part1;
+                    let description = part2;
+
+                    const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/;
+                    if (blankRegex.test(part1) && !blankRegex.test(part2)) {
+                        description = part1;
+                        answersPart = part2;
+                    }
+
+                    const answers = answersPart.split(';').map(a => a.trim()).filter(Boolean);
+                    card = {
+                        type: "fill",
+                        description: description,
+                        answers: answers,
+                        answer: answers.join('; ')
+                    };
+                } else {
+                    card = {
+                        type: "fill",
+                        description: content,
+                        answers: ["[GEMINI]"],
+                        answer: "[GEMINI]"
+                    };
+                }
             }
         } else if (openDoubleMatch) {
             const content = openDoubleMatch[1].trim();
@@ -2790,22 +2864,38 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         newCard.answer = correctText;
         newCard.options = options;
     } else if (type === 'fill') {
-        const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/g;
-        const blanksCount = (desc.match(blankRegex) || []).length;
-        if (blanksCount === 0) {
-            alert(t('alert_fill_missing_blank'));
-            creatorQuestion.focus();
-            return;
+        const braceRegex = /\{([^{}]+)\}/g;
+        const braceAnswers = [];
+        let bMatch;
+        while ((bMatch = braceRegex.exec(desc)) !== null) {
+            const trimmed = bMatch[1].trim();
+            if (trimmed.length > 0) braceAnswers.push(trimmed);
         }
-        const ansRaw = creatorAnsFill ? creatorAnsFill.value.trim() : '';
-        const answers = ansRaw.split(';').map(a => a.trim()).filter(Boolean);
-        if (answers.length === 0) {
-            alert(t('alert_fill_missing_answers'));
-            if (creatorAnsFill) creatorAnsFill.focus();
-            return;
+
+        if (braceAnswers.length > 0) {
+            newCard.description = desc.replace(/\{([^{}]+)\}/g, (fullMatch, inner) => {
+                return inner.trim().length > 0 ? '_' : fullMatch;
+            });
+            newCard.answers = braceAnswers;
+            newCard.answer = braceAnswers.join('; ');
+        } else {
+            const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/g;
+            const blanksCount = (desc.match(blankRegex) || []).length;
+            if (blanksCount === 0) {
+                alert(t('alert_fill_missing_blank'));
+                creatorQuestion.focus();
+                return;
+            }
+            const ansRaw = creatorAnsFill ? creatorAnsFill.value.trim() : '';
+            const answers = ansRaw.split(';').map(a => a.trim()).filter(Boolean);
+            if (answers.length === 0) {
+                alert(t('alert_fill_missing_answers'));
+                if (creatorAnsFill) creatorAnsFill.focus();
+                return;
+            }
+            newCard.answers = answers;
+            newCard.answer = answers.join('; ');
         }
-        newCard.answers = answers;
-        newCard.answer = answers.join('; ');
     }
 
     appendNewCardWithElasticCollision(newCard);

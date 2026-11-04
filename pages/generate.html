@@ -330,7 +330,7 @@
                         <div class="flex items-start gap-2 text-xs text-blue-900">
                             <span class="material-symbols-rounded text-sm text-amber-500 shrink-0 mt-0.5 select-none">lightbulb</span>
                             <div class="min-w-0 flex-1 leading-relaxed break-words" data-i18n-html="special_tags_desc">
-                                <strong class="text-blue-950">Tags especiais:</strong> Use <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(anki_like) Frente: Verso</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(open_double) Resp1;Resp2: Pergunta</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(fill) Resp1;Resp2: Frase com _ e _</code> ou <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(multiple_choice) Resposta: Pergunta</code> para definir formatos específicos por linha.
+                                <strong class="text-blue-950">Tags especiais:</strong> Use <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(anki_like) Frente: Verso</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(open_double) Resp1;Resp2: Pergunta</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(fill) Frase com {resposta1} e {resposta2}</code> ou <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(multiple_choice) Resposta: Pergunta</code> para definir formatos específicos por linha.
                             </div>
                         </div>
 
@@ -504,7 +504,7 @@
                     <p class="text-xs" data-i18n-html="gemini_tip_default_line">• Linha padrão: <code>RESPOSTA: Pergunta</code></p>
                     <p class="text-xs" data-i18n-html="gemini_tip_anki">• Anki-like: inicie com <code>(anki_like) Frente: Verso</code> (a parte antes de ":" é a frente/pergunta e depois é o verso/resposta).</p>
                     <p class="text-xs" data-i18n-html="gemini_tip_double">• Resposta dupla: inicie com <code>(open_double) Resposta1;Resposta2: Pergunta</code> (o Gemini criará os rótulos adequados).</p>
-                    <p class="text-xs" data-i18n-html="gemini_tip_fill">• Preencher lacunas: inicie com <code>(fill) Resposta1;Resposta2: Frase com _ e _</code> (os pontos a serem preenchidos são identificados por "_").</p>
+                    <p class="text-xs" data-i18n-html="gemini_tip_fill">• Preencher lacunas: inicie com <code>(fill) Frase com {resposta1} e {resposta2}</code> (respostas indicadas entre chaves "{}").</p>
                     <p class="text-xs" data-i18n-html="gemini_tip_mc">• Múltipla escolha: inicie com <code>(multiple_choice) RespostaCorreta: Pergunta</code> (o Gemini criará distratores plausíveis).</p>
                     <p class="text-xs" data-i18n-html="gemini_tip_notes">• Notas e divisores: inicie com <code># Título da Seção</code> (organizam o baralho no editor e são ignorados no jogo).</p>
                 </div>

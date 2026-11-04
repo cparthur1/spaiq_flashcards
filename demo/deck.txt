@@ -6,7 +6,7 @@ Mitocôndria : Qual é a principal organela celular responsável pela respiraç�
 
 (multiple_choice) Veias pulmonares : Qual dos seguintes vasos sanguíneos transporta sangue oxigenado dos pulmões diretamente para o átrio esquerdo do coração?
 
-(fill) Mitose ; Meiose : Na divisão celular eucariótica, a _ resulta em duas células-filhas geneticamente idênticas, enquanto a _ gera quatro células haploides com variabilidade genética.
+(fill) Na divisão celular eucariótica, a {Mitose} resulta em duas células-filhas geneticamente idênticas, enquanto a {Meiose} gera quatro células haploides com variabilidade genética.
 
 (anki) O que é o mecanismo de Feedback Negativo (Retroalimentação Negativa) na homeostase biológica? : É uma resposta regulatória fisiológica em que o organismo atua no sentido oposto à alteração inicial, trazendo a variável (ex: temperatura corporal, glicemia) de volta ao ponto de equilíbrio estável.
 
@@ -19,7 +19,7 @@ Pilha : Qual estrutura de dados linear opera estritamente sob o princípio LIFO 
 
 (multiple_choice) O(n²) : Qual é a complexidade de tempo de pior caso do algoritmo de ordenação QuickSort quando o pivô escolhido é sempre o menor ou maior elemento?
 
-(fill) Model ; Controller : No padrão arquitetural MVC, o _ gerencia os dados e regras de negócio, enquanto o _ processa as requisições e faz a ponte entre a interface e os dados.
+(fill) No padrão arquitetural MVC, o {Model} gerencia os dados e regras de negócio, enquanto o {Controller} processa as requisições e faz a ponte entre a interface e os dados.
 
 (anki) O que preconiza o Princípio da Responsabilidade Única (SRP) da metodologia SOLID? : Afirma que uma classe ou módulo deve possuir apenas um motivo para ser alterado, ou seja, deve ser responsável por uma única função ou responsabilidade bem delimitada dentro do sistema.
 
@@ -32,6 +32,6 @@ Rio de Janeiro : Em qual cidade foi assinada a Lei Áurea em 1888, então capita
 
 (multiple_choice) Júpiter : Qual planeta do Sistema Solar possui a maior massa, o campo magnético mais potente e a Grande Mancha Vermelha?
 
-(fill) Legislativo ; Judiciário : Na teoria da tripartição dos poderes de Montesquieu, o Estado é constituído por três poderes harmônicos: o Poder Executivo, o Poder _ e o Poder _.
+(fill) Na teoria da tripartição dos poderes de Montesquieu, o Estado é constituído por três poderes harmônicos: o Poder Executivo, o Poder {Legislativo} e o Poder {Judiciário}.
 
 (anki) O que foi a Conferência de Berlim (1884-1885) e qual foi seu principal impacto geopolítico? : Foi a conferência internacional entre potências europeias que organizou a Partilha da África, impondo fronteiras artificiais sem considerar as populações locais e acelerando o neocolonialismo e a exploração imperialista no continente.
