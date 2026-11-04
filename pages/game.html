@@ -569,6 +569,17 @@
                         spellcheck="false" enterkeyhint="done" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_2_placeholder">
                 </div>
             </div>
+
+            <!-- Image Arrows Answer Area -->
+            <div id="image-arrows-answer-area" class="relative z-10 hidden mt-2.5 sm:mt-6 space-y-2.5">
+                <div class="flex items-center justify-between text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] px-1">
+                    <span data-i18n="name_the_structures">Nomeie as estruturas apontadas (clique na seta para focar):</span>
+                    <span id="image-arrows-progress-badge" class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">0/0</span>
+                </div>
+                <div id="image-arrows-inputs-list" class="space-y-2.5">
+                    <!-- Populated dynamically in game.js -->
+                </div>
+            </div>
         </div>
 
         <!-- Dynamic Multiple Choice Area (2 to 6 options) -->
@@ -698,6 +709,17 @@
                     <button type="button" id="edit-add-mc-opt-btn" class="w-full py-2 border border-dashed border-blue-400 text-xs font-bold text-blue-600 rounded-xl hover:bg-blue-50 transition flex items-center justify-center gap-1" data-i18n="add_mc_option">
                         + Adicionar Alternativa
                     </button>
+                </div>
+                <div id="edit-image-arrows-group" class="hidden space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="image_arrows_labels_title">Respostas das Estruturas Apontadas</label>
+                        <span id="edit-arrows-count-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">0</span>
+                    </div>
+                    <div id="edit-arrows-empty-msg" class="p-3 bg-blue-50/70 rounded-xl border border-blue-100 text-xs text-gray-600 flex items-start gap-2">
+                        <span class="material-symbols-rounded text-sm text-[#3b82f7] flex-shrink-0 mt-0.5">info</span>
+                        <p data-i18n="image_arrows_empty_guide_desc">Clique em "Cortar / Setas" na imagem para desenhar as setas.</p>
+                    </div>
+                    <div id="edit-arrows-inputs-list" class="space-y-2"></div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="question_image_label">Link da Imagem da Pergunta (Opcional)</label>

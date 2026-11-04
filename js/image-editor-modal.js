@@ -35,6 +35,66 @@ const ARROW_COLORS = [
 ];
 
 /**
+ * Returns background, border, and badge color tokens for arrow-matching UI.
+ */
+export function getArrowColorTheme(hex) {
+    const clean = (hex || '#3b82f7').toLowerCase();
+    switch (clean) {
+        case '#ef4444':
+            return {
+                bg: '#fef2f2',
+                border: '#fca5a5',
+                focusRing: '#ef4444',
+                badgeBg: '#ef4444',
+                badgeText: '#ffffff',
+                textColor: '#991b1b',
+                name: 'Vermelho'
+            };
+        case '#eab308':
+            return {
+                bg: '#fefce8',
+                border: '#fde047',
+                focusRing: '#eab308',
+                badgeBg: '#eab308',
+                badgeText: '#ffffff',
+                textColor: '#854d0e',
+                name: 'Amarelo'
+            };
+        case '#10b981':
+            return {
+                bg: '#ecfdf5',
+                border: '#6ee7b7',
+                focusRing: '#10b981',
+                badgeBg: '#10b981',
+                badgeText: '#ffffff',
+                textColor: '#065f46',
+                name: 'Verde'
+            };
+        case '#ffffff':
+            return {
+                bg: '#f8fafc',
+                border: '#cbd5e1',
+                focusRing: '#64748b',
+                badgeBg: '#475569',
+                badgeText: '#ffffff',
+                textColor: '#1e293b',
+                name: 'Branco'
+            };
+        case '#3b82f7':
+        default:
+            return {
+                bg: '#eff6ff',
+                border: '#93c5fd',
+                focusRing: '#3b82f7',
+                badgeBg: '#3b82f7',
+                badgeText: '#ffffff',
+                textColor: '#1e40af',
+                name: 'Azul'
+            };
+    }
+}
+
+/**
  * Calculates vector coordinates for an arrow shaft and arrowhead.
  */
 function calculateArrowSvgParts(arrow, naturalWidth, naturalHeight) {
@@ -92,16 +152,34 @@ function calculateArrowSvgParts(arrow, naturalWidth, naturalHeight) {
 /**
  * Generates SVG markup for all arrows given natural pixel dimensions.
  */
-export function buildArrowsSvgContent(arrows, naturalWidth, naturalHeight) {
+export function buildArrowsSvgContent(arrows, naturalWidth, naturalHeight, { showNumbers = false } = {}) {
     if (!Array.isArray(arrows) || arrows.length === 0) return '';
+
+    const minDim = Math.min(naturalWidth, naturalHeight);
+    const badgeRadius = Math.max(12, Math.min(minDim * 0.034, 24));
+    const badgeFontSize = Math.max(11, Math.min(badgeRadius * 1.12, 19));
 
     return arrows.map((arrow, idx) => {
         const parts = calculateArrowSvgParts(arrow, naturalWidth, naturalHeight);
         if (!parts) return '';
 
         const filterId = `arrow-shadow-${Math.random().toString(36).slice(2, 8)}-${idx}`;
+        const isWhite = (parts.color || '').toLowerCase() === '#ffffff';
+        const numColor = isWhite ? '#0f172a' : '#ffffff';
+
+        const numberBadgeMarkup = showNumbers ? `
+            <!-- Number badge at arrow start (non-pointed end) -->
+            <g class="arrow-number-badge" data-badge-index="${idx}">
+                <circle cx="${parts.x1}" cy="${parts.y1}" r="${badgeRadius}"
+                    fill="${parts.color}" stroke="#ffffff" stroke-width="2.5" />
+                <text x="${parts.x1}" y="${parts.y1}"
+                    fill="${numColor}" font-size="${badgeFontSize}" font-weight="900"
+                    font-family="system-ui, -apple-system, sans-serif" text-anchor="middle" dominant-baseline="central">${idx + 1}</text>
+            </g>
+        ` : '';
+
         return `
-            <g class="arrow-group" data-arrow-index="${idx}">
+            <g class="arrow-group ${showNumbers ? 'cursor-pointer hover:opacity-95' : ''}" data-arrow-index="${idx}" style="${showNumbers ? 'cursor: pointer;' : ''}">
                 <defs>
                     <filter id="${filterId}" x="-20%" y="-20%" width="140%" height="140%">
                         <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.75" />
@@ -119,6 +197,8 @@ export function buildArrowsSvgContent(arrows, naturalWidth, naturalHeight) {
                     <!-- Arrowhead outline -->
                     <polygon points="${parts.x2},${parts.y2} ${parts.leftX},${parts.leftY} ${parts.notchX},${parts.notchY} ${parts.rightX},${parts.rightY}"
                         fill="${parts.color}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round" />
+                    
+                    ${numberBadgeMarkup}
                 </g>
             </g>
         `;
@@ -149,6 +229,8 @@ export function renderAnnotatedImage({
     alt = 'Imagem',
     maxHClass = 'max-h-48 sm:max-h-72',
     zoomable = false,
+    showNumbers = false,
+    onArrowClick = null,
     onClick = null
 }) {
     if (!container) return;
@@ -286,10 +368,23 @@ export function renderAnnotatedImage({
 
         // 3. SVG overlay for vector arrows
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('class', 'absolute inset-0 w-full h-full pointer-events-none select-none');
+        svg.setAttribute('class', `absolute inset-0 w-full h-full select-none ${onArrowClick ? 'pointer-events-auto' : 'pointer-events-none'}`);
         svg.setAttribute('viewBox', `${cropPixX} ${cropPixY} ${cropPixW} ${cropPixH}`);
         svg.setAttribute('preserveAspectRatio', 'none');
-        svg.innerHTML = buildArrowsSvgContent(arrows, natW, natH);
+        svg.innerHTML = buildArrowsSvgContent(arrows, natW, natH, { showNumbers });
+
+        if (onArrowClick) {
+            svg.addEventListener('click', (e) => {
+                const grp = e.target.closest('.arrow-group');
+                if (grp) {
+                    e.stopPropagation();
+                    const arrowIdx = parseInt(grp.dataset.arrowIndex, 10);
+                    if (!isNaN(arrowIdx) && typeof onArrowClick === 'function') {
+                        onArrowClick(arrowIdx);
+                    }
+                }
+            });
+        }
 
         wrapper.appendChild(spacer);
         wrapper.appendChild(innerImg);
@@ -556,7 +651,7 @@ function renderEditorSvg() {
     if (activeArrow) {
         allArrows.push(activeArrow);
     }
-    markup += buildArrowsSvgContent(allArrows, natW, natH);
+    markup += buildArrowsSvgContent(allArrows, natW, natH, { showNumbers: true });
 
     svg.innerHTML = markup;
 }
@@ -630,7 +725,8 @@ function attachModalEvents() {
             startY: Math.round(a.startY * 10) / 10,
             endX: Math.round(a.endX * 10) / 10,
             endY: Math.round(a.endY * 10) / 10,
-            color: a.color || '#3b82f7'
+            color: a.color || '#3b82f7',
+            label: a.label || ''
         }));
 
         if (typeof currentSaveCallback === 'function') {
@@ -852,6 +948,7 @@ export function openImageEditorModal({
     imageUrl,
     crop = null,
     arrows = [],
+    defaultTool = 'crop',
     onSave = null,
     onCancel = null
 }) {
@@ -864,7 +961,7 @@ export function openImageEditorModal({
     currentCancelCallback = onCancel;
     currentCrop = crop ? { ...crop } : { x: 0, y: 0, width: 100, height: 100 };
     currentArrows = Array.isArray(arrows) ? JSON.parse(JSON.stringify(arrows)) : [];
-    activeTool = 'crop';
+    activeTool = defaultTool === 'arrow' ? 'arrow' : 'crop';
     activeArrow = null;
     isDrawingArrow = false;
     isPreviewActive = false;
@@ -888,19 +985,29 @@ export function openImageEditorModal({
     }
     if (previewLabel) previewLabel.textContent = t('preview_mode');
 
-    // Reset toolbar to crop tool
+    // Reset toolbar according to activeTool
     const toolCropBtn = document.getElementById('img-tool-crop-btn');
     const toolArrowBtn = document.getElementById('img-tool-arrow-btn');
     const arrowColorBar = document.getElementById('img-arrow-color-bar');
     const hintText = document.getElementById('img-edit-hint-text');
 
-    if (toolCropBtn) toolCropBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all bg-[#3b82f7] text-white shadow-xs";
-    if (toolArrowBtn) toolArrowBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-[var(--md-sys-color-on-surface-variant,#475569)] hover:text-black";
-    if (arrowColorBar) {
-        arrowColorBar.classList.add('hidden');
-        arrowColorBar.classList.remove('flex');
+    if (activeTool === 'arrow') {
+        if (toolArrowBtn) toolArrowBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all bg-[#3b82f7] text-white shadow-xs";
+        if (toolCropBtn) toolCropBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-[var(--md-sys-color-on-surface-variant,#475569)] hover:text-black";
+        if (arrowColorBar) {
+            arrowColorBar.classList.remove('hidden');
+            arrowColorBar.classList.add('flex');
+        }
+        if (hintText) hintText.textContent = t('arrow_instructions');
+    } else {
+        if (toolCropBtn) toolCropBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all bg-[#3b82f7] text-white shadow-xs";
+        if (toolArrowBtn) toolArrowBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-[var(--md-sys-color-on-surface-variant,#475569)] hover:text-black";
+        if (arrowColorBar) {
+            arrowColorBar.classList.add('hidden');
+            arrowColorBar.classList.remove('flex');
+        }
+        if (hintText) hintText.textContent = t('crop_instructions');
     }
-    if (hintText) hintText.textContent = t('crop_instructions');
 
     // Load image
     sourceImg.onload = () => {

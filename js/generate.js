@@ -6,7 +6,7 @@ import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalS
 import { syncSharedDeckToFirestore, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
 import { savePendingGeneration, getPendingGeneration, clearPendingGeneration, hasPendingGenerationFlag } from './pending-generation.js';
-import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated } from './image-editor-modal.js';
+import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated, getArrowColorTheme } from './image-editor-modal.js';
 
 try {
     initExploreModal();
@@ -188,6 +188,11 @@ const creatorGroupMc = document.getElementById('creator-group-mc');
 const creatorMcOptionsList = document.getElementById('creator-mc-options-list');
 const creatorAddMcOptBtn = document.getElementById('creator-add-mc-opt-btn');
 
+const creatorGroupImageArrows = document.getElementById('creator-group-image-arrows');
+const creatorArrowsCountBadge = document.getElementById('creator-arrows-count-badge');
+const creatorArrowsEmptyMsg = document.getElementById('creator-arrows-empty-msg');
+const creatorArrowsInputsList = document.getElementById('creator-arrows-inputs-list');
+
 const creatorFeedback = document.getElementById('creator-feedback');
 const creatorSubmitCardBtn = document.getElementById('creator-submit-card-btn');
 
@@ -227,6 +232,11 @@ const editCardAnkiAnswer = document.getElementById('edit-card-anki-answer');
 const editCardMcGroup = document.getElementById('edit-card-mc-group');
 const editCardMcList = document.getElementById('edit-card-mc-list');
 const editCardAddMcOptBtn = document.getElementById('edit-card-add-mc-opt-btn');
+
+const inlineEditImageArrowsGroup = document.getElementById('inline-edit-image-arrows-group');
+const inlineEditArrowsCountBadge = document.getElementById('inline-edit-arrows-count-badge');
+const inlineEditArrowsEmptyMsg = document.getElementById('inline-edit-arrows-empty-msg');
+const inlineEditArrowsInputsList = document.getElementById('inline-edit-arrows-inputs-list');
 
 const inlineEditImagePreviewContainer = document.getElementById('inline-edit-image-preview-container');
 const inlineEditImagePreview = document.getElementById('inline-edit-image-preview');
@@ -768,7 +778,9 @@ function normalizeCard(raw) {
             answer: ''
         };
     }
-    if (type === 'multiple_choice' || type === 'multipla_escolha' || type === 'mc') {
+    if (type === 'image_arrows' || type === 'arrows' || type === 'setas' || type === 'imagearrows') {
+        type = 'image_arrows';
+    } else if (type === 'multiple_choice' || type === 'multipla_escolha' || type === 'mc') {
         type = 'multiple_choice';
     } else if (type === 'open_double' || type === 'duplo' || type === 'double') {
         type = 'open_double';
@@ -844,7 +856,13 @@ function normalizeCard(raw) {
         }
     }
 
-    if (type === 'multiple_choice') {
+    if (type === 'image_arrows') {
+        const hasArrows = Array.isArray(raw.imageArrows) && raw.imageArrows.length > 0;
+        if (!hasArrows && (!raw.image && !raw.qImage)) return null;
+        if (!answer && hasArrows) {
+            answer = raw.imageArrows.map(a => a.label || '').filter(Boolean).join('; ');
+        }
+    } else if (type === 'multiple_choice') {
         if (options.length < 2) return null;
         if (!answer) answer = options[0];
         else if (!options.includes(answer)) options.unshift(answer);
@@ -2855,6 +2873,7 @@ creatorCardType.addEventListener('change', () => {
     if (creatorGroupFill) creatorGroupFill.classList.toggle('hidden', tVal !== 'fill');
     creatorGroupAnki.classList.toggle('hidden', tVal !== 'anki');
     creatorGroupMc.classList.toggle('hidden', tVal !== 'multiple_choice');
+    if (creatorGroupImageArrows) creatorGroupImageArrows.classList.toggle('hidden', tVal !== 'image_arrows');
 
     const qImgContainer = creatorQImgUrl?.parentElement?.parentElement;
     if (qImgContainer) {
@@ -2870,6 +2889,9 @@ creatorCardType.addEventListener('change', () => {
     } else if (tVal === 'anki') {
         creatorQuestionLabel.textContent = t('short_question_concept_label');
         creatorQuestion.placeholder = t('question_placeholder');
+    } else if (tVal === 'image_arrows') {
+        creatorQuestionLabel.textContent = t('question_concept_label');
+        creatorQuestion.placeholder = t('name_the_structures');
     } else {
         creatorQuestionLabel.textContent = t('question_desc_label');
         creatorQuestion.placeholder = t('question_placeholder');
@@ -2878,7 +2900,73 @@ creatorCardType.addEventListener('change', () => {
     if (tVal === 'multiple_choice' && creatorMcOptionsList.children.length === 0) {
         renderCreatorMcOptions(["", "", "", ""], 0);
     }
+    if (tVal === 'image_arrows') {
+        renderCreatorArrowsInputs(pendingCreatorQImageArrows);
+        updateCreatorQImagePreview();
+    }
 });
+
+// Creator Image Arrows Handlers
+function renderCreatorArrowsInputs(arrows = []) {
+    if (!creatorArrowsInputsList) return;
+    creatorArrowsInputsList.innerHTML = '';
+    const count = Array.isArray(arrows) ? arrows.length : 0;
+    if (creatorArrowsCountBadge) creatorArrowsCountBadge.textContent = String(count);
+
+    if (count === 0) {
+        if (creatorArrowsEmptyMsg) creatorArrowsEmptyMsg.classList.remove('hidden');
+        return;
+    }
+    if (creatorArrowsEmptyMsg) creatorArrowsEmptyMsg.classList.add('hidden');
+
+    arrows.forEach((arrow, i) => {
+        const theme = getArrowColorTheme(arrow.color);
+        const row = document.createElement('div');
+        row.className = "flex items-center gap-2 p-2 rounded-xl transition border shadow-2xs";
+        row.style.backgroundColor = theme.bg;
+        row.style.borderColor = theme.border;
+        row.id = `creator-arrow-row-${i}`;
+
+        // Number Badge at arrow start
+        const badge = document.createElement('div');
+        badge.className = "w-6 h-6 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 shadow-xs select-none";
+        badge.style.backgroundColor = theme.badgeBg;
+        badge.style.color = theme.badgeText;
+        badge.textContent = String(i + 1);
+
+        // Text input for structure name
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `creator-arrow-input-${i}`;
+        input.className = 'creator-arrow-val flex-1 px-3 py-1.5 bg-white/95 border rounded-lg text-sm font-medium outline-none transition focus:ring-2';
+        input.style.borderColor = theme.border;
+        input.style.color = '#1e293b';
+        input.placeholder = t('structure_placeholder', { num: i + 1 }) || `Nome da estrutura ${i + 1}...`;
+        input.value = arrow.label || '';
+        input.dataset.arrowIdx = String(i);
+
+        input.addEventListener('input', (e) => {
+            arrow.label = e.target.value;
+        });
+
+        row.appendChild(badge);
+        row.appendChild(input);
+        creatorArrowsInputsList.appendChild(row);
+    });
+}
+
+function focusCreatorArrowInput(idx) {
+    const input = document.getElementById(`creator-arrow-input-${idx}`);
+    if (input) {
+        input.focus();
+        input.select();
+        const row = document.getElementById(`creator-arrow-row-${idx}`);
+        if (row) {
+            row.classList.add('ring-2', 'ring-blue-400');
+            setTimeout(() => row.classList.remove('ring-2', 'ring-blue-400'), 1200);
+        }
+    }
+}
 
 // Creator MCQ Options (between 2 and 6 options)
 function renderCreatorMcOptions(options = ["", "", "", ""], selectedIdx = 0) {
@@ -2943,6 +3031,7 @@ creatorAddMcOptBtn.addEventListener('click', () => {
 
 // Creator Image Handling
 function updateCreatorQImagePreview() {
+    const isImageArrows = creatorCardType && creatorCardType.value === 'image_arrows';
     if (pendingCreatorQImage) {
         renderAnnotatedImage({
             container: creatorQImgPreviewContainer,
@@ -2950,6 +3039,8 @@ function updateCreatorQImagePreview() {
             imageUrl: pendingCreatorQImage,
             crop: pendingCreatorQImageCrop,
             arrows: pendingCreatorQImageArrows,
+            showNumbers: isImageArrows,
+            onArrowClick: isImageArrows ? (idx) => focusCreatorArrowInput(idx) : null,
             maxHClass: 'max-h-28'
         });
         creatorQImgPreviewContainer.classList.remove('hidden');
@@ -2962,6 +3053,9 @@ function updateCreatorQImagePreview() {
         if (creatorEditQImg) creatorEditQImg.classList.add('hidden');
         const oldWrap = creatorQImgPreviewContainer.querySelector('.annotated-image-wrapper');
         if (oldWrap) oldWrap.remove();
+    }
+    if (isImageArrows) {
+        renderCreatorArrowsInputs(pendingCreatorQImageArrows);
     }
 }
 
@@ -3010,14 +3104,23 @@ creatorRemoveQImg.addEventListener('click', () => {
 if (creatorEditQImg) {
     creatorEditQImg.addEventListener('click', () => {
         if (!pendingCreatorQImage) return;
+        const isImageArrows = creatorCardType && creatorCardType.value === 'image_arrows';
         openImageEditorModal({
             imageUrl: pendingCreatorQImage,
             crop: pendingCreatorQImageCrop,
             arrows: pendingCreatorQImageArrows,
+            defaultTool: isImageArrows ? 'arrow' : 'crop',
             onSave: ({ crop, arrows }) => {
                 pendingCreatorQImageCrop = crop;
-                pendingCreatorQImageArrows = arrows;
+                // Preserve existing structure labels for arrows
+                pendingCreatorQImageArrows = arrows.map((a, idx) => ({
+                    ...a,
+                    label: a.label || pendingCreatorQImageArrows[idx]?.label || ''
+                }));
                 updateCreatorQImagePreview();
+                if (isImageArrows) {
+                    renderCreatorArrowsInputs(pendingCreatorQImageArrows);
+                }
             }
         });
     });
@@ -3145,6 +3248,32 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         }
         newCard.answer = correctText;
         newCard.options = options;
+    } else if (type === 'image_arrows') {
+        if (!pendingCreatorQImage) {
+            alert(t('alert_image_arrows_need_image'));
+            creatorQImgUrl.focus();
+            return;
+        }
+        if (!pendingCreatorQImageArrows || pendingCreatorQImageArrows.length === 0) {
+            alert(t('alert_image_arrows_need_arrows'));
+            if (creatorEditQImg) creatorEditQImg.click();
+            return;
+        }
+        const arrowInputs = Array.from(document.querySelectorAll('.creator-arrow-val'));
+        arrowInputs.forEach((inp, idx) => {
+            if (pendingCreatorQImageArrows[idx]) {
+                pendingCreatorQImageArrows[idx].label = inp.value.trim();
+            }
+        });
+        const hasAtLeastOneLabel = pendingCreatorQImageArrows.some(a => (a.label || '').trim());
+        if (!hasAtLeastOneLabel) {
+            alert(t('alert_image_arrows_need_labels'));
+            arrowInputs[0]?.focus();
+            return;
+        }
+        newCard.description = desc || t('name_the_structures');
+        newCard.imageArrows = JSON.parse(JSON.stringify(pendingCreatorQImageArrows));
+        newCard.answer = pendingCreatorQImageArrows.map(a => a.label || '').filter(Boolean).join('; ');
     } else if (type === 'fill') {
         const braceRegex = /\{([^{}]+)\}/g;
         const braceAnswers = [];
@@ -3192,7 +3321,9 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     creatorRemoveQImg.click();
     creatorRemoveAnsImg.click();
 
-    if (type === 'multiple_choice') {
+    if (type === 'image_arrows') {
+        renderCreatorArrowsInputs([]);
+    } else if (type === 'multiple_choice') {
         renderCreatorMcOptions(["", "", "", ""], 0);
     }
 
@@ -3661,6 +3792,10 @@ function createCardElement(card, index, withAnimation = true) {
         typeBadge.className += " bg-teal-100 text-teal-800";
         const count = Array.isArray(card.answers) && card.answers.length > 0 ? card.answers.length : (card.answer ? card.answer.split(';').length : 1);
         typeBadge.textContent = `${t('card_type_fill')} (${count})`;
+    } else if (card.type === 'image_arrows') {
+        typeBadge.className += " bg-blue-100 text-blue-800";
+        const count = Array.isArray(card.imageArrows) ? card.imageArrows.length : 0;
+        typeBadge.textContent = `${t('card_type_image_arrows')} (${count})`;
     } else {
         typeBadge.className += " bg-gray-100 text-gray-700";
         typeBadge.textContent = t('card_type_open');
@@ -3707,6 +3842,17 @@ function createCardElement(card, index, withAnimation = true) {
         } else {
             ansStr = `<strong>${t('blanks_label')}:</strong> <span class="text-yellow-600 text-xs">${t('no_answer_defined')}</span>`;
         }
+    } else if (card.type === 'image_arrows') {
+        const arrows = Array.isArray(card.imageArrows) ? card.imageArrows : [];
+        if (arrows.length > 0) {
+            const badges = arrows.map((a, i) => {
+                const theme = getArrowColorTheme(a.color || '#3b82f7');
+                return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-semibold" style="background-color: ${theme.bg}; border: 1px solid ${theme.border}; color: ${theme.textColor};"><span class="w-4 h-4 rounded-full flex items-center justify-center font-black text-[10px]" style="background-color: ${theme.badgeBg}; color: ${theme.badgeText};">${i + 1}</span> ${escapeHtml(a.label || t('no_answer_defined'))}</span>`;
+            }).join(' ');
+            ansStr = `<strong>${t('image_arrows_labels_title')}:</strong> <div class="inline-flex flex-wrap gap-1.5 mt-1">${badges}</div>`;
+        } else {
+            ansStr = `<strong>${t('image_arrows_labels_title')}:</strong> <span class="text-yellow-600 text-xs">${t('no_answer_defined')}</span>`;
+        }
     }
 
     const textCont = document.createElement('div');
@@ -3723,6 +3869,7 @@ function createCardElement(card, index, withAnimation = true) {
             imageUrl: safeCardImg,
             crop: card.imageCrop,
             arrows: card.imageArrows,
+            showNumbers: card.type === 'image_arrows',
             alt: t('card_image') || 'Imagem',
             maxHClass: 'max-h-28'
         });
@@ -3815,12 +3962,13 @@ function openInlineEditModal(index) {
 
     // Show/hide groups based on type
     const cardType = card.type || 'open';
-    editCardAns1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill');
+    editCardAns1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows');
     editCardAns2Group.classList.toggle('hidden', cardType !== 'open_double');
     if (editCardFillGroup) editCardFillGroup.classList.toggle('hidden', cardType !== 'fill');
     editCardAnkiGroup.classList.toggle('hidden', cardType !== 'anki');
     editCardMcGroup.classList.toggle('hidden', cardType !== 'multiple_choice');
     inlineEditAnsImageGroup.classList.toggle('hidden', cardType !== 'anki');
+    if (inlineEditImageArrowsGroup) inlineEditImageArrowsGroup.classList.toggle('hidden', cardType !== 'image_arrows');
 
     if (cardType === 'open') {
         editCardAns1Label.textContent = t('main_answer_label');
@@ -3840,6 +3988,8 @@ function openInlineEditModal(index) {
                 : (card.answer || '');
             editCardFillAnswer.value = answers;
         }
+    } else if (cardType === 'image_arrows') {
+        renderInlineEditArrowsInputs(card.imageArrows || []);
     }
 
     pendingInlineEditQImage = sanitizeImageUrl(card.image || '');
@@ -3907,8 +4057,69 @@ editCardAddMcOptBtn.addEventListener('click', () => {
     renderInlineEditMcOptions(currentVals, curCorrect);
 });
 
+// Inline Edit Image Arrows Handlers
+function renderInlineEditArrowsInputs(arrows = []) {
+    if (!inlineEditArrowsInputsList) return;
+    inlineEditArrowsInputsList.innerHTML = '';
+    const count = Array.isArray(arrows) ? arrows.length : 0;
+    if (inlineEditArrowsCountBadge) inlineEditArrowsCountBadge.textContent = String(count);
+
+    if (count === 0) {
+        if (inlineEditArrowsEmptyMsg) inlineEditArrowsEmptyMsg.classList.remove('hidden');
+        return;
+    }
+    if (inlineEditArrowsEmptyMsg) inlineEditArrowsEmptyMsg.classList.add('hidden');
+
+    arrows.forEach((arrow, i) => {
+        const theme = getArrowColorTheme(arrow.color);
+        const row = document.createElement('div');
+        row.className = "flex items-center gap-2 p-2 rounded-xl transition border shadow-2xs";
+        row.style.backgroundColor = theme.bg;
+        row.style.borderColor = theme.border;
+        row.id = `inline-edit-arrow-row-${i}`;
+
+        const badge = document.createElement('div');
+        badge.className = "w-6 h-6 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 shadow-xs select-none";
+        badge.style.backgroundColor = theme.badgeBg;
+        badge.style.color = theme.badgeText;
+        badge.textContent = String(i + 1);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `inline-edit-arrow-input-${i}`;
+        input.className = 'inline-edit-arrow-val flex-1 px-3 py-1.5 bg-white/95 border rounded-lg text-sm font-medium outline-none transition focus:ring-2';
+        input.style.borderColor = theme.border;
+        input.style.color = '#1e293b';
+        input.placeholder = t('structure_placeholder', { num: i + 1 }) || `Nome da estrutura ${i + 1}...`;
+        input.value = arrow.label || '';
+        input.dataset.arrowIdx = String(i);
+
+        input.addEventListener('input', (e) => {
+            arrow.label = e.target.value;
+        });
+
+        row.appendChild(badge);
+        row.appendChild(input);
+        inlineEditArrowsInputsList.appendChild(row);
+    });
+}
+
+function focusInlineEditArrowInput(idx) {
+    const input = document.getElementById(`inline-edit-arrow-input-${idx}`);
+    if (input) {
+        input.focus();
+        input.select();
+        const row = document.getElementById(`inline-edit-arrow-row-${idx}`);
+        if (row) {
+            row.classList.add('ring-2', 'ring-blue-400');
+            setTimeout(() => row.classList.remove('ring-2', 'ring-blue-400'), 1200);
+        }
+    }
+}
+
 // Inline Edit Image Listeners & Previews
 function updateInlineEditQImagePreviewUI() {
+    const isImageArrows = editCardType && editCardType.value === 'image_arrows';
     if (pendingInlineEditQImage) {
         renderAnnotatedImage({
             container: inlineEditImagePreviewContainer,
@@ -3916,6 +4127,8 @@ function updateInlineEditQImagePreviewUI() {
             imageUrl: pendingInlineEditQImage,
             crop: pendingInlineEditQImageCrop,
             arrows: pendingInlineEditQImageArrows,
+            showNumbers: isImageArrows,
+            onArrowClick: isImageArrows ? (idx) => focusInlineEditArrowInput(idx) : null,
             maxHClass: 'max-h-36'
         });
         inlineEditImagePreviewContainer.classList.remove('hidden');
@@ -3924,6 +4137,9 @@ function updateInlineEditQImagePreviewUI() {
         inlineEditImagePreviewContainer.classList.add('hidden');
         const oldWrap = inlineEditImagePreviewContainer.querySelector('.annotated-image-wrapper');
         if (oldWrap) oldWrap.remove();
+    }
+    if (isImageArrows) {
+        renderInlineEditArrowsInputs(pendingInlineEditQImageArrows);
     }
 }
 
@@ -3968,14 +4184,22 @@ inlineEditRemoveImageBtn.addEventListener('click', () => {
 if (inlineEditCropImageBtn) {
     inlineEditCropImageBtn.addEventListener('click', () => {
         if (!pendingInlineEditQImage) return;
+        const isImageArrows = editCardType && editCardType.value === 'image_arrows';
         openImageEditorModal({
             imageUrl: pendingInlineEditQImage,
             crop: pendingInlineEditQImageCrop,
             arrows: pendingInlineEditQImageArrows,
+            defaultTool: isImageArrows ? 'arrow' : 'crop',
             onSave: ({ crop, arrows }) => {
                 pendingInlineEditQImageCrop = crop;
-                pendingInlineEditQImageArrows = arrows;
+                pendingInlineEditQImageArrows = arrows.map((a, idx) => ({
+                    ...a,
+                    label: a.label || pendingInlineEditQImageArrows[idx]?.label || ''
+                }));
                 updateInlineEditQImagePreviewUI();
+                if (isImageArrows) {
+                    renderInlineEditArrowsInputs(pendingInlineEditQImageArrows);
+                }
             }
         });
     });
@@ -4073,6 +4297,15 @@ saveInlineEditBtn.addEventListener('click', (e) => {
         const answers = rawAns.split(';').map(a => a.trim()).filter(Boolean);
         card.answers = answers;
         card.answer = answers.join('; ');
+    } else if (card.type === 'image_arrows') {
+        const arrowInputs = Array.from(document.querySelectorAll('.inline-edit-arrow-val'));
+        arrowInputs.forEach((inp, idx) => {
+            if (pendingInlineEditQImageArrows[idx]) {
+                pendingInlineEditQImageArrows[idx].label = inp.value.trim();
+            }
+        });
+        card.imageArrows = JSON.parse(JSON.stringify(pendingInlineEditQImageArrows));
+        card.answer = pendingInlineEditQImageArrows.map(a => a.label || '').filter(Boolean).join('; ');
     }
 
     inlineEditModal.classList.add('hidden');

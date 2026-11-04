@@ -57,3 +57,10 @@
    - Default mode is always `open` (`Resposta : Pergunta`).
    - Tag convention: cards specify format by prefixing `(tag)` on the line (e.g., `(anki_like)`, `(fill)`, `(open_double)`, `(multiple_choice)`). Section dividers use `#`.
    - The interactive sandbox allows immediate testing and editing with live real-time preview before committing or creating a deck.
+
+12. **Image Identification Cards (`image_arrows`)**:
+   - Card type: `image_arrows` ('Identificar na Imagem').
+   - Scope: Available **strictly** in Manual Creation (Opção 1.1) and inline/in-game card editing. Do NOT add to Doc Converter (1.2) or AI Generator (2.1/2.2).
+   - Storage: Zero raster files. Arrows are stored as array of objects in `card.imageArrows`: `{ startX, startY, endX, endY, color, label }`.
+   - Interaction: Circular numbered badge is anchored at arrow start `(startX, startY)`. Answer fields are tinted according to `getArrowColorTheme(hex)` with high-contrast text and border. Clicking an arrow on the image focuses and rings the corresponding answer box.
+   - Gameplay: Evaluates text inputs against `arrow.label` (handling synonyms separated by `/`). Provides per-structure inline green/red validation and reveals correct answer when wrong.

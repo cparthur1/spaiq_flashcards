@@ -1,3 +1,20 @@
+CHANGELOG: NEW FLASHCARD MODE 'IDENTIFICAR NA IMAGEM' (IMAGE_ARROWS) (v15.29)
+Date: 2026-11-04
+
+OVERVIEW:
+1. New Card Mode 'Identificar na Imagem' (`image_arrows`):
+   - Available strictly in Manual Creation (Opção 1.1) in `pages/generate.html`, deck editor / inline edit, and gameplay (`pages/game.html`).
+   - Pure vector/JSON metadata storage: arrows and crops are persisted as lightweight JSON coordinates and labels without saving binary/raster image data.
+   - Interactive Numbered Badges: Circular badges (`1, 2, 3...`) are rendered at arrow start positions (non-pointed end) with white borders and high-contrast numbers.
+   - Dynamic Color-Matching Answer Inputs: Each arrow automatically creates an answer row styled with an ultra-light tinted background matching the arrow's color (`#eff6ff`, `#fef2f2`, `#fefce8`, `#ecfdf5`, `#f8fafc`) and a matching number badge.
+   - Bidirectional Interactive Focus: Clicking an arrow or badge on the image immediately focuses and highlights the corresponding answer input.
+   - Gameplay Integration: In `pages/game.html`, displays question text and image with numbered arrows. Users type each identified structure. Submitting validates answers against defined labels (supporting synonyms with `/`), providing immediate per-field green/red feedback and revealing correct answers on error.
+   - Full Inline & In-Game Editing: Support for updating arrows, colors, and structure labels in both `generate.html` inline editor and `game.html` live edit modal.
+2. Bilingual Internationalization (`js/i18n.js`):
+   - Fully localized in Portuguese (`pt-BR`) and English (`en-US`).
+3. Service Worker Cache Update:
+   - Bumped cache to `flashcards-v15.29` in `sw.js`.
+
 CHANGELOG: SCIENTIFIC GUIDE "HOW TO WRITE GOOD FLASHCARDS" & ADAPTIVE ALGORITHM (v15.27)
 Date: 2026-11-04
 

@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.28'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.29'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -88,6 +88,7 @@ const RAW_ASSETS = [
   '/assets/img/anki.svg',
   '/assets/img/multiple choice.svg',
   '/assets/img/comment.svg',
+  '/assets/img/img_deck.svg',
   '/assets/img/settings.svg',
   '/assets/img/notifications.svg',
   '/assets/img/paywall.svg',

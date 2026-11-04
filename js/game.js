@@ -26,7 +26,7 @@ import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllShared
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
-import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated } from './image-editor-modal.js';
+import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated, getArrowColorTheme } from './image-editor-modal.js';
 
 // --- DOM ELEMENTS ---
 const deckTitle = document.getElementById('deck-title');
@@ -171,6 +171,10 @@ const answerInput2 = document.getElementById('answer-input-2');
 const mcAnswerArea = document.getElementById('mc-answer-area');
 let mcOptionBtns = document.querySelectorAll('.mc-option-btn');
 
+const imageArrowsAnswerArea = document.getElementById('image-arrows-answer-area');
+const imageArrowsProgressBadge = document.getElementById('image-arrows-progress-badge');
+const imageArrowsInputsList = document.getElementById('image-arrows-inputs-list');
+
 // Anki DOM Elements
 const ankiAnswerContainer = document.getElementById('anki-answer-container');
 const ankiAnswerText = document.getElementById('anki-answer-text');
@@ -203,6 +207,11 @@ const editCropAnsImageBtn = document.getElementById('edit-crop-ans-image-btn');
 const editAnsImageUrlInput = document.getElementById('edit-ans-image-url-input');
 const editFillAnswerGroup = document.getElementById('edit-fill-answer-group');
 const editFillAnswerInput = document.getElementById('edit-fill-answer-input');
+
+const editImageArrowsGroup = document.getElementById('edit-image-arrows-group');
+const editArrowsCountBadge = document.getElementById('edit-arrows-count-badge');
+const editArrowsEmptyMsg = document.getElementById('edit-arrows-empty-msg');
+const editArrowsInputsList = document.getElementById('edit-arrows-inputs-list');
 
 const submitBtn = document.getElementById('submit-btn');
 const nextQuestionBtn = document.getElementById('next-question-btn');
@@ -244,7 +253,7 @@ let questionStartTime = Date.now();
 // --- UI UTILITIES ---
 const imageLoadSeqMap = new WeakMap();
 
-function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placeholderElem, crop = null, arrows = []) {
+function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placeholderElem, crop = null, arrows = [], { showNumbers = false, onArrowClick = null } = {}) {
     if (!containerElem || !imgElem) return;
 
     const safeUrl = sanitizeImageUrl(srcUrl);
@@ -278,16 +287,18 @@ function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placehold
         imageUrl: safeUrl,
         crop,
         arrows,
+        showNumbers,
+        onArrowClick,
         alt: imgElem.alt || t('card_image') || 'Imagem do Flashcard',
         maxHClass: containerElem.id === 'anki-answer-image-container' ? 'max-h-48 sm:max-h-72' : 'max-h-36 xs:max-h-48 sm:max-h-64',
         zoomable: true,
         onClick: () => {
-            openZoomForCard(safeUrl, crop, arrows);
+            openZoomForCard(safeUrl, crop, arrows, { showNumbers });
         }
     });
 }
 
-function openZoomForCard(url, crop = null, arrows = []) {
+function openZoomForCard(url, crop = null, arrows = [], { showNumbers = false } = {}) {
     const safeUrl = sanitizeImageUrl(url);
     if (!safeUrl || !imageZoomModal) return;
 
@@ -299,6 +310,7 @@ function openZoomForCard(url, crop = null, arrows = []) {
             imageUrl: safeUrl,
             crop,
             arrows,
+            showNumbers,
             alt: t('zoomed_image') || 'Imagem Ampliada',
             maxHClass: 'max-h-[85vh]',
             zoomable: false
@@ -713,6 +725,105 @@ function initFillBlankInputs() {
     setTimeout(() => {
         inputs[0]?.focus();
     }, 50);
+}
+
+function initImageArrowsInputs() {
+    if (!imageArrowsInputsList) return;
+    imageArrowsInputsList.innerHTML = '';
+
+    const arrows = Array.isArray(currentQuestion?.imageArrows) ? currentQuestion.imageArrows : [];
+    if (imageArrowsProgressBadge) {
+        imageArrowsProgressBadge.textContent = `0/${arrows.length}`;
+    }
+
+    arrows.forEach((arrow, i) => {
+        const theme = getArrowColorTheme(arrow.color);
+        const row = document.createElement('div');
+        row.className = "flex items-center gap-2.5 p-2 sm:p-2.5 rounded-2xl border transition shadow-2xs";
+        row.id = `game-arrow-row-${i}`;
+        row.style.backgroundColor = theme.bg;
+        row.style.borderColor = theme.border;
+
+        // Circular number badge at arrow start
+        const badge = document.createElement('div');
+        badge.className = "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-black text-xs sm:text-sm flex-shrink-0 shadow-xs select-none";
+        badge.style.backgroundColor = theme.badgeBg;
+        badge.style.color = theme.badgeText;
+        badge.textContent = String(i + 1);
+
+        // Input and feedback container
+        const inputWrap = document.createElement('div');
+        inputWrap.className = "flex-1 min-w-0";
+
+        const input = document.createElement('input');
+        input.type = 'search';
+        input.id = `game-arrow-input-${i}`;
+        input.className = "game-answer-input game-arrow-input w-full px-3 py-2 sm:px-3.5 sm:py-2.5 text-sm sm:text-base font-semibold bg-white/95 rounded-xl border outline-none transition focus:ring-2 focus:ring-blue-500 text-[var(--md-sys-color-on-surface,#1e293b)] shadow-2xs";
+        input.style.borderColor = theme.border;
+        input.placeholder = t('structure_placeholder', { num: i + 1 }) || `Estrutura ${i + 1}...`;
+        input.autocomplete = "off";
+        input.autocorrect = "off";
+        input.autocapitalize = "off";
+        input.spellcheck = false;
+        input.enterKeyHint = i === arrows.length - 1 ? 'done' : 'next';
+        input.dataset.arrowIdx = String(i);
+
+        const feedbackDiv = document.createElement('div');
+        feedbackDiv.id = `game-arrow-feedback-${i}`;
+        feedbackDiv.className = "hidden text-xs font-bold mt-1 text-green-700 flex items-center gap-1";
+
+        input.addEventListener('keydown', (e) => {
+            if (e.isComposing) return;
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (i < arrows.length - 1) {
+                    const nextInp = document.getElementById(`game-arrow-input-${i + 1}`);
+                    if (nextInp) {
+                        nextInp.focus();
+                        nextInp.select();
+                    }
+                } else {
+                    handleOpenSubmit();
+                }
+            }
+        });
+
+        input.addEventListener('input', () => {
+            updateImageArrowsProgress();
+        });
+
+        inputWrap.appendChild(input);
+        inputWrap.appendChild(feedbackDiv);
+        row.appendChild(badge);
+        row.appendChild(inputWrap);
+        imageArrowsInputsList.appendChild(row);
+    });
+
+    setTimeout(() => {
+        const firstInp = document.getElementById('game-arrow-input-0');
+        firstInp?.focus();
+    }, 60);
+}
+
+function updateImageArrowsProgress() {
+    if (!imageArrowsProgressBadge) return;
+    const inputs = Array.from(document.querySelectorAll('.game-arrow-input'));
+    const filled = inputs.filter(inp => inp.value.trim().length > 0).length;
+    imageArrowsProgressBadge.textContent = `${filled}/${inputs.length}`;
+}
+
+function focusGameArrowInput(idx) {
+    const input = document.getElementById(`game-arrow-input-${idx}`);
+    if (input && !input.disabled) {
+        input.focus();
+        input.select();
+        const row = document.getElementById(`game-arrow-row-${idx}`);
+        if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            row.classList.add('ring-2', 'ring-blue-400');
+            setTimeout(() => row.classList.remove('ring-2', 'ring-blue-400'), 1200);
+        }
+    }
 }
 
 // --- STREAK COUNTER LOGIC & ANIMATIONS ---
@@ -1312,13 +1423,26 @@ function loadQuestion() {
         }
     }
 
-    setupCardImageWithPlaceholder(currentQuestion.image, questionImage, questionImageContainer, questionImagePlaceholder, currentQuestion.imageCrop, currentQuestion.imageArrows);
+    const isImageArrows = currentQuestion?.type === 'image_arrows';
+    setupCardImageWithPlaceholder(
+        currentQuestion.image,
+        questionImage,
+        questionImageContainer,
+        questionImagePlaceholder,
+        currentQuestion.imageCrop,
+        currentQuestion.imageArrows,
+        {
+            showNumbers: isImageArrows,
+            onArrowClick: isImageArrows ? (idx) => focusGameArrowInput(idx) : null
+        }
+    );
 
     openAnswerArea.classList.add('hidden');
     openDoubleAnswerArea.classList.add('hidden');
     mcAnswerArea.classList.add('hidden');
     if (ankiAnswerContainer) ankiAnswerContainer.classList.add('hidden');
     if (ankiControlsArea) ankiControlsArea.classList.add('hidden');
+    if (imageArrowsAnswerArea) imageArrowsAnswerArea.classList.add('hidden');
 
     if (actionButtonsArea) actionButtonsArea.classList.remove('hidden');
     deleteCardBtn.classList.remove('hidden');
@@ -1334,6 +1458,10 @@ function loadQuestion() {
         if (document.activeElement && typeof document.activeElement.blur === 'function') {
             document.activeElement.blur();
         }
+    } else if (currentQuestion.type === 'image_arrows') {
+        if (imageArrowsAnswerArea) imageArrowsAnswerArea.classList.remove('hidden');
+        submitBtn.classList.remove('hidden');
+        initImageArrowsInputs();
     } else if (currentQuestion.type === 'multiple_choice' && currentQuestion.options) {
         mcAnswerArea.classList.remove('hidden');
         submitBtn.classList.add('hidden'); // MCQ submits on click
@@ -1824,6 +1952,108 @@ function handleFillSubmit() {
     }
 }
 
+function handleImageArrowsSubmit() {
+    const arrows = Array.isArray(currentQuestion?.imageArrows) ? currentQuestion.imageArrows : [];
+    if (arrows.length === 0) {
+        showFeedback(true);
+        return;
+    }
+
+    const inputs = Array.from(document.querySelectorAll('.game-arrow-input'));
+    const userAnswers = inputs.map(inp => inp.value.trim());
+
+    // Check if at least one input has content
+    const hasAnyInput = userAnswers.some(ans => ans.length > 0);
+    if (!hasAnyInput) {
+        inputs[0]?.classList.add('animate-pulse', 'border-red-500');
+        setTimeout(() => inputs[0]?.classList.remove('animate-pulse', 'border-red-500'), 800);
+        inputs[0]?.focus();
+        return;
+    }
+
+    isOpenSubmitting = true;
+
+    try {
+        let allCorrect = true;
+        const arrowResults = arrows.map((arrow, idx) => {
+            const input = inputs[idx];
+            const userVal = normalizeString(input ? input.value : '');
+            const expectedRaw = arrow.label || '';
+            const synonyms = String(expectedRaw).split('/').map(s => s.trim()).filter(Boolean);
+            const maxSim = synonyms.length > 0
+                ? Math.max(...synonyms.map(syn => calculateSimilarity(userVal, normalizeString(syn))))
+                : (userVal === normalizeString(expectedRaw) ? 1.0 : 0.0);
+            const isCorrect = maxSim >= 0.8 || (userVal.length > 0 && synonyms.some(syn => normalizeString(syn) === userVal));
+            if (!isCorrect) allCorrect = false;
+            return {
+                idx,
+                input,
+                userVal,
+                expectedRaw,
+                synonyms,
+                maxSim,
+                isCorrect
+            };
+        });
+
+        console.log("[Game] Image arrows avaliadas:", {
+            allCorrect,
+            results: arrowResults.map(r => ({
+                idx: r.idx + 1,
+                user: r.userVal,
+                expected: r.expectedRaw,
+                similarity: Math.round(r.maxSim * 100) + '%',
+                isCorrect: r.isCorrect
+            }))
+        });
+
+        currentQuestion._lastUserAnswer = userAnswers.map((u, i) => `${i + 1}. ${u}`).join(' ; ');
+
+        if (allCorrect) {
+            arrowResults.forEach(({ input }) => {
+                if (input) {
+                    input.readOnly = true;
+                    input.blur();
+                    input.classList.remove('border-red-500', 'bg-red-50', 'text-red-700');
+                    input.classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+                }
+            });
+            showFeedback(true);
+        } else {
+            isAnimating = true;
+            arrowResults.forEach(({ input, expectedRaw, synonyms, isCorrect, idx }) => {
+                if (!input) return;
+                input.readOnly = true;
+                input.blur();
+                input.classList.remove('border-green-500', 'border-red-500', 'bg-green-50', 'bg-red-50', 'text-green-700', 'text-red-700', 'card-shake');
+
+                if (isCorrect) {
+                    input.classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+                } else {
+                    input.classList.add('border-red-500', 'bg-red-50', 'text-red-700', 'card-shake');
+                    const feedbackDiv = document.getElementById(`game-arrow-feedback-${idx}`);
+                    if (feedbackDiv) {
+                        const primaryExpected = synonyms[0] || expectedRaw;
+                        feedbackDiv.innerHTML = `<span class="material-symbols-rounded text-sm text-green-600">check_circle</span> <span class="text-gray-500 text-[11px] font-normal">${t('correct_structure_is')}</span> <span class="text-green-700 font-bold">${escapeHtml(primaryExpected)}</span>`;
+                        feedbackDiv.classList.remove('hidden');
+                    }
+                }
+            });
+
+            triggerHaptic('shake');
+            showFeedback(false);
+
+            setTimeout(() => {
+                isAnimating = false;
+            }, 500);
+        }
+    } catch (err) {
+        console.error("[Game] Erro durante handleImageArrowsSubmit:", err);
+        isOpenSubmitting = false;
+        isAnimating = false;
+    }
+}
+
 function handleOpenSubmit() {
     // Auto-heal: se o botão de verificar está ativo/habilitado e visível, não estamos em estado de correção
     if (submitBtn && !submitBtn.disabled && !submitBtn.classList.contains('hidden')) {
@@ -1850,6 +2080,10 @@ function handleOpenSubmit() {
 
     if (type === 'fill') {
         handleFillSubmit();
+        return;
+    }
+    if (type === 'image_arrows') {
+        handleImageArrowsSubmit();
         return;
     }
 
@@ -1945,6 +2179,9 @@ function showFeedback(isCorrect, element) {
         } else if (currentQuestion.type === 'fill') {
             const fillInputs = Array.from(questionCard.querySelectorAll('.fill-blank-input'));
             userAnswer = currentQuestion._lastUserAnswer || fillInputs.map(inp => inp.value.trim()).join(' ; ');
+        } else if (currentQuestion.type === 'image_arrows') {
+            const arrowInputs = Array.from(document.querySelectorAll('.game-arrow-input'));
+            userAnswer = currentQuestion._lastUserAnswer || arrowInputs.map((inp, i) => `${i + 1}. ${inp.value.trim()}`).join(' ; ');
         } else {
             userAnswer = answerInput.value;
         }
@@ -2083,6 +2320,8 @@ function showFeedback(isCorrect, element) {
                     const fillInputs = questionCard.querySelectorAll('.fill-blank-input');
                     fillInputs.forEach(inp => inp.disabled = true);
                 }
+                const arrowInputs = document.querySelectorAll('.game-arrow-input');
+                arrowInputs.forEach(inp => inp.disabled = true);
             }
             nextQuestionBtn.classList.remove('hidden');
             correctionOptions.classList.add('flex');
@@ -2210,7 +2449,7 @@ function updateFeedbackText() {
 
                 feedbackElem.append(span1, span2);
                 feedbackElem.classList.remove('hidden');
-            } else if (currentQuestion.type === 'fill') {
+            } else if (currentQuestion.type === 'fill' || currentQuestion.type === 'image_arrows') {
                 feedbackElem.classList.add('hidden');
             } else if (currentQuestion.type === 'anki') {
                 const span = document.createElement('span');
@@ -5367,8 +5606,68 @@ let pendingEditAnsImage = '';
 let pendingEditAnsImageCrop = null;
 let pendingEditAnsImageArrows = [];
 
+function renderEditArrowsInputs(arrows = []) {
+    if (!editArrowsInputsList) return;
+    editArrowsInputsList.innerHTML = '';
+    const count = Array.isArray(arrows) ? arrows.length : 0;
+    if (editArrowsCountBadge) editArrowsCountBadge.textContent = String(count);
+
+    if (count === 0) {
+        if (editArrowsEmptyMsg) editArrowsEmptyMsg.classList.remove('hidden');
+        return;
+    }
+    if (editArrowsEmptyMsg) editArrowsEmptyMsg.classList.add('hidden');
+
+    arrows.forEach((arrow, i) => {
+        const theme = getArrowColorTheme(arrow.color);
+        const row = document.createElement('div');
+        row.className = "flex items-center gap-2 p-2 rounded-xl transition border shadow-2xs";
+        row.style.backgroundColor = theme.bg;
+        row.style.borderColor = theme.border;
+        row.id = `edit-arrow-row-${i}`;
+
+        const badge = document.createElement('div');
+        badge.className = "w-6 h-6 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 shadow-xs select-none";
+        badge.style.backgroundColor = theme.badgeBg;
+        badge.style.color = theme.badgeText;
+        badge.textContent = String(i + 1);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `edit-arrow-input-${i}`;
+        input.className = 'edit-arrow-val flex-1 px-3 py-1.5 bg-white/95 border rounded-lg text-sm font-medium outline-none transition focus:ring-2';
+        input.style.borderColor = theme.border;
+        input.style.color = '#1e293b';
+        input.placeholder = t('structure_placeholder', { num: i + 1 }) || `Nome da estrutura ${i + 1}...`;
+        input.value = arrow.label || '';
+        input.dataset.arrowIdx = String(i);
+
+        input.addEventListener('input', (e) => {
+            arrow.label = e.target.value;
+        });
+
+        row.appendChild(badge);
+        row.appendChild(input);
+        editArrowsInputsList.appendChild(row);
+    });
+}
+
+function focusEditArrowInput(idx) {
+    const input = document.getElementById(`edit-arrow-input-${idx}`);
+    if (input) {
+        input.focus();
+        input.select();
+        const row = document.getElementById(`edit-arrow-row-${idx}`);
+        if (row) {
+            row.classList.add('ring-2', 'ring-blue-400');
+            setTimeout(() => row.classList.remove('ring-2', 'ring-blue-400'), 1200);
+        }
+    }
+}
+
 function updateEditImagePreviewUI(imgSrc) {
     const cleanSrc = sanitizeImageUrl(imgSrc);
+    const isImageArrows = currentQuestion?.type === 'image_arrows';
     if (cleanSrc && editImagePreviewContainer) {
         renderAnnotatedImage({
             container: editImagePreviewContainer,
@@ -5376,6 +5675,8 @@ function updateEditImagePreviewUI(imgSrc) {
             imageUrl: cleanSrc,
             crop: pendingEditImageCrop,
             arrows: pendingEditImageArrows,
+            showNumbers: isImageArrows,
+            onArrowClick: isImageArrows ? (idx) => focusEditArrowInput(idx) : null,
             maxHClass: 'max-h-40'
         });
         editImagePreviewContainer.classList.remove('hidden');
@@ -5386,6 +5687,9 @@ function updateEditImagePreviewUI(imgSrc) {
         if (editCropImageBtn) editCropImageBtn.classList.add('hidden');
         const oldWrap = editImagePreviewContainer.querySelector('.annotated-image-wrapper');
         if (oldWrap) oldWrap.remove();
+    }
+    if (isImageArrows) {
+        renderEditArrowsInputs(pendingEditImageArrows);
     }
 }
 
@@ -5437,14 +5741,22 @@ if (editRemoveImageBtn) {
 if (editCropImageBtn) {
     editCropImageBtn.addEventListener('click', () => {
         if (!pendingEditImage) return;
+        const isImageArrows = currentQuestion?.type === 'image_arrows';
         openImageEditorModal({
             imageUrl: pendingEditImage,
             crop: pendingEditImageCrop,
             arrows: pendingEditImageArrows,
+            defaultTool: isImageArrows ? 'arrow' : 'crop',
             onSave: ({ crop, arrows }) => {
                 pendingEditImageCrop = crop;
-                pendingEditImageArrows = arrows;
+                pendingEditImageArrows = arrows.map((a, idx) => ({
+                    ...a,
+                    label: a.label || pendingEditImageArrows[idx]?.label || ''
+                }));
                 updateEditImagePreviewUI(pendingEditImage);
+                if (isImageArrows) {
+                    renderEditArrowsInputs(pendingEditImageArrows);
+                }
             }
         });
     });
@@ -5552,12 +5864,13 @@ editBtn.addEventListener('click', () => {
     editQuestionInput.value = currentQuestion.description || '';
 
     const cardType = currentQuestion.type || 'open';
-    if (editAnswer1Group) editAnswer1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill');
+    if (editAnswer1Group) editAnswer1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows');
     if (editAnswer2Group) editAnswer2Group.classList.toggle('hidden', cardType !== 'open_double');
     if (editAnkiAnswerGroup) editAnkiAnswerGroup.classList.toggle('hidden', cardType !== 'anki');
     if (editMcOptionsGroup) editMcOptionsGroup.classList.toggle('hidden', cardType !== 'multiple_choice');
     if (editAnsImageGroup) editAnsImageGroup.classList.toggle('hidden', cardType !== 'anki');
     if (editFillAnswerGroup) editFillAnswerGroup.classList.toggle('hidden', cardType !== 'fill');
+    if (editImageArrowsGroup) editImageArrowsGroup.classList.toggle('hidden', cardType !== 'image_arrows');
 
     if (cardType === 'open') {
         if (editAnswer1Label) editAnswer1Label.textContent = t('main_answer_label');
@@ -5574,6 +5887,8 @@ editBtn.addEventListener('click', () => {
         editAnkiAnswerInput.value = currentQuestion.answer || '';
     } else if (cardType === 'multiple_choice') {
         renderEditMcOptions(currentQuestion.options || ["", "", "", ""], currentQuestion.answer);
+    } else if (cardType === 'image_arrows') {
+        renderEditArrowsInputs(currentQuestion.imageArrows || []);
     }
 
     pendingEditImage = currentQuestion.image || '';
@@ -5624,6 +5939,15 @@ saveEditBtn.addEventListener('click', () => {
         const correctIdx = checkedRadio ? parseInt(checkedRadio.value) : 0;
         currentQuestion.options = options;
         currentQuestion.answer = optInputs[correctIdx]?.value.trim() || options[0];
+    } else if (t === 'image_arrows') {
+        const arrowInputs = Array.from(document.querySelectorAll('.edit-arrow-val'));
+        arrowInputs.forEach((inp, idx) => {
+            if (pendingEditImageArrows[idx]) {
+                pendingEditImageArrows[idx].label = inp.value.trim();
+            }
+        });
+        currentQuestion.imageArrows = JSON.parse(JSON.stringify(pendingEditImageArrows));
+        currentQuestion.answer = pendingEditImageArrows.map(a => a.label || '').filter(Boolean).join('; ');
     }
 
     if (pendingEditImage) {

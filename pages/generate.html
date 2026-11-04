@@ -894,6 +894,19 @@
                                     </svg>
                                 </div>
                             </div>
+
+                            <!-- 7. Identificar na Imagem (image_arrows) -->
+                            <div class="m3-select-item" data-value="image_arrows" data-label="Identificar na Imagem" data-icon="../assets/img/img_deck.svg" role="option" aria-selected="false" tabindex="0">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <img src="../assets/img/img_deck.svg" class="w-5 h-5 flex-shrink-0" alt="Identificar na Imagem" data-i18n-alt="card_type_image_arrows">
+                                    <span class="truncate" data-i18n="card_type_image_arrows">Identificar na Imagem</span>
+                                </div>
+                                <div class="m3-select-check">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -994,6 +1007,24 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         <span data-i18n="add_mc_option">Adicionar Alternativa</span>
                     </button>
+                </div>
+
+                <!-- GROUP: IMAGE ARROWS IDENTIFICATION -->
+                <div id="creator-group-image-arrows" class="space-y-3 hidden">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="image_arrows_labels_title">Respostas das Estruturas Apontadas</label>
+                        <span id="creator-arrows-count-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">0</span>
+                    </div>
+                    <div id="creator-arrows-empty-msg" class="p-3.5 bg-blue-50/70 rounded-xl border border-blue-100 text-xs text-gray-600 flex items-start gap-2.5">
+                        <span class="material-symbols-rounded text-base text-[#3b82f7] flex-shrink-0 mt-0.5">info</span>
+                        <div>
+                            <p class="font-bold text-gray-800" data-i18n="image_arrows_empty_guide_title">Adicione setas na imagem</p>
+                            <p class="mt-0.5 text-gray-600 leading-relaxed" data-i18n="image_arrows_empty_guide_desc">Clique em "Cortar / Setas" na imagem para desenhar as setas. Cada seta numerada criará um campo de resposta com a respectiva cor.</p>
+                        </div>
+                    </div>
+                    <div id="creator-arrows-inputs-list" class="space-y-2">
+                        <!-- Dynamically populated answer boxes per arrow -->
+                    </div>
                 </div>
 
                 <p id="creator-feedback" class="text-xs font-bold text-green-600 hidden"></p>
@@ -1169,6 +1200,19 @@
                     <button type="button" id="edit-card-add-mc-opt-btn" class="w-full py-1.5 border border-dashed border-gray-300 text-xs font-bold text-blue-600 rounded-xl transition flex items-center justify-center gap-1">
                         <span data-i18n="add_mc_option">+ Adicionar Alternativa</span>
                     </button>
+                </div>
+
+                <!-- Image Arrows Options Editor -->
+                <div id="inline-edit-image-arrows-group" class="hidden space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="image_arrows_labels_title">Respostas das Estruturas Apontadas</label>
+                        <span id="inline-edit-arrows-count-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">0</span>
+                    </div>
+                    <div id="inline-edit-arrows-empty-msg" class="p-3 bg-blue-50/70 rounded-xl border border-blue-100 text-xs text-gray-600 flex items-start gap-2">
+                        <span class="material-symbols-rounded text-sm text-[#3b82f7] flex-shrink-0 mt-0.5">info</span>
+                        <p data-i18n="image_arrows_empty_guide_desc">Clique em "Cortar / Setas" na imagem para desenhar as setas.</p>
+                    </div>
+                    <div id="inline-edit-arrows-inputs-list" class="space-y-2"></div>
                 </div>
 
                 <!-- Card Image -->
