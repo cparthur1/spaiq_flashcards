@@ -4,19 +4,33 @@
   "description": "Um webapp simples para carregar e estudar seus próprios baralhos de flashcards no formato .json.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#111827",
+  "background_color": "#f8fafc",
   "theme_color": "#3b82f7",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "assets/img/favicon.png",
+      "src": "assets/img/icon-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
-      "src": "assets/img/favicon.png",
+      "src": "assets/img/icon-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/img/icon-192-maskable.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/img/icon-512-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ]
 }

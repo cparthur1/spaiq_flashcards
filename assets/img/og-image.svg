@@ -1,58 +1,130 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="627" viewBox="0 0 1200 627" fill="none">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="ogBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="45%" stop-color="#eff6ff"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
 
-<svg
-   width="317.5mm"
-   height="165.89375mm"
-   viewBox="0 0 317.5 165.89375"
-   version="1.1"
-   id="svg1"
-   xml:space="preserve"
-   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
-   sodipodi:docname="oepngraph.svg"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     inkscape:zoom="0.7483165"
-     inkscape:cx="567.94151"
-     inkscape:cy="335.41957"
-     inkscape:window-width="1920"
-     inkscape:window-height="1043"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" /><defs
-     id="defs1" /><g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
-     id="layer1"><rect
-       style="fill:#dbeafe;fill-opacity:1;stroke-width:0.735572"
-       id="rect2"
-       width="317.5"
-       height="165.89375"
-       x="0"
-       y="-1.7763568e-15" /><g
-       id="g2"
-       transform="translate(-1.668093)"><path
-         style="fill:#1a56db;fill-opacity:1;stroke-width:1.55055"
-         d="m 74.639166,140.30652 c -2.665825,-1.02374 -5.492536,-3.71242 -6.738959,-6.4099 -0.859065,-1.85916 -0.894635,-2.50143 -1.01488,-18.32451 -0.06853,-9.01882 -0.03768,-16.310941 0.06853,-16.204711 0.106212,0.10622 3.263359,8.954601 7.01587,19.663081 3.752512,10.70848 7.198216,20.07748 7.657116,20.82001 l 0.83438,1.35006 -2.802645,-0.0214 c -1.805473,-0.014 -3.591332,-0.32425 -5.019386,-0.87265 z m 26.626564,-3.11011 c -0.78973,-0.3869 -2.178678,-1.44421 -3.086555,-2.34959 -1.57441,-1.57007 -2.341931,-3.52307 -16.607961,-42.260791 C 70.218601,61.759396 66.621672,51.552878 66.645985,50.234849 c 0.04341,-2.353618 1.909313,-5.302612 4.272177,-6.752133 1.009391,-0.619229 12.819679,-5.099424 26.245079,-9.955989 19.133469,-6.921427 24.841199,-8.830853 26.405549,-8.833514 2.61269,-0.0045 5.69381,1.651098 7.21822,3.878492 0.64616,0.944142 7.421,18.547621 15.75439,40.935564 16.08359,43.209231 15.63679,41.721651 13.76863,45.840201 -1.0049,2.2154 -1.82157,3.16448 -3.45458,4.01459 -0.67745,0.35268 -12.30477,4.67216 -25.8385,9.59885 -26.12258,9.50943 -26.77964,9.69133 -29.75122,8.2355 z m 27.28156,-16.70428 c 12.86131,-4.68265 23.51303,-8.63109 23.67051,-8.77429 0.22814,-0.20748 -28.02778,-77.778703 -28.50555,-78.256468 -0.1598,-0.159806 -47.466748,16.932424 -47.807357,17.273031 -0.133502,0.133471 -0.05908,0.743303 0.165211,1.355193 0.224333,0.611891 6.677402,18.233302 14.340177,39.158693 7.662775,20.925381 14.116929,37.981291 14.342569,37.901981 0.22563,-0.0792 10.93314,-3.97547 23.79444,-8.65814 z M 93.192428,62.591372 c -1.615205,-0.796551 -2.750237,-3.022374 -2.386261,-4.679525 0.391808,-1.783881 2.380121,-3.273852 4.368853,-3.273852 4.449746,0 5.61249,5.913524 1.573434,8.002199 -1.475113,0.762813 -1.922694,0.756669 -3.556026,-0.04883 z M 48.60721,128.66525 c -2.57287,-0.94338 -4.301436,-2.197 -5.568327,-4.03837 -1.646278,-2.39277 -2.645807,-6.02257 -2.324798,-8.44245 0.198548,-1.49676 5.572591,-14.40448 9.654221,-23.188151 0.241777,-0.52032 0.391436,5.97106 0.409034,17.743281 0.01551,10.21006 -0.110709,18.55075 -0.27992,18.53486 -0.169227,-0.016 -1.019826,-0.29003 -1.89021,-0.60917 z"
-         id="path2" /><text
-         xml:space="preserve"
-         style="font-style:italic;font-variant:normal;font-weight:900;font-stretch:normal;font-size:22.5778px;font-family:Roboto;-inkscape-font-specification:'Roboto, Heavy Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;writing-mode:lr-tb;direction:ltr;fill:#1a56db;fill-opacity:1;stroke-width:0.0560917"
-         x="171.48213"
-         y="91.275749"
-         id="text2"><tspan
-           sodipodi:role="line"
-           id="tspan2"
-           x="171.48213"
-           y="91.275749">Flashcards</tspan></text></g></g></svg>
+    <!-- Google 2026 AI Gradient -->
+    <linearGradient id="ogHeroGrad" x1="12%" y1="8%" x2="88%" y2="92%">
+      <stop offset="0%" stop-color="#b8caff"/>
+      <stop offset="20%" stop-color="#82a6ff"/>
+      <stop offset="50%" stop-color="#3b82f7"/>
+      <stop offset="82%" stop-color="#1d61e8"/>
+      <stop offset="100%" stop-color="#1042b5"/>
+    </linearGradient>
+    <linearGradient id="ogRearGrad" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#2565ec"/>
+      <stop offset="100%" stop-color="#0e3a9c"/>
+    </linearGradient>
+    <linearGradient id="ogMidGrad" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#4e8aff"/>
+      <stop offset="100%" stop-color="#184ec6"/>
+    </linearGradient>
+
+    <filter id="ogCardShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="16" result="b1"/>
+      <feOffset in="b1" dx="0" dy="18" result="o1"/>
+      <feFlood flood-color="#071b40" flood-opacity="0.22" result="c1"/>
+      <feComposite in="c1" in2="o1" operator="in" result="s1"/>
+
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b2"/>
+      <feOffset in="b2" dx="-2" dy="6" result="o2"/>
+      <feFlood flood-color="#071b40" flood-opacity="0.18" result="c2"/>
+      <feComposite in="c2" in2="o2" operator="in" result="s2"/>
+
+      <feMerge>
+        <feMergeNode in="s1"/>
+        <feMergeNode in="s2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="ogLayerShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur"/>
+      <feOffset in="blur" dx="-2" dy="5" result="off"/>
+      <feFlood flood-color="#06163a" flood-opacity="0.25" result="col"/>
+      <feComposite in="col" in2="off" operator="in" result="shad"/>
+      <feMerge>
+        <feMergeNode in="shad"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1200" height="627" fill="url(#ogBg)"/>
+
+  <!-- Subtle ambient decorative circles -->
+  <circle cx="1050" cy="120" r="280" fill="#3b82f7" opacity="0.06"/>
+  <circle cx="150" cy="520" r="220" fill="#7c3aed" opacity="0.04"/>
+
+  <!-- LEFT: Large Fanned Study Deck Hero Graphic -->
+  <g transform="translate(310, 314) scale(1.15)" filter="url(#ogCardShadow)">
+    <!-- Back Card -->
+    <g transform="rotate(-24) translate(-30, -15)">
+      <rect x="-115" y="-155" width="230" height="310" rx="44" fill="url(#ogRearGrad)"/>
+      <circle cx="0" cy="-95" r="16" fill="#ffffff" opacity="0.30"/>
+    </g>
+
+    <!-- Middle Card -->
+    <g transform="rotate(-6) translate(-8, -8)" filter="url(#ogLayerShadow)">
+      <rect x="-115" y="-155" width="230" height="310" rx="44" fill="url(#ogMidGrad)"/>
+      <circle cx="0" cy="-95" r="16" fill="#ffffff" opacity="0.45"/>
+    </g>
+
+    <!-- Front Hero Card -->
+    <g transform="rotate(14) translate(22, 10)" filter="url(#ogLayerShadow)">
+      <rect x="-115" y="-155" width="230" height="310" rx="44" fill="url(#ogHeroGrad)"/>
+      <circle cx="0" cy="-95" r="18" fill="#ffffff"/>
+      <rect x="-65" y="-18" width="130" height="14" rx="7" fill="#ffffff" opacity="0.95"/>
+      <rect x="-65" y="22" width="100" height="14" rx="7" fill="#ffffff" opacity="0.95"/>
+      <rect x="-65" y="62" width="60" height="14" rx="7" fill="#ffffff" opacity="0.95"/>
+    </g>
+  </g>
+
+  <!-- RIGHT: Typographic Branding & Value Proposition -->
+  <g transform="translate(620, 180)">
+    <!-- M3 Category Pill -->
+    <rect x="0" y="0" width="230" height="40" rx="20" fill="#dbeafe"/>
+    <text x="20" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700" fill="#1e40af">
+      ESTUDO INTELIGENTE
+    </text>
+
+    <!-- Main Title -->
+    <text x="0" y="115" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="68" font-weight="900" fill="#0f172a" letter-spacing="-1.5">
+      Flashcards
+    </text>
+
+    <!-- Subtitle / Value Prop -->
+    <text x="0" y="170" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="500" fill="#475569">
+      Repetição espaçada com inteligência artificial.
+    </text>
+    <text x="0" y="205" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="400" fill="#64748b">
+      Aprenda mais rápido, memorize para sempre.
+    </text>
+
+    <!-- Feature Chips (Material 3 style) -->
+    <g transform="translate(0, 260)">
+      <!-- Chip 1: PWA Offline -->
+      <rect x="0" y="0" width="140" height="42" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="20" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="600" fill="#1e293b">
+        PWA Offline
+      </text>
+
+      <!-- Chip 2: Gemini AI -->
+      <rect x="156" y="0" width="145" height="42" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="176" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="600" fill="#1e293b">
+        Gemini AI
+      </text>
+
+      <!-- Chip 3: Custo Zero -->
+      <rect x="317" y="0" width="135" height="42" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="337" y="27" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="600" fill="#1e293b">
+        100% Grátis
+      </text>
+    </g>
+  </g>
+</svg>

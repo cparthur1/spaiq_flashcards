@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.21'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.22'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -53,9 +53,20 @@ const RAW_ASSETS = [
   '/js/pdf-worker.js',
   '/manifest.json',
   '/favicon.png',
+  '/favicon.ico',
   '/assets/img/favicon.png',
+  '/assets/img/favicon.svg',
+  '/assets/img/favicon-32x32.png',
+  '/assets/img/favicon-16x16.png',
+  '/assets/img/apple-touch-icon.png',
+  '/assets/img/icon-192.png',
+  '/assets/img/icon-512.png',
+  '/assets/img/icon-192-maskable.png',
+  '/assets/img/icon-512-maskable.png',
+  '/assets/img/og-image.png',
   '/assets/img/logo.svg',
   '/assets/img/logo.png',
+  '/assets/img/notification-icon.png',
   '/assets/img/badge.svg',
   '/assets/img/badge.png',
   '/assets/img/menu.svg',
