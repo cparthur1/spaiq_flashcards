@@ -1205,3 +1205,53 @@ Date: 2026-11-01
 - Removed redundant language selector buttons from secondary pages (pages/stats.html, pages/generate.html, pages/bulk-add.html).
 - Secondary pages automatically inherit the active language preference from localStorage on load and update via cross-tab storage synchronization.
 - Bumped cache version to 'flashcards-v15.1' in sw.js.
+
+CHANGELOG: DOCUMENT CONVERTER OVERHAUL & INTERACTIVE LIVE PREVIEW SANDBOX
+Date: 2026-11-04
+
+1. FORMAT SELECTION SIMPLIFICATION
+- Removed global format selector (radio buttons) from Modal 1.2 ("Converta um doc") in pages/generate.html.
+- Set default card format to 'open' (Active Recall: 'Resposta : Pergunta').
+- Cards intended for Anki-like flip & self-assessment now use the '(anki_like)' tag at the beginning of the line: '(anki_like) Frente : Verso'.
+
+2. FORMATTING GUIDE & MODAL RESTRUCTURING
+- Reordered Modal 1.2 layout:
+  1. Top: File upload dropzone (.txt, .doc, .docx).
+  2. Middle: Clear, structured syntax guide explaining how tags work (e.g., '(tag) Conteúdo') with individual topics for open (default), anki_like, fill, open_double, multiple_choice, and section dividers (#).
+  3. Bottom: Dynamic interactive sandbox featuring a pre-filled, editable textarea with sample lines for each tag, coupled with a real-time live preview rendering parsed flashcards instantly as the user types.
+- Added direct action button to create a deck directly from the live sandbox text without needing to upload a file first.
+
+3. INTERNATIONALIZATION & SYSTEM DESIGN
+- Added bilingual dictionary entries in js/i18n.js for pt-BR and en-US covering the tags guide, sandbox instructions, and preview counters.
+- Strictly maintained Material Design 3 language, theme color #3b82f7, and zero Unicode emojis.
+
+CHANGELOG: ENHANCE A DOC INSTRUCTIONS UNIFICATION & CONVERT DOC SUBTITLE UPDATE
+Date: 2026-11-04
+
+1. BUTTON SUBTITLE UPDATE
+- Updated subtitle for "Converta um doc" (Opção 1.2) in pages/generate.html and js/i18n.js (pt-BR and en-US):
+  - pt-BR: "Escreva no Word ou txt e converta em um deck"
+  - en-US: "Write in Word or txt and convert into a deck"
+
+2. AI DOC ENHANCEMENT MODAL (MODAL 2.2) RESTRUCTURING
+- Extended Modal 2.2 width to max-w-2xl lg:max-w-3xl for optimal legibility.
+- Placed Pro badge and document file dropzone at the top of the modal.
+- Replaced old bullet list with the unified structured tags formatting guide:
+  - Explains that each line becomes a card, default format is open (typing), and tags are placed at the start as '(tag)'.
+  - Added dedicated topic cards for open (default), (anki_like), (fill), (open_double), (multiple_choice), and # (section dividers) with purple theme styling.
+- Maintained complete bilingual support (pt-BR and en-US) with zero Unicode emojis.
+
+CHANGELOG: IMAGE CROP & VECTOR ARROW ANNOTATIONS WITH ZERO RASTER STORAGE
+Date: 2026-11-04
+
+1. LIGHTWEIGHT VECTOR & CROP METADATA
+- Added interactive modal in js/image-editor-modal.js allowing users to crop images and draw directional indicator arrows directly on card images.
+- Implemented zero-raster storage constraint: original image URLs are preserved without converting to Base64 or storing image binaries in deck JSON.
+- Crop regions (x, y, width, height) and arrow vectors (startX, startY, endX, endY, color) are stored purely as lightweight percentages in card metadata.
+
+2. ASPECT-RATIO COLLAPSE & PRELOADER RESOLUTION
+- Fixed aspect-ratio container collapse where wrappers with absolute children rendered as 0x0 / 2x2 specks by introducing an in-flow invisible spacer SVG that defines natural aspect-ratio dimensions and scales gracefully.
+- Replaced asynchronous img.decode() with synchronous event-registered preloader, eliminating CORS stalls and race conditions.
+- Added instant cache detection to openImageEditorModal so pre-loaded images display without spinner hang.
+- Integrated full zoom lightbox support for cropped and arrow-annotated visuals in game.html.
+- Bumped Service Worker cache to 'flashcards-v15.28' in sw.js.

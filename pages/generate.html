@@ -226,7 +226,7 @@
                         </div>
                         <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2" data-i18n="convert_doc_title">Converta um doc</h3>
                         <p class="text-gray-600 text-sm leading-relaxed" data-i18n="convert_doc_desc">
-                            Importe um txt ou word já feito (.txt, .doc, .docx). Escolha entre conversão tradicional ou no novo formato Anki-like.
+                            Escreva no Word ou txt e converta em um deck
                         </p>
                     </div>
                     <div class="relative z-10 mt-6 sm:mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
@@ -340,84 +340,176 @@
 
     <!-- MODAL 1.2: CONVERTER DOCUMENTO -->
     <div id="modal-1-2" class="hidden fixed inset-0 modal-overlay bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+        <div class="bg-white rounded-3xl w-full max-w-2xl lg:max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
                     <span class="w-6 h-6 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center">1.2</span>
                     <h3 class="font-bold text-lg text-gray-900" data-i18n="convert_doc_title">Converta um documento</h3>
                 </div>
-                <button id="close-modal-1-2-btn" class="text-gray-500 hover:text-gray-700">
+                <button id="close-modal-1-2-btn" class="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-200 transition">
                     <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar" data-i18n-alt="close">
                 </button>
             </div>
 
-            <div class="p-6 overflow-y-auto space-y-6">
-                <!-- Explanation -->
-                <div class="bg-blue-50 border border-blue-200 p-4 rounded-2xl text-sm leading-relaxed text-blue-900 space-y-3">
+            <!-- Scrollable Content -->
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
+                
+                <!-- 1. TOPO: Selecionar Arquivo -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2" data-i18n="file_types_txt_doc">Arquivo (.txt, .doc, .docx)</label>
+                    <div class="relative border-2 border-dashed border-gray-300 hover:border-blue-500 rounded-2xl p-5 text-center transition cursor-pointer bg-gray-50/70 hover:bg-blue-50/40 group" id="modal-1-2-dropzone">
+                        <input type="file" id="modal-1-2-file" accept=".txt,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-10 h-10 rounded-xl bg-blue-100/70 text-[#3b82f7] flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                                <span class="material-symbols-rounded text-2xl select-none">upload_file</span>
+                            </div>
+                            <p class="font-semibold text-sm text-gray-800" id="modal-1-2-file-name" data-i18n="drop_file_here">Clique ou arraste o arquivo aqui</p>
+                            <p class="text-xs text-gray-500 mt-0.5" data-i18n="supports_txt_doc">Suporta arquivos .txt, .doc ou .docx</p>
+                        </div>
+                    </div>
+                    <p id="modal-1-2-error" class="text-xs text-red-500 font-medium mt-1.5 empty:hidden"></p>
+                </div>
+
+                <!-- 2. MEIO: Explicação das Tags e Formatação -->
+                <div class="bg-blue-50/80 border border-blue-200/90 rounded-2xl p-5 space-y-3.5 text-blue-950">
                     <div>
-                        <p class="font-semibold mb-1 text-blue-950" data-i18n="format_explanation_title">Como funciona a formatação:</p>
-                        <p class="text-xs text-blue-900/90 leading-relaxed" data-i18n-html="format_explanation_text">
-                            Cada linha do documento vai ser um card. No modo <strong>Tradicional</strong>, o que vem antes do <strong>":"</strong> é a resposta e o que vem depois é a pergunta. No modo <strong>Anki-like</strong>, o que vem antes do <strong>":"</strong> é a frente e o que vem depois é o verso. Se quiser digitar a resposta, selecione tradicional, se não, anki-like.
+                        <h4 class="font-bold text-sm text-blue-950 flex items-center gap-1.5 mb-1" data-i18n="doc_tags_guide_title">
+                            <span class="material-symbols-rounded text-base text-[#3b82f7] select-none">help_outline</span>
+                            <span>Como funciona cada tag e formatação:</span>
+                        </h4>
+                        <p class="text-xs text-blue-900/90 leading-relaxed" data-i18n="doc_tags_guide_intro">
+                            Cada linha do documento se transforma em um card. Por padrão, todos os cartões são <strong>abertos (open)</strong>, onde você digita a resposta. Para usar outros formatos, basta colocar a <strong>(tag)</strong> no começo da linha e formatar de acordo:
                         </p>
                     </div>
 
-                    <div class="border-t border-blue-200/70 pt-2.5 space-y-2">
-                        <div class="flex items-start gap-2 text-xs text-blue-900">
-                            <span class="material-symbols-rounded text-sm text-amber-500 shrink-0 mt-0.5 select-none">lightbulb</span>
-                            <div class="min-w-0 flex-1 leading-relaxed break-words" data-i18n-html="special_tags_desc">
-                                <strong class="text-blue-950">Tags especiais:</strong> Use <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(anki_like) Frente: Verso</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(open_double) Resp1;Resp2: Pergunta</code>, <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(fill) Frase com {resposta1} e {resposta2}</code> ou <code class="px-1.5 py-0.5 bg-blue-100/80 text-blue-950 rounded font-mono text-[11px] border border-blue-200/60 break-words">(multiple_choice) Resposta: Pergunta</code> para definir formatos específicos por linha.
+                    <!-- Topics per Tag -->
+                    <div class="grid grid-cols-1 gap-2.5 pt-1 text-xs">
+                        <!-- Open (Default) -->
+                        <div class="bg-white/90 border border-blue-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-[#3b82f7]" data-i18n="tag_badge_open">Padrão • Aberta (sem tag)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">Resposta : Pergunta</code>
                             </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_open">
+                                Você digita a resposta exata ao jogar. O que vem <strong>antes dos dois-pontos ":"</strong> é a resposta esperada e o que vem <strong>depois</strong> é a pergunta.
+                            </p>
                         </div>
 
-                        <div class="flex items-start gap-2 text-xs text-blue-900">
-                            <span class="material-symbols-rounded text-sm text-amber-500 shrink-0 mt-0.5 select-none">lightbulb</span>
-                            <div class="min-w-0 flex-1 leading-relaxed break-words">
-                                <strong class="text-blue-950" data-i18n="notes_and_dividers">Notas e Divisores:</strong> <span data-i18n="notes_and_dividers_desc">Linhas iniciadas com # viram divisores de seção no editor (não aparecem durante o jogo).</span>
+                        <!-- anki_like -->
+                        <div class="bg-white/90 border border-blue-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-100 text-indigo-700">(anki_like)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(anki_like) Frente : Verso</code>
                             </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_anki">
+                                Card estilo Anki: frente de pergunta e verso de resposta para apenas virar e autoavaliar seu desempenho (Errei / Bom / Fácil) sem precisar digitar.
+                            </p>
+                        </div>
+
+                        <!-- fill -->
+                        <div class="bg-white/90 border border-blue-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">(fill)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(fill) Frase com {lacuna1} e {lacuna2}</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_fill">
+                                Preenchimento de lacunas (Cloze). Envolva as palavras que deseja ocultar entre chaves <code>{...}</code> no corpo da frase.
+                            </p>
+                        </div>
+
+                        <!-- open_double -->
+                        <div class="bg-white/90 border border-blue-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-100 text-teal-800">(open_double)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(open_double) Resp1;Resp2 : Pergunta</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_double">
+                                Card com duas respostas abertas. Separe as duas respostas por ponto e vírgula <code>;</code> antes dos dois-pontos.
+                            </p>
+                        </div>
+
+                        <!-- multiple_choice -->
+                        <div class="bg-white/90 border border-blue-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-800">(multiple_choice)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(multiple_choice) Gabarito : Pergunta</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_mc">
+                                Múltipla escolha. Coloque a alternativa correta antes dos dois-pontos; as demais alternativas podem ser editadas ou geradas pelo assistente no editor.
+                            </p>
+                        </div>
+
+                        <!-- Divisor / Seção -->
+                        <div class="bg-white/90 border border-blue-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-700"># (Divisor)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]"># Título da Seção</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_divider">
+                                Linhas iniciadas com <code>#</code> criam divisores de seção no editor para organizar seus cartões (não viram cartas durante o jogo).
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Format Selection (Radio Cards) -->
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2" data-i18n="select_card_format">Selecione o Formato dos Cards</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <label class="cursor-pointer border-2 border-gray-200 rounded-2xl p-4 flex flex-col gap-1 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-gray-900 text-sm" data-i18n="card_type_write">Tradicional</span>
-                                <input type="radio" name="modal-1-2-type" value="traditional" class="text-blue-600 focus:ring-blue-500">
-                            </div>
-                            <span class="text-xs text-gray-500" data-i18n="format_traditional_desc">Você digita a resposta ao estudar no jogo.</span>
-                        </label>
-                        <label class="cursor-pointer border-2 border-gray-200 rounded-2xl p-4 flex flex-col gap-1 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/50">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-gray-900 text-sm" data-i18n="format_anki_title">Anki-like</span>
-                                <input type="radio" name="modal-1-2-type" value="anki" checked class="text-blue-600 focus:ring-blue-500">
-                            </div>
-                            <span class="text-xs text-gray-500" data-i18n="format_anki_desc">Apenas virar e avaliar dificuldade (Errei/Fácil).</span>
-                        </label>
+                <!-- 3. EMBAIXO: Simulador Dinâmico Editável + Preview ao Vivo -->
+                <div class="border border-gray-200 rounded-2xl p-5 bg-gray-50/70 space-y-4">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div>
+                            <h4 class="font-bold text-sm text-gray-900 flex items-center gap-1.5" data-i18n="sandbox_title">
+                                <span class="material-symbols-rounded text-base text-[#3b82f7] select-none">edit_note</span>
+                                <span>Simulador Interativo: Pratique antes de converter</span>
+                            </h4>
+                            <p class="text-xs text-gray-500 mt-0.5" data-i18n="sandbox_desc">
+                                Edite o texto abaixo para ver como cada linha se transforma ao vivo em um cartão com o formato correto:
+                            </p>
+                        </div>
+                        <button id="modal-1-2-reset-sandbox-btn" type="button" class="text-xs font-semibold text-[#3b82f7] hover:underline cursor-pointer select-none inline-flex items-center gap-1">
+                            <span class="material-symbols-rounded text-xs select-none">restart_alt</span>
+                            <span data-i18n="sandbox_reset">Restaurar Exemplo</span>
+                        </button>
                     </div>
-                </div>
 
-                <!-- File Upload -->
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2" data-i18n="file_types_txt_doc">Arquivo (.txt, .doc, .docx)</label>
-                    <div class="relative border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-blue-500 transition cursor-pointer bg-gray-50" id="modal-1-2-dropzone">
-                        <input type="file" id="modal-1-2-file" accept=".txt,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
-                        <div class="flex flex-col items-center justify-center">
-                            <img src="../assets/img/folder.svg" class="w-8 h-8 mb-2 text-gray-400" alt="Arquivo">
-                            <p class="font-medium text-sm text-gray-700" id="modal-1-2-file-name" data-i18n="drop_file_here">Clique ou arraste o arquivo aqui</p>
-                            <p class="text-xs text-gray-500 mt-1" data-i18n="supports_txt_doc">Suporta arquivos .txt, .doc ou .docx</p>
+                    <!-- Textarea Pré-feita e Editável -->
+                    <div class="relative">
+                        <textarea id="modal-1-2-sandbox-input" rows="7" class="w-full font-mono text-xs p-3.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition leading-relaxed text-gray-800 resize-y shadow-2xs" spellcheck="false" placeholder="Digite uma linha para cada card..."></textarea>
+                    </div>
+
+                    <!-- Cards Gerados ao Vivo (Live Preview) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
+                                    <span class="material-symbols-rounded text-sm text-emerald-600 select-none">visibility</span>
+                                    <span data-i18n="live_preview_label">Cards Gerados em Tempo Real</span>
+                                </span>
+                                <span id="modal-1-2-preview-count" class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold font-sans">0 cards</span>
+                            </div>
+                            <span class="text-[11px] text-gray-400 font-medium" data-i18n="live_preview_hint">Atualização em tempo real</span>
+                        </div>
+
+                        <div id="modal-1-2-preview-cards" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                            <!-- Cards renderizados dinamicamente -->
                         </div>
                     </div>
                 </div>
 
-                <p id="modal-1-2-error" class="text-xs text-red-500 font-medium"></p>
             </div>
 
-            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                <button id="cancel-modal-1-2-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition" data-i18n="cancel">Cancelar</button>
-                <button id="submit-modal-1-2-btn" class="px-6 py-2.5 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition" data-i18n="convert_and_open_editor">Converter e Abrir Editor</button>
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-3 shrink-0 flex-wrap">
+                <button id="modal-1-2-use-sandbox-btn" type="button" class="text-xs font-bold text-[#3b82f7] hover:text-blue-700 hover:bg-blue-50 px-3.5 py-2 rounded-xl transition cursor-pointer select-none flex items-center gap-1.5 border border-blue-200/80 bg-white shadow-2xs">
+                    <span class="material-symbols-rounded text-base select-none">play_arrow</span>
+                    <span data-i18n="use_sandbox_cards">Criar Baralho com o Texto do Simulador</span>
+                </button>
+                <div class="flex items-center gap-2 ml-auto">
+                    <button id="cancel-modal-1-2-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition cursor-pointer" data-i18n="cancel">Cancelar</button>
+                    <button id="submit-modal-1-2-btn" class="px-5 py-2.5 text-sm font-bold bg-[#3b82f7] hover:bg-blue-600 text-white rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+                        <span class="material-symbols-rounded text-base select-none">file_open</span>
+                        <span data-i18n="convert_file_btn">Converter Arquivo e Abrir</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -521,57 +613,136 @@
 
     <!-- MODAL 2.2: APRIMORAR DOCUMENTO (IA) -->
     <div id="modal-2-2" class="hidden fixed inset-0 modal-overlay bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+        <div class="bg-white rounded-3xl w-full max-w-2xl lg:max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] my-auto">
+            <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
                     <span class="w-6 h-6 rounded-lg bg-purple-600 text-white font-bold text-xs flex items-center justify-center">2.2</span>
                     <h3 class="font-bold text-lg text-gray-900" data-i18n="enhance_doc_with_ai">Aprimore um documento com IA</h3>
                 </div>
-                <button id="close-modal-2-2-btn" class="text-gray-500 hover:text-gray-700">
+                <button id="close-modal-2-2-btn" class="text-gray-500 hover:text-gray-700 p-1 rounded-lg hover:bg-gray-200 transition">
                     <img src="../assets/img/close.svg" class="w-6 h-6 opacity-70 hover:opacity-100 transition-opacity" alt="Fechar" data-i18n-alt="close">
                 </button>
             </div>
 
-            <div class="p-6 overflow-y-auto space-y-6">
-                <!-- Instructions on AI enhancements -->
-                <div class="bg-purple-50 border border-purple-200 p-4 rounded-2xl text-sm leading-relaxed text-purple-900 space-y-2">
-                    <p class="font-semibold" data-i18n="enhance_instructions_title">Como estruturar para aprimoramento:</p>
-                    <p class="text-xs" data-i18n-html="gemini_tip_default_line">• Linha padrão: <code>RESPOSTA: Pergunta</code></p>
-                    <p class="text-xs" data-i18n-html="gemini_tip_anki">• Anki-like: inicie com <code>(anki_like) Frente: Verso</code> (a parte antes de ":" é a frente/pergunta e depois é o verso/resposta).</p>
-                    <p class="text-xs" data-i18n-html="gemini_tip_double">• Resposta dupla: inicie com <code>(open_double) Resposta1;Resposta2: Pergunta</code> (o Gemini criará os rótulos adequados).</p>
-                    <p class="text-xs" data-i18n-html="gemini_tip_fill">• Preencher lacunas: inicie com <code>(fill) Frase com {resposta1} e {resposta2}</code> (respostas indicadas entre chaves "{}").</p>
-                    <p class="text-xs" data-i18n-html="gemini_tip_mc">• Múltipla escolha: inicie com <code>(multiple_choice) RespostaCorreta: Pergunta</code> (o Gemini criará distratores plausíveis).</p>
-                    <p class="text-xs" data-i18n-html="gemini_tip_notes">• Notas e divisores: inicie com <code># Título da Seção</code> (organizam o baralho no editor e são ignorados no jogo).</p>
-                </div>
-
-                <!-- Pro Feature Badge -->
-                <div id="modal-2-2-badge-container" class="p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
-                        <div>
-                            <span class="text-xs font-bold text-purple-900 block" data-i18n="flashcards_pro_plan">Recurso Flashcards Pro</span>
-                            <span class="text-[11px] text-purple-700" data-i18n="pro_feature_enhance_integrated">Aprimoramento de IA com Gemini integrado ao seu plano</span>
+            <!-- Scrollable Content -->
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
+                
+                <!-- 1. TOPO: Upload de Arquivo + Pro Badge -->
+                <div class="space-y-3">
+                    <!-- Pro Feature Badge -->
+                    <div id="modal-2-2-badge-container" class="p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
+                            <div>
+                                <span class="text-xs font-bold text-purple-900 block" data-i18n="flashcards_pro_plan">Recurso Flashcards Pro</span>
+                                <span class="text-[11px] text-purple-700" data-i18n="pro_feature_enhance_integrated">Aprimoramento de IA com Gemini integrado ao seu plano</span>
+                            </div>
                         </div>
+                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
+                            <span class="material-symbols-rounded text-xs select-none">check_circle</span> <span data-i18n="active_status">Ativo</span>
+                        </span>
                     </div>
-                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
-                        <span class="material-symbols-rounded text-xs">check_circle</span> <span data-i18n="active_status">Ativo</span>
-                    </span>
-                </div>
 
-                <!-- File Upload -->
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5" data-i18n="file_types_txt_doc">Documento (.txt, .doc, .docx)</label>
-                    <div class="relative border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-purple-500 transition cursor-pointer bg-gray-50" id="modal-2-2-dropzone">
-                        <input type="file" id="modal-2-2-file" accept=".txt,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
-                        <div class="flex flex-col items-center justify-center">
-                            <img src="../assets/img/ai.svg" class="w-8 h-8 mb-2 text-purple-500" alt="IA">
-                            <p class="font-medium text-sm text-gray-700" id="modal-2-2-file-name" data-i18n="drop_txt_word_here">Clique ou arraste o arquivo .txt ou Word</p>
-                            <p class="text-xs text-gray-500 mt-1" data-i18n="gemini_will_complete">O Gemini completará distratores e rótulos automaticamente</p>
+                    <!-- File Upload Dropzone -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2" data-i18n="file_types_txt_doc">Arquivo (.txt, .doc, .docx)</label>
+                        <div class="relative border-2 border-dashed border-gray-300 hover:border-purple-500 rounded-2xl p-5 text-center transition cursor-pointer bg-gray-50/70 hover:bg-purple-50/40 group" id="modal-2-2-dropzone">
+                            <input type="file" id="modal-2-2-file" accept=".txt,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-10 h-10 rounded-xl bg-purple-100/70 text-purple-600 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                                    <span class="material-symbols-rounded text-2xl select-none">upload_file</span>
+                                </div>
+                                <p class="font-semibold text-sm text-gray-800" id="modal-2-2-file-name" data-i18n="drop_txt_word_here">Clique ou arraste o arquivo .txt ou Word</p>
+                                <p class="text-xs text-purple-600 mt-0.5 font-medium" data-i18n="gemini_will_complete">O Gemini completará distratores e rótulos automaticamente</p>
+                            </div>
                         </div>
+                        <p id="modal-2-2-error" class="text-xs text-red-500 font-medium mt-1.5 empty:hidden"></p>
                     </div>
                 </div>
 
-                <p id="modal-2-2-error" class="text-xs text-red-500 font-medium"></p>
+                <!-- 2. MEIO: Explicação das Tags e Formatação -->
+                <div class="bg-purple-50/80 border border-purple-200/90 rounded-2xl p-5 space-y-3.5 text-purple-950">
+                    <div>
+                        <h4 class="font-bold text-sm text-purple-950 flex items-center gap-1.5 mb-1" data-i18n="doc_tags_guide_title">
+                            <span class="material-symbols-rounded text-base text-purple-600 select-none">help_outline</span>
+                            <span>Como funciona cada tag e formatação:</span>
+                        </h4>
+                        <p class="text-xs text-purple-900/90 leading-relaxed" data-i18n="doc_tags_guide_intro">
+                            Cada linha do documento se transforma em um card. Por padrão, todos os cartões são <strong>abertos (open)</strong>, onde você digita a resposta. Para usar outros formatos, basta colocar a <strong>(tag)</strong> no começo da linha e formatar de acordo:
+                        </p>
+                    </div>
+
+                    <!-- Topics per Tag -->
+                    <div class="grid grid-cols-1 gap-2.5 pt-1 text-xs">
+                        <!-- Open (Default) -->
+                        <div class="bg-white/90 border border-purple-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-[#3b82f7]" data-i18n="tag_badge_open">Padrão • Aberta (sem tag)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">Resposta : Pergunta</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_open">
+                                Você digita a resposta exata ao jogar. O que vem <strong>antes dos dois-pontos ":"</strong> é a resposta esperada e o que vem <strong>depois</strong> é a pergunta.
+                            </p>
+                        </div>
+
+                        <!-- anki_like -->
+                        <div class="bg-white/90 border border-purple-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-100 text-indigo-700">(anki_like)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(anki_like) Frente : Verso</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_anki">
+                                Card estilo Anki: frente de pergunta e verso de resposta para apenas virar e autoavaliar seu desempenho (Errei / Bom / Fácil) sem precisar digitar.
+                            </p>
+                        </div>
+
+                        <!-- fill -->
+                        <div class="bg-white/90 border border-purple-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">(fill)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(fill) Frase com {lacuna1} e {lacuna2}</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_fill">
+                                Preenchimento de lacunas (Cloze). Envolva as palavras que deseja ocultar entre chaves <code>{...}</code> no corpo da frase.
+                            </p>
+                        </div>
+
+                        <!-- open_double -->
+                        <div class="bg-white/90 border border-purple-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-100 text-teal-800">(open_double)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(open_double) Resp1;Resp2 : Pergunta</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_double">
+                                Card com duas respostas abertas. Separe as duas respostas por ponto e vírgula <code>;</code> antes dos dois-pontos.
+                            </p>
+                        </div>
+
+                        <!-- multiple_choice -->
+                        <div class="bg-white/90 border border-purple-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-800">(multiple_choice)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(multiple_choice) Gabarito : Pergunta</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_mc">
+                                Múltipla escolha. Coloque a alternativa correta antes dos dois-pontos; as demais alternativas podem ser editadas ou geradas pelo assistente no editor.
+                            </p>
+                        </div>
+
+                        <!-- Divisor / Seção -->
+                        <div class="bg-white/90 border border-purple-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-700"># (Divisor)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]"># Título da Seção</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_divider">
+                                Linhas iniciadas com <code>#</code> criam divisores de seção no editor para organizar seus cartões (não viram cartas durante o jogo).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
                 <p id="modal-2-2-loading-msg" class="text-xs text-purple-600 font-medium hidden flex items-center gap-2">
                     <svg class="animate-spin w-4 h-4 text-purple-600 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
@@ -581,9 +752,10 @@
                 </p>
             </div>
 
-            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-                <button id="cancel-modal-2-2-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition" data-i18n="cancel">Cancelar</button>
-                <button id="submit-modal-2-2-btn" class="px-6 py-2.5 text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg transition flex items-center gap-2">
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 shrink-0">
+                <button id="cancel-modal-2-2-btn" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition cursor-pointer" data-i18n="cancel">Cancelar</button>
+                <button id="submit-modal-2-2-btn" class="px-6 py-2.5 text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer">
                     <img src="../assets/img/ai.svg" class="w-5 h-5" alt="IA">
                     <span data-i18n="enhance_with_gemini">Aprimorar com IA</span>
                     <div id="modal-2-2-spinner" class="spinner hidden"></div>

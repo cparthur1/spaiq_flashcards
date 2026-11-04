@@ -51,3 +51,9 @@
    - Public landing and article pages include JSON-LD structured data (`TechArticle`, `FAQPage`, `BreadcrumbList`, `WebApplication`).
    - Canonical URLs and social metadata (Open Graph, Twitter card) must be kept accurate.
    - Maintain root `sitemap.xml` and `robots.txt` referencing `https://flashcards.camblu.org/sitemap.xml`.
+
+11. **Document Conversion & Live Sandbox Pattern**:
+   - Modal 1.2 in `pages/generate.html` converts user documents and text into structured flashcards using `convertDocumentToCards` in `js/generate.js`.
+   - Default mode is always `open` (`Resposta : Pergunta`).
+   - Tag convention: cards specify format by prefixing `(tag)` on the line (e.g., `(anki_like)`, `(fill)`, `(open_double)`, `(multiple_choice)`). Section dividers use `#`.
+   - The interactive sandbox allows immediate testing and editing with live real-time preview before committing or creating a deck.

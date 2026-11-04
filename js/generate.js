@@ -51,6 +51,11 @@ const submitModal12Btn = document.getElementById('submit-modal-1-2-btn');
 const modal12File = document.getElementById('modal-1-2-file');
 const modal12FileName = document.getElementById('modal-1-2-file-name');
 const modal12Error = document.getElementById('modal-1-2-error');
+const modal12SandboxInput = document.getElementById('modal-1-2-sandbox-input');
+const modal12PreviewCards = document.getElementById('modal-1-2-preview-cards');
+const modal12PreviewCount = document.getElementById('modal-1-2-preview-count');
+const modal12ResetSandboxBtn = document.getElementById('modal-1-2-reset-sandbox-btn');
+const modal12UseSandboxBtn = document.getElementById('modal-1-2-use-sandbox-btn');
 
 // Modal 2.1 Elements (AI Materials)
 const modal21 = document.getElementById('modal-2-1');
@@ -1161,7 +1166,7 @@ async function extractTextFromPPTX(file) {
 }
 
 // --- DOCUMENT PARSING (TRADITIONAL & ANKI) ---
-function convertDocumentToCards(text, mode = 'anki') {
+function convertDocumentToCards(text, mode = 'open') {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const cards = [];
 
@@ -1183,6 +1188,7 @@ function convertDocumentToCards(text, mode = 'anki') {
         const fillMatch = line.match(/^[\(\[]\s*(?:fill|preencher|lacunas?|cloze)\s*[\)\]]:?\s*(.*)$/i);
         const mcMatch = line.match(/^[\(\[]\s*(?:multiple[_-]?choice|multipla[_-]?escolha|mc)\s*[\)\]]:?\s*(.*)$/i);
         const ankiMatch = line.match(/^[\(\[]\s*(?:anki[_-]?like|anki)\s*[\)\]]:?\s*(.*)$/i);
+        const openMatch = line.match(/^[\(\[]\s*(?:open|tradicional|aberta?)\s*[\)\]]:?\s*(.*)$/i);
 
         if (fillMatch) {
             const content = fillMatch[1].trim();
@@ -1280,6 +1286,20 @@ function convertDocumentToCards(text, mode = 'anki') {
                         type: 'anki',
                         description: front,
                         answer: back
+                    });
+                }
+            }
+        } else if (openMatch) {
+            const content = openMatch[1].trim();
+            const colonIndex = content.indexOf(':');
+            if (colonIndex !== -1) {
+                const answer = content.substring(0, colonIndex).trim();
+                const description = content.substring(colonIndex + 1).trim();
+                if (answer && description) {
+                    cards.push({
+                        type: "open",
+                        description: description,
+                        answer: answer
                     });
                 }
             }
@@ -1850,11 +1870,149 @@ cardMode11.addEventListener('click', () => {
     openEditorView('creator');
 });
 
+// Modal 1.2 Interactive Sandbox Constants & Functions
+const MODAL_1_2_DEFAULT_TEXT_PT = `# Módulo 1: Fundamentos de Biologia
+Mitocôndria : Qual organela celular é responsável pela síntese aeróbica de ATP?
+(anki_like) Efeito Bohr : Redução da afinidade da hemoglobina por O2 em ambiente ácido
+(fill) Os osmorreceptores hipotalâmicos regulam a secreção de {ADH} para controlar a retenção de {água}.
+(open_double) Cefaleia em salvas;Oxigênio 100% : Homem jovem com dor periorbitária em facada e lacrimejamento. Diagnóstico e conduta:
+(multiple_choice) Brasil : Qual é o maior país da América do Sul em área territorial?`;
+
+const MODAL_1_2_DEFAULT_TEXT_EN = `# Module 1: Biology Fundamentals
+Mitochondria : Which cellular organelle is responsible for aerobic ATP synthesis?
+(anki_like) Bohr Effect : Shift in hemoglobin oxygen affinity under acidosis
+(fill) Hypothalamic osmoreceptors regulate {ADH} secretion to govern {water} retention.
+(open_double) Cluster headache;100% Oxygen : Young patient with severe unilateral periorbital pain. Diagnosis and acute therapy:
+(multiple_choice) Brazil : What is the largest country in South America by land area?`;
+
+function getModal12DefaultText() {
+    return getCurrentLanguage() === 'en-US' ? MODAL_1_2_DEFAULT_TEXT_EN : MODAL_1_2_DEFAULT_TEXT_PT;
+}
+
+function renderModal12LivePreview(cards) {
+    if (!modal12PreviewCards) return;
+    modal12PreviewCards.innerHTML = '';
+    
+    if (modal12PreviewCount) {
+        const playableCount = cards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note').length;
+        const totalCount = cards.length;
+        modal12PreviewCount.textContent = `${playableCount} ${playableCount === 1 ? 'card' : 'cards'}${totalCount > playableCount ? ` (+${totalCount - playableCount} div)` : ''}`;
+    }
+
+    if (!cards || cards.length === 0) {
+        modal12PreviewCards.innerHTML = `
+            <div class="p-6 text-center text-xs text-gray-400 bg-white border border-dashed border-gray-200 rounded-xl font-sans">
+                ${t('sandbox_empty_state')}
+            </div>
+        `;
+        return;
+    }
+
+    cards.forEach((c) => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'p-3 bg-white border rounded-xl shadow-2xs space-y-1.5 transition';
+
+        if (c.type === 'divisor' || c.type === 'divider') {
+            cardEl.className = 'p-2.5 bg-gray-100/90 border border-gray-200 rounded-xl flex items-center gap-2';
+            cardEl.innerHTML = `
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-200 text-gray-700 font-sans"># Divisor</span>
+                <span class="font-bold text-xs text-gray-800 font-sans">${escapeHtml(c.text || c.description || '')}</span>
+            `;
+        } else if (c.type === 'anki') {
+            cardEl.className += ' border-indigo-100';
+            cardEl.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-100 text-indigo-700 font-sans">(anki_like) Anki-like</span>
+                    <span class="text-[11px] text-gray-400 font-sans">Virar &amp; avaliar</span>
+                </div>
+                <div class="text-xs text-gray-900 leading-relaxed font-sans">
+                    <span class="font-bold text-gray-500">Frente:</span> ${escapeHtml(c.description || '')}
+                </div>
+                <div class="text-xs text-indigo-900 bg-indigo-50/70 border border-indigo-100 p-2 rounded-lg font-sans">
+                    <span class="font-bold text-indigo-950">Verso:</span> ${escapeHtml(c.answer || '')}
+                </div>
+            `;
+        } else if (c.type === 'fill') {
+            cardEl.className += ' border-emerald-100';
+            const answersBadges = (c.answers || []).map(a => `<span class="px-2 py-0.5 bg-white border border-emerald-200 rounded font-bold text-[11px] text-emerald-900">${escapeHtml(a)}</span>`).join(' ');
+            cardEl.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 font-sans">(fill) Preenchimento</span>
+                    <span class="text-[11px] text-gray-400 font-sans">${(c.answers || []).length} lacuna(s)</span>
+                </div>
+                <div class="text-xs text-gray-900 leading-relaxed font-sans">
+                    <span class="font-bold text-gray-500">Frase:</span> ${escapeHtml(c.description || '')}
+                </div>
+                <div class="text-xs text-emerald-900 bg-emerald-50/70 border border-emerald-100 p-2 rounded-lg font-sans flex items-center gap-1.5 flex-wrap">
+                    <span class="font-bold text-emerald-950">Lacunas:</span> ${answersBadges || escapeHtml(c.answer || '')}
+                </div>
+            `;
+        } else if (c.type === 'open_double') {
+            cardEl.className += ' border-teal-100';
+            cardEl.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-100 text-teal-800 font-sans">(open_double) Resposta Dupla</span>
+                    <span class="text-[11px] text-gray-400 font-sans">2 respostas</span>
+                </div>
+                <div class="text-xs text-gray-900 leading-relaxed font-sans">
+                    <span class="font-bold text-gray-500">Pergunta:</span> ${escapeHtml(c.description || '')}
+                </div>
+                <div class="text-xs text-teal-900 bg-teal-50/70 border border-teal-100 p-2 rounded-lg font-sans grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div><span class="font-bold text-teal-950">Resp 1:</span> ${escapeHtml(c.answer || '')}</div>
+                    <div><span class="font-bold text-teal-950">Resp 2:</span> ${escapeHtml(c.answer2 || '')}</div>
+                </div>
+            `;
+        } else if (c.type === 'multiple_choice') {
+            cardEl.className += ' border-purple-100';
+            cardEl.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-800 font-sans">(multiple_choice) Múltipla Escolha</span>
+                    <span class="text-[11px] text-gray-400 font-sans">Gabarito</span>
+                </div>
+                <div class="text-xs text-gray-900 leading-relaxed font-sans">
+                    <span class="font-bold text-gray-500">Pergunta:</span> ${escapeHtml(c.description || '')}
+                </div>
+                <div class="text-xs text-purple-900 bg-purple-50/70 border border-purple-100 p-2 rounded-lg font-sans">
+                    <span class="font-bold text-purple-950">Gabarito correto:</span> ${escapeHtml(c.answer || '')}
+                </div>
+            `;
+        } else {
+            // Default: open
+            cardEl.className += ' border-blue-100';
+            cardEl.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-[#3b82f7] font-sans">Aberta (Padrão)</span>
+                    <span class="text-[11px] text-gray-400 font-sans">Você digita</span>
+                </div>
+                <div class="text-xs text-gray-900 leading-relaxed font-sans">
+                    <span class="font-bold text-gray-500">Pergunta:</span> ${escapeHtml(c.description || '')}
+                </div>
+                <div class="text-xs text-emerald-800 bg-emerald-50/70 border border-emerald-100 p-2 rounded-lg font-sans">
+                    <span class="font-bold text-emerald-900">Resposta:</span> ${escapeHtml(c.answer || '')}
+                </div>
+            `;
+        }
+
+        modal12PreviewCards.appendChild(cardEl);
+    });
+}
+
+function updateModal12SandboxLivePreview() {
+    if (!modal12SandboxInput || !modal12PreviewCards) return;
+    const text = modal12SandboxInput.value || '';
+    const cards = convertDocumentToCards(text, 'open');
+    renderModal12LivePreview(cards);
+}
+
 // 1.2 Converta um doc — Importe um txt ou word já feito
 cardMode12.addEventListener('click', () => {
     modal12Error.textContent = '';
     modal12File.value = '';
-    modal12FileName.textContent = t('click_or_drag_file_here');
+    modal12FileName.textContent = t('drop_file_here');
+    if (modal12SandboxInput && !modal12SandboxInput.value.trim()) {
+        modal12SandboxInput.value = getModal12DefaultText();
+    }
+    updateModal12SandboxLivePreview();
     modal12.classList.remove('hidden');
 });
 
@@ -1867,6 +2025,33 @@ modal12File.addEventListener('change', () => {
     }
 });
 
+modal12SandboxInput?.addEventListener('input', () => {
+    updateModal12SandboxLivePreview();
+});
+
+modal12ResetSandboxBtn?.addEventListener('click', () => {
+    if (modal12SandboxInput) {
+        modal12SandboxInput.value = getModal12DefaultText();
+        updateModal12SandboxLivePreview();
+    }
+});
+
+modal12UseSandboxBtn?.addEventListener('click', () => {
+    modal12Error.textContent = '';
+    const text = modal12SandboxInput?.value || '';
+    const cards = convertDocumentToCards(text, 'open');
+    const playableCards = cards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
+    if (playableCards.length === 0) {
+        modal12Error.textContent = t('no_valid_cards_colon_error');
+        return;
+    }
+
+    deckCards = cards;
+    deckTitleDisplay.value = t('sandbox_deck_title');
+    modal12.classList.add('hidden');
+    openEditorView('creator');
+});
+
 submitModal12Btn.addEventListener('click', async () => {
     modal12Error.textContent = '';
     if (!modal12File.files || modal12File.files.length === 0) {
@@ -1875,7 +2060,7 @@ submitModal12Btn.addEventListener('click', async () => {
     }
 
     const file = modal12File.files[0];
-    const selectedMode = document.querySelector('input[name="modal-1-2-type"]:checked')?.value || 'anki';
+    const selectedMode = 'open';
 
     try {
         const text = await extractTextFromFile(file);

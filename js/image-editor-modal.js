@@ -99,7 +99,7 @@ export function buildArrowsSvgContent(arrows, naturalWidth, naturalHeight) {
         const parts = calculateArrowSvgParts(arrow, naturalWidth, naturalHeight);
         if (!parts) return '';
 
-        const filterId = `arrow-shadow-${idx}`;
+        const filterId = `arrow-shadow-${Math.random().toString(36).slice(2, 8)}-${idx}`;
         return `
             <g class="arrow-group" data-arrow-index="${idx}">
                 <defs>
@@ -170,56 +170,80 @@ export function renderAnnotatedImage({
     container.classList.remove('hidden');
     if (placeholderElem) placeholderElem.classList.remove('hidden');
 
-    // Preload image to get natural dimensions
+    const hasCrop = crop && typeof crop === 'object' &&
+        (crop.width > 0 && crop.height > 0 && (crop.x > 0.5 || crop.y > 0.5 || crop.width < 99.5 || crop.height < 99.5));
+    const hasArrows = Array.isArray(arrows) && arrows.length > 0;
+    const isAnnotated = Boolean(hasCrop || hasArrows);
+
+    // Clean any existing dynamic wrapper from previous renders
+    const oldWrap = container.querySelector('.annotated-image-wrapper');
+    if (oldWrap) oldWrap.remove();
+
+    // Fast-path: plain unannotated image with a dedicated existing <img> element
+    if (!isAnnotated && imgElem) {
+        imgElem.src = safeUrl;
+        imgElem.alt = alt;
+        imgElem.classList.remove('hidden', 'opacity-0');
+        imgElem.classList.add('opacity-100');
+        if (zoomable) {
+            imgElem.classList.add('cursor-pointer', 'card-img-zoomable');
+        }
+        if (onClick) {
+            imgElem.onclick = onClick;
+        }
+        if (placeholderElem) {
+            if (imgElem.complete && imgElem.naturalWidth > 0) {
+                placeholderElem.classList.add('hidden');
+            } else {
+                imgElem.onload = () => {
+                    if (placeholderElem) placeholderElem.classList.add('hidden');
+                };
+                imgElem.onerror = () => {
+                    if (placeholderElem) placeholderElem.classList.add('hidden');
+                    imgElem.classList.add('hidden');
+                    container.classList.add('hidden');
+                };
+            }
+        }
+        return;
+    }
+
+    // Preload image to get natural dimensions for cropping / SVG positioning
     const preloader = new Image();
-    preloader.src = safeUrl;
+    let handled = false;
 
     const onImageReady = () => {
+        if (handled) return;
+        handled = true;
         if (placeholderElem) placeholderElem.classList.add('hidden');
 
         const natW = preloader.naturalWidth || 800;
         const natH = preloader.naturalHeight || 600;
 
-        const hasCrop = crop && typeof crop === 'object' &&
-            (crop.width > 0 && crop.height > 0 && (crop.x > 0.5 || crop.y > 0.5 || crop.width < 99.5 || crop.height < 99.5));
-        const hasArrows = Array.isArray(arrows) && arrows.length > 0;
-
-        // Clean any existing dynamic wrapper
+        // Clean any existing wrapper
         const existingWrap = container.querySelector('.annotated-image-wrapper');
         if (existingWrap) existingWrap.remove();
 
-        if (!hasCrop && !hasArrows) {
-            // Standard plain image rendering
-            if (imgElem) {
-                imgElem.src = safeUrl;
-                imgElem.alt = alt;
-                imgElem.className = `w-auto ${maxHClass} rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] object-contain transition-opacity duration-300 opacity-0 select-none`;
-                if (zoomable) {
-                    imgElem.classList.add('cursor-pointer', 'transition-transform', 'hover:scale-[1.01]', 'card-img-zoomable');
-                }
-                imgElem.classList.remove('hidden');
-                requestAnimationFrame(() => {
-                    imgElem.classList.remove('opacity-0');
-                    imgElem.classList.add('opacity-100');
-                });
-                if (onClick) {
-                    imgElem.onclick = onClick;
-                }
-            } else {
-                const img = document.createElement('img');
-                img.src = safeUrl;
-                img.alt = alt;
-                img.className = `w-auto ${maxHClass} rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] object-contain select-none`;
-                if (zoomable) {
-                    img.classList.add('cursor-pointer', 'transition-transform', 'hover:scale-[1.01]');
-                }
-                if (onClick) img.onclick = onClick;
+        if (!isAnnotated) {
+            // Unannotated without imgElem: ensure plain img element is created
+            let img = container.querySelector('img:not(.annotated-image-wrapper img)');
+            if (!img) {
+                img = document.createElement('img');
+                img.className = `w-auto ${maxHClass} rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant,#e2e8f0)] object-contain select-none`;
                 container.appendChild(img);
             }
+            img.src = safeUrl;
+            img.alt = alt;
+            img.classList.remove('hidden', 'opacity-0');
+            img.classList.add('opacity-100');
+            if (zoomable) {
+                img.classList.add('cursor-pointer', 'transition-transform', 'hover:scale-[1.01]');
+            }
+            if (onClick) img.onclick = onClick;
             return;
         }
 
-        // Hide standalone imgElem if we are creating an annotated wrapper
+        // Hide standalone imgElem if we are rendering an annotated wrapper
         if (imgElem) {
             imgElem.classList.add('hidden');
             imgElem.src = '';
@@ -232,19 +256,25 @@ export function renderAnnotatedImage({
         const cropPixW = Math.max(1, (effectiveCrop.width / 100) * natW);
         const cropPixH = Math.max(1, (effectiveCrop.height / 100) * natH);
 
-        const cropAspect = cropPixW / cropPixH;
-
-        // Create container wrapper
+        // Create container wrapper (inline-block with max-height & max-width constraints)
         const wrapper = document.createElement('div');
-        wrapper.className = `annotated-image-wrapper relative overflow-hidden rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low,#f1f5f9)] select-none transition-opacity duration-300 opacity-0 inline-flex items-center justify-center ${maxHClass}`;
-        wrapper.style.aspectRatio = `${cropAspect}`;
-        wrapper.style.maxWidth = '100%';
+        wrapper.className = `annotated-image-wrapper relative overflow-hidden rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant,#e2e8f0)] bg-[var(--md-sys-color-surface-container-low,#f1f5f9)] select-none inline-block max-w-full ${maxHClass}`;
 
         if (zoomable) {
             wrapper.classList.add('cursor-pointer', 'transition-transform', 'hover:scale-[1.01]');
         }
 
-        // Inner image offset & scaled to display only cropped frame
+        // 1. In-flow invisible spacer SVG gives the wrapper its exact cropped aspect ratio and responsive scaling
+        const spacer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        spacer.setAttribute('viewBox', `0 0 ${cropPixW} ${cropPixH}`);
+        spacer.setAttribute('width', cropPixW);
+        spacer.setAttribute('height', cropPixH);
+        spacer.setAttribute('class', `block w-auto h-auto max-w-full ${maxHClass}`);
+        spacer.style.maxHeight = 'inherit';
+        spacer.style.visibility = 'hidden';
+        spacer.style.pointerEvents = 'none';
+
+        // 2. Inner image offset & scaled to display only cropped frame
         const innerImg = document.createElement('img');
         innerImg.src = safeUrl;
         innerImg.alt = alt;
@@ -254,13 +284,14 @@ export function renderAnnotatedImage({
         innerImg.style.left = `${-(effectiveCrop.x / effectiveCrop.width) * 100}%`;
         innerImg.style.top = `${-(effectiveCrop.y / effectiveCrop.height) * 100}%`;
 
-        // SVG overlay for vector arrows
+        // 3. SVG overlay for vector arrows
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('class', 'absolute inset-0 w-full h-full pointer-events-none select-none');
         svg.setAttribute('viewBox', `${cropPixX} ${cropPixY} ${cropPixW} ${cropPixH}`);
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.innerHTML = buildArrowsSvgContent(arrows, natW, natH);
 
+        wrapper.appendChild(spacer);
         wrapper.appendChild(innerImg);
         wrapper.appendChild(svg);
 
@@ -269,29 +300,24 @@ export function renderAnnotatedImage({
         }
 
         container.appendChild(wrapper);
-
-        requestAnimationFrame(() => {
-            wrapper.classList.remove('opacity-0');
-            wrapper.classList.add('opacity-100');
-        });
     };
 
+    const onImageError = () => {
+        if (handled) return;
+        handled = true;
+        if (placeholderElem) placeholderElem.classList.add('hidden');
+        if (imgElem) {
+            imgElem.classList.add('hidden');
+            imgElem.src = '';
+        }
+        container.classList.add('hidden');
+    };
+
+    preloader.onload = onImageReady;
+    preloader.onerror = onImageError;
+    preloader.src = safeUrl;
     if (preloader.complete && preloader.naturalWidth > 0) {
         onImageReady();
-    } else if (typeof preloader.decode === 'function') {
-        preloader.decode().then(onImageReady).catch(() => {
-            preloader.onload = onImageReady;
-            preloader.onerror = () => {
-                if (placeholderElem) placeholderElem.classList.add('hidden');
-                container.classList.add('hidden');
-            };
-        });
-    } else {
-        preloader.onload = onImageReady;
-        preloader.onerror = () => {
-            if (placeholderElem) placeholderElem.classList.add('hidden');
-            container.classList.add('hidden');
-        };
     }
 }
 
@@ -468,16 +494,16 @@ function renderEditorSvg() {
 
     // Base markup: 4 dim rectangles outside crop region (strictly positive dimensions to prevent SVG negative rect errors)
     let markup = `
-        <g class="crop-backdrop">
-            <!-- Top dim -->
-            ${topH > 0.05 ? `<rect x="0" y="0" width="${natW}" height="${topH}" fill="rgba(0, 0, 0, 0.52)" />` : ''}
-            <!-- Bottom dim -->
-            ${bottomH > 0.05 ? `<rect x="0" y="${bottomY}" width="${natW}" height="${bottomH}" fill="rgba(0, 0, 0, 0.52)" />` : ''}
-            <!-- Left dim -->
-            ${leftW > 0.05 ? `<rect x="0" y="${cropPixY}" width="${leftW}" height="${cropPixH}" fill="rgba(0, 0, 0, 0.52)" />` : ''}
-            <!-- Right dim -->
-            ${rightW > 0.05 ? `<rect x="${rightX}" y="${cropPixY}" width="${rightW}" height="${cropPixH}" fill="rgba(0, 0, 0, 0.52)" />` : ''}
-        </g>
+            <g class="crop-backdrop">
+                <!-- Top dim -->
+                ${topH > 0.05 ? `<rect x="0" y="0" width="${natW}" height="${topH}" fill="rgba(0, 0, 0, 0.52)" />` : ''}
+                <!-- Bottom dim -->
+                ${bottomH > 0.05 ? `<rect x="0" y="${bottomY}" width="${natW}" height="${bottomH}" fill="rgba(0, 0, 0, 0.52)" />` : ''}
+                <!-- Left dim -->
+                ${leftW > 0.05 ? `<rect x="0" y="${cropPixY}" width="${leftW}" height="${cropPixH}" fill="rgba(0, 0, 0, 0.52)" />` : ''}
+                <!-- Right dim -->
+                ${rightW > 0.05 ? `<rect x="${rightX}" y="${cropPixY}" width="${rightW}" height="${cropPixH}" fill="rgba(0, 0, 0, 0.52)" />` : ''}
+            </g>
     `;
 
     // Render crop boundary and handles when Crop tool is active
@@ -897,6 +923,9 @@ export function openImageEditorModal({
     };
 
     sourceImg.src = safeUrl;
+    if (sourceImg.complete && sourceImg.naturalWidth > 0) {
+        sourceImg.onload();
+    }
 }
 
 /**
