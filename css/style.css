@@ -3329,6 +3329,27 @@ textarea:-webkit-autofill:focus {
     transition: background-color 5000s ease-in-out 0s;
 }
 
+/* Strip native browser search appearance & decoration buttons on game answer inputs */
+input[type="search"].game-answer-input,
+input[type="search"].fill-blank-input {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+input[type="search"].game-answer-input::-webkit-search-decoration,
+input[type="search"].game-answer-input::-webkit-search-cancel-button,
+input[type="search"].game-answer-input::-webkit-search-results-button,
+input[type="search"].game-answer-input::-webkit-search-results-decoration,
+input[type="search"].fill-blank-input::-webkit-search-decoration,
+input[type="search"].fill-blank-input::-webkit-search-cancel-button,
+input[type="search"].fill-blank-input::-webkit-search-results-button,
+input[type="search"].fill-blank-input::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+}
+
+
 
 
 

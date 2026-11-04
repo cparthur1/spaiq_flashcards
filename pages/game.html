@@ -73,7 +73,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="../css/style.css?v=6.8">
+    <link rel="stylesheet" href="../css/style.css?v=6.9">
     <script src="../assets/vendor/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
@@ -544,33 +544,32 @@
             </div>
         </div>
 
-        <!-- Flashcard Answer Form: isolated from password manager & browser autofill suggestions -->
-        <form id="flashcard-answer-form" autocomplete="off" onsubmit="return false;" class="m-0 p-0">
+        <!-- Flashcard Answer Area: non-form container completely decoupled from browser autofill & password managers -->
+        <div id="flashcard-answer-form" class="m-0 p-0" role="region" aria-label="Área de Resposta" data-i18n-aria-label="answer_area_aria">
             <div id="open-answer-area" class="relative z-10 hidden mt-2.5 sm:mt-6">
                 <div class="relative">
-                    <input type="text" id="answer-input"
-                        class="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
+                    <input type="search" id="answer-input" name="search"
+                        class="game-answer-input w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
                         placeholder="Digite sua resposta aqui..." data-i18n-placeholder="type_answer_placeholder" autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+                        spellcheck="false" enterkeyhint="done" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
                 </div>
             </div>
 
             <div id="open-double-answer-area" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 relative z-10 hidden mt-2.5 sm:mt-6">
                 <div class="relative">
-                    <input type="text" id="answer-input-1"
-                        class="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
+                    <input type="search" id="answer-input-1" name="search"
+                        class="game-answer-input w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
                         placeholder="Resposta 1..." autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_1_placeholder">
+                        spellcheck="false" enterkeyhint="next" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_1_placeholder">
                 </div>
                 <div class="relative">
-                    <input type="text" id="answer-input-2"
-                        class="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
+                    <input type="search" id="answer-input-2" name="search"
+                        class="game-answer-input w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-lg bg-[var(--md-sys-color-surface-container-lowest)] border-2 border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition shadow-inner text-[var(--md-sys-color-on-surface)]"
                         placeholder="Resposta 2..." autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_2_placeholder">
+                        spellcheck="false" enterkeyhint="done" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-i18n-placeholder="answer_2_placeholder">
                 </div>
             </div>
-            <button type="submit" class="hidden" tabindex="-1" aria-hidden="true"></button>
-        </form>
+        </div>
 
         <!-- Dynamic Multiple Choice Area (2 to 6 options) -->
         <div id="mc-answer-area" class="relative z-10 hidden">
@@ -670,22 +669,22 @@
                 </div>
                 <div id="edit-answer-1-group">
                     <label id="edit-answer-1-label" class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="main_answer_concept">Resposta Principal</label>
-                    <input type="text" id="edit-answer-input"
+                    <input type="text" id="edit-answer-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-sm text-[var(--md-sys-color-on-surface)]">
                 </div>
                 <div id="edit-answer-2-group" class="hidden">
                     <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="edit_answer2_label">Resposta 2</label>
-                    <input type="text" id="edit-answer-2-input"
+                    <input type="text" id="edit-answer-2-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-sm text-[var(--md-sys-color-on-surface)]">
                 </div>
                 <div id="edit-anki-answer-group" class="hidden">
                     <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="detailed_answer_label">Resposta Detalhada</label>
-                    <textarea id="edit-anki-answer-input" rows="5"
+                    <textarea id="edit-anki-answer-input" rows="5" spellcheck="false"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none resize-y text-sm text-[var(--md-sys-color-on-surface)]" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="anki_answer_placeholder"></textarea>
                 </div>
                 <div id="edit-fill-answer-group" class="hidden space-y-1">
                     <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="fill_answers_label">Respostas das Lacunas (separadas por ponto e vírgula ";")</label>
-                    <input type="text" id="edit-fill-answer-input"
+                    <input type="text" id="edit-fill-answer-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-sm text-[var(--md-sys-color-on-surface)]"
                         placeholder="Ex: 30; 3; 300" data-i18n-placeholder="fill_answer_placeholder">
                     <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="fill_hint_text">Cada resposta preenche um "_" na ordem em que aparecem no texto. Sinônimos podem ser separados por "/".</p>

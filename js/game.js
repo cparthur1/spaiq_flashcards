@@ -668,13 +668,13 @@ function renderFillBlanksQuestion(text) {
     const totalSpots = spotIndex;
     for (let i = 0; i < totalSpots; i++) {
         const enterHint = i < totalSpots - 1 ? 'next' : 'done';
-        const inputHtml = `<input type="text" class="fill-blank-input" data-blank-index="${i}" enterkeyhint="${enterHint}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">`;
+        const inputHtml = `<input type="search" name="search" class="fill-blank-input game-answer-input" data-blank-index="${i}" enterkeyhint="${enterHint}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">`;
         renderedHtml = renderedHtml.split(`%%FILL_SPOT_${i}%%`).join(inputHtml);
     }
 
     return sanitizeHtml(renderedHtml, {
         ADD_TAGS: ['input'],
-        ADD_ATTR: ['type', 'data-blank-index', 'enterkeyhint', 'autocomplete', 'autocorrect', 'autocapitalize', 'spellcheck', 'aria-autocomplete', 'data-form-type', 'data-lpignore', 'data-1p-ignore', 'data-bwignore']
+        ADD_ATTR: ['type', 'name', 'class', 'data-blank-index', 'enterkeyhint', 'autocomplete', 'autocorrect', 'autocapitalize', 'spellcheck', 'aria-autocomplete', 'data-form-type', 'data-lpignore', 'data-1p-ignore', 'data-bwignore']
     });
 }
 
@@ -688,6 +688,16 @@ function initFillBlankInputs() {
             input.style.width = Math.max(64, Math.min(240, (len + 2) * 11)) + 'px';
         };
         input.addEventListener('input', updateWidth);
+
+        input.addEventListener('focus', () => {
+            document.body.classList.add('keyboard-open');
+            setTimeout(keepCardInFocus, 100);
+            setTimeout(keepCardInFocus, 300);
+        });
+
+        input.addEventListener('blur', () => {
+            document.body.classList.remove('keyboard-open');
+        });
 
         input.addEventListener('keydown', (e) => {
             if (e.isComposing) return;
@@ -5163,31 +5173,38 @@ submitBtn.addEventListener('click', () => {
     handleOpenSubmit();
 });
 
-if (flashcardAnswerForm) {
-    flashcardAnswerForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        console.log("[Game] Form submetido via Enter.");
-        handleOpenSubmit();
-    });
-}
-[answerInput, answerInput1, answerInput2].forEach(inp => {
-    inp?.addEventListener('keyup', (e) => {
+if (answerInput) {
+    answerInput.addEventListener('keydown', (e) => {
+        if (e.isComposing) return;
         if (e.key === 'Enter') {
-            if (flashcardAnswerForm && flashcardAnswerForm.contains(inp)) {
-                return; // Já tratado pelo submit do form
-            }
-            console.log("[Game] Enter detectado no input:", inp.id);
+            e.preventDefault();
+            console.log("[Game] Enter detectado no input:", answerInput.id);
             handleOpenSubmit();
         }
     });
-});
+}
 
 if (answerInput1 && answerInput2) {
     answerInput1.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && answerInput1.value.trim() && !answerInput2.value.trim()) {
+        if (e.isComposing) return;
+        if (e.key === 'Enter') {
             e.preventDefault();
-            console.log("[Game] Enter em answerInput1 focando answerInput2.");
-            answerInput2.focus();
+            if (answerInput1.value.trim() && !answerInput2.value.trim()) {
+                console.log("[Game] Enter em answerInput1 focando answerInput2.");
+                answerInput2.focus();
+            } else {
+                console.log("[Game] Enter em answerInput1 submetendo resposta dupla.");
+                handleOpenSubmit();
+            }
+        }
+    });
+
+    answerInput2.addEventListener('keydown', (e) => {
+        if (e.isComposing) return;
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            console.log("[Game] Enter detectado no input:", answerInput2.id);
+            handleOpenSubmit();
         }
     });
 }
@@ -6086,7 +6103,7 @@ function initMobileFocusHelpers() {
 
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
-            if (document.activeElement && inputs.includes(document.activeElement)) {
+            if (document.activeElement && (inputs.includes(document.activeElement) || document.activeElement.classList?.contains('fill-blank-input'))) {
                 setTimeout(keepCardInFocus, 50);
             }
         });

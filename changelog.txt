@@ -1,3 +1,24 @@
+CHANGELOG: MOBILE CHROME AUTOFILL BAR SUPPRESSION IN GAME ANSWER INPUTS (v15.24)
+Date: 2026-11-04
+
+OVERVIEW:
+1. Complete Decoupling from Form Heuristics & Chromium Autofill Manager:
+   - Replaced `<form id="flashcard-answer-form">` and hidden `<button type="submit">` in `pages/game.html` with a semantic, non-form container (`<div id="flashcard-answer-form" role="region">`). This prevents Chromium's `HTMLFormElement` / `FormAutofillManager` from registering a submittable form and notifying the Android Autofill framework.
+2. Search Query Field Semantics (`type="search"`):
+   - Converted `#answer-input`, `#answer-input-1`, `#answer-input-2`, and Cloze inputs (`.fill-blank-input`) to `type="search"` with `name="search"`.
+   - In Chromium and Android (`AutofillProviderAndroid`), search inputs are explicitly categorized as query fields (`IsSearchInput() == true`) and excluded from credential, password, address, and credit-card autofill heuristics.
+   - Combined with `autocomplete="off"`, `autocorrect="off"`, `autocapitalize="off"`, `spellcheck="false"`, `aria-autocomplete="none"`, and third-party password manager suppression attributes (`data-form-type="other"`, `data-lpignore="true"`, `data-1p-ignore="true"`, `data-bwignore="true"`).
+3. Soft Keyboard Hints & Native Appearance Reset:
+   - Configured `enterkeyhint="done"` on `#answer-input` / `#answer-input-2` and `enterkeyhint="next"` on `#answer-input-1` so mobile keyboards show appropriate action labels instead of a magnifying glass icon.
+   - Added CSS normalization in `css/style.css` (`-webkit-appearance: none;` and hiding `::-webkit-search-cancel-button`, `::-webkit-search-decoration`) ensuring answer fields look and behave identically to standard text inputs without browser-injected cancel 'x' buttons.
+4. Input Submission Event Streamlining:
+   - Replaced form submit and duplicate keyup listeners in `js/game.js` with direct, composition-safe `keydown` Enter listeners on the answer inputs.
+   - Added mobile focus helpers to Cloze inputs to ensure viewport anchoring and `.keyboard-open` body states work reliably.
+5. Service Worker & Cache:
+   - Bumped `CACHE_NAME` to `flashcards-v15.24` in `sw.js` and stylesheet version to `v=6.9` in `pages/game.html`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: GEMINI AGENT ROLE SANITIZATION & FIRESTORE 1MB LIMIT REMEDIATION (v15.20)
 Date: 2026-11-02
 
