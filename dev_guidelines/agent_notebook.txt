@@ -35,3 +35,19 @@
 7. **Internationalization (i18n)**:
    - The internationalization file (`js/i18n.js`) strictly supports only Portuguese (`pt-BR`) and English (`en-US`).
    - Do not introduce or support any other language or locale dictionary.
+
+8. **Image Cropping & Vector Arrow Annotations (No File Saving)**:
+   - When modifying or displaying cards with images, keep fetching from web URLs (`card.image`, `card.answerImage`).
+   - Store crop and arrows as pure lightweight metadata (`imageCrop`, `imageArrows`, `answerImageCrop`, `answerImageArrows`) to preserve browser storage quotas and Firestore 1MB limits. Never save Base64 data URLs or binary image blobs to card objects.
+   - Use `renderAnnotatedImage` from `js/image-editor-modal.js` for rendering images across gameplay, creator, editor, and thumbnails.
+
+9. **Scientific Guide & Educational Article Pattern**:
+   - Educational articles explaining learning neuroscience, Bloom's Taxonomy, and algorithm mechanics are integrated into `pages/how-to-write-good-flashcards.html` and linked from `pages/generate.html`.
+   - Maintain the journalistic serif style (`Newsreader` font) paired with Material You Expressive tokens, 28px corner radii, and `#3b82f7` theme blue.
+   - Do not use Unicode emojis; use Google Fonts Material Symbols exclusively.
+   - Provide full bilingual support (`pt-BR` and `en-US`) in `js/i18n.js`.
+
+10. **SEO & Structured Data (Schema.org JSON-LD)**:
+   - Public landing and article pages include JSON-LD structured data (`TechArticle`, `FAQPage`, `BreadcrumbList`, `WebApplication`).
+   - Canonical URLs and social metadata (Open Graph, Twitter card) must be kept accurate.
+   - Maintain root `sitemap.xml` and `robots.txt` referencing `https://flashcards.camblu.org/sitemap.xml`.

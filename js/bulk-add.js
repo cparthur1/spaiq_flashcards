@@ -10,6 +10,7 @@ import { triggerHaptic } from './engine/effects.js';
 import { isPlayableCard } from './engine/scheduler.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
 import { t, applyTranslations } from './i18n.js';
+import { renderAnnotatedImage } from './image-editor-modal.js';
 
 // --- DOM ELEMENTS ---
 const bulkFileInput = document.getElementById('bulk-file-input');
@@ -866,7 +867,13 @@ function createRightCardElement(card) {
     if (safeImg) {
         const imgCont = document.createElement('div');
         imgCont.className = "mt-2 max-h-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center p-1";
-        imgCont.innerHTML = `<img src="${safeImg}" class="max-h-20 w-auto object-contain rounded" alt="${t('image')}">`;
+        renderAnnotatedImage({
+            container: imgCont,
+            imageUrl: safeImg,
+            crop: card.imageCrop,
+            arrows: card.imageArrows,
+            maxHClass: 'max-h-20'
+        });
         contentBox.appendChild(imgCont);
     }
 
@@ -1423,7 +1430,13 @@ function createModalCardElement(card, idx) {
     if (safeImg) {
         const imgCont = document.createElement('div');
         imgCont.className = "mt-1 max-h-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center p-1";
-        imgCont.innerHTML = `<img src="${safeImg}" class="max-h-20 w-auto object-contain rounded" alt="${t('image')}">`;
+        renderAnnotatedImage({
+            container: imgCont,
+            imageUrl: safeImg,
+            crop: card.imageCrop,
+            arrows: card.imageArrows,
+            maxHClass: 'max-h-20'
+        });
         cardEl.appendChild(imgCont);
     }
 

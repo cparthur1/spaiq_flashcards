@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.25'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.27'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -16,6 +16,7 @@ const RAW_ASSETS = [
   '/pages/generate.html',
   '/pages/stats.html',
   '/pages/bulk-add.html',
+  '/pages/how-to-write-good-flashcards.html',
   '/css/style.css',
   '/assets/fonts/fonts.css',
   '/assets/fonts/material-symbols-rounded.woff2',
@@ -26,6 +27,7 @@ const RAW_ASSETS = [
   '/js/index.js',
   '/js/game.js',
   '/js/account-modal.js',
+  '/js/image-editor-modal.js',
   '/js/firebase-client.js',
   '/js/backend-api.js',
   '/js/slot-manager.js',
@@ -43,6 +45,7 @@ const RAW_ASSETS = [
   '/js/engine/notifications.js',
   '/js/engine/pwa-install.js',
   '/js/generate.js',
+  '/js/guide.js',
   '/js/stats.js',
   '/js/stats-tracker.js',
   '/js/stats-ai.js',

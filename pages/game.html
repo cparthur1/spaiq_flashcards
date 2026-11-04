@@ -704,6 +704,10 @@
                     <div class="space-y-2">
                         <div id="edit-image-preview-container" class="hidden relative group w-full max-h-48 overflow-hidden rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex items-center justify-center p-2">
                             <img id="edit-image-preview" src="" alt="Preview" class="max-h-40 w-auto object-contain rounded-xl">
+                            <button type="button" id="edit-crop-image-btn" class="absolute bottom-2 right-2 bg-[#3b82f7] hover:bg-blue-600 text-white px-2.5 py-1 rounded-xl shadow text-xs font-semibold flex items-center gap-1 transition" title="Cortar / Setas" data-i18n-title="edit_image_crop_arrows">
+                                <span class="material-symbols-rounded text-sm">crop</span>
+                                <span data-i18n="edit_image_crop_arrows">Cortar / Setas</span>
+                            </button>
                             <button type="button" id="edit-remove-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem" data-i18n-title="remove_image" data-i18n="remove_image">
                                 <span class="material-symbols-rounded text-sm">close</span>
                             </button>
@@ -716,6 +720,10 @@
                     <div class="space-y-2">
                         <div id="edit-ans-image-preview-container" class="hidden relative group w-full max-h-48 overflow-hidden rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex items-center justify-center p-2">
                             <img id="edit-ans-image-preview" src="" alt="Preview" class="max-h-40 w-auto object-contain rounded-xl">
+                            <button type="button" id="edit-crop-ans-image-btn" class="absolute bottom-2 right-2 bg-[#3b82f7] hover:bg-blue-600 text-white px-2.5 py-1 rounded-xl shadow text-xs font-semibold flex items-center gap-1 transition" title="Cortar / Setas" data-i18n-title="edit_image_crop_arrows">
+                                <span class="material-symbols-rounded text-sm">crop</span>
+                                <span data-i18n="edit_image_crop_arrows">Cortar / Setas</span>
+                            </button>
                             <button type="button" id="edit-remove-ans-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem" data-i18n-title="remove_image" data-i18n="remove_image">
                                 <span class="material-symbols-rounded text-sm">close</span>
                             </button>
@@ -1357,7 +1365,9 @@
             <button id="close-image-zoom-btn" class="absolute -top-10 right-0 text-white hover:text-gray-300 p-2">
                 <img src="../assets/img/close.svg" class="w-8 h-8 invert" alt="Fechar" data-i18n-alt="close">
             </button>
-            <img id="zoomed-image" src="" alt="Imagem Ampliada" class="lightbox-content bg-white" data-i18n-alt="zoomed_image">
+            <div id="zoomed-image-wrapper" class="relative max-h-[85vh] max-w-full flex items-center justify-center">
+                <img id="zoomed-image" src="" alt="Imagem Ampliada" class="lightbox-content bg-white" data-i18n-alt="zoomed_image">
+            </div>
         </div>
     </div>
 

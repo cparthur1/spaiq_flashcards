@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6JNRDNHL0N"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-6JNRDNHL0N');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="article_page_title">Como Escrever Bons Flashcards: A Neurociência da Aprendizagem Eficaz | Flashcards</title>
+    <meta name="description" content="Aprenda a neurociência dos flashcards, Taxonomia de Bloom, princípios de elaboração atômica e como o algoritmo de repetição adaptativa do nosso aplicativo maximiza sua retenção permanente.">
+    <link rel="canonical" href="https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html">
+    <meta property="og:site_name" content="Flashcards">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:title" content="Como Escrever Bons Flashcards: A Neurociência da Aprendizagem Eficaz">
+    <meta property="og:description" content="Guia científico completo sobre flashcards, Taxonomia de Bloom, princípios atômicos e engenharia de algoritmos de repetição adaptativa.">
+    <meta property="og:image" content="https://flashcards.camblu.org/assets/img/og-image.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html">
+    <meta name="twitter:title" content="Como Escrever Bons Flashcards: A Neurociência da Aprendizagem Eficaz">
+    <meta name="twitter:description" content="Guia científico completo sobre flashcards, Taxonomia de Bloom, princípios atômicos e engenharia de algoritmos de repetição adaptativa.">
+    <meta name="twitter:image" content="https://flashcards.camblu.org/assets/img/og-image.png">
+
+    <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../assets/img/favicon-16x16.png">
+    <link rel="icon" type="image/png" href="../assets/img/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/img/apple-touch-icon.png">
+
+    <!-- Fonts & Styling -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..700&family=Roboto+Flex:opsz,wdth,wght,XOPQ,XTRA,YOPQ,YTDE,YTFI,YTLC,YTUC@8..144,135,1000,154,518,53,-203,738,514,712&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/fonts/fonts.css">
+    <link rel="stylesheet" href="../css/style.css?v=6.8">
+    <script src="../js/config.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- DOMPurify for HTML sanitization -->
+    <script src="../assets/vendor/purify.min.js"></script>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous"></script>
+    <!-- KaTeX for math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" integrity="sha384-cpW21h6RZv/phavutF+AuVYrr+dA8xD9zs6FwLpaCct6O9ctzYFfFr4dgmgccOTx" crossorigin="anonymous"></script>
+
+    <!-- Material Web Components -->
+    <script type="module" src="../assets/vendor/material-web.bundle.js"></script>
+
+    <style>
+        /* Standardized Serif Typography for all content blocks */
+        .article-prose,
+        .standard-article-text {
+            font-family: var(--md-ref-typeface-serif, 'Newsreader', Georgia, serif);
+            font-size: 1.0625rem; /* 17px standardized body size */
+            line-height: 1.72;
+            color: #1e293b;
+            text-wrap: pretty;
+        }
+
+        .standard-article-text p,
+        .article-prose p,
+        .standard-article-text li,
+        .article-prose li {
+            font-family: inherit;
+            font-size: inherit;
+            line-height: inherit;
+        }
+
+        .bloom-panel.animate-fade-in {
+            animation: fadeIn 0.25s cubic-bezier(0.2, 0, 0, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <!-- Structured Data (JSON-LD) for Schema.org Rich Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "TechArticle",
+          "@id": "https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html#article",
+          "isPartOf": {
+            "@type": "WebPage",
+            "@id": "https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html"
+          },
+          "headline": "Como Escrever Bons Flashcards: A Neurociência da Aprendizagem Eficaz",
+          "alternativeHeadline": "How to Write Good Flashcards: The Cognitive Neuroscience of Spaced Retrieval",
+          "description": "Guia científico completo sobre flashcards, Taxonomia de Bloom, princípios atômicos e engenharia de algoritmos de repetição adaptativa.",
+          "image": "https://flashcards.camblu.org/assets/img/og-image.png",
+          "datePublished": "2026-11-04T12:00:00-03:00",
+          "dateModified": "2026-11-04T15:30:00-03:00",
+          "inLanguage": ["pt-BR", "en-US"],
+          "proficiencyLevel": "Expert",
+          "author": {
+            "@type": "Organization",
+            "name": "Spaiq Flashcards Scientific Team",
+            "url": "https://flashcards.camblu.org/"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Spaiq Flashcards",
+            "url": "https://flashcards.camblu.org/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://flashcards.camblu.org/assets/img/favicon.png"
+            }
+          },
+          "mainEntityOfPage": "https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html",
+          "keywords": [
+            "flashcards",
+            "repetição espaçada",
+            "active recall",
+            "taxonomia de bloom",
+            "neurociência da aprendizagem",
+            "spaced repetition system",
+            "estudo eficiente",
+            "algoritmo de repetição espaçada"
+          ],
+          "about": [
+            { "@type": "Thing", "name": "Active Recall" },
+            { "@type": "Thing", "name": "Spaced Repetition System" },
+            { "@type": "Thing", "name": "Bloom's Taxonomy" },
+            { "@type": "Thing", "name": "Neuroscience of Memory" }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Por que a releitura passiva falha comparada ao uso de flashcards?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "A releitura passiva gera a ilusão de competência (efeito de fluência) ao ativar o córtex visual sem recrutar os circuitos hipocampais e pré-frontais necessários para a consolidação. O teste ativo via flashcards induz potenciação de longa duração (LTP) e erro de predição, reativando a plasticidade sináptica."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "O que é o Princípio da Informação Mínima para flashcards?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Cada flashcard deve testar apenas uma proposição conceitual única (atômica) com resposta inequívoca. Cartões com múltiplos tópicos ou parágrafos longos sofrem do efeito de mascaramento, onde a lembrança de um detalhe disfarça o esquecimento de outro."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Como estruturar flashcards segundo a Taxonomia de Bloom?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Flashcards eficazes progridem além da memorização básica (nível 1). Eles devem exercitar Compreensão (explicar mecanismos causais), Aplicação (resolver casos clínicos ou problemas práticos), Análise (diagnóstico diferencial e contrastes estruturais) e Avaliação (julgar premissas e trade-offs técnicos)."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Como funciona o algoritmo adaptativo de repetição do Spaiq Flashcards?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "O algoritmo analisa a latência de evocação (Thinking Gap), gerencia o ciclo biológico de esquecimento e detecta cartas parasitas (leech prevention) para evitar frustração, agendando a repetição no instante preciso do limiar de esquecimento para consolidar a memória duradoura."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Flashcards funcionam sozinhos para aprender qualquer matéria?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Não. Flashcards são otimizados para retenção e consolidação a longo prazo de conceitos já compreendidos, mas não para a compreensão inicial ou raciocínio holístico. Eles devem ser combinados em uma tríade de estudo: codificação conceitual (aulas, diagramas e método Feynman), consolidação atômica (flashcards SRS) e aplicação prática (bancos de questões reais, simulados e resolução de problemas)."
+              }
+            }
+          ]
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html#breadcrumb",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Início",
+              "item": "https://flashcards.camblu.org/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Criador de Flashcards",
+              "item": "https://flashcards.camblu.org/pages/generate.html"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "Como Escrever Bons Flashcards",
+              "item": "https://flashcards.camblu.org/pages/how-to-write-good-flashcards.html"
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+</head>
+
+<body class="bg-[#F8FAFC] text-gray-900 min-h-screen flex flex-col font-sans antialiased selection:bg-blue-100 selection:text-blue-900">
+
+    <!-- READING PROGRESS TRACKER (M3 Stick-to-Top) -->
+    <div class="reading-progress-container" aria-hidden="true">
+        <div id="reading-progress-bar" class="reading-progress-bar"></div>
+    </div>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/80 px-4 sm:px-8 py-3 transition-shadow shadow-xs">
+        <div class="max-w-5xl mx-auto flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <a href="generate.html" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-600 hover:text-blue-600 transition px-2.5 py-1.5 rounded-xl hover:bg-gray-100">
+                    <span class="material-symbols-rounded text-lg select-none">arrow_back</span>
+                    <span data-i18n="article_nav_back">Voltar ao Criador</span>
+                </a>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Language Selector Dropdown -->
+                <div class="relative">
+                    <button id="guide-lang-btn" type="button" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition cursor-pointer" aria-label="Idioma">
+                        <span class="material-symbols-rounded text-sm text-[#3b82f7] select-none">language</span>
+                        <span id="guide-lang-label">PT</span>
+                        <span class="material-symbols-rounded text-xs select-none">expand_more</span>
+                    </button>
+                    <div id="guide-lang-dropdown" class="hidden absolute right-0 mt-2 w-36 bg-white border border-gray-200 rounded-2xl shadow-lg p-1.5 z-50">
+                        <button type="button" data-lang="pt-BR" class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-blue-50 text-gray-800 flex items-center justify-between cursor-pointer">
+                            <span>Português</span>
+                            <span class="lang-check-icon material-symbols-rounded text-sm text-[#3b82f7] select-none hidden">check</span>
+                        </button>
+                        <button type="button" data-lang="en-US" class="lang-option-btn w-full px-3 py-2 text-xs font-semibold rounded-xl hover:bg-blue-50 text-gray-800 flex items-center justify-between cursor-pointer">
+                            <span>English</span>
+                            <span class="lang-check-icon material-symbols-rounded text-sm text-[#3b82f7] select-none hidden">check</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Primary CTA -->
+                <a href="generate.html" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#3b82f7] text-white font-semibold text-xs sm:text-sm hover:bg-blue-600 shadow-xs transition">
+                    <span class="material-symbols-rounded text-base select-none">auto_awesome</span>
+                    <span data-i18n="article_nav_create">Criar Baralho com IA</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN EDITORIAL CONTAINER -->
+    <main class="w-full max-w-4xl mx-auto px-4 sm:px-8 py-8 sm:py-14 flex-1">
+        
+        <!-- ARTICLE MASTHEAD -->
+        <header class="mb-10 sm:mb-14 pb-8 sm:pb-12 border-b border-gray-200/80">
+            <!-- Kicker / Section Tag -->
+            <div class="flex items-center gap-2 mb-4">
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider select-none">
+                    <span class="material-symbols-rounded text-sm">psychology</span>
+                    <span data-i18n="article_masthead_kicker">NEUROCIÊNCIA COGNITIVA & METODOLOGIA</span>
+                </span>
+                <span class="text-gray-300">|</span>
+                <span class="text-xs font-medium text-gray-500 inline-flex items-center gap-1 select-none">
+                    <span class="material-symbols-rounded text-sm">schedule</span>
+                    <span data-i18n="article_reading_time">8 min de leitura</span>
+                </span>
+            </div>
+
+            <!-- Headline -->
+            <h1 class="font-editorial-serif text-3xl sm:text-5xl lg:text-[3.25rem] font-bold text-gray-900 leading-[1.18] tracking-tight mb-5" data-i18n="article_main_title">
+                Como Escrever Bons Flashcards: A Neurociência por Trás da Memória Permanente
+            </h1>
+
+            <!-- Subtitle / Dek -->
+            <p class="font-editorial-serif italic text-lg sm:text-2xl text-gray-600 leading-relaxed" data-i18n="article_dek">
+                Por que reler resumos é uma ilusão biológica de competência, como aplicar a Taxonomia de Bloom para evitar cartões fracos e de que forma a engenharia algorítmica do nosso aplicativo constrói memória permanente.
+            </p>
+        </header>
+
+        <!-- KEY TAKEAWAYS CALLOUT (M3 Expressive Card) -->
+        <div class="mb-12 bg-gradient-to-br from-blue-50/80 to-indigo-50/50 border border-blue-200/90 rounded-3xl p-6 sm:p-8 shadow-xs standard-article-text">
+            <div class="flex items-center gap-2.5 mb-4 text-[#3b82f7]">
+                <div class="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-rounded text-xl select-none">lightbulb</span>
+                </div>
+                <h3 class="font-editorial-serif text-xl sm:text-2xl font-bold text-gray-900" data-i18n="article_takeaways_title">Pontos-Chave em 30 Segundos</h3>
+            </div>
+            <ul class="space-y-3 leading-relaxed">
+                <li class="flex items-start gap-3">
+                    <span class="material-symbols-rounded text-[#3b82f7] text-lg shrink-0 mt-1 select-none font-sans">check_circle</span>
+                    <span data-i18n="article_takeaway_1">A evocação ativa (active recall) é até 50% superior ao estudo passivo porque ativa a Potenciação de Longo Prazo (LTP) e reorganiza vias sinápticas duradouras.</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="material-symbols-rounded text-[#3b82f7] text-lg shrink-0 mt-1 select-none font-sans">check_circle</span>
+                    <span data-i18n="article_takeaway_2">O Princípio da Informação Mínima: cartões devem ser atômicos. Um cartão com múltiplas ideias causa a ilusão de competência parcial e falhas de retenção.</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="material-symbols-rounded text-[#3b82f7] text-lg shrink-0 mt-1 select-none font-sans">check_circle</span>
+                    <span data-i18n="article_takeaway_3">A Taxonomia de Bloom ensina que flashcards não são apenas para memorizar fatos isolados: preenchimento de lacunas, dupla resposta e múltipla escolha treinam compreensão, aplicação e análise crítica.</span>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="material-symbols-rounded text-[#3b82f7] text-lg shrink-0 mt-1 select-none font-sans">check_circle</span>
+                    <span data-i18n="article_takeaway_4">Nosso algoritmo mede sua latência de reflexão: erros impulsivos recebem intervalos maiores para esvaziar o eco superficial, enquanto erros lentos recebem reforço imediato.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- QUICK JUMP TABLE OF CONTENTS (Horizontal Scrollable Pills on Mobile) -->
+        <nav class="sticky top-16 z-30 mb-12 bg-white/95 backdrop-blur-md py-3 -mx-4 px-4 sm:mx-0 sm:px-0 border-y sm:border sm:rounded-2xl border-gray-200/80 shadow-xs" aria-label="Sumário">
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 font-sans">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 pl-2 pr-1 select-none" data-i18n="toc_title">Neste Artigo:</span>
+                <a href="#section-1" class="article-toc-link shrink-0 px-3 py-1.5 rounded-full text-xs font-medium text-gray-700 hover:bg-gray-100" data-i18n="toc_sec1">1. Neurociência</a>
+                <a href="#section-2" class="article-toc-link shrink-0 px-3 py-1.5 rounded-full text-xs font-medium text-gray-700 hover:bg-gray-100" data-i18n="toc_sec2">2. O Que Funciona</a>
+                <a href="#section-3" class="article-toc-link shrink-0 px-3 py-1.5 rounded-full text-xs font-medium text-gray-700 hover:bg-gray-100" data-i18n="toc_sec3">3. Taxonomia de Bloom</a>
+                <a href="#section-4" class="article-toc-link shrink-0 px-3 py-1.5 rounded-full text-xs font-medium text-gray-700 hover:bg-gray-100" data-i18n="toc_sec4">4. O Algoritmo</a>
+                <a href="#section-5" class="article-toc-link shrink-0 px-3 py-1.5 rounded-full text-xs font-medium text-gray-700 hover:bg-gray-100" data-i18n="toc_sec5">5. Workflows</a>
+                <a href="#section-6" class="article-toc-link shrink-0 px-3 py-1.5 rounded-full text-xs font-medium text-gray-700 hover:bg-gray-100" data-i18n="toc_sec6">6. 6 Regras de Ouro</a>
+                <a href="#section-7" class="article-toc-link shrink-0 px-3 py-1.5 rounded-full text-xs font-bold text-[#3b82f7] bg-blue-50 hover:bg-blue-100" data-i18n="toc_sec7">7. Pratique no App</a>
+            </div>
+        </nav>
+
+        <!-- ARTICLE BODY WITH STANDARDIZED SERIF TYPOGRAPHY -->
+        <article class="article-prose space-y-16">
+
+            <!-- SECTION 1: NEUROSCIENCE -->
+            <section id="section-1" class="scroll-mt-28">
+                <h2 class="font-editorial-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-black tracking-tight mb-6" data-i18n="article_sec1_title">
+                    1. A Neurociência dos Flashcards: O Efeito de Testagem e a Plasticidade Sináptica
+                </h2>
+
+                <p class="article-dropcap" data-i18n="article_sec1_lead_p1">
+                    A maioria dos estudantes passa horas sublinhando apostilas com canetas fluorescentes e relendo resumos preparados dias antes. Embora essa prática gere uma sensação reconfortante de domínio, a neurociência cognitiva demonstra que se trata de uma armadilha biológica conhecida como fluência de processamento: o cérebro reconhece a cadência das palavras familiares no córtex visual e confunde reconhecimento passivo com retenção duradoura.
+                </p>
+
+                <p data-i18n="article_sec1_lead_p2">
+                    Quando você fecha o livro e tenta responder a uma pergunta formulada em um flashcard, um circuito neurobiológico inteiramente diferente entra em ação. Pesquisadores pioneiros como Henry Roediger e Jeffrey Karpicke (2006) demonstraram o chamado Efeito de Testagem (Testing Effect): o ato mecânico de recuperar uma informação da memória fortalece a retenção em longo prazo em proporções até 50% superiores quando comparado a múltiplas sessões de releitura.
+                </p>
+
+                <!-- JOURNALISTIC PULLQUOTE -->
+                <figure class="journalistic-pullquote">
+                    <p class="mb-0" data-i18n="article_sec1_pullquote">
+                        "A facilidade é o veneno da memória. Quando você se esforça para resgatar uma pista fraca a partir do vácuo, o cérebro decodifica esse estresse como um sinal inequívoco de sobrevivência evolutiva, reconfigurando conexões sinápticas permanentes."
+                    </p>
+                    <figcaption class="text-xs uppercase font-sans tracking-wider text-gray-500 font-semibold mt-2 not-italic" data-i18n="article_sec1_pullquote_author">
+                        — Princípio das Dificuldades Desejáveis (Robert A. Bjork, UCLA)
+                    </figcaption>
+                </figure>
+
+                <h3 class="font-editorial-serif text-xl sm:text-2xl font-bold text-black mt-8 mb-4" data-i18n="article_sec1_ltp_title">
+                    Potenciação de Longo Prazo (LTP) e o Erro de Predição
+                </h3>
+
+                <p data-i18n="article_sec1_ltp_p1">
+                    No nível molecular, a memória reside na força de conexão entre redes neuronais. A recuperação bem-sucedida desencadeia a Potenciação de Longo Prazo (LTP), um processo no qual estímulos sincronizados despolarizam o neurônio pós-sináptico, expulsando íons de magnésio que bloqueiam os receptores NMDA. Isso abre comportas para o influxo de cálcio (Ca²⁺), promovendo o recrutamento de novos receptores AMPA e solidificando fisicamente o traço engrâmico entre o hipocampo e o neocórtex.
+                </p>
+
+                <p data-i18n="article_sec1_ltp_p2">
+                    E o que acontece quando você erra um cartão? Longe de ser tempo perdido, o erro é o maior catalisador da neuroplasticidade através do Erro de Predição (Prediction Error). O cérebro opera como uma máquina bayesiana. Quando ocorre um descompasso agudo entre o que você previu e o gabarito real, uma quebra transitória de dopamina desestabiliza a sinapse defeituosa, abrindo uma janela biológica de reconsolidação na qual o dado corrigido é gravado com máxima prioridade.
+                </p>
+
+                <!-- APP INTEGRATION CALLOUT -->
+                <div class="my-8 p-5 sm:p-6 bg-white border border-blue-200 rounded-2xl shadow-xs flex items-start gap-4 standard-article-text">
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#3b82f7] flex items-center justify-center shrink-0">
+                        <span class="material-symbols-rounded text-2xl select-none font-sans">terminal</span>
+                    </div>
+                    <div>
+                        <h4 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2" data-i18n="article_sec1_app_title">Como nosso aplicativo potencializa a biologia do Testing Effect:</h4>
+                        <p class="text-gray-800 leading-relaxed mb-0" data-i18n="article_sec1_app_desc">
+                            Muitos aplicativos tradicionais permitem apenas virar o cartão mentalmente, o que reabre as portas para o falso reconhecimento. Em nosso aplicativo, o Modo Aberto exige que você digite a resposta ativamente, ativando circuitos motores e de evocação léxica. Nosso algoritmo inteligente de similaridade de texto (distância Levenshtein ≥ 80%) valida sinônimos e pequenos deslizes de digitação sem penalizar seu ritmo nem deixar você se enganar.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: WHAT WORKS VS WHAT FAILS -->
+            <section id="section-2" class="scroll-mt-28">
+                <h2 class="font-editorial-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-black tracking-tight mb-6" data-i18n="article_sec2_title">
+                    2. O Que Funciona com Flashcards vs. O Que Fracassa
+                </h2>
+
+                <p data-i18n="article_sec2_p1">
+                    Embora os flashcards sejam um dos instrumentos de aprendizagem mais robustos já estudados pela psicologia experimental, eles não são uma varinha mágica universal. Usá-los para tentar memorizar capítulos inteiros de forma mecânica é a receita mais rápida para fadiga mental, frustração e abandono.
+                </p>
+
+                <p data-i18n="article_sec2_p2">
+                    A regra de ouro da engenharia de cartões foi cunhada pelo pesquisador Piotr Wozniak: o Princípio da Informação Mínima (Minimum Information Principle). Um flashcard eficaz deve ser estritamente atômico. Se uma pergunta exige três conclusões independentes, ela deve ser dividida em três cartões distintos.
+                </p>
+
+                <!-- COMPARISON MATRIX CARDS WITH STANDARDIZED SERIF TYPOGRAPHY -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8 not-prose">
+                    <!-- WORKS EXTREMELY WELL -->
+                    <div class="bg-emerald-50/70 border-2 border-emerald-200 rounded-3xl p-6 flex flex-col justify-between standard-article-text">
+                        <div>
+                            <div class="flex items-center gap-2 mb-4 text-emerald-800 font-sans">
+                                <div class="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center">
+                                    <span class="material-symbols-rounded text-emerald-700 select-none">verified</span>
+                                </div>
+                                <h3 class="font-editorial-serif font-bold text-xl sm:text-2xl" data-i18n="article_sec2_works_heading">O que Funciona com Maestria</h3>
+                            </div>
+                            <ul class="space-y-3 leading-relaxed text-emerald-950/90">
+                                <li class="flex items-start gap-2">
+                                    <span class="material-symbols-rounded text-emerald-600 text-base shrink-0 mt-1 select-none font-sans">check</span>
+                                    <span data-i18n="article_sec2_works_1">Fatos atômicos e precisos: definições de termos, marcos históricos, constantes físicas.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="material-symbols-rounded text-emerald-600 text-base shrink-0 mt-1 select-none font-sans">check</span>
+                                    <span data-i18n="article_sec2_works_2">Pares conceituais contrastantes: diagnósticos diferenciais, agonista vs. antagonista.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="material-symbols-rounded text-emerald-600 text-base shrink-0 mt-1 select-none font-sans">check</span>
+                                    <span data-i18n="article_sec2_works_3">Sintaxe, vocabulário e regras: vocabulário em outros idiomas, comandos de código, estruturas químicas.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="material-symbols-rounded text-emerald-600 text-base shrink-0 mt-1 select-none font-sans">check</span>
+                                    <span data-i18n="article_sec2_works_4">Perguntas causais curtas: Por que a vasodilatação periférica rápida causa síncope postural?</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-emerald-200 text-xs font-sans text-emerald-800 font-medium" data-i18n="article_sec2_works_footer">
+                            Excelente retenção e velocidade de recuperação (&lt; 5s por card).
+                        </div>
+                    </div>
+
+                    <!-- FAILS COMPLETELY -->
+                    <div class="bg-rose-50/70 border-2 border-rose-200 rounded-3xl p-6 flex flex-col justify-between standard-article-text">
+                        <div>
+                            <div class="flex items-center gap-2 mb-4 text-rose-800 font-sans">
+                                <div class="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center">
+                                    <span class="material-symbols-rounded text-rose-700 select-none">dangerous</span>
+                                </div>
+                                <h3 class="font-editorial-serif font-bold text-xl sm:text-2xl" data-i18n="article_sec2_fails_heading">O que Fracassa Miseravelmente</h3>
+                            </div>
+                            <ul class="space-y-3 leading-relaxed text-rose-950/90">
+                                <li class="flex items-start gap-2">
+                                    <span class="material-symbols-rounded text-rose-600 text-base shrink-0 mt-1 select-none font-sans">close</span>
+                                    <span data-i18n="article_sec2_fails_1">Muralha de texto: parágrafos de 5 linhas copiados na íntegra de um livro.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="material-symbols-rounded text-rose-600 text-base shrink-0 mt-1 select-none font-sans">close</span>
+                                    <span data-i18n="article_sec2_fails_2">Listas abertas extensas: Cite os 7 estágios do desenvolvimento celular de Piaget.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="material-symbols-rounded text-rose-600 text-base shrink-0 mt-1 select-none font-sans">close</span>
+                                    <span data-i18n="article_sec2_fails_3">Perguntas vagas ou ambíguas: Explique a Revolução Industrial no século XVIII.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <span class="material-symbols-rounded text-rose-600 text-base shrink-0 mt-1 select-none font-sans">close</span>
+                                    <span data-i18n="article_sec2_fails_4">Memorização cega prévia: tentar decorar o cartão antes de entender o conceito global.</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-rose-200 text-xs font-sans text-rose-800 font-medium" data-i18n="article_sec2_fails_footer">
+                            Gera ilusão de competência, tempo excessivo e fadiga mental.
+                        </div>
+                    </div>
+                </div>
+
+                <p data-i18n="article_sec2_feynman">
+                    Aqui entra a clássica Regra de Richard Feynman: antes de transformar um conceito em flashcard, certifique-se de que você consegue explicá-lo em voz alta com termos simples para uma criança de 10 anos. Se você não entendeu o mecanismo causal, o flashcard servirá apenas como um eco oco de palavras. Compreenda o quadro geral primeiro; consolide os nós críticos da rede com os cartões depois.
+                </p>
+            </section>
+
+            <!-- SECTION 3: BLOOM'S TAXONOMY -->
+            <section id="section-3" class="scroll-mt-28">
+                <h2 class="font-editorial-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-black tracking-tight mb-6" data-i18n="article_sec3_title">
+                    3. Taxonomia de Bloom Aplicada aos Flashcards
+                </h2>
+
+                <p data-i18n="article_sec3_p1">
+                    Um equívoco comum na comunidade acadêmica é classificar os flashcards como restritos ao nível mais baixo da cognição: a memorização pura de fatos. Essa limitação não está no instrumento, mas na forma ingênua como a maioria dos cartões é redigida.
+                </p>
+
+                <p data-i18n="article_sec3_p2">
+                    Ao aplicar a Taxonomia de Objetivos Educacionais de Benjamin Bloom (revisada por Anderson &amp; Krathwohl), você pode arquitetar flashcards que escalam por todos os degraus do pensamento crítico:
+                </p>
+
+                <!-- BLOOM INTERACTIVE EXPLORER -->
+                <div class="my-8 bg-white border border-gray-200/90 rounded-3xl p-6 sm:p-8 shadow-xs not-prose standard-article-text">
+                    <div class="flex items-center justify-between gap-3 mb-6 flex-wrap font-sans">
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900" data-i18n="bloom_lab_title">Laboratório Bloom: Formatos &amp; Níveis Cognitivos</h3>
+                            <p class="text-xs text-gray-500" data-i18n="bloom_lab_sub">Clique em cada nível para examinar como modelar cartões de alto valor no app</p>
+                        </div>
+                        <span class="text-[11px] font-bold text-purple-700 bg-purple-100 px-3 py-1 rounded-full uppercase tracking-wider select-none" data-i18n="bloom_lab_badge">Interativo</span>
+                    </div>
+
+                    <!-- Level Pills Navigation -->
+                    <div class="flex flex-wrap gap-2 mb-6 font-sans">
+                        <button type="button" class="bloom-tab-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition bg-blue-600 text-white shadow-sm cursor-pointer select-none" data-bloom-level="1" aria-selected="true" data-i18n="bloom_tab_1">
+                            N1: Lembrar
+                        </button>
+                        <button type="button" class="bloom-tab-btn px-3.5 py-1.5 rounded-full text-xs font-medium transition bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer select-none" data-bloom-level="2" aria-selected="false" data-i18n="bloom_tab_2">
+                            N2: Compreender
+                        </button>
+                        <button type="button" class="bloom-tab-btn px-3.5 py-1.5 rounded-full text-xs font-medium transition bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer select-none" data-bloom-level="3" aria-selected="false" data-i18n="bloom_tab_3">
+                            N3: Aplicar
+                        </button>
+                        <button type="button" class="bloom-tab-btn px-3.5 py-1.5 rounded-full text-xs font-medium transition bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer select-none" data-bloom-level="4" aria-selected="false" data-i18n="bloom_tab_4">
+                            N4: Analisar
+                        </button>
+                        <button type="button" class="bloom-tab-btn px-3.5 py-1.5 rounded-full text-xs font-medium transition bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer select-none" data-bloom-level="5" aria-selected="false" data-i18n="bloom_tab_5">
+                            N5: Avaliar
+                        </button>
+                        <button type="button" class="bloom-tab-btn px-3.5 py-1.5 rounded-full text-xs font-medium transition bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer select-none" data-bloom-level="6" aria-selected="false" data-i18n="bloom_tab_6">
+                            N6: Criar (Chunking)
+                        </button>
+                    </div>
+
+                    <!-- PANEL 1: REMEMBER -->
+                    <div class="bloom-panel" data-bloom-level="1">
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-4">
+                            <div class="flex items-center justify-between mb-2 font-sans">
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-600" data-i18n="bloom_p1_title">Nível 1: Lembrar (Evocação Direta)</span>
+                                <span class="text-xs font-medium bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full" data-i18n="bloom_p1_format">Formato: Aberta (open) ou Anki</span>
+                            </div>
+                            <p class="mb-4 leading-relaxed text-gray-700" data-i18n="bloom_p1_desc">
+                                Recuperação pura de definições atômicas, fórmulas, datas e nomenclaturas técnicas.
+                            </p>
+                            <div class="bg-white p-3.5 rounded-xl border border-gray-200 font-mono text-xs text-gray-800 leading-relaxed relative">
+                                <span class="text-gray-400 select-none block text-[10px] mb-1 font-sans" data-i18n="bloom_p1_eg_label">Exemplo de Formatação no Editor:</span>
+                                <div><strong class="text-blue-600">Resposta:</strong> <span data-i18n="bloom_p1_eg_ans">Mitocôndria</span></div>
+                                <div><strong class="text-gray-900">Pergunta:</strong> <span data-i18n="bloom_p1_eg_q">Qual organela celular é a principal responsável pela fosforilação oxidativa e produção aeróbica de ATP?</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 2: UNDERSTAND -->
+                    <div class="bloom-panel hidden" data-bloom-level="2">
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-4">
+                            <div class="flex items-center justify-between mb-2 font-sans">
+                                <span class="text-xs font-bold uppercase tracking-wider text-indigo-600" data-i18n="bloom_p2_title">Nível 2: Compreender (Relações &amp; Mecanismos)</span>
+                                <span class="text-xs font-medium bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full" data-i18n="bloom_p2_format">Formato: Preenchimento de Lacunas (fill / Cloze)</span>
+                            </div>
+                            <p class="mb-4 leading-relaxed text-gray-700" data-i18n="bloom_p2_desc">
+                                Exige que o estudante decodifique a causalidade de uma frase e complete o termo funcional exato.
+                            </p>
+                            <div class="bg-white p-3.5 rounded-xl border border-gray-200 font-mono text-xs text-gray-800 leading-relaxed relative">
+                                <span class="text-gray-400 select-none block text-[10px] mb-1 font-sans" data-i18n="bloom_p2_eg_label">Exemplo no Formato Cloze do App:</span>
+                                <div data-i18n="bloom_p2_eg_text">(fill) Quando a pressão osmótica plasmática diminui, os osmorreceptores hipotalâmicos reduzem a secreção de {ADH / vasopressina}, promovendo maior excreção de {água} pelos rins.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 3: APPLY -->
+                    <div class="bloom-panel hidden" data-bloom-level="3">
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-4">
+                            <div class="flex items-center justify-between mb-2 font-sans">
+                                <span class="text-xs font-bold uppercase tracking-wider text-emerald-600" data-i18n="bloom_p3_title">Nível 3: Aplicar (Casos Concretos &amp; Dupla Resposta)</span>
+                                <span class="text-xs font-medium bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full" data-i18n="bloom_p3_format">Formato: Resposta Dupla (open_double)</span>
+                            </div>
+                            <p class="mb-4 leading-relaxed text-gray-700" data-i18n="bloom_p3_desc">
+                                Apresenta um cenário realista condensado e exige o diagnóstico simultâneo de causa e conduta.
+                            </p>
+                            <div class="bg-white p-3.5 rounded-xl border border-gray-200 font-mono text-xs text-gray-800 leading-relaxed relative">
+                                <span class="text-gray-400 select-none block text-[10px] mb-1 font-sans" data-i18n="bloom_p3_eg_label">Exemplo Duplo Aberto no App:</span>
+                                <div><strong class="text-emerald-600">Resp1;Resp2:</strong> <span data-i18n="bloom_p3_eg_ans">Cefaleia em salvas;Oxigênio 100% / Triptano</span></div>
+                                <div><strong class="text-gray-900">Pergunta:</strong> <span data-i18n="bloom_p3_eg_q">Paciente jovem com dor periorbitária lancinante unilateral associada a lacrimejamento e miose. Diagnóstico e conduta aguda de primeira linha:</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 4: ANALYZE -->
+                    <div class="bloom-panel hidden" data-bloom-level="4">
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-4">
+                            <div class="flex items-center justify-between mb-2 font-sans">
+                                <span class="text-xs font-bold uppercase tracking-wider text-purple-600" data-i18n="bloom_p4_title">Nível 4: Analisar (Discriminação Fina)</span>
+                                <span class="text-xs font-medium bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full" data-i18n="bloom_p4_format">Formato: Múltipla Escolha com Distratores IA</span>
+                            </div>
+                            <p class="mb-4 leading-relaxed text-gray-700" data-i18n="bloom_p4_desc">
+                                Compara opções conceituais parecidas onde apenas uma atende estritamente a todas as premissas. Use o assistente Gemini do app para criar alternativas plausíveis.
+                            </p>
+                            <div class="bg-white p-3.5 rounded-xl border border-gray-200 font-mono text-xs text-gray-800 leading-relaxed relative">
+                                <span class="text-gray-400 select-none block text-[10px] mb-1 font-sans" data-i18n="bloom_p4_eg_label">Exemplo de Discriminação:</span>
+                                <div><strong class="text-purple-600">Gabarito:</strong> <span data-i18n="bloom_p4_eg_ans">Efeito Bohr (diminuição da afinidade da hemoglobina por O2 devido à acidose)</span></div>
+                                <div><strong class="text-gray-900">Pergunta:</strong> <span data-i18n="bloom_p4_eg_q">Qual fenômeno explica a liberação facilitada de oxigênio nos tecidos musculares metabolicamente ativos durante exercício intenso?</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 5: EVALUATE -->
+                    <div class="bloom-panel hidden" data-bloom-level="5">
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-4">
+                            <div class="flex items-center justify-between mb-2 font-sans">
+                                <span class="text-xs font-bold uppercase tracking-wider text-amber-600" data-i18n="bloom_p5_title">Nível 5: Avaliar (Julgamento Sob Restrições)</span>
+                                <span class="text-xs font-medium bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full" data-i18n="bloom_p5_format">Formato: Aberta (open) com Contraindicação</span>
+                            </div>
+                            <p class="mb-4 leading-relaxed text-gray-700" data-i18n="bloom_p5_desc">
+                                Pede o julgamento do motivo pelo qual uma conduta tradicional é proibida sob certas variáveis.
+                            </p>
+                            <div class="bg-white p-3.5 rounded-xl border border-gray-200 font-mono text-xs text-gray-800 leading-relaxed relative">
+                                <span class="text-gray-400 select-none block text-[10px] mb-1 font-sans" data-i18n="bloom_p5_eg_label">Exemplo Crítico:</span>
+                                <div><strong class="text-amber-600">Resposta:</strong> <span data-i18n="bloom_p5_eg_ans">Risco de broncoespasmo / Bloqueio beta-2 nos pulmões</span></div>
+                                <div><strong class="text-gray-900">Pergunta:</strong> <span data-i18n="bloom_p5_eg_q">Por que betabloqueadores não-seletivos (como propranolol) são estritamente contraindicados em pacientes asmáticos moderados a graves?</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANEL 6: CREATE -->
+                    <div class="bloom-panel hidden" data-bloom-level="6">
+                        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-4">
+                            <div class="flex items-center justify-between mb-2 font-sans">
+                                <span class="text-xs font-bold uppercase tracking-wider text-rose-600" data-i18n="bloom_p6_title">Nível 6: Criar (Chunking Mental de Alta Síntese)</span>
+                                <span class="text-xs font-medium bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-full" data-i18n="bloom_p6_format">Papel dos Flashcards: Peças Fundamentais de Lego</span>
+                            </div>
+                            <p class="leading-relaxed text-gray-700 mb-0" data-i18n="bloom_p6_desc">
+                                Você nunca criará uma tese completa dentro de um cartão. Porém, segundo a teoria da Carga Cognitiva de Sweller, a criatividade em alto nível exige que os blocos atômicos fundamentais estejam automatizados na memória de longo prazo (Mental Chunking), liberando 100% da sua memória de trabalho para arquitetar soluções originais.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBSECTION: WHY FLASHCARDS DON'T WORK ALONE & STUDY TRIAD -->
+                <div class="mt-8 standard-article-text space-y-5">
+                    <h3 class="font-editorial-serif text-xl sm:text-2xl font-bold text-gray-900 tracking-tight" data-i18n="article_sec3_limits_title">
+                        A Verdade Incômoda: Por Que Flashcards Não Funcionam Sozinhos
+                    </h3>
+
+                    <p data-i18n="article_sec3_limits_p1">
+                        Existe uma armadilha frequente entre estudantes que descobrem a repetição espaçada: acreditar que os flashcards são uma solução autossuficiente para todo o aprendizado. A literatura de ciências cognitivas e a comunidade veterana de memorização (como amplamente debatido no r/Anki e por pesquisadores de técnicas de estudo) apontam uma máxima fundamental: flashcards servem para reter o que você já compreendeu, nunca para compreender o que você precisa aprender pela primeira vez.
+                    </p>
+
+                    <p data-i18n="article_sec3_limits_p2">
+                        Se você cria cartões diretamente durante o primeiro contato com um assunto denso, o resultado é o conhecimento em silos isolados: você memoriza respostas como peças de Lego espalhadas no chão, mas seu cérebro não constrói o mapa mental unificado. Em provas práticas, diagnósticos clínicos ou desafios profissionais onde os problemas são não-estruturados e as pistas são implícitas, cartões isolados falham se não houver modelos mentais consolidados que orquestrem esses dados.
+                    </p>
+
+                    <!-- THE 3-PILLAR COGNITIVE PIPELINE CARD -->
+                    <div class="my-6 bg-blue-50/60 border border-blue-200/80 rounded-3xl p-6 sm:p-8 not-prose">
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="material-symbols-rounded text-2xl text-[#3b82f7] select-none">hub</span>
+                            <h4 class="font-editorial-serif text-xl sm:text-2xl font-bold text-gray-900" data-i18n="article_sec3_triad_title">
+                                O Pipeline Cognitivo em Três Fases: Onde os Flashcards se Encaixam
+                            </h4>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-white p-6 rounded-2xl border border-blue-100 shadow-xs flex flex-col justify-between standard-article-text">
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-purple-600 block mb-1.5 font-sans">Fase 1 • Bloom N2-N4</span>
+                                    <h5 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2" data-i18n="article_sec3_triad_phase1_title">Compreensão &amp; Visão Global</h5>
+                                    <p class="leading-relaxed text-gray-800 mb-4" data-i18n="article_sec3_triad_phase1_desc">
+                                        Leitura atenta, aulas e elaboração de diagramas. Utilize a técnica de Feynman para explicar o tema com suas palavras antes de criar qualquer cartão.
+                                    </p>
+                                </div>
+                                <div class="mt-auto pt-3 border-t border-gray-100 text-gray-500 font-sans text-xs">Objetivo: Construir o modelo mental</div>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-2xl border border-blue-100 shadow-xs flex flex-col justify-between standard-article-text">
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-[#3b82f7] block mb-1.5 font-sans">Fase 2 • Bloom N1-N3</span>
+                                    <h5 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2" data-i18n="article_sec3_triad_phase2_title">Consolidação Atômica (Spaiq)</h5>
+                                    <p class="leading-relaxed text-gray-800 mb-4" data-i18n="article_sec3_triad_phase2_desc">
+                                        Aqui o aplicativo brilha: ancorar os nós conceituais críticos em cartões atômicos. O algoritmo adaptativo garante retenção permanente gastando apenas minutos diários.
+                                    </p>
+                                </div>
+                                <div class="mt-auto pt-3 border-t border-gray-100 text-[#3b82f7] font-sans text-xs">Objetivo: Evitar a curva do esquecimento</div>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-2xl border border-blue-100 shadow-xs flex flex-col justify-between standard-article-text">
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-600 block mb-1.5 font-sans">Fase 3 • Bloom N3-N6</span>
+                                    <h5 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2" data-i18n="article_sec3_triad_phase3_title">Aplicação Real &amp; Síntese</h5>
+                                    <p class="leading-relaxed text-gray-800 mb-4" data-i18n="article_sec3_triad_phase3_desc">
+                                        Bancos de questões reais (Q-Banks), redação, simulações e problemas complexos. Se errar uma questão prática, crie um cartão cirúrgico para a lacuna identificada.
+                                    </p>
+                                </div>
+                                <div class="mt-auto pt-3 border-t border-gray-100 text-emerald-600 font-sans text-xs">Objetivo: Treinar tomada de decisão</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="font-editorial-serif text-xl sm:text-2xl font-bold text-gray-900 tracking-tight pt-2" data-i18n="article_sec3_tips_title">
+                        Práticas Essenciais da Ciência do Estudo para Multiplicar o Impacto dos Flashcards
+                    </h3>
+
+                    <p data-i18n="article_sec3_tips_intro">
+                        Ao sintetizar as melhores práticas de metodologias ativas (como as formuladas por Thomas Frank no College Info Geek e as discussões comunitárias de especialistas em repetição espaçada), quatro princípios distinguem os estudantes de alto desempenho:
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 my-6">
+                        <div class="bg-white border border-gray-200/90 rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between standard-article-text">
+                            <div>
+                                <div class="flex items-center gap-2.5 mb-3 font-sans">
+                                    <span class="material-symbols-rounded text-xl text-[#3b82f7] select-none">record_voice_over</span>
+                                    <h4 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900" data-i18n="article_sec3_tip1_title">1. Evocação Ativa Explícita (Diga em Voz Alta ou Digite)</h4>
+                                </div>
+                                <p class="leading-relaxed text-gray-800 mb-0" data-i18n="article_sec3_tip1_desc">
+                                    Nunca vire o cartão pensando apenas "ah, eu sabia disso". Esse hábito ativa o córtex de reconhecimento visual e gera falsa sensação de maestria. No nosso app, digitar a resposta no modo aberto força o lobo frontal a sintetizar ativamente a palavra exata antes da validação.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-200/90 rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between standard-article-text">
+                            <div>
+                                <div class="flex items-center gap-2.5 mb-3 font-sans">
+                                    <span class="material-symbols-rounded text-xl text-[#3b82f7] select-none">swap_horiz</span>
+                                    <h4 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900" data-i18n="article_sec3_tip2_title">2. Estudo Bidirecional (Reversibilidade)</h4>
+                                </div>
+                                <p class="leading-relaxed text-gray-800 mb-0" data-i18n="article_sec3_tip2_desc">
+                                    Conhecimento real é flexível. Em vez de estudar apenas Conceito → Definição, crie também a via inversa: forneça o caso prático ou sintoma para evocar o conceito original. Isso impede que sua memória fique condicionada a um único gatilho textual.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-200/90 rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between standard-article-text">
+                            <div>
+                                <div class="flex items-center gap-2.5 mb-3 font-sans">
+                                    <span class="material-symbols-rounded text-xl text-[#3b82f7] select-none">image</span>
+                                    <h4 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900" data-i18n="article_sec3_tip3_title">3. Teoria da Dupla Codificação (Allan Paivio)</h4>
+                                </div>
+                                <p class="leading-relaxed text-gray-800 mb-0" data-i18n="article_sec3_tip3_desc">
+                                    O cérebro humano processa informações verbais e visuais por canais independentes. Associar uma imagem, esquema anatômico ou anotação vetorial ao flashcard cria múltiplos caminhos de recuperação no hipocampo, tornando o conceito muito mais resistente ao esquecimento.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-200/90 rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between standard-article-text">
+                            <div>
+                                <div class="flex items-center gap-2.5 mb-3 font-sans">
+                                    <span class="material-symbols-rounded text-xl text-[#3b82f7] select-none">content_cut</span>
+                                    <h4 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900" data-i18n="article_sec3_tip4_title">4. Poda Implacável &amp; O Efeito IKEA</h4>
+                                </div>
+                                <p class="leading-relaxed text-gray-800 mb-0" data-i18n="article_sec3_tip4_desc">
+                                    Nem tudo precisa ser um cartão. Se algo pode ser deduzido por lógica pura ou princípios gerais, não gaste tempo decorando. Além disso, cartões que você mesmo elabora ou personaliza produzem fixação sináptica superior a baralhos prontos de terceiros ("Efeito IKEA").
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: UNDER THE HOOD ALGORITHM (TERMINAL VIBE: PURE BLACK, PURE WHITE, MONOSPACE, ZERO ICONS) -->
+            <section id="section-4" class="scroll-mt-28">
+                <h2 class="font-editorial-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-black tracking-tight mb-6" data-i18n="article_sec4_title">
+                    4. Sob o Capô: A Engenharia Algorítmica do Flashcards WebApp
+                </h2>
+
+                <p data-i18n="article_sec4_p1">
+                    A maioria dos softwares de flashcards adota agendamentos genéricos inspirados no algoritmo SM-2 dos anos 1980, tratando uma sessão de 30 minutos como uma mera lista linear. No nosso aplicativo, o motor de repetição intra-sessão (js/engine/scheduler.js) foi desenvolvido sobre quatro pilares neurobiológicos de ponta:
+                </p>
+
+                <!-- PURE BLACK TERMINAL BLOCK -->
+                <div class="my-8 bg-black text-white font-mono rounded-3xl p-6 sm:p-8 border border-neutral-800 shadow-2xl not-prose">
+                    <!-- Terminal Header -->
+                    <div class="flex items-center justify-between pb-4 mb-6 border-b border-neutral-800 text-xs text-neutral-400">
+                        <div data-i18n="terminal_header">// engine/scheduler.js &bull; algorithm_core</div>
+                        <div class="text-[11px] text-neutral-500" data-i18n="terminal_version">v2.0-neuroscience</div>
+                    </div>
+
+                    <div class="mb-5 text-sm sm:text-base font-bold text-white tracking-tight" data-i18n="terminal_func">
+                        &gt; calculateThinkingGap(thinkingTimeSec, card, poolSize)
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs sm:text-sm text-neutral-200">
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-white font-bold mb-1" data-i18n="terminal_c1_title">[1] Latência e Erro de Predição (t)</div>
+                                <p class="text-neutral-300 leading-relaxed" data-i18n="terminal_c1_p1">
+                                    &bull; Erro impulsivo (t &lt; 2.5s): indica chute heurístico ou falso reconhecimento superficial. O algoritmo programa gap dilatado (+3 a +4 cards) para aguardar o decaimento do eco sensorial imediato.
+                                </p>
+                                <p class="text-neutral-300 leading-relaxed mt-1.5" data-i18n="terminal_c1_p2">
+                                    &bull; Erro de busca profunda (t &gt; 7.0s): reflete esforço genuíno de busca semântica. O algoritmo programa gap contido (~5 cards) para reconsolidar o traço antes de sua extinção.
+                                </p>
+                            </div>
+
+                            <div>
+                                <div class="text-white font-bold mb-1" data-i18n="terminal_c2_title">[2] Proteção contra o Vórtice do Erro</div>
+                                <p class="text-neutral-300 leading-relaxed" data-i18n="terminal_c2_p">
+                                    &bull; Repetir um erro a cada dois passos induz estresse cognitivo. O motor expande o intervalo para erros crônicos e injeta cartas novas na fila para oxigenar a mente.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-white font-bold mb-1" data-i18n="terminal_c3_title">[3] Prática Intercalada (Interleaving)</div>
+                                <p class="text-neutral-300 leading-relaxed" data-i18n="terminal_c3_p">
+                                    &bull; O cérebro aprende a discriminar conceitos quando tópicos são alternados. Em background, temas são categorizados e a fila evita cartões consecutivos com o mesmo tópico.
+                                </p>
+                            </div>
+
+                            <div>
+                                <div class="text-white font-bold mb-1" data-i18n="terminal_c4_title">[4] Limiar de Sanguessuga (Leech Prevention)</div>
+                                <p class="text-neutral-300 leading-relaxed" data-i18n="terminal_c4_p">
+                                    &bull; Cartões com 4 ou mais erros não graduam por simples acerto casual: exigem estritamente 2 acertos consecutivos (correctStreak &gt;= 2) com latência controlada.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p data-i18n="article_sec4_p2">
+                    Além da fila intra-sessão, o modo Caderno de Erros (Notebook SRS) calcula intervalos expansivos em dias baseados no Fator de Facilidade (Ease Factor) individual de cada item, associado a um rastreador de frequência diária com proteção automática por Streak Freeze para não quebrar seus hábitos de estudo durante emergências.
+                </p>
+            </section>
+
+            <!-- SECTION 5: STUDY WORKFLOWS -->
+            <section id="section-5" class="scroll-mt-28">
+                <h2 class="font-editorial-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-black tracking-tight mb-6" data-i18n="article_sec5_title">
+                    5. Workflows de Estudo de Alto Desempenho
+                </h2>
+
+                <p data-i18n="article_sec5_p">
+                    Como integrar flashcards de maneira harmoniosa à sua rotina semanal sem se tornar escravo de pilhas intermináveis de revisões? Apresentamos a sequência metodológica recomendada:
+                </p>
+
+                <!-- WORKFLOW TIMELINE STEPS WITH STANDARDIZED SERIF TYPOGRAPHY -->
+                <div class="my-8 space-y-4 not-prose">
+                    <div class="p-5 sm:p-6 bg-white border border-gray-200 rounded-3xl shadow-xs flex items-start gap-4 standard-article-text">
+                        <div class="w-10 h-10 rounded-2xl bg-blue-100 text-[#3b82f7] font-bold text-sm font-sans flex items-center justify-center shrink-0">1</div>
+                        <div>
+                            <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2" data-i18n="wf_s1_title">Compreensão &amp; Extração Ativa (Dia 1)</h3>
+                            <p class="leading-relaxed text-gray-800 mb-0" data-i18n="wf_s1_desc">
+                                Assista à aula ou leia o material original sem abrir o editor de flashcards. Identifique os nós conceituais de atrito. Ao final da sessão, utilize a ferramenta "Crie de materiais" (Opção 2.1) para carregar slides ou notas em PDF; a IA Gemini organizará os conceitos em cartões atômicos no padrão Bloom.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-5 sm:p-6 bg-white border border-gray-200 rounded-3xl shadow-xs flex items-start gap-4 standard-article-text">
+                        <div class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 font-bold text-sm font-sans flex items-center justify-center shrink-0">2</div>
+                        <div>
+                            <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2" data-i18n="wf_s2_title">Primeira Consolidação Intra-Sessão (Dia 1 / Dia 2)</h3>
+                            <p class="leading-relaxed text-gray-800 mb-0" data-i18n="wf_s2_desc">
+                                Jogue o baralho recém-criado até a conclusão da sessão. Deixe o algoritmo dinâmico calculateThinkingGap dosar os intervalos de erro. Os cartões que você errar múltiplas vezes serão automaticamente etiquetados como difíceis.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-5 sm:p-6 bg-white border border-gray-200 rounded-3xl shadow-xs flex items-start gap-4 standard-article-text">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 font-bold text-sm font-sans flex items-center justify-center shrink-0">3</div>
+                        <div>
+                            <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2" data-i18n="wf_s3_title">Rotina Matinal no Caderno de Erros (Diário)</h3>
+                            <p class="leading-relaxed text-gray-800 mb-0" data-i18n="wf_s3_desc">
+                                Dedique os primeiros 15 minutos do dia ao modo Caderno de Erros. Como o Caderno unifica os cartões mais desafiadores com repetição espaçada contínua em dias, essa micro-sessão preserva seu Streak diário e impede que a curva de esquecimento de Ebbinghaus apague seus avanços.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-5 sm:p-6 bg-white border border-gray-200 rounded-3xl shadow-xs flex items-start gap-4 standard-article-text">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 font-bold text-sm font-sans flex items-center justify-center shrink-0">4</div>
+                        <div>
+                            <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2" data-i18n="wf_s4_title">Simulação de Provas Multi-Deck (1 a 2 semanas antes do exame)</h3>
+                            <p class="leading-relaxed text-gray-800 mb-0" data-i18n="wf_s4_desc">
+                                Ative o modo Semana de Provas no menu do app. Selecione todos os baralhos do semestre para criar uma mistura consolidada. Isso eleva a prática intercalada ao ápice, impedindo que seu cérebro adivinhe respostas com base no contexto isolado de uma matéria específica.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: 6 GOLDEN RULES -->
+            <section id="section-6" class="scroll-mt-28">
+                <h2 class="font-editorial-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-black tracking-tight mb-6" data-i18n="article_sec6_title">
+                    6. As 6 Regras de Ouro para Escrever Flashcards
+                </h2>
+
+                <div class="space-y-6 standard-article-text">
+                    <div class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-xs">
+                        <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2 flex items-center gap-2">
+                            <span class="text-[#3b82f7] font-mono text-sm">#1</span>
+                            <span data-i18n="rule1_title">Uma Pergunta, Uma Resposta (Atomicidade Radical)</span>
+                        </h3>
+                        <p class="leading-relaxed text-gray-800 mb-3" data-i18n="rule1_desc">
+                            Se um cartão pergunta três características simultâneas, você invariavelmente lembrará duas e esquecerá a terceira, induzindo você a avaliar o cartão com "Bom" por benevolência. Quebre em cartões individuais.
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                            <div class="bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-rose-900">
+                                <span class="font-bold text-rose-700 block mb-1 font-sans" data-i18n="rule1_bad_label">Ruim (Multi-fato):</span>
+                                <span data-i18n="rule1_bad_text">Sintomas de DRC: Fadiga, oligúria, edema periorbitário, náuseas e anemia.</span>
+                            </div>
+                            <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl text-emerald-900">
+                                <span class="font-bold text-emerald-700 block mb-1 font-sans" data-i18n="rule1_good_label">Excelente (Atômico):</span>
+                                <span data-i18n="rule1_good_text">Qual a causa primária da anemia normocítica na Doença Renal Crônica? : Redução da síntese de eritropoietina.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-xs">
+                        <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2 flex items-center gap-2">
+                            <span class="text-[#3b82f7] font-mono text-sm">#2</span>
+                            <span data-i18n="rule2_title">Elimine Pistas Óbvias no Enunciado (Evite o "Efeito Dica")</span>
+                        </h3>
+                        <p class="leading-relaxed text-gray-800 mb-0" data-i18n="rule2_desc">
+                            Não formule perguntas onde a estrutura gramatical ou palavras com a mesma raiz entreguem a resposta. Por exemplo, em vez de perguntar "Qual neuromodulador dopaminérgico atua na via mesolímbica?", pergunte "Qual neurotransmissor primário regula o circuito de recompensa mesolímbico?".
+                        </p>
+                    </div>
+
+                    <div class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-xs">
+                        <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2 flex items-center gap-2">
+                            <span class="text-[#3b82f7] font-mono text-sm">#3</span>
+                            <span data-i18n="rule3_title">Aproveite o Recurso de Sinônimos com Barra (/)</span>
+                        </h3>
+                        <p class="leading-relaxed text-gray-800 mb-0" data-i18n="rule3_desc">
+                            No nosso aplicativo, você pode cadastrar termos equivalentes separando-os por barra no campo de resposta: Vitamina B12 / Cobalamina. Assim, qualquer uma das denominações corretas que você digitar será validada com nota máxima.
+                        </p>
+                    </div>
+
+                    <div class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-xs">
+                        <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2 flex items-center gap-2">
+                            <span class="text-[#3b82f7] font-mono text-sm">#4</span>
+                            <span data-i18n="rule4_title">No Cloze, Oculte o Conceito Central, Não a Sintaxe</span>
+                        </h3>
+                        <p class="leading-relaxed text-gray-800 mb-0" data-i18n="rule4_desc">
+                            Ao utilizar o modo de preenchimento de lacunas (fill), posicione as chaves {...} estritamente sobre a palavra técnica chave ou elemento causal, preservando todo o restante da oração gramaticalmente intacto.
+                        </p>
+                    </div>
+
+                    <div class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-xs">
+                        <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2 flex items-center gap-2">
+                            <span class="text-[#3b82f7] font-mono text-sm">#5</span>
+                            <span data-i18n="rule5_title">Otimize Distratores com IA Gemini ("Aprimore um doc")</span>
+                        </h3>
+                        <p class="leading-relaxed text-gray-800 mb-0" data-i18n="rule5_desc">
+                            Elaborar alternativas falsas, porém verossímeis, para cartões de múltipla escolha consome muito tempo. No nosso app, basta criar a pergunta com a resposta correta e clicar no modo "Aprimore um doc" (Opção 2.2): o Gemini Flash analisa o contexto e preenche automaticamente as alternativas plausíveis.
+                        </p>
+                    </div>
+
+                    <div class="bg-white border border-gray-200/90 rounded-2xl p-6 shadow-xs">
+                        <h3 class="font-editorial-serif font-bold text-lg sm:text-xl text-gray-900 mb-2 flex items-center gap-2">
+                            <span class="text-[#3b82f7] font-mono text-sm">#6</span>
+                            <span data-i18n="rule6_title">Grooming Regular: Refatore Cartões que Causam Erros Repetidos</span>
+                        </h3>
+                        <p class="leading-relaxed text-gray-800 mb-0" data-i18n="rule6_desc">
+                            Se um cartão atinge o status de "Sanguessuga" (Leech, ≥ 4 erros) nas estatísticas analíticas do app, não insista em decorá-lo na marra. Esse é o diagnóstico infalível de que o cartão está mal redigido, vago ou complexo demais. Clique no ícone de lápis no jogo, edite a redação e reestruture-o como dois cartões atômicos.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 7: CALL TO ACTION -->
+            <section id="section-7" class="scroll-mt-28">
+                <div class="p-8 sm:p-12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white rounded-3xl shadow-xl not-prose standard-article-text">
+                    <div class="max-w-2xl">
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-blue-100 text-xs font-semibold uppercase tracking-wider mb-4 select-none font-sans">
+                            <span class="material-symbols-rounded text-sm">rocket_launch</span>
+                            <span data-i18n="cta_ready_badge">Pronto para a Prática</span>
+                        </div>
+                        <h2 class="font-editorial-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight text-white" data-i18n="cta_main_title">
+                            Transforme Teoria em Memória Permanente no App
+                        </h2>
+                        <p class="text-blue-100 leading-relaxed mb-8" data-i18n="cta_desc">
+                            Agora que você domina a neurociência da recuperação ativa, a Taxonomia de Bloom e a arquitetura do nosso algoritmo, comece a criar e exercitar seus baralhos inteligentes.
+                        </p>
+
+                        <div class="flex flex-wrap items-center gap-3 font-sans">
+                            <a href="generate.html" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-blue-700 font-bold text-sm shadow hover:bg-blue-50 transition">
+                                <span class="material-symbols-rounded text-base select-none">auto_awesome</span>
+                                <span data-i18n="article_cta_create_deck">Criar Baralho com IA</span>
+                            </a>
+                            <a href="game.html" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-blue-500/30 text-white border border-white/20 font-semibold text-sm hover:bg-blue-500/50 transition">
+                                <span class="material-symbols-rounded text-base select-none">play_arrow</span>
+                                <span data-i18n="article_cta_open_game">Praticar no Jogo</span>
+                            </a>
+                            <a href="stats.html" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-blue-500/30 text-white border border-white/20 font-semibold text-sm hover:bg-blue-500/50 transition">
+                                <span class="material-symbols-rounded text-base select-none">analytics</span>
+                                <span data-i18n="article_cta_stats">Ver Estatísticas</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </article>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full bg-white border-t border-gray-200/80 py-8 px-4 text-center text-xs text-gray-500 font-sans">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2 text-gray-700 font-bold">
+                <span class="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs">S</span>
+                <span>Spaiq Flashcards</span>
+            </div>
+            <p data-i18n="footer_tagline">Guia Científico de Engenharia Cognitiva &bull; Licença GPL-2.0</p>
+            <div class="flex items-center gap-3">
+                <a href="generate.html" class="hover:text-blue-600 transition" data-i18n="footer_creator">Criador</a>
+                <span>&bull;</span>
+                <a href="game.html" class="hover:text-blue-600 transition" data-i18n="footer_game">Jogo</a>
+                <span>&bull;</span>
+                <a href="stats.html" class="hover:text-blue-600 transition" data-i18n="footer_stats">Estatísticas</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- INTERACTION TOAST -->
+    <div id="guide-toast" class="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-xl transition-all duration-300 opacity-0 pointer-events-none translate-y-4 flex items-center gap-2 font-sans" role="status" aria-live="polite">
+        <span class="material-symbols-rounded text-sm text-[#3b82f7] select-none">info</span>
+        <span>Aviso</span>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="../js/ripple.js"></script>
+    <script type="module" src="../js/guide.js"></script>
+</body>
+</html>

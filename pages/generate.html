@@ -300,6 +300,41 @@
             </div>
         </section>
 
+        <!-- ARTICLE CALLOUT: HOW TO WRITE GOOD FLASHCARDS -->
+        <section class="mb-8 sm:mb-12">
+            <a href="how-to-write-good-flashcards.html" class="block group text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-3xl">
+                <div class="netflix-box relative bg-gradient-to-br from-blue-50/70 via-white to-purple-50/40 border-2 border-blue-200/80 hover:border-blue-500 rounded-3xl p-5 sm:p-8 shadow-sm transition-all duration-300 overflow-hidden">
+                    <div class="card-mouse-glow glow-traditional" aria-hidden="true"></div>
+                    <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 sm:gap-6">
+                        <div class="flex items-start gap-4 sm:gap-5 flex-1 min-w-0">
+                            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-100 text-[#3b82f7] flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                                <span class="material-symbols-rounded text-28 sm:text-32 select-none">menu_book</span>
+                            </div>
+                            <div class="space-y-1.5 flex-1 min-w-0">
+                                <h3 class="text-lg sm:text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors font-serif leading-snug" data-i18n="article_callout_title">
+                                    Como escrever bons Flashcards
+                                </h3>
+                                <p class="text-gray-600 text-xs sm:text-sm leading-relaxed max-w-3xl" data-i18n="article_callout_desc">
+                                    Aprenda a neurociência da recuperação ativa, a Taxonomia de Bloom e como o algoritmo de repetição adaptativa do nosso aplicativo constrói memórias permanentes.
+                                </p>
+                                <div class="pt-2 flex items-center gap-2">
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500 bg-gray-100/90 px-2.5 py-0.5 rounded-full select-none">
+                                        <span class="material-symbols-rounded text-xs">schedule</span>
+                                        <span data-i18n="article_reading_time">8 min de leitura</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#3b82f7] text-white font-semibold text-xs sm:text-sm shadow-sm group-hover:bg-blue-600 group-hover:shadow transition shrink-0 self-stretch sm:self-auto justify-center">
+                            <span data-i18n="article_callout_cta">Ler artigo</span>
+                            <span class="material-symbols-rounded text-base group-hover:translate-x-1 transition-transform select-none">arrow_forward</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </section>
+
         <p id="global-error" class="text-red-500 text-center font-medium my-4"></p>
     </div>
 
@@ -705,7 +740,12 @@
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="question_image_label">Link da Imagem da Pergunta (Opcional)</label>
-                        <button type="button" id="creator-remove-q-img" class="text-[11px] text-red-500 hidden hover:underline" data-i18n="remove_image">Remover</button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="creator-edit-q-img" class="text-[11px] text-[#3b82f7] hidden hover:underline font-semibold flex items-center gap-1" data-i18n="edit_image_crop_arrows">
+                                <span class="material-symbols-rounded text-xs">crop</span> <span data-i18n="edit_image_crop_arrows">Cortar / Setas</span>
+                            </button>
+                            <button type="button" id="creator-remove-q-img" class="text-[11px] text-red-500 hidden hover:underline" data-i18n="remove_image">Remover</button>
+                        </div>
                     </div>
                     <div id="creator-q-img-preview-container" class="hidden mb-2 max-h-32 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center p-1">
                         <img id="creator-q-img-preview" src="" class="max-h-28 w-auto object-contain rounded" alt="Preview">
@@ -755,7 +795,12 @@
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="answer_image_label">Link da Imagem da Resposta (Opcional)</label>
-                            <button type="button" id="creator-remove-ans-img" class="text-[11px] text-red-500 hidden hover:underline" data-i18n="remove_image">Remover</button>
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="creator-edit-ans-img" class="text-[11px] text-[#3b82f7] hidden hover:underline font-semibold flex items-center gap-1" data-i18n="edit_image_crop_arrows">
+                                    <span class="material-symbols-rounded text-xs">crop</span> <span data-i18n="edit_image_crop_arrows">Cortar / Setas</span>
+                                </button>
+                                <button type="button" id="creator-remove-ans-img" class="text-[11px] text-red-500 hidden hover:underline" data-i18n="remove_image">Remover</button>
+                            </div>
                         </div>
                         <div id="creator-ans-img-preview-container" class="hidden mb-2 max-h-32 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center p-1">
                             <img id="creator-ans-img-preview" src="" class="max-h-28 w-auto object-contain rounded" alt="Preview">
@@ -960,6 +1005,9 @@
                     <div class="space-y-2">
                         <div id="inline-edit-image-preview-container" class="hidden relative group w-full max-h-40 overflow-hidden rounded-xl border border-gray-300 bg-gray-100 flex items-center justify-center p-2">
                             <img id="inline-edit-image-preview" src="" alt="Preview" class="max-h-36 w-auto object-contain rounded">
+                            <button type="button" id="inline-edit-crop-image-btn" class="absolute bottom-2 right-2 bg-[#3b82f7] hover:bg-blue-600 text-white px-2.5 py-1 rounded-lg shadow text-xs font-semibold flex items-center gap-1 transition" title="Cortar / Setas" data-i18n-title="edit_image_crop_arrows">
+                                <span class="material-symbols-rounded text-sm">crop</span> <span data-i18n="edit_image_crop_arrows">Cortar / Setas</span>
+                            </button>
                             <button type="button" id="inline-edit-remove-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem" data-i18n-title="remove_image">
                                 <img src="../assets/img/close.svg" class="w-4 h-4 invert" alt="Remover">
                             </button>
@@ -974,6 +1022,9 @@
                     <div class="space-y-2">
                         <div id="inline-edit-ans-image-preview-container" class="hidden relative group w-full max-h-40 overflow-hidden rounded-xl border border-gray-300 bg-gray-100 flex items-center justify-center p-2">
                             <img id="inline-edit-ans-image-preview" src="" alt="Preview" class="max-h-36 w-auto object-contain rounded">
+                            <button type="button" id="inline-edit-crop-ans-image-btn" class="absolute bottom-2 right-2 bg-[#3b82f7] hover:bg-blue-600 text-white px-2.5 py-1 rounded-lg shadow text-xs font-semibold flex items-center gap-1 transition" title="Cortar / Setas" data-i18n-title="edit_image_crop_arrows">
+                                <span class="material-symbols-rounded text-sm">crop</span> <span data-i18n="edit_image_crop_arrows">Cortar / Setas</span>
+                            </button>
                             <button type="button" id="inline-edit-remove-ans-image-btn" class="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow transition" title="Remover Imagem" data-i18n-title="remove_image">
                                 <img src="../assets/img/close.svg" class="w-4 h-4 invert" alt="Remover">
                             </button>

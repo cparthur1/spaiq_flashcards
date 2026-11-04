@@ -6,6 +6,7 @@ import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalS
 import { syncSharedDeckToFirestore, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
 import { savePendingGeneration, getPendingGeneration, clearPendingGeneration, hasPendingGenerationFlag } from './pending-generation.js';
+import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated } from './image-editor-modal.js';
 
 try {
     initExploreModal();
@@ -158,6 +159,7 @@ const creatorQImgUrl = document.getElementById('creator-q-img-url');
 const creatorQImgPreviewContainer = document.getElementById('creator-q-img-preview-container');
 const creatorQImgPreview = document.getElementById('creator-q-img-preview');
 const creatorRemoveQImg = document.getElementById('creator-remove-q-img');
+const creatorEditQImg = document.getElementById('creator-edit-q-img');
 
 const creatorGroupOpen = document.getElementById('creator-group-open');
 const creatorAnsOpen = document.getElementById('creator-ans-open');
@@ -175,6 +177,7 @@ const creatorAnsImgUrl = document.getElementById('creator-ans-img-url');
 const creatorAnsImgPreviewContainer = document.getElementById('creator-ans-img-preview-container');
 const creatorAnsImgPreview = document.getElementById('creator-ans-img-preview');
 const creatorRemoveAnsImg = document.getElementById('creator-remove-ans-img');
+const creatorEditAnsImg = document.getElementById('creator-edit-ans-img');
 
 const creatorGroupMc = document.getElementById('creator-group-mc');
 const creatorMcOptionsList = document.getElementById('creator-mc-options-list');
@@ -223,12 +226,14 @@ const editCardAddMcOptBtn = document.getElementById('edit-card-add-mc-opt-btn');
 const inlineEditImagePreviewContainer = document.getElementById('inline-edit-image-preview-container');
 const inlineEditImagePreview = document.getElementById('inline-edit-image-preview');
 const inlineEditRemoveImageBtn = document.getElementById('inline-edit-remove-image-btn');
+const inlineEditCropImageBtn = document.getElementById('inline-edit-crop-image-btn');
 const inlineEditImageUrl = document.getElementById('inline-edit-image-url');
 
 const inlineEditAnsImageGroup = document.getElementById('inline-edit-ans-image-group');
 const inlineEditAnsImagePreviewContainer = document.getElementById('inline-edit-ans-image-preview-container');
 const inlineEditAnsImagePreview = document.getElementById('inline-edit-ans-image-preview');
 const inlineEditRemoveAnsImageBtn = document.getElementById('inline-edit-remove-ans-image-btn');
+const inlineEditCropAnsImageBtn = document.getElementById('inline-edit-crop-ans-image-btn');
 const inlineEditAnsImageUrl = document.getElementById('inline-edit-ans-image-url');
 
 // --- STATE ---
@@ -364,9 +369,17 @@ let promptQueue = [];
 let isProcessingPromptQueue = false;
 
 let pendingCreatorQImage = '';
+let pendingCreatorQImageCrop = null;
+let pendingCreatorQImageArrows = [];
 let pendingCreatorAnsImage = '';
+let pendingCreatorAnsImageCrop = null;
+let pendingCreatorAnsImageArrows = [];
 let pendingInlineEditQImage = '';
+let pendingInlineEditQImageCrop = null;
+let pendingInlineEditQImageArrows = [];
 let pendingInlineEditAnsImage = '';
+let pendingInlineEditAnsImageCrop = null;
+let pendingInlineEditAnsImageArrows = [];
 
 let lastFailedSourceType = null;
 let lastFailedLocalCards = null;
@@ -857,6 +870,10 @@ function normalizeCard(raw) {
     if (raw.explanation) card.explanation = raw.explanation;
     if (raw.image) card.image = raw.image;
     if (raw.answerImage) card.answerImage = raw.answerImage;
+    if (raw.imageCrop) card.imageCrop = raw.imageCrop;
+    if (Array.isArray(raw.imageArrows)) card.imageArrows = raw.imageArrows;
+    if (raw.answerImageCrop) card.answerImageCrop = raw.answerImageCrop;
+    if (Array.isArray(raw.answerImageArrows)) card.answerImageArrows = raw.answerImageArrows;
     if (Array.isArray(raw.tags)) card.tags = raw.tags;
 
     // Pure system metadata (stats, categorization, subject/topic tracking)
@@ -2740,49 +2757,121 @@ creatorAddMcOptBtn.addEventListener('click', () => {
 });
 
 // Creator Image Handling
-creatorQImgUrl.addEventListener('input', (e) => {
-    const url = e.target.value.trim();
-    const cleanUrl = sanitizeImageUrl(url);
-    pendingCreatorQImage = cleanUrl;
-    if (cleanUrl) {
-        creatorQImgPreview.src = cleanUrl;
+function updateCreatorQImagePreview() {
+    if (pendingCreatorQImage) {
+        renderAnnotatedImage({
+            container: creatorQImgPreviewContainer,
+            imgElem: creatorQImgPreview,
+            imageUrl: pendingCreatorQImage,
+            crop: pendingCreatorQImageCrop,
+            arrows: pendingCreatorQImageArrows,
+            maxHClass: 'max-h-28'
+        });
         creatorQImgPreviewContainer.classList.remove('hidden');
         creatorRemoveQImg.classList.remove('hidden');
+        if (creatorEditQImg) creatorEditQImg.classList.remove('hidden');
     } else {
         creatorQImgPreview.src = '';
         creatorQImgPreviewContainer.classList.add('hidden');
         creatorRemoveQImg.classList.add('hidden');
+        if (creatorEditQImg) creatorEditQImg.classList.add('hidden');
+        const oldWrap = creatorQImgPreviewContainer.querySelector('.annotated-image-wrapper');
+        if (oldWrap) oldWrap.remove();
     }
-});
-creatorRemoveQImg.addEventListener('click', () => {
-    pendingCreatorQImage = '';
-    creatorQImgUrl.value = '';
-    creatorQImgPreview.src = '';
-    creatorQImgPreviewContainer.classList.add('hidden');
-    creatorRemoveQImg.classList.add('hidden');
-});
+}
 
-creatorAnsImgUrl.addEventListener('input', (e) => {
-    const url = e.target.value.trim();
-    const cleanUrl = sanitizeImageUrl(url);
-    pendingCreatorAnsImage = cleanUrl;
-    if (cleanUrl) {
-        creatorAnsImgPreview.src = cleanUrl;
+function updateCreatorAnsImagePreview() {
+    if (pendingCreatorAnsImage) {
+        renderAnnotatedImage({
+            container: creatorAnsImgPreviewContainer,
+            imgElem: creatorAnsImgPreview,
+            imageUrl: pendingCreatorAnsImage,
+            crop: pendingCreatorAnsImageCrop,
+            arrows: pendingCreatorAnsImageArrows,
+            maxHClass: 'max-h-28'
+        });
         creatorAnsImgPreviewContainer.classList.remove('hidden');
         creatorRemoveAnsImg.classList.remove('hidden');
+        if (creatorEditAnsImg) creatorEditAnsImg.classList.remove('hidden');
     } else {
         creatorAnsImgPreview.src = '';
         creatorAnsImgPreviewContainer.classList.add('hidden');
         creatorRemoveAnsImg.classList.add('hidden');
+        if (creatorEditAnsImg) creatorEditAnsImg.classList.add('hidden');
+        const oldWrap = creatorAnsImgPreviewContainer.querySelector('.annotated-image-wrapper');
+        if (oldWrap) oldWrap.remove();
     }
+}
+
+creatorQImgUrl.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    const cleanUrl = sanitizeImageUrl(url);
+    if (cleanUrl !== pendingCreatorQImage) {
+        pendingCreatorQImageCrop = null;
+        pendingCreatorQImageArrows = [];
+    }
+    pendingCreatorQImage = cleanUrl;
+    updateCreatorQImagePreview();
 });
+
+creatorRemoveQImg.addEventListener('click', () => {
+    pendingCreatorQImage = '';
+    pendingCreatorQImageCrop = null;
+    pendingCreatorQImageArrows = [];
+    creatorQImgUrl.value = '';
+    updateCreatorQImagePreview();
+});
+
+if (creatorEditQImg) {
+    creatorEditQImg.addEventListener('click', () => {
+        if (!pendingCreatorQImage) return;
+        openImageEditorModal({
+            imageUrl: pendingCreatorQImage,
+            crop: pendingCreatorQImageCrop,
+            arrows: pendingCreatorQImageArrows,
+            onSave: ({ crop, arrows }) => {
+                pendingCreatorQImageCrop = crop;
+                pendingCreatorQImageArrows = arrows;
+                updateCreatorQImagePreview();
+            }
+        });
+    });
+}
+
+creatorAnsImgUrl.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    const cleanUrl = sanitizeImageUrl(url);
+    if (cleanUrl !== pendingCreatorAnsImage) {
+        pendingCreatorAnsImageCrop = null;
+        pendingCreatorAnsImageArrows = [];
+    }
+    pendingCreatorAnsImage = cleanUrl;
+    updateCreatorAnsImagePreview();
+});
+
 creatorRemoveAnsImg.addEventListener('click', () => {
     pendingCreatorAnsImage = '';
+    pendingCreatorAnsImageCrop = null;
+    pendingCreatorAnsImageArrows = [];
     creatorAnsImgUrl.value = '';
-    creatorAnsImgPreview.src = '';
-    creatorAnsImgPreviewContainer.classList.add('hidden');
-    creatorRemoveAnsImg.classList.add('hidden');
+    updateCreatorAnsImagePreview();
 });
+
+if (creatorEditAnsImg) {
+    creatorEditAnsImg.addEventListener('click', () => {
+        if (!pendingCreatorAnsImage) return;
+        openImageEditorModal({
+            imageUrl: pendingCreatorAnsImage,
+            crop: pendingCreatorAnsImageCrop,
+            arrows: pendingCreatorAnsImageArrows,
+            onSave: ({ crop, arrows }) => {
+                pendingCreatorAnsImageCrop = crop;
+                pendingCreatorAnsImageArrows = arrows;
+                updateCreatorAnsImagePreview();
+            }
+        });
+    });
+}
 
 // Submit New Card
 creatorSubmitCardBtn.addEventListener('click', () => {
@@ -2817,7 +2906,11 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         description: desc
     };
 
-    if (pendingCreatorQImage) newCard.image = pendingCreatorQImage;
+    if (pendingCreatorQImage) {
+        newCard.image = pendingCreatorQImage;
+        if (pendingCreatorQImageCrop) newCard.imageCrop = pendingCreatorQImageCrop;
+        if (pendingCreatorQImageArrows && pendingCreatorQImageArrows.length > 0) newCard.imageArrows = pendingCreatorQImageArrows;
+    }
 
     if (type === 'open') {
         const ans = creatorAnsOpen.value.trim();
@@ -2846,7 +2939,11 @@ creatorSubmitCardBtn.addEventListener('click', () => {
             return;
         }
         newCard.answer = ans;
-        if (pendingCreatorAnsImage) newCard.answerImage = pendingCreatorAnsImage;
+        if (pendingCreatorAnsImage) {
+            newCard.answerImage = pendingCreatorAnsImage;
+            if (pendingCreatorAnsImageCrop) newCard.answerImageCrop = pendingCreatorAnsImageCrop;
+            if (pendingCreatorAnsImageArrows && pendingCreatorAnsImageArrows.length > 0) newCard.answerImageArrows = pendingCreatorAnsImageArrows;
+        }
     } else if (type === 'multiple_choice') {
         const optInputs = Array.from(document.querySelectorAll('.creator-mc-opt-val'));
         const options = optInputs.map(inp => inp.value.trim()).filter(Boolean);
@@ -3436,11 +3533,14 @@ function createCardElement(card, index, withAnimation = true) {
     if (safeCardImg) {
         const imgDiv = document.createElement('div');
         imgDiv.className = "w-full max-h-32 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center p-1 mt-1";
-        const imgTag = document.createElement('img');
-        imgTag.src = safeCardImg;
-        imgTag.alt = "Imagem";
-        imgTag.className = "max-h-28 w-auto object-contain rounded";
-        imgDiv.appendChild(imgTag);
+        renderAnnotatedImage({
+            container: imgDiv,
+            imageUrl: safeCardImg,
+            crop: card.imageCrop,
+            arrows: card.imageArrows,
+            alt: t('card_image') || 'Imagem',
+            maxHClass: 'max-h-28'
+        });
         cardEl.appendChild(imgDiv);
     }
 
@@ -3449,11 +3549,14 @@ function createCardElement(card, index, withAnimation = true) {
     if (safeAnsImg) {
         const ansImgDiv = document.createElement('div');
         ansImgDiv.className = "w-full max-h-32 overflow-hidden rounded-lg border border-indigo-200 bg-indigo-50/50 flex items-center justify-center p-1 mt-1";
-        const ansImgTag = document.createElement('img');
-        ansImgTag.src = safeAnsImg;
-        ansImgTag.alt = "Imagem Resposta";
-        ansImgTag.className = "max-h-28 w-auto object-contain rounded";
-        ansImgDiv.appendChild(ansImgTag);
+        renderAnnotatedImage({
+            container: ansImgDiv,
+            imageUrl: safeAnsImg,
+            crop: card.answerImageCrop,
+            arrows: card.answerImageArrows,
+            alt: t('answer_image') || 'Imagem Resposta',
+            maxHClass: 'max-h-28'
+        });
         cardEl.appendChild(ansImgDiv);
     }
 
@@ -3555,24 +3658,16 @@ function openInlineEditModal(index) {
     }
 
     pendingInlineEditQImage = sanitizeImageUrl(card.image || '');
+    pendingInlineEditQImageCrop = card.imageCrop ? { ...card.imageCrop } : null;
+    pendingInlineEditQImageArrows = Array.isArray(card.imageArrows) ? JSON.parse(JSON.stringify(card.imageArrows)) : [];
     inlineEditImageUrl.value = pendingInlineEditQImage;
-    if (pendingInlineEditQImage) {
-        inlineEditImagePreview.src = pendingInlineEditQImage;
-        inlineEditImagePreviewContainer.classList.remove('hidden');
-    } else {
-        inlineEditImagePreview.src = '';
-        inlineEditImagePreviewContainer.classList.add('hidden');
-    }
+    updateInlineEditQImagePreviewUI();
 
     pendingInlineEditAnsImage = sanitizeImageUrl(card.answerImage || '');
+    pendingInlineEditAnsImageCrop = card.answerImageCrop ? { ...card.answerImageCrop } : null;
+    pendingInlineEditAnsImageArrows = Array.isArray(card.answerImageArrows) ? JSON.parse(JSON.stringify(card.answerImageArrows)) : [];
     inlineEditAnsImageUrl.value = pendingInlineEditAnsImage;
-    if (pendingInlineEditAnsImage) {
-        inlineEditAnsImagePreview.src = pendingInlineEditAnsImage;
-        inlineEditAnsImagePreviewContainer.classList.remove('hidden');
-    } else {
-        inlineEditAnsImagePreview.src = '';
-        inlineEditAnsImagePreviewContainer.classList.add('hidden');
-    }
+    updateInlineEditAnsImagePreviewUI();
 
     inlineEditModal.classList.remove('hidden');
 }
@@ -3627,44 +3722,114 @@ editCardAddMcOptBtn.addEventListener('click', () => {
     renderInlineEditMcOptions(currentVals, curCorrect);
 });
 
-// Inline Edit Image Listeners
-inlineEditImageUrl.addEventListener('input', (e) => {
-    const url = e.target.value.trim();
-    const cleanUrl = sanitizeImageUrl(url);
-    pendingInlineEditQImage = cleanUrl;
-    if (cleanUrl) {
-        inlineEditImagePreview.src = cleanUrl;
+// Inline Edit Image Listeners & Previews
+function updateInlineEditQImagePreviewUI() {
+    if (pendingInlineEditQImage) {
+        renderAnnotatedImage({
+            container: inlineEditImagePreviewContainer,
+            imgElem: inlineEditImagePreview,
+            imageUrl: pendingInlineEditQImage,
+            crop: pendingInlineEditQImageCrop,
+            arrows: pendingInlineEditQImageArrows,
+            maxHClass: 'max-h-36'
+        });
         inlineEditImagePreviewContainer.classList.remove('hidden');
     } else {
         inlineEditImagePreview.src = '';
         inlineEditImagePreviewContainer.classList.add('hidden');
+        const oldWrap = inlineEditImagePreviewContainer.querySelector('.annotated-image-wrapper');
+        if (oldWrap) oldWrap.remove();
     }
-});
-inlineEditRemoveImageBtn.addEventListener('click', () => {
-    pendingInlineEditQImage = '';
-    inlineEditImageUrl.value = '';
-    inlineEditImagePreview.src = '';
-    inlineEditImagePreviewContainer.classList.add('hidden');
-});
+}
 
-inlineEditAnsImageUrl.addEventListener('input', (e) => {
-    const url = e.target.value.trim();
-    const cleanUrl = sanitizeImageUrl(url);
-    pendingInlineEditAnsImage = cleanUrl;
-    if (cleanUrl) {
-        inlineEditAnsImagePreview.src = cleanUrl;
+function updateInlineEditAnsImagePreviewUI() {
+    if (pendingInlineEditAnsImage) {
+        renderAnnotatedImage({
+            container: inlineEditAnsImagePreviewContainer,
+            imgElem: inlineEditAnsImagePreview,
+            imageUrl: pendingInlineEditAnsImage,
+            crop: pendingInlineEditAnsImageCrop,
+            arrows: pendingInlineEditAnsImageArrows,
+            maxHClass: 'max-h-36'
+        });
         inlineEditAnsImagePreviewContainer.classList.remove('hidden');
     } else {
         inlineEditAnsImagePreview.src = '';
         inlineEditAnsImagePreviewContainer.classList.add('hidden');
+        const oldWrap = inlineEditAnsImagePreviewContainer.querySelector('.annotated-image-wrapper');
+        if (oldWrap) oldWrap.remove();
     }
+}
+
+inlineEditImageUrl.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    const cleanUrl = sanitizeImageUrl(url);
+    if (cleanUrl !== pendingInlineEditQImage) {
+        pendingInlineEditQImageCrop = null;
+        pendingInlineEditQImageArrows = [];
+    }
+    pendingInlineEditQImage = cleanUrl;
+    updateInlineEditQImagePreviewUI();
 });
+
+inlineEditRemoveImageBtn.addEventListener('click', () => {
+    pendingInlineEditQImage = '';
+    pendingInlineEditQImageCrop = null;
+    pendingInlineEditQImageArrows = [];
+    inlineEditImageUrl.value = '';
+    updateInlineEditQImagePreviewUI();
+});
+
+if (inlineEditCropImageBtn) {
+    inlineEditCropImageBtn.addEventListener('click', () => {
+        if (!pendingInlineEditQImage) return;
+        openImageEditorModal({
+            imageUrl: pendingInlineEditQImage,
+            crop: pendingInlineEditQImageCrop,
+            arrows: pendingInlineEditQImageArrows,
+            onSave: ({ crop, arrows }) => {
+                pendingInlineEditQImageCrop = crop;
+                pendingInlineEditQImageArrows = arrows;
+                updateInlineEditQImagePreviewUI();
+            }
+        });
+    });
+}
+
+inlineEditAnsImageUrl.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    const cleanUrl = sanitizeImageUrl(url);
+    if (cleanUrl !== pendingInlineEditAnsImage) {
+        pendingInlineEditAnsImageCrop = null;
+        pendingInlineEditAnsImageArrows = [];
+    }
+    pendingInlineEditAnsImage = cleanUrl;
+    updateInlineEditAnsImagePreviewUI();
+});
+
 inlineEditRemoveAnsImageBtn.addEventListener('click', () => {
     pendingInlineEditAnsImage = '';
+    pendingInlineEditAnsImageCrop = null;
+    pendingInlineEditAnsImageArrows = [];
     inlineEditAnsImageUrl.value = '';
-    inlineEditAnsImagePreview.src = '';
-    inlineEditAnsImagePreviewContainer.classList.add('hidden');
+    updateInlineEditAnsImagePreviewUI();
 });
+
+if (inlineEditCropAnsImageBtn) {
+    inlineEditCropAnsImageBtn.addEventListener('click', () => {
+        if (!pendingInlineEditAnsImage) return;
+        openImageEditorModal({
+            imageUrl: pendingInlineEditAnsImage,
+            crop: pendingInlineEditAnsImageCrop,
+            arrows: pendingInlineEditAnsImageArrows,
+            onSave: ({ crop, arrows }) => {
+                pendingInlineEditAnsImageCrop = crop;
+                pendingInlineEditAnsImageArrows = arrows;
+                updateInlineEditAnsImagePreviewUI();
+            }
+        });
+    });
+}
 
 closeInlineEditBtn.addEventListener('click', closeInlineEditModal);
 cancelInlineEditBtn.addEventListener('click', closeInlineEditModal);
@@ -3681,8 +3846,17 @@ saveInlineEditBtn.addEventListener('click', (e) => {
     const card = deckCards[idx];
     card.description = editCardDesc.value.trim();
 
-    if (pendingInlineEditQImage) card.image = pendingInlineEditQImage;
-    else delete card.image;
+    if (pendingInlineEditQImage) {
+        card.image = pendingInlineEditQImage;
+        if (pendingInlineEditQImageCrop) card.imageCrop = pendingInlineEditQImageCrop;
+        else delete card.imageCrop;
+        if (pendingInlineEditQImageArrows && pendingInlineEditQImageArrows.length > 0) card.imageArrows = pendingInlineEditQImageArrows;
+        else delete card.imageArrows;
+    } else {
+        delete card.image;
+        delete card.imageCrop;
+        delete card.imageArrows;
+    }
 
     if (card.type === 'open') {
         card.answer = editCardAns1.value.trim();
@@ -3691,8 +3865,17 @@ saveInlineEditBtn.addEventListener('click', (e) => {
         card.answer2 = editCardAns2.value.trim();
     } else if (card.type === 'anki') {
         card.answer = editCardAnkiAnswer.value.trim();
-        if (pendingInlineEditAnsImage) card.answerImage = pendingInlineEditAnsImage;
-        else delete card.answerImage;
+        if (pendingInlineEditAnsImage) {
+            card.answerImage = pendingInlineEditAnsImage;
+            if (pendingInlineEditAnsImageCrop) card.answerImageCrop = pendingInlineEditAnsImageCrop;
+            else delete card.answerImageCrop;
+            if (pendingInlineEditAnsImageArrows && pendingInlineEditAnsImageArrows.length > 0) card.answerImageArrows = pendingInlineEditAnsImageArrows;
+            else delete card.answerImageArrows;
+        } else {
+            delete card.answerImage;
+            delete card.answerImageCrop;
+            delete card.answerImageArrows;
+        }
     } else if (card.type === 'multiple_choice') {
         const optInputs = Array.from(document.querySelectorAll('.inline-edit-mc-opt-val'));
         const options = optInputs.map(inp => inp.value.trim()).filter(Boolean);

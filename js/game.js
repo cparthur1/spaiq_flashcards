@@ -26,6 +26,7 @@ import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllShared
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
 import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
+import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated } from './image-editor-modal.js';
 
 // --- DOM ELEMENTS ---
 const deckTitle = document.getElementById('deck-title');
@@ -151,6 +152,7 @@ const editAnswer2Input = document.getElementById('edit-answer-2-input');
 const editImagePreviewContainer = document.getElementById('edit-image-preview-container');
 const editImagePreview = document.getElementById('edit-image-preview');
 const editRemoveImageBtn = document.getElementById('edit-remove-image-btn');
+const editCropImageBtn = document.getElementById('edit-crop-image-btn');
 const editImageUrlInput = document.getElementById('edit-image-url-input');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const cancelEditBtn = document.getElementById('cancel-edit-btn');
@@ -197,6 +199,7 @@ const editAnsImageGroup = document.getElementById('edit-ans-image-group');
 const editAnsImagePreviewContainer = document.getElementById('edit-ans-image-preview-container');
 const editAnsImagePreview = document.getElementById('edit-ans-image-preview');
 const editRemoveAnsImageBtn = document.getElementById('edit-remove-ans-image-btn');
+const editCropAnsImageBtn = document.getElementById('edit-crop-ans-image-btn');
 const editAnsImageUrlInput = document.getElementById('edit-ans-image-url-input');
 const editFillAnswerGroup = document.getElementById('edit-fill-answer-group');
 const editFillAnswerInput = document.getElementById('edit-fill-answer-input');
@@ -236,13 +239,12 @@ let consecutiveDueCardsCount = 0;
 let consecutiveNewCardsCount = 0;
 let lastCardTopic = '';
 let isAnkiFlipped = false;
-let pendingEditAnsImage = '';
 let questionStartTime = Date.now();
 
 // --- UI UTILITIES ---
 const imageLoadSeqMap = new WeakMap();
 
-function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placeholderElem) {
+function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placeholderElem, crop = null, arrows = []) {
     if (!containerElem || !imgElem) return;
 
     const safeUrl = sanitizeImageUrl(srcUrl);
@@ -253,6 +255,8 @@ function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placehold
         imgElem.classList.remove('opacity-100');
         imgElem.classList.add('opacity-0');
         imgElem.src = '';
+        const oldWrap = containerElem.querySelector('.annotated-image-wrapper');
+        if (oldWrap) oldWrap.remove();
         return;
     }
 
@@ -264,52 +268,45 @@ function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placehold
     imgElem.classList.remove('opacity-100');
     imgElem.classList.add('opacity-0');
     imgElem.src = '';
+    const oldWrap = containerElem.querySelector('.annotated-image-wrapper');
+    if (oldWrap) oldWrap.remove();
 
-    // Show container and animated skeleton placeholder
-    containerElem.classList.remove('hidden');
-    if (placeholderElem) {
-        placeholderElem.classList.remove('hidden');
-    }
-
-    const preloader = new Image();
-    preloader.src = safeUrl;
-
-    const revealImage = () => {
-        if (imageLoadSeqMap.get(imgElem) !== loadSeq) return;
-        imgElem.src = safeUrl;
-        if (placeholderElem) {
-            placeholderElem.classList.add('hidden');
+    renderAnnotatedImage({
+        container: containerElem,
+        imgElem,
+        placeholderElem,
+        imageUrl: safeUrl,
+        crop,
+        arrows,
+        alt: imgElem.alt || t('card_image') || 'Imagem do Flashcard',
+        maxHClass: containerElem.id === 'anki-answer-image-container' ? 'max-h-48 sm:max-h-72' : 'max-h-36 xs:max-h-48 sm:max-h-64',
+        zoomable: true,
+        onClick: () => {
+            openZoomForCard(safeUrl, crop, arrows);
         }
-        imgElem.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            imgElem.classList.remove('opacity-0');
-            imgElem.classList.add('opacity-100');
-        });
-    };
+    });
+}
 
-    const handleLoadError = () => {
-        if (imageLoadSeqMap.get(imgElem) !== loadSeq) return;
-        if (placeholderElem) {
-            placeholderElem.classList.add('hidden');
-        }
-        containerElem.classList.add('hidden');
-    };
+function openZoomForCard(url, crop = null, arrows = []) {
+    const safeUrl = sanitizeImageUrl(url);
+    if (!safeUrl || !imageZoomModal) return;
 
-    if (preloader.complete && preloader.naturalWidth > 0) {
-        revealImage();
-    } else if (typeof preloader.decode === 'function') {
-        preloader.decode().then(revealImage).catch(() => {
-            if (preloader.complete && preloader.naturalWidth > 0) {
-                revealImage();
-            } else {
-                preloader.onload = revealImage;
-                preloader.onerror = handleLoadError;
-            }
+    const zoomWrapper = document.getElementById('zoomed-image-wrapper') || imageZoomModal.querySelector('.relative');
+    if (zoomWrapper && zoomedImage) {
+        renderAnnotatedImage({
+            container: zoomWrapper,
+            imgElem: zoomedImage,
+            imageUrl: safeUrl,
+            crop,
+            arrows,
+            alt: t('zoomed_image') || 'Imagem Ampliada',
+            maxHClass: 'max-h-[85vh]',
+            zoomable: false
         });
-    } else {
-        preloader.onload = revealImage;
-        preloader.onerror = handleLoadError;
+    } else if (zoomedImage) {
+        zoomedImage.src = safeUrl;
     }
+    imageZoomModal.classList.remove('hidden');
 }
 function showNotificationPill(message, iconName, isWarning = false) {
     const existing = document.getElementById('notification-pill');
@@ -1315,7 +1312,7 @@ function loadQuestion() {
         }
     }
 
-    setupCardImageWithPlaceholder(currentQuestion.image, questionImage, questionImageContainer, questionImagePlaceholder);
+    setupCardImageWithPlaceholder(currentQuestion.image, questionImage, questionImageContainer, questionImagePlaceholder, currentQuestion.imageCrop, currentQuestion.imageArrows);
 
     openAnswerArea.classList.add('hidden');
     openDoubleAnswerArea.classList.add('hidden');
@@ -1447,7 +1444,7 @@ function flipAnkiCard() {
 
     if (ankiAnswerContainer) {
         ankiAnswerText.innerHTML = renderMathAndMarkdown(currentQuestion.answer || '');
-        setupCardImageWithPlaceholder(currentQuestion.answerImage, ankiAnswerImage, ankiAnswerImageContainer, ankiAnswerImagePlaceholder);
+        setupCardImageWithPlaceholder(currentQuestion.answerImage, ankiAnswerImage, ankiAnswerImageContainer, ankiAnswerImagePlaceholder, currentQuestion.answerImageCrop, currentQuestion.answerImageArrows);
         ankiAnswerContainer.classList.remove('hidden');
     }
 
@@ -5327,17 +5324,15 @@ initInputController({
 // --- IMAGE LIGHTBOX ZOOM ---
 if (questionImage && imageZoomModal && zoomedImage) {
     questionImage.addEventListener('click', () => {
-        if (questionImage.src && !questionImage.classList.contains('hidden')) {
-            zoomedImage.src = sanitizeImageUrl(questionImage.src);
-            imageZoomModal.classList.remove('hidden');
+        if (currentQuestion.image && !questionImage.classList.contains('hidden')) {
+            openZoomForCard(currentQuestion.image, currentQuestion.imageCrop, currentQuestion.imageArrows);
         }
     });
 }
 if (ankiAnswerImage && imageZoomModal && zoomedImage) {
     ankiAnswerImage.addEventListener('click', () => {
-        if (ankiAnswerImage.src && !ankiAnswerImage.classList.contains('hidden')) {
-            zoomedImage.src = sanitizeImageUrl(ankiAnswerImage.src);
-            imageZoomModal.classList.remove('hidden');
+        if (currentQuestion.answerImage && !ankiAnswerImage.classList.contains('hidden')) {
+            openZoomForCard(currentQuestion.answerImage, currentQuestion.answerImageCrop, currentQuestion.answerImageArrows);
         }
     });
 }
@@ -5345,6 +5340,11 @@ function closeImageZoom() {
     if (imageZoomModal && !imageZoomModal.classList.contains('hidden')) {
         imageZoomModal.classList.add('hidden');
         if (zoomedImage) zoomedImage.src = '';
+        const zoomWrapper = document.getElementById('zoomed-image-wrapper');
+        if (zoomWrapper) {
+            const oldWrap = zoomWrapper.querySelector('.annotated-image-wrapper');
+            if (oldWrap) oldWrap.remove();
+        }
     }
 }
 
@@ -5361,33 +5361,65 @@ if (imageZoomModal) {
 
 // --- EDIT MODAL HANDLING (FOR ALL CARD TYPES) ---
 let pendingEditImage = '';
+let pendingEditImageCrop = null;
+let pendingEditImageArrows = [];
+let pendingEditAnsImage = '';
+let pendingEditAnsImageCrop = null;
+let pendingEditAnsImageArrows = [];
 
 function updateEditImagePreviewUI(imgSrc) {
     const cleanSrc = sanitizeImageUrl(imgSrc);
-    if (cleanSrc && editImagePreview && editImagePreviewContainer) {
-        editImagePreview.src = cleanSrc;
+    if (cleanSrc && editImagePreviewContainer) {
+        renderAnnotatedImage({
+            container: editImagePreviewContainer,
+            imgElem: editImagePreview,
+            imageUrl: cleanSrc,
+            crop: pendingEditImageCrop,
+            arrows: pendingEditImageArrows,
+            maxHClass: 'max-h-40'
+        });
         editImagePreviewContainer.classList.remove('hidden');
+        if (editCropImageBtn) editCropImageBtn.classList.remove('hidden');
     } else if (editImagePreviewContainer) {
         if (editImagePreview) editImagePreview.src = '';
         editImagePreviewContainer.classList.add('hidden');
+        if (editCropImageBtn) editCropImageBtn.classList.add('hidden');
+        const oldWrap = editImagePreviewContainer.querySelector('.annotated-image-wrapper');
+        if (oldWrap) oldWrap.remove();
     }
 }
 
 function updateEditAnsImagePreviewUI(imgSrc) {
     const cleanSrc = sanitizeImageUrl(imgSrc);
-    if (cleanSrc && editAnsImagePreview && editAnsImagePreviewContainer) {
-        editAnsImagePreview.src = cleanSrc;
+    if (cleanSrc && editAnsImagePreviewContainer) {
+        renderAnnotatedImage({
+            container: editAnsImagePreviewContainer,
+            imgElem: editAnsImagePreview,
+            imageUrl: cleanSrc,
+            crop: pendingEditAnsImageCrop,
+            arrows: pendingEditAnsImageArrows,
+            maxHClass: 'max-h-40'
+        });
         editAnsImagePreviewContainer.classList.remove('hidden');
+        if (editCropAnsImageBtn) editCropAnsImageBtn.classList.remove('hidden');
     } else if (editAnsImagePreviewContainer) {
         if (editAnsImagePreview) editAnsImagePreview.src = '';
         editAnsImagePreviewContainer.classList.add('hidden');
+        if (editCropAnsImageBtn) editCropAnsImageBtn.classList.add('hidden');
+        const oldWrap = editAnsImagePreviewContainer.querySelector('.annotated-image-wrapper');
+        if (oldWrap) oldWrap.remove();
     }
 }
 
 if (editImageUrlInput) {
     editImageUrlInput.addEventListener('input', (e) => {
         const url = e.target.value.trim();
-        pendingEditImage = sanitizeImageUrl(url);
+        const clean = sanitizeImageUrl(url);
+        if (clean !== pendingEditImage) {
+            pendingEditImageCrop = null;
+            pendingEditImageArrows = [];
+        }
+        pendingEditImage = clean;
         updateEditImagePreviewUI(pendingEditImage);
     });
 }
@@ -5395,15 +5427,38 @@ if (editImageUrlInput) {
 if (editRemoveImageBtn) {
     editRemoveImageBtn.addEventListener('click', () => {
         pendingEditImage = '';
+        pendingEditImageCrop = null;
+        pendingEditImageArrows = [];
         if (editImageUrlInput) editImageUrlInput.value = '';
         updateEditImagePreviewUI('');
+    });
+}
+
+if (editCropImageBtn) {
+    editCropImageBtn.addEventListener('click', () => {
+        if (!pendingEditImage) return;
+        openImageEditorModal({
+            imageUrl: pendingEditImage,
+            crop: pendingEditImageCrop,
+            arrows: pendingEditImageArrows,
+            onSave: ({ crop, arrows }) => {
+                pendingEditImageCrop = crop;
+                pendingEditImageArrows = arrows;
+                updateEditImagePreviewUI(pendingEditImage);
+            }
+        });
     });
 }
 
 if (editAnsImageUrlInput) {
     editAnsImageUrlInput.addEventListener('input', (e) => {
         const url = e.target.value.trim();
-        pendingEditAnsImage = sanitizeImageUrl(url);
+        const clean = sanitizeImageUrl(url);
+        if (clean !== pendingEditAnsImage) {
+            pendingEditAnsImageCrop = null;
+            pendingEditAnsImageArrows = [];
+        }
+        pendingEditAnsImage = clean;
         updateEditAnsImagePreviewUI(pendingEditAnsImage);
     });
 }
@@ -5411,8 +5466,26 @@ if (editAnsImageUrlInput) {
 if (editRemoveAnsImageBtn) {
     editRemoveAnsImageBtn.addEventListener('click', () => {
         pendingEditAnsImage = '';
+        pendingEditAnsImageCrop = null;
+        pendingEditAnsImageArrows = [];
         if (editAnsImageUrlInput) editAnsImageUrlInput.value = '';
         updateEditAnsImagePreviewUI('');
+    });
+}
+
+if (editCropAnsImageBtn) {
+    editCropAnsImageBtn.addEventListener('click', () => {
+        if (!pendingEditAnsImage) return;
+        openImageEditorModal({
+            imageUrl: pendingEditAnsImage,
+            crop: pendingEditAnsImageCrop,
+            arrows: pendingEditAnsImageArrows,
+            onSave: ({ crop, arrows }) => {
+                pendingEditAnsImageCrop = crop;
+                pendingEditAnsImageArrows = arrows;
+                updateEditAnsImagePreviewUI(pendingEditAnsImage);
+            }
+        });
     });
 }
 
@@ -5504,10 +5577,14 @@ editBtn.addEventListener('click', () => {
     }
 
     pendingEditImage = currentQuestion.image || '';
+    pendingEditImageCrop = currentQuestion.imageCrop ? { ...currentQuestion.imageCrop } : null;
+    pendingEditImageArrows = Array.isArray(currentQuestion.imageArrows) ? JSON.parse(JSON.stringify(currentQuestion.imageArrows)) : [];
     if (editImageUrlInput) editImageUrlInput.value = pendingEditImage;
     updateEditImagePreviewUI(pendingEditImage);
 
     pendingEditAnsImage = currentQuestion.answerImage || '';
+    pendingEditAnsImageCrop = currentQuestion.answerImageCrop ? { ...currentQuestion.answerImageCrop } : null;
+    pendingEditAnsImageArrows = Array.isArray(currentQuestion.answerImageArrows) ? JSON.parse(JSON.stringify(currentQuestion.answerImageArrows)) : [];
     if (editAnsImageUrlInput) editAnsImageUrlInput.value = pendingEditAnsImage;
     updateEditAnsImagePreviewUI(pendingEditAnsImage);
 
@@ -5529,8 +5606,17 @@ saveEditBtn.addEventListener('click', () => {
         currentQuestion.answers = val.split(';').map(s => s.trim()).filter(Boolean);
     } else if (t === 'anki') {
         currentQuestion.answer = editAnkiAnswerInput.value;
-        if (pendingEditAnsImage) currentQuestion.answerImage = pendingEditAnsImage;
-        else delete currentQuestion.answerImage;
+        if (pendingEditAnsImage) {
+            currentQuestion.answerImage = pendingEditAnsImage;
+            if (pendingEditAnsImageCrop) currentQuestion.answerImageCrop = pendingEditAnsImageCrop;
+            else delete currentQuestion.answerImageCrop;
+            if (pendingEditAnsImageArrows && pendingEditAnsImageArrows.length > 0) currentQuestion.answerImageArrows = pendingEditAnsImageArrows;
+            else delete currentQuestion.answerImageArrows;
+        } else {
+            delete currentQuestion.answerImage;
+            delete currentQuestion.answerImageCrop;
+            delete currentQuestion.answerImageArrows;
+        }
     } else if (t === 'multiple_choice') {
         const optInputs = Array.from(document.querySelectorAll('.edit-mc-opt-val'));
         const options = optInputs.map(inp => inp.value.trim()).filter(Boolean);
@@ -5542,8 +5628,14 @@ saveEditBtn.addEventListener('click', () => {
 
     if (pendingEditImage) {
         currentQuestion.image = pendingEditImage;
+        if (pendingEditImageCrop) currentQuestion.imageCrop = pendingEditImageCrop;
+        else delete currentQuestion.imageCrop;
+        if (pendingEditImageArrows && pendingEditImageArrows.length > 0) currentQuestion.imageArrows = pendingEditImageArrows;
+        else delete currentQuestion.imageArrows;
     } else {
         delete currentQuestion.image;
+        delete currentQuestion.imageCrop;
+        delete currentQuestion.imageArrows;
     }
 
     saveGameState(true);
@@ -6448,7 +6540,7 @@ window.addEventListener('flashcards:sync-updated', (event) => {
                                 : renderMathAndMarkdown(currentQuestion.description || '');
                             bodyElem.innerHTML = formatted;
                         }
-                        setupCardImageWithPlaceholder(currentQuestion.image, questionImage, questionImageContainer, questionImagePlaceholder);
+                        setupCardImageWithPlaceholder(currentQuestion.image, questionImage, questionImageContainer, questionImagePlaceholder, currentQuestion.imageCrop, currentQuestion.imageArrows);
                     } else {
                         if (questionsPool.length > 0) {
                             loadQuestion();

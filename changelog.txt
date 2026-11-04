@@ -1,3 +1,56 @@
+CHANGELOG: SCIENTIFIC GUIDE "HOW TO WRITE GOOD FLASHCARDS" & ADAPTIVE ALGORITHM (v15.27)
+Date: 2026-11-04
+
+OVERVIEW:
+1. Editorial Scientific Guide (`pages/how-to-write-good-flashcards.html` & `js/guide.js`):
+   - Created comprehensive scientific article page explaining cognitive neuroscience principles: Testing Effect (Roediger & Karpicke), Long-Term Potentiation (LTP), Desirable Difficulties (Bjork), Prediction Error & Dopaminergic reconsolidation (Dehaene & Schultz), and Interleaving (Rohrer & Pashler).
+   - What Works vs. What Fails: Detailed comparison matrices based on the Minimum Information Principle (SuperMemo / Wozniak), contrastive pairs, and atomic card design vs. text-walls, multi-fact lists, and blind memorization.
+   - Bloom's Taxonomy applied to flashcards: Interactive 6-tier level explorer with practical cards and format mappings for Remember (open/anki), Understand (cloze fill), Apply (open_double), Analyze (multiple_choice with plausible AI distractors), Evaluate (decision making), and Create (mental chunking).
+   - "Why Flashcards Cannot Stand Alone": Comprehensive Section 3 expansion explaining why flashcards are designed for consolidation and retention rather than initial comprehension, detailing the Three-Phase Cognitive Pipeline (Comprehension/Feynman -> Atomic SRS -> Real Application/Q-Banks) and 4 evidence-based study practices from College Info Geek & the r/Anki community (Explicit Active Retrieval with typing, Bidirectional retrieval, Dual-Coding Theory, and Ruthless Pruning/IKEA effect).
+   - App Architecture & Adaptive Algorithm breakdown: Detailed mathematical logic of `calculateThinkingGap` (latency analysis, fast impulsive mistakes vs. slow search mistakes, error trap protection, leech threshold >= 4, and background Gemini topic interleaving).
+   - High-performance study workflows (Feynman rule, Daily Notebook SRS with streak freezes, Exam Week multi-deck simulation, and card refactoring/grooming).
+   - 6 Golden Rules of Flashcard Writing with copyable template examples and feedback toast.
+2. Journalistic Serif Theme & Material You Expressive Design:
+   - Standardized typography across all prose blocks, callouts, cards, workflows, and rules to share the same serif family (`Newsreader`) and uniform font size/line-height.
+   - Re-engineered Section 4 Algorithm block into a pure black terminal vibe (`bg-black`, pure white text, monospace font, zero icons).
+   - Cleaned up section headings: kept purely in black text (`text-black font-bold`) and removed upper badge tags.
+   - Removed redundant metadata pills under the main title.
+   - Fixed math formatting (e.g. `(t < 2.5s)`, `Ca²⁺`, `≥ 80%`) and integrated KaTeX/DOMPurify support.
+   - Features drop-caps, pull quotes, reading progress tracking bar, sticky/floating Table of Contents with active IntersectionObserver highlighting, and M3 28px extra-large rounded containers.
+3. Creation Dashboard Callout (`pages/generate.html`):
+   - Refined the editorial card: removed the "Scientific guide & article" pill and moved the "8 min read" indicator to the bottom.
+4. Full Bilingual i18n Translation (`js/i18n.js`):
+   - Added complete English translations for every article section, quote, workflow, Bloom tier, algorithm line, and rule, allowing instant bilingual switching between Portuguese (`pt-BR`) and English (`en-US`).
+5. SEO & Structured Data (Schema.org JSON-LD):
+   - Added rich snippet JSON-LD to `pages/how-to-write-good-flashcards.html` implementing `TechArticle`, `FAQPage`, and `BreadcrumbList` schemas.
+   - Added `WebApplication` structured data to `index.html`.
+   - Added canonical URLs and ensured complete metadata across pages.
+   - Created root `sitemap.xml` listing all canonical URLs (including the new scientific article) and `robots.txt` pointing to the sitemap.
+   - Bumped `CACHE_NAME` to `flashcards-v15.27` in `sw.js` and registered `/pages/how-to-write-good-flashcards.html` and `/js/guide.js`.
+
+--------------------------------------------------------------------------------
+
+CHANGELOG: IMAGE CROPPING AND ARROW ANNOTATIONS FOR LINKED IMAGES (v15.26)
+Date: 2026-11-04
+
+OVERVIEW:
+1. Pure Metadata Image Cropping & Arrow Annotation (`imageCrop` & `imageArrows`):
+   - Implemented interactive image cropping and vector arrow annotations for cards using linked web URLs without saving any raster data (Base64/blobs/files) into the deck JSON, strictly preserving deck size limits and localStorage/Firestore quotas.
+   - Crop regions are saved as normalized coordinates (`{ x, y, width, height }`), and arrows as resolution-independent percentage coordinates (`{ startX, startY, endX, endY, color }`).
+   - Supports both question images (`image`, `imageCrop`, `imageArrows`) and Anki answer images (`answerImage`, `answerImageCrop`, `answerImageArrows`).
+2. Material Design 3 Image Editor Modal (`js/image-editor-modal.js`):
+   - Interactive Crop Tool: features a dimmed exterior mask, draggable 8-handle bounding box, and clamped percentage coordinates.
+   - Interactive Arrow Tool: click-and-drag vector arrow drawing with live preview, chevron arrowheads, multi-color palette (theme blue `#3b82f7`, red, yellow, green, white), and high-contrast double-stroke outlines with drop shadows for legibility on all backgrounds.
+   - Controls: Undo Arrow, Reset Crop, Clear Arrows, Live Preview toggle, Cancel, and Save Adjustments.
+3. Universal Annotated Image Rendering:
+   - Exported `renderAnnotatedImage` providing pixel-perfect CSS container clipping + SVG vector arrow overlay matching the crop aspect ratio.
+   - Fully integrated across gameplay (`#question-image-container`, `#anki-answer-image-container`), Lightbox Zoom modal (`#image-zoom-modal`), Card Creator, Inline Card Editor, and Deck Cards list preview.
+4. i18n & PWA Updates:
+   - Added localization keys in `js/i18n.js` strictly for `pt-BR` and `en-US`.
+   - Bumped `CACHE_NAME` to `flashcards-v15.26` and registered `js/image-editor-modal.js` in `sw.js`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: CLOZE INLINE BRACES SYNTAX FOR FILL TAGS (v15.25)
 Date: 2026-11-04
 
