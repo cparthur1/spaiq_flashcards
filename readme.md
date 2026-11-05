@@ -94,6 +94,14 @@ O **Spaiq Flashcards** (ou simplesmente **Spaiq**) transforma materiais brutos (
 
 ---
 
+### 8. API REST de Estatísticas & Progresso (Spaiq Pro)
+- **Integração Externa:** Conecte seus dados de estudo a aplicativos de acompanhamento de progresso, painéis pessoais (Notion, Obsidian, Home Assistant) ou widgets móveis.
+- **Métricas Retornadas em JSON:** Data (`date`), total de cartões revisados no dia (`cards_reviewed`), taxa de retenção (`retention_rate`), tempo de estudo em segundos (`time_spent_seconds`) e sequência consecutiva de dias (`streak_days`).
+- **Autenticação:** Chave secreta de API (`fc_live_...`) solicitada e gerenciada diretamente no menu de **Configurações** do webapp.
+- **Documentação Técnica Completa:** Consulte a especificação dos endpoints, esquemas de erros e exemplos em Python, Node.js e cURL em [**docs/API.md**](./docs/API.md).
+
+---
+
 ## Design System & Estética (Material Design 3)
 
 O Spaiq foi projetado segundo diretrizes rigorosas:

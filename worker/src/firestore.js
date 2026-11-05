@@ -155,6 +155,11 @@ export async function deleteUserDocument(serviceAccountConfig, uid) {
     }
   }
 
+  // Delete API key if present
+  if (userDoc?.apiKey) {
+    await deleteDocument(serviceAccountConfig, 'api_keys', userDoc.apiKey).catch(() => {});
+  }
+
   // Delete the user doc
   await fetch(userUrl, {
     method: 'DELETE',
@@ -180,6 +185,11 @@ export async function clearUserCloudData(serviceAccountConfig, uid) {
     // Delete notebook deck
     await deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {});
 
+    // Delete API key if present
+    if (userDoc?.apiKey) {
+      await deleteDocument(serviceAccountConfig, 'api_keys', userDoc.apiKey).catch(() => {});
+    }
+
     // Clear cloud slots and data on user document
     await updateUserDocument(serviceAccountConfig, uid, {
       deckSlots: [],
@@ -188,6 +198,8 @@ export async function clearUserCloudData(serviceAccountConfig, uid) {
       settings: null,
       dailyStreak: null,
       activeMode: null,
+      apiKey: null,
+      apiKeyCreatedAt: null,
       lastSyncedAt: 0
     });
     return true;
@@ -243,6 +255,20 @@ export async function setDocument(serviceAccountConfig, collectionName, docId, f
   }
 
   return await res.json();
+}
+
+/**
+ * Delete any document from Firestore
+ */
+export async function deleteDocument(serviceAccountConfig, collectionName, docId) {
+  const token = await getGoogleAdminAccessToken(serviceAccountConfig);
+  const projectId = serviceAccountConfig.project_id;
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${collectionName}/${docId}`;
+
+  return await fetch(url, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
 }
 
 /**

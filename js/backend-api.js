@@ -272,3 +272,65 @@ export async function deleteAccountAndCancelSubscription() {
   return await res.json();
 }
 
+/**
+ * Get user stats API key (exclusive to Pro)
+ */
+export async function getUserApiKey() {
+  const res = await fetchWithAuth('/api/user/api-key');
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      const err = await res.json().catch(() => ({}));
+      return { isPro: false, error: err.error || 'forbidden', message: err.message || '' };
+    }
+    throw new Error('Falha ao obter chave de API');
+  }
+  return await res.json();
+}
+
+/**
+ * Generate or regenerate user stats API key (exclusive to Pro)
+ */
+export async function generateUserApiKey() {
+  const res = await fetchWithAuth('/api/user/api-key', {
+    method: 'POST'
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Erro ao gerar chave de API');
+  }
+  return await res.json();
+}
+
+/**
+ * Revoke user stats API key (exclusive to Pro)
+ */
+export async function revokeUserApiKey() {
+  const res = await fetchWithAuth('/api/user/api-key', {
+    method: 'DELETE'
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Erro ao revogar chave de API');
+  }
+  return await res.json();
+}
+
+/**
+ * Test the public Stats API using an API key
+ */
+export async function testStatsApi(apiKey) {
+  const headers = {};
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+  const res = await fetch(`${BACKEND_URL}/api/v1/stats`, {
+    headers
+  });
+  const data = await res.json().catch(() => ({}));
+  return {
+    ok: res.ok,
+    status: res.status,
+    data
+  };
+}
+

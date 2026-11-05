@@ -18,5 +18,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // API keys mapping (only accessible via backend Admin Service Account)
+    match /api_keys/{apiKey} {
+      allow read, write: if false;
+    }
   }
 }

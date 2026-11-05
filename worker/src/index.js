@@ -10,7 +10,7 @@
 
 import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail } from './google-auth.js';
 import { callGemini } from './gemini.js';
-import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData } from './firestore.js';
+import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData, deleteDocument } from './firestore.js';
 import {
   getStripeClient,
   createSubscription,
@@ -74,13 +74,24 @@ export default {
   async fetch(request, env, ctx) {
     const corsHeaders = getCorsHeaders(request);
 
-    // Handle CORS Preflight
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders });
-    }
-
     const url = new URL(request.url);
     const path = url.pathname;
+
+    const isPublicStatsPath = path === '/api/v1/stats' || path === '/api/stats';
+    const publicCorsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+      'Access-Control-Max-Age': '86400'
+    };
+
+    // Handle CORS Preflight
+    if (request.method === 'OPTIONS') {
+      if (isPublicStatsPath) {
+        return new Response(null, { status: 204, headers: publicCorsHeaders });
+      }
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
 
     try {
       // 1. Health Check
@@ -456,6 +467,220 @@ export default {
         }).catch(err => console.warn('Erro ao atualizar user doc:', err));
 
         return jsonResponse({ success: true, syncedAt: now }, 200, corsHeaders);
+      }
+
+      // 3.3 User Stats API Key Management (Exclusive to Pro)
+      if (path === '/api/user/api-key' && request.method === 'GET') {
+        const user = await authenticateUser();
+        const serviceAccount = getServiceAccount(env);
+        const userDoc = await getUserDocument(serviceAccount, user.uid);
+
+        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
+
+        if (!isPro) {
+          return jsonResponse({
+            error: 'pro_required',
+            message: 'A API de estatísticas é exclusiva para assinantes Pro.'
+          }, 403, corsHeaders);
+        }
+
+        return jsonResponse({
+          apiKey: userDoc?.apiKey || null,
+          createdAt: userDoc?.apiKeyCreatedAt || null,
+          isPro: true
+        }, 200, corsHeaders);
+      }
+
+      if (path === '/api/user/api-key' && request.method === 'POST') {
+        const user = await authenticateUser();
+        const serviceAccount = getServiceAccount(env);
+        const userDoc = await getUserDocument(serviceAccount, user.uid);
+
+        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
+
+        if (!isPro) {
+          return jsonResponse({
+            error: 'pro_required',
+            message: 'A API de estatísticas é exclusiva para assinantes Pro.'
+          }, 403, corsHeaders);
+        }
+
+        // Generate 32-hex cryptographically random string with prefix fc_live_
+        const randomBytes = new Uint8Array(16);
+        crypto.getRandomValues(randomBytes);
+        const keySuffix = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        const newApiKey = `fc_live_${keySuffix}`;
+        const now = new Date().toISOString();
+
+        // If user already had an existing API key, remove previous key document
+        if (userDoc?.apiKey && userDoc.apiKey !== newApiKey) {
+          await deleteDocument(serviceAccount, 'api_keys', userDoc.apiKey).catch(() => {});
+        }
+
+        // Save key reference document in 'api_keys' collection
+        await setDocument(serviceAccount, 'api_keys', newApiKey, {
+          uid: user.uid,
+          email: user.email || '',
+          createdAt: now,
+          lastUsedAt: null
+        });
+
+        // Update user document
+        await updateUserDocument(serviceAccount, user.uid, {
+          apiKey: newApiKey,
+          apiKeyCreatedAt: now
+        });
+
+        return jsonResponse({
+          apiKey: newApiKey,
+          createdAt: now,
+          isPro: true
+        }, 200, corsHeaders);
+      }
+
+      if (path === '/api/user/api-key' && request.method === 'DELETE') {
+        const user = await authenticateUser();
+        const serviceAccount = getServiceAccount(env);
+        const userDoc = await getUserDocument(serviceAccount, user.uid);
+
+        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
+
+        if (!isPro) {
+          return jsonResponse({
+            error: 'pro_required',
+            message: 'A API de estatísticas é exclusiva para assinantes Pro.'
+          }, 403, corsHeaders);
+        }
+
+        if (userDoc?.apiKey) {
+          await deleteDocument(serviceAccount, 'api_keys', userDoc.apiKey).catch(() => {});
+          await updateUserDocument(serviceAccount, user.uid, {
+            apiKey: null,
+            apiKeyCreatedAt: null
+          });
+        }
+
+        return jsonResponse({ success: true, message: 'Chave de API revogada com sucesso.' }, 200, corsHeaders);
+      }
+
+      // 3.4 External Public Stats API Endpoint (Exclusive to Pro with API Key)
+      if ((path === '/api/v1/stats' || path === '/api/stats') && request.method === 'GET') {
+        // Extract API key from headers or query parameters
+        let apiKey = request.headers.get('X-API-Key') || request.headers.get('x-api-key') || '';
+        if (!apiKey) {
+          const authHeader = request.headers.get('Authorization') || '';
+          if (authHeader.startsWith('Bearer ')) {
+            apiKey = authHeader.substring(7).trim();
+          }
+        }
+        if (!apiKey) {
+          apiKey = url.searchParams.get('api_key') || url.searchParams.get('key') || '';
+        }
+
+        if (!apiKey) {
+          return jsonResponse({
+            error: 'unauthorized',
+            message: 'Chave de API ausente. Forneça o cabeçalho Authorization: Bearer <chave>, X-API-Key: <chave> ou o parâmetro ?api_key=<chave>.'
+          }, 401, publicCorsHeaders);
+        }
+
+        const serviceAccount = getServiceAccount(env);
+        const keyDoc = await getDocument(serviceAccount, 'api_keys', apiKey).catch(() => null);
+
+        if (!keyDoc || !keyDoc.uid) {
+          return jsonResponse({
+            error: 'invalid_api_key',
+            message: 'Chave de API inválida ou revogada.'
+          }, 401, publicCorsHeaders);
+        }
+
+        const userDoc = await getUserDocument(serviceAccount, keyDoc.uid).catch(() => null);
+        if (!userDoc) {
+          return jsonResponse({
+            error: 'user_not_found',
+            message: 'Usuário não encontrado.'
+          }, 404, publicCorsHeaders);
+        }
+
+        // Verify that the user is currently PRO
+        const isLifetime = LIFETIME_PRO_EMAILS.includes((userDoc.email || '').toLowerCase().trim());
+        const isPro = isLifetime || userDoc.subscription?.status === 'active' || userDoc.pro === true;
+
+        if (!isPro) {
+          return jsonResponse({
+            error: 'pro_required',
+            message: 'A API de estatísticas é exclusiva para assinantes Pro.'
+          }, 403, publicCorsHeaders);
+        }
+
+        // Asynchronously update lastUsedAt on key document
+        ctx.waitUntil(
+          updateUserDocument(serviceAccount, keyDoc.uid, {
+            'apiKeyLastUsedAt': new Date().toISOString()
+          }).catch(() => {})
+        );
+
+        // Determine target date (YYYY-MM-DD), default to today in UTC
+        let targetDate = url.searchParams.get('date');
+        if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+          targetDate = new Date().toISOString().slice(0, 10);
+        }
+
+        const streakDays = Number(userDoc.dailyStreak?.streak) || 0;
+        const streakHistoryCount = Number(userDoc.dailyStreak?.history?.[targetDate]) || 0;
+
+        let sessionCardsSum = 0;
+        let sessionCorrectSum = 0;
+        let sessionDurationSum = 0;
+
+        const sessions = [];
+        if (Array.isArray(userDoc.stats?.history)) {
+          sessions.push(...userDoc.stats.history);
+        }
+        if (userDoc.stats?.currentSession && typeof userDoc.stats.currentSession === 'object') {
+          sessions.push(userDoc.stats.currentSession);
+        }
+
+        for (const sess of sessions) {
+          if (!sess) continue;
+          const sessTime = sess.startTime || sess.lastActiveTime || sess.endTime;
+          if (!sessTime) continue;
+          const sessDateStr = new Date(sessTime).toISOString().slice(0, 10);
+          if (sessDateStr === targetDate) {
+            sessionCardsSum += (Number(sess.cardsAnswered) || 0);
+            sessionCorrectSum += (Number(sess.correctCount) || 0);
+            sessionDurationSum += (Number(sess.durationSeconds || sess.activeDurationSeconds) || 0);
+          }
+        }
+
+        const cardsReviewed = Math.max(sessionCardsSum, streakHistoryCount);
+
+        let retentionRate = 0.0;
+        if (sessionCardsSum > 0) {
+          retentionRate = Math.round((sessionCorrectSum / sessionCardsSum) * 100) / 100;
+        } else if (cardsReviewed > 0 && userDoc.stats?.allTime?.totalCardsAnswered > 0) {
+          const allTimeCorrect = Number(userDoc.stats.allTime.totalCorrect) || 0;
+          const allTimeTotal = Number(userDoc.stats.allTime.totalCardsAnswered) || 0;
+          retentionRate = allTimeTotal > 0 ? Math.round((allTimeCorrect / allTimeTotal) * 100) / 100 : 0.0;
+        }
+
+        const timeSpentSeconds = sessionDurationSum;
+
+        // If sample query parameter is explicitly requested, inject sample fallback values
+        const isSampleRequested = url.searchParams.get('sample') === 'true';
+
+        const statsPayload = {
+          date: targetDate,
+          cards_reviewed: isSampleRequested ? (cardsReviewed || 142) : cardsReviewed,
+          retention_rate: isSampleRequested ? (retentionRate || 0.88) : retentionRate,
+          time_spent_seconds: isSampleRequested ? (timeSpentSeconds || 1840) : timeSpentSeconds,
+          streak_days: isSampleRequested ? (streakDays || 18) : streakDays
+        };
+
+        return jsonResponse(statsPayload, 200, publicCorsHeaders);
       }
 
       // 4. Verify Payment Status & Activate Pro immediately

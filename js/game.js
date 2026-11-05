@@ -21,6 +21,7 @@ import { initTransfer } from './transfer.js';
 import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCurrentSession, completeCurrentSession, getCurrentSessionMetrics } from './stats-tracker.js';
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
+import { getUserApiKey, generateUserApiKey, revokeUserApiKey, testStatsApi, BACKEND_URL } from './backend-api.js';
 import { onAuthChange, auth } from './firebase-client.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
@@ -4911,6 +4912,273 @@ async function updateSettingsModalState() {
 
     // 6. Daily notifications settings
     updateNotificationsUI();
+
+    // 7. Statistics API settings
+    updateApiSettingsUI();
+}
+
+let isApiSettingsLoading = false;
+let currentLoadedApiKey = null;
+
+async function updateApiSettingsUI() {
+    const container = document.getElementById('settings-api-container');
+    if (!container) return;
+
+    if (!isUserPro()) {
+        container.innerHTML = `
+            <div class="p-3.5 bg-gradient-to-br from-blue-50/80 to-indigo-50/50 rounded-xl border border-blue-200/70 space-y-3">
+                <div class="flex items-start gap-2.5">
+                    <span class="material-symbols-rounded text-xl text-[#3b82f7] flex-shrink-0 mt-0.5">lock</span>
+                    <div>
+                        <p class="text-xs font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="settings_api_pro_exclusive">${escapeHtml(t('settings_api_pro_exclusive'))}</p>
+                        <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-relaxed mt-0.5" data-i18n="settings_api_pro_desc">${escapeHtml(t('settings_api_pro_desc'))}</p>
+                    </div>
+                </div>
+
+                <div class="bg-white/90 rounded-xl p-2.5 border border-blue-100 font-mono text-[10px] text-gray-700 leading-tight select-all">
+                    <span class="text-gray-400 block text-[9px] font-sans font-bold uppercase tracking-wider mb-1">Exemplo de Resposta JSON:</span>
+                    <code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18\n}</code>
+                </div>
+
+                <button type="button" id="setting-api-upgrade-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm text-white cursor-pointer transition-all hover:opacity-95" style="background-color: #3b82f7;">
+                    <span class="material-symbols-rounded text-base">stars</span>
+                    <span data-i18n="settings_api_unlock_btn">${escapeHtml(t('settings_api_unlock_btn'))}</span>
+                </button>
+            </div>
+        `;
+        document.getElementById('setting-api-upgrade-btn')?.addEventListener('click', () => {
+            openProModal();
+        });
+        return;
+    }
+
+    // User is Pro: fetch their existing API key
+    if (!currentLoadedApiKey && !isApiSettingsLoading) {
+        isApiSettingsLoading = true;
+        container.innerHTML = `
+            <div class="py-6 flex flex-col items-center justify-center gap-2 text-center">
+                <span class="material-symbols-rounded text-2xl text-[#3b82f7] animate-spin">progress_activity</span>
+                <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]">${escapeHtml(t('loading'))}</span>
+            </div>
+        `;
+        try {
+            const res = await getUserApiKey();
+            currentLoadedApiKey = res?.apiKey || null;
+        } catch (e) {
+            console.warn('[Settings API] Erro ao carregar chave:', e);
+        } finally {
+            isApiSettingsLoading = false;
+        }
+    }
+
+    if (!currentLoadedApiKey) {
+        // Pro, but no key generated yet
+        container.innerHTML = `
+            <div class="space-y-3">
+                <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed" data-i18n="settings_api_generate_desc">
+                    ${escapeHtml(t('settings_api_generate_desc'))}
+                </p>
+
+                <div class="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80 font-mono text-[10px] text-gray-700 leading-tight">
+                    <span class="text-gray-400 block text-[9px] font-sans font-bold uppercase tracking-wider mb-1">Formato do Retorno JSON:</span>
+                    <code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18\n}</code>
+                </div>
+
+                <button type="button" id="setting-api-generate-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm text-white cursor-pointer transition-all hover:opacity-95" style="background-color: #3b82f7;">
+                    <span class="material-symbols-rounded text-base">key</span>
+                    <span data-i18n="settings_api_generate_btn">${escapeHtml(t('settings_api_generate_btn'))}</span>
+                </button>
+            </div>
+        `;
+
+        document.getElementById('setting-api-generate-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('setting-api-generate-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="material-symbols-rounded text-base animate-spin">progress_activity</span><span>${escapeHtml(t('loading'))}</span>`;
+            }
+            try {
+                const res = await generateUserApiKey();
+                currentLoadedApiKey = res?.apiKey || null;
+                syncSlotsToCloud();
+                showNotificationPill(t('settings_api_key_label') + ' gerada!', 'check');
+            } catch (err) {
+                showNotificationPill(err.message || 'Erro ao gerar chave', 'error');
+            }
+            updateApiSettingsUI();
+        });
+        return;
+    }
+
+    // User is Pro and has an active API key
+    const endpointUrl = `${BACKEND_URL}/api/v1/stats`;
+    const curlCommand = `curl -H "X-API-Key: ${currentLoadedApiKey}" "${endpointUrl}"`;
+
+    container.innerHTML = `
+        <div class="space-y-3">
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="settings_api_key_label">
+                    ${escapeHtml(t('settings_api_key_label'))}
+                </label>
+                <div class="flex items-center gap-1.5">
+                    <div class="flex-1 relative flex items-center">
+                        <input type="password" id="setting-api-key-input" readonly value="${escapeHtml(currentLoadedApiKey)}"
+                            class="w-full pl-3 pr-9 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-xs font-mono font-semibold outline-none select-all focus:ring-2 focus:ring-blue-500">
+                        <button type="button" id="setting-api-key-toggle-vis" class="absolute right-2 text-gray-400 hover:text-gray-700 p-1 rounded-lg cursor-pointer transition" title="${escapeHtml(t('settings_api_toggle_visibility'))}">
+                            <span class="material-symbols-rounded text-base">visibility</span>
+                        </button>
+                    </div>
+                    <button type="button" id="setting-api-copy-btn" class="px-3.5 py-2 rounded-xl text-white text-xs font-bold flex items-center gap-1 transition shadow-xs cursor-pointer flex-shrink-0 hover:opacity-95" style="background-color: #3b82f7;">
+                        <span class="material-symbols-rounded text-sm">content_copy</span>
+                        <span data-i18n="settings_api_copy_btn">${escapeHtml(t('settings_api_copy_btn'))}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Actions Row -->
+            <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--md-sys-color-outline-variant)]/60">
+                <button type="button" id="setting-api-test-btn" class="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/80 text-xs font-bold text-[#3b82f7] transition cursor-pointer flex items-center gap-1">
+                    <span class="material-symbols-rounded text-sm">play_arrow</span>
+                    <span data-i18n="settings_api_test_btn">${escapeHtml(t('settings_api_test_btn'))}</span>
+                </button>
+                <button type="button" id="setting-api-regen-btn" class="px-3 py-1.5 rounded-xl border border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-container-high)] text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] transition cursor-pointer flex items-center gap-1">
+                    <span class="material-symbols-rounded text-sm">refresh</span>
+                    <span data-i18n="settings_api_regenerate_btn">${escapeHtml(t('settings_api_regenerate_btn'))}</span>
+                </button>
+                <button type="button" id="setting-api-revoke-btn" class="px-3 py-1.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold transition cursor-pointer flex items-center gap-1 ml-auto">
+                    <span class="material-symbols-rounded text-sm">delete</span>
+                    <span data-i18n="settings_api_revoke_btn">${escapeHtml(t('settings_api_revoke_btn'))}</span>
+                </button>
+            </div>
+
+            <!-- Test Result Box -->
+            <div id="setting-api-test-box" class="hidden rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 space-y-1.5 transition-all">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
+                        <span class="material-symbols-rounded text-sm text-emerald-600">check_circle</span>
+                        <span data-i18n="settings_api_test_success">${escapeHtml(t('settings_api_test_success'))}</span>
+                    </span>
+                    <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-200/70 text-emerald-900">200 OK</span>
+                </div>
+                <pre id="setting-api-test-json" class="p-2.5 bg-slate-900 text-emerald-300 rounded-lg font-mono text-[11px] overflow-x-auto leading-relaxed select-all"></pre>
+            </div>
+
+            <!-- Endpoint Documentation & Examples -->
+            <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500" data-i18n="settings_api_endpoint_label">Endpoint REST (GET)</span>
+                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">JSON</span>
+                </div>
+                <code class="block text-[11px] text-gray-900 font-mono break-all bg-white p-2 rounded-lg border border-gray-200 select-all font-semibold">
+                    ${endpointUrl}
+                </code>
+                <p class="text-[10px] text-gray-600 leading-normal" data-i18n="settings_api_guide_desc">
+                    ${escapeHtml(t('settings_api_guide_desc'))}
+                </p>
+                <div class="pt-1.5 border-t border-gray-200/80">
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-1">Exemplo cURL:</span>
+                    <code class="block text-[10px] text-gray-700 font-mono break-all bg-gray-100 p-1.5 rounded border border-gray-200 select-all">
+                        ${escapeHtml(curlCommand)}
+                    </code>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Visibility toggle
+    const keyInput = document.getElementById('setting-api-key-input');
+    const toggleVisBtn = document.getElementById('setting-api-key-toggle-vis');
+    toggleVisBtn?.addEventListener('click', () => {
+        if (!keyInput) return;
+        const isPassword = keyInput.type === 'password';
+        keyInput.type = isPassword ? 'text' : 'password';
+        const icon = toggleVisBtn.querySelector('.material-symbols-rounded');
+        if (icon) icon.textContent = isPassword ? 'visibility_off' : 'visibility';
+    });
+
+    // Copy button
+    document.getElementById('setting-api-copy-btn')?.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(currentLoadedApiKey);
+            const copyBtn = document.getElementById('setting-api-copy-btn');
+            if (copyBtn) {
+                const prev = copyBtn.innerHTML;
+                copyBtn.innerHTML = `<span class="material-symbols-rounded text-sm">check</span><span>${escapeHtml(t('settings_api_copied'))}</span>`;
+                setTimeout(() => { copyBtn.innerHTML = prev; }, 2000);
+            }
+            showNotificationPill(t('settings_api_copied'), 'check');
+        } catch {
+            keyInput?.select();
+        }
+    });
+
+    // Test API button
+    document.getElementById('setting-api-test-btn')?.addEventListener('click', async () => {
+        const testBtn = document.getElementById('setting-api-test-btn');
+        const testBox = document.getElementById('setting-api-test-box');
+        const testJson = document.getElementById('setting-api-test-json');
+
+        if (testBtn) {
+            testBtn.disabled = true;
+            testBtn.innerHTML = `<span class="material-symbols-rounded text-sm animate-spin">progress_activity</span><span>${escapeHtml(t('settings_api_testing'))}</span>`;
+        }
+
+        try {
+            syncSlotsToCloud();
+            const res = await testStatsApi(currentLoadedApiKey);
+            if (testBox && testJson) {
+                testBox.classList.remove('hidden');
+                testJson.textContent = JSON.stringify(res.data, null, 2);
+            }
+        } catch (err) {
+            if (testBox && testJson) {
+                testBox.classList.remove('hidden');
+                testJson.textContent = JSON.stringify({ error: 'test_failed', message: err.message }, null, 2);
+            }
+        } finally {
+            if (testBtn) {
+                testBtn.disabled = false;
+                testBtn.innerHTML = `<span class="material-symbols-rounded text-sm">play_arrow</span><span>${escapeHtml(t('settings_api_test_btn'))}</span>`;
+            }
+        }
+    });
+
+    // Regenerate Key button
+    document.getElementById('setting-api-regen-btn')?.addEventListener('click', async () => {
+        if (!confirm(t('settings_api_confirm_regenerate'))) return;
+        const regenBtn = document.getElementById('setting-api-regen-btn');
+        if (regenBtn) {
+            regenBtn.disabled = true;
+            regenBtn.innerHTML = `<span class="material-symbols-rounded text-sm animate-spin">progress_activity</span>`;
+        }
+        try {
+            const res = await generateUserApiKey();
+            currentLoadedApiKey = res?.apiKey || null;
+            syncSlotsToCloud();
+            showNotificationPill(t('settings_api_key_label') + ' regerada!', 'check');
+        } catch (err) {
+            showNotificationPill(err.message || 'Erro ao regerar chave', 'error');
+        }
+        updateApiSettingsUI();
+    });
+
+    // Revoke Key button
+    document.getElementById('setting-api-revoke-btn')?.addEventListener('click', async () => {
+        if (!confirm(t('settings_api_confirm_revoke'))) return;
+        const revokeBtn = document.getElementById('setting-api-revoke-btn');
+        if (revokeBtn) {
+            revokeBtn.disabled = true;
+            revokeBtn.innerHTML = `<span class="material-symbols-rounded text-sm animate-spin">progress_activity</span>`;
+        }
+        try {
+            await revokeUserApiKey();
+            currentLoadedApiKey = null;
+            showNotificationPill('Chave revogada com sucesso', 'check');
+        } catch (err) {
+            showNotificationPill(err.message || 'Erro ao revogar chave', 'error');
+        }
+        updateApiSettingsUI();
+    });
 }
 
 function switchSettingsStatsTab(tab) {
@@ -6885,4 +7153,25 @@ window.addEventListener('flashcards:sync-updated', (event) => {
         console.warn('Erro ao atualizar UI após sincronização:', e);
     }
 });
+
+// Check for URL deep-link to settings (e.g. game.html?open=settings&section=api)
+try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open') === 'settings') {
+        setTimeout(() => {
+            openAppSettingsModal();
+            if (urlParams.get('section') === 'api') {
+                setTimeout(() => {
+                    const apiSection = document.getElementById('settings-api-section');
+                    if (apiSection) {
+                        apiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+        }, 300);
+    }
+} catch (e) {
+    console.warn('Erro ao processar parâmetros de URL para configurações:', e);
+}
+
 
