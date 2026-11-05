@@ -442,7 +442,8 @@ function renderPerformanceByType(sess) {
         'open': { name: t('card_type_open'), icon: 'keyboard', color: 'bg-emerald-500' },
         'open_double': { name: t('card_type_open_double'), icon: 'bolt', color: 'bg-purple-500' },
         'fill': { name: t('card_type_fill'), icon: 'draw', color: 'bg-teal-500' },
-        'anki': { name: t('card_type_anki'), icon: 'psychology', color: 'bg-indigo-500' }
+        'anki': { name: t('card_type_anki'), icon: 'psychology', color: 'bg-indigo-500' },
+        'voice': { name: t('card_type_voice'), icon: 'record_voice_over', color: 'bg-blue-600' }
     };
 
     let hasAnyData = false;

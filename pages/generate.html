@@ -907,6 +907,20 @@
                                     </svg>
                                 </div>
                             </div>
+
+                            <!-- 8. Explicar em voz alta (voice - PRO) -->
+                            <div class="m3-select-item" data-value="voice" data-label="Explicar em voz alta" data-icon="../assets/img/voice_explain.svg" role="option" aria-selected="false" tabindex="0">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <img src="../assets/img/voice_explain.svg" class="w-5 h-5 flex-shrink-0" alt="Explicar em voz alta">
+                                    <span class="truncate" data-i18n="card_type_voice">Explicar em voz alta</span>
+                                    <span class="ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-2xs">PRO</span>
+                                </div>
+                                <div class="m3-select-check">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1024,6 +1038,23 @@
                     </div>
                     <div id="creator-arrows-inputs-list" class="space-y-2">
                         <!-- Dynamically populated answer boxes per arrow -->
+                    </div>
+                </div>
+
+                <!-- GROUP: EXPLAIN OUT LOUD (VOICE - PRO) -->
+                <div id="creator-group-voice" class="space-y-3 hidden">
+                    <div>
+                        <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="voice_desc_label">Explicação de Referência do Conceito</label>
+                            <div class="flex items-center gap-1.5">
+                                <span id="voice-deck-limit-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Máx. 5 por baralho (0/5)</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">PRO • Gemini Flash-Lite</span>
+                            </div>
+                        </div>
+                        <textarea id="creator-ans-voice" rows="6" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm resize-y" placeholder="Explique detalhadamente o conceito ou resposta esperada. O Gemini usará este texto para comparar com o que você falar e classificar seu desempenho..." data-i18n-placeholder="voice_desc_placeholder"></textarea>
+                        <p class="text-[11px] text-gray-500 mt-1 leading-relaxed" data-i18n="creator_hint_voice">
+                            Grave sua voz explicando o conceito. O Gemini comparará a resposta com sua explicação de referência.
+                        </p>
                     </div>
                 </div>
 
@@ -1187,6 +1218,17 @@
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="edit_detailed_answer_label">Resposta Detalhada</label>
                         <textarea id="edit-card-anki-answer" rows="5" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm resize-y" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="edit_anki_placeholder"></textarea>
+                    </div>
+                </div>
+
+                <!-- Voice Answer (PRO) -->
+                <div id="edit-card-voice-group" class="hidden space-y-3">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="voice_desc_label">Explicação de Referência do Conceito</label>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">PRO</span>
+                        </div>
+                        <textarea id="edit-card-voice-answer" rows="6" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm resize-y" placeholder="Explique detalhadamente o conceito ou resposta esperada..." data-i18n-placeholder="voice_desc_placeholder"></textarea>
                     </div>
                 </div>
 

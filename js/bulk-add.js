@@ -346,6 +346,8 @@ function renderLeftCardsList() {
 function getTypeBadgeInfo(type) {
     if (type === 'anki') {
         return { label: "Anki", classes: "bg-indigo-100 text-indigo-800" };
+    } else if (type === 'voice') {
+        return { label: t('card_type_voice') || "Voz", classes: "bg-blue-100 text-blue-800" };
     } else if (type === 'multiple_choice') {
         return { label: t('multiple_choice'), classes: "bg-cyan-100 text-cyan-800" };
     } else if (type === 'open_double') {

@@ -193,6 +193,9 @@ const creatorArrowsCountBadge = document.getElementById('creator-arrows-count-ba
 const creatorArrowsEmptyMsg = document.getElementById('creator-arrows-empty-msg');
 const creatorArrowsInputsList = document.getElementById('creator-arrows-inputs-list');
 
+const creatorGroupVoice = document.getElementById('creator-group-voice');
+const creatorAnsVoice = document.getElementById('creator-ans-voice');
+
 const creatorFeedback = document.getElementById('creator-feedback');
 const creatorSubmitCardBtn = document.getElementById('creator-submit-card-btn');
 
@@ -229,6 +232,8 @@ const editCardFillGroup = document.getElementById('edit-card-fill-group');
 const editCardFillAnswer = document.getElementById('edit-card-fill-answer');
 const editCardAnkiGroup = document.getElementById('edit-card-anki-group');
 const editCardAnkiAnswer = document.getElementById('edit-card-anki-answer');
+const editCardVoiceGroup = document.getElementById('edit-card-voice-group');
+const editCardVoiceAnswer = document.getElementById('edit-card-voice-answer');
 const editCardMcGroup = document.getElementById('edit-card-mc-group');
 const editCardMcList = document.getElementById('edit-card-mc-list');
 const editCardAddMcOptBtn = document.getElementById('edit-card-add-mc-opt-btn');
@@ -656,6 +661,12 @@ const toolFunctions = {
     },
     adicionar_card: (args) => {
         const card = normalizeCard(args) || args;
+        if (card && card.type === 'voice') {
+            const voiceCount = deckCards.filter(c => c && c.type === 'voice').length;
+            if (voiceCount >= 5) {
+                return { success: false, message: "Limite de 5 cards de voz por baralho atingido." };
+            }
+        }
         appendNewCardWithElasticCollision(card);
         return { success: true, message: "Card adicionado com sucesso." };
     },
@@ -696,8 +707,17 @@ const toolFunctions = {
     },
     adicionar_varios_cards: (args) => {
         const cardsToAdd = (args.cards || []).map(c => normalizeCard(c) || c);
-        cardsToAdd.forEach(card => appendNewCardWithElasticCollision(card));
-        return { success: true, message: `${cardsToAdd.length} cards adicionados ao deck.` };
+        let addedCount = 0;
+        let voiceCount = deckCards.filter(c => c && c.type === 'voice').length;
+        for (const card of cardsToAdd) {
+            if (card && card.type === 'voice') {
+                if (voiceCount >= 5) continue;
+                voiceCount++;
+            }
+            appendNewCardWithElasticCollision(card);
+            addedCount++;
+        }
+        return { success: true, message: `${addedCount} cards adicionados ao deck.` };
     }
 };
 
@@ -2737,6 +2757,10 @@ function getTypeHint(type) {
 
 // --- M3 CUSTOM CARD TYPE SELECT CONTROLLER ---
 function selectCardType(type, triggerChange = true) {
+    if (type === 'voice' && !isUserPro()) {
+        openProModal();
+        return;
+    }
     const input = document.getElementById('creator-card-type');
     if (!input) return;
     input.value = type;
@@ -2874,6 +2898,10 @@ creatorCardType.addEventListener('change', () => {
     creatorGroupAnki.classList.toggle('hidden', tVal !== 'anki');
     creatorGroupMc.classList.toggle('hidden', tVal !== 'multiple_choice');
     if (creatorGroupImageArrows) creatorGroupImageArrows.classList.toggle('hidden', tVal !== 'image_arrows');
+    if (creatorGroupVoice) {
+        creatorGroupVoice.classList.toggle('hidden', tVal !== 'voice');
+        if (tVal === 'voice') updateVoiceLimitBadge();
+    }
 
     const qImgContainer = creatorQImgUrl?.parentElement?.parentElement;
     if (qImgContainer) {
@@ -2892,6 +2920,9 @@ creatorCardType.addEventListener('change', () => {
     } else if (tVal === 'image_arrows') {
         creatorQuestionLabel.textContent = t('question_concept_label');
         creatorQuestion.placeholder = t('name_the_structures');
+    } else if (tVal === 'voice') {
+        creatorQuestionLabel.textContent = t('question_concept_label');
+        creatorQuestion.placeholder = 'Ex: Explique o conceito de...';
     } else {
         creatorQuestionLabel.textContent = t('question_desc_label');
         creatorQuestion.placeholder = t('question_placeholder');
@@ -3310,6 +3341,23 @@ creatorSubmitCardBtn.addEventListener('click', () => {
             newCard.answers = answers;
             newCard.answer = answers.join('; ');
         }
+    } else if (type === 'voice') {
+        if (!isUserPro()) {
+            openProModal();
+            return;
+        }
+        const currentVoiceCards = deckCards.filter(c => c && c.type === 'voice').length;
+        if (currentVoiceCards >= 5) {
+            alert(t('alert_voice_limit_reached') || 'Limite de 5 cards de "Explicar em voz alta" por baralho atingido para economizar gastos de IA.');
+            return;
+        }
+        const ans = creatorAnsVoice ? creatorAnsVoice.value.trim() : '';
+        if (!ans) {
+            alert(t('alert_voice_desc_empty') || 'Preencha a explicação de referência para o Gemini avaliar.');
+            creatorAnsVoice?.focus();
+            return;
+        }
+        newCard.answer = ans;
     }
 
     appendNewCardWithElasticCollision(newCard);
@@ -3320,6 +3368,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     creatorAnsDouble1.value = '';
     creatorAnsDouble2.value = '';
     creatorAnsAnki.value = '';
+    if (creatorAnsVoice) creatorAnsVoice.value = '';
     if (creatorAnsFill) creatorAnsFill.value = '';
     creatorRemoveQImg.click();
     creatorRemoveAnsImg.click();
@@ -3498,12 +3547,26 @@ function updateCardsBorderRadius() {
     applyGroupRadii(currentGroup);
 }
 
+function updateVoiceLimitBadge() {
+    const badge = document.getElementById('voice-deck-limit-badge');
+    if (!badge) return;
+    const voiceCount = deckCards.filter(c => c && c.type === 'voice').length;
+    const label = t('voice_limit_badge') || 'Máx. 5 por baralho';
+    badge.textContent = `${label} (${voiceCount}/5)`;
+    if (voiceCount >= 5) {
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
+    } else {
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200';
+    }
+}
+
 // --- APPEND NEW CARD WITH PHYSICAL ELASTIC COLLISION & AUTO-SCROLL ---
 // Card enters from below, strikes previous card with elastic shock and damping, view scrolls down
 function appendNewCardWithElasticCollision(cardItem) {
     deckCards.push(cardItem);
     const playableCount = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note').length;
     deckSizeBadge.textContent = playableCount;
+    updateVoiceLimitBadge();
 
     // Clean up skeleton or empty state if present
     const skeleton = document.getElementById('cards-skeleton-loader');
@@ -3567,6 +3630,7 @@ function appendNewCardWithElasticCollision(cardItem) {
 function renderCardsList(fullReRender = false, preserveScroll = true) {
     const playableCount = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note').length;
     deckSizeBadge.textContent = playableCount;
+    updateVoiceLimitBadge();
 
     if (deckCards.length === 0) {
         if (isGeneratingCards) {
@@ -3799,13 +3863,16 @@ function createCardElement(card, index, withAnimation = true) {
         typeBadge.className += " bg-blue-100 text-blue-800";
         const count = Array.isArray(card.imageArrows) ? card.imageArrows.length : 0;
         typeBadge.textContent = `${t('card_type_image_arrows')} (${count})`;
+    } else if (card.type === 'voice') {
+        typeBadge.className += " bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1";
+        typeBadge.innerHTML = `<span class="material-symbols-rounded text-xs text-[#3b82f7]">record_voice_over</span> <span>${t('card_type_voice')}</span>`;
     } else {
         typeBadge.className += " bg-gray-100 text-gray-700";
         typeBadge.textContent = t('card_type_open');
     }
     cardEl.appendChild(typeBadge);
 
-    const descLabel = card.type === 'anki' ? `${t('front_label')}:` : (card.type === 'fill' ? `${t('phrase_label')}:` : `${t('question_label')}:`);
+    const descLabel = card.type === 'anki' ? `${t('front_label')}:` : (card.type === 'fill' ? `${t('phrase_label')}:` : (card.type === 'voice' ? `${t('question_concept_label')}:` : `${t('question_label')}:`));
     let descContent = card.description || t('no_text_placeholder');
     if (card.type === 'anki') {
         descContent = `<div class="anki-markdown-content text-gray-800 mt-0.5">${renderMathAndMarkdown(descContent)}</div>`;
@@ -3835,6 +3902,9 @@ function createCardElement(card, index, withAnimation = true) {
     } else if (card.type === 'anki') {
         const renderedAns = renderMathAndMarkdown(card.answer || '');
         ansStr = `<strong>${t('back_label')}:</strong> <div class="anki-markdown-content text-indigo-600 mt-1">${renderedAns}</div>`;
+    } else if (card.type === 'voice') {
+        const renderedAns = renderMathAndMarkdown(card.answer || '');
+        ansStr = `<strong>${t('voice_reference_answer')}:</strong> <div class="text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100 text-xs mt-1 leading-relaxed">${renderedAns}</div>`;
     } else if (card.type === 'fill') {
         const answers = Array.isArray(card.answers) && card.answers.length > 0 
             ? card.answers 
@@ -3965,10 +4035,11 @@ function openInlineEditModal(index) {
 
     // Show/hide groups based on type
     const cardType = card.type || 'open';
-    editCardAns1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows');
+    editCardAns1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows' || cardType === 'voice');
     editCardAns2Group.classList.toggle('hidden', cardType !== 'open_double');
     if (editCardFillGroup) editCardFillGroup.classList.toggle('hidden', cardType !== 'fill');
     editCardAnkiGroup.classList.toggle('hidden', cardType !== 'anki');
+    if (editCardVoiceGroup) editCardVoiceGroup.classList.toggle('hidden', cardType !== 'voice');
     editCardMcGroup.classList.toggle('hidden', cardType !== 'multiple_choice');
     inlineEditAnsImageGroup.classList.toggle('hidden', cardType !== 'anki');
     if (inlineEditImageArrowsGroup) inlineEditImageArrowsGroup.classList.toggle('hidden', cardType !== 'image_arrows');
@@ -3982,6 +4053,8 @@ function openInlineEditModal(index) {
         editCardAns2.value = card.answer2 || '';
     } else if (cardType === 'anki') {
         editCardAnkiAnswer.value = card.answer || '';
+    } else if (cardType === 'voice') {
+        if (editCardVoiceAnswer) editCardVoiceAnswer.value = card.answer || '';
     } else if (cardType === 'multiple_choice') {
         renderInlineEditMcOptions(card.options || ["", "", "", ""], card.answer);
     } else if (cardType === 'fill') {
@@ -4291,6 +4364,8 @@ saveInlineEditBtn.addEventListener('click', (e) => {
             delete card.answerImageCrop;
             delete card.answerImageArrows;
         }
+    } else if (card.type === 'voice') {
+        card.answer = editCardVoiceAnswer ? editCardVoiceAnswer.value.trim() : '';
     } else if (card.type === 'multiple_choice') {
         const optInputs = Array.from(document.querySelectorAll('.inline-edit-mc-opt-val'));
         const options = optInputs.map(inp => inp.value.trim()).filter(Boolean);

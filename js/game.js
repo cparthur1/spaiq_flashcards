@@ -22,7 +22,8 @@ import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCu
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
 import { getUserApiKey, generateUserApiKey, revokeUserApiKey, testStatsApi, getUserWebhook, saveUserWebhook, testUserWebhook, triggerDailyGoalWebhook, BACKEND_URL } from './backend-api.js';
-import { onAuthChange, auth } from './firebase-client.js';
+import { onAuthChange, auth, getCurrentUserToken } from './firebase-client.js';
+import { getApiKey } from './key-manager.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
@@ -193,6 +194,55 @@ const ankiBtnAgain = document.getElementById('anki-btn-again');
 const ankiBtnHard = document.getElementById('anki-btn-hard');
 const ankiBtnGood = document.getElementById('anki-btn-good');
 const ankiBtnEasy = document.getElementById('anki-btn-easy');
+
+// Voice "Explicar em voz alta" DOM Elements
+const voiceAnswerContainer = document.getElementById('voice-answer-container');
+const voiceUserTranscriptDisplay = document.getElementById('voice-user-transcript-display');
+const voiceReferenceTextDisplay = document.getElementById('voice-reference-text-display');
+const voiceAiFeedbackText = document.getElementById('voice-ai-feedback-text');
+const voiceEvaluationRatingBadge = document.getElementById('voice-evaluation-rating-badge');
+const voiceKeyPointsContainer = document.getElementById('voice-key-points-container');
+const voicePointsCoveredRow = document.getElementById('voice-points-covered-row');
+const voicePointsCoveredChips = document.getElementById('voice-points-covered-chips');
+const voicePointsMissedRow = document.getElementById('voice-points-missed-row');
+const voicePointsMissedChips = document.getElementById('voice-points-missed-chips');
+
+const voiceControlsArea = document.getElementById('voice-controls-area');
+const voiceMicContainer = document.getElementById('voice-mic-container');
+const voiceWavyBlur = document.getElementById('voice-wavy-blur');
+const voiceThinkingOrb = document.getElementById('voice-thinking-orb');
+const voiceMicBtn = document.getElementById('voice-mic-btn');
+const voiceMicIcon = document.getElementById('voice-mic-icon');
+const voiceThinkingMsg = document.getElementById('voice-thinking-msg');
+const voiceCantSpeakBtn = document.getElementById('voice-cant-speak-btn');
+
+const voiceEvaluatedControls = document.getElementById('voice-evaluated-controls');
+const voiceBtnAgain = document.getElementById('voice-btn-again');
+const voiceBtnHard = document.getElementById('voice-btn-hard');
+const voiceBtnGood = document.getElementById('voice-btn-good');
+const voiceBtnEasy = document.getElementById('voice-btn-easy');
+const voiceContinueBtn = document.getElementById('voice-continue-btn');
+
+// Hamburger Menu Speech Switch
+const speechCardsSwitch = document.getElementById('speech-cards-switch');
+const speechCardsSubtitle = document.getElementById('speech-cards-subtitle');
+
+// Edit Modal Voice Fields
+const editVoiceAnswerGroup = document.getElementById('edit-voice-answer-group');
+const editVoiceAnswerInput = document.getElementById('edit-voice-answer-input');
+
+// Voice State Variables (Multimodal Audio Recording & Live Reactive Wave Visualizer)
+let isVoiceCardsMutedThisSession = false;
+let mediaRecorder = null;
+let mediaStream = null;
+let audioCtx = null;
+let audioAnalyser = null;
+let audioAnimFrame = null;
+let recordedAudioChunks = [];
+let recordedMimeType = 'audio/webm';
+let isVoiceRecording = false;
+let isVoiceSubmitting = false;
+let lastVoiceRating = 'good';
 
 // Edit Modal Additional Fields
 const editAnswer1Group = document.getElementById('edit-answer-1-group');
@@ -1380,6 +1430,19 @@ function loadQuestion() {
         consecutiveNewCardsCount++;
     }
 
+    if (isVoiceCardsMutedThisSession && currentQuestion && currentQuestion.type === 'voice') {
+        const nextPlayable = questionsPool.find(q => q.type !== 'voice');
+        if (nextPlayable) {
+            currentQuestion = nextPlayable;
+            currentQuestionIndexInPool = questionsPool.indexOf(nextPlayable);
+            lastCardTopic = getCardTopic(currentQuestion);
+        } else {
+            console.log("[Voice] Apenas cards de voz restam nesta sessão (mutados). Concluindo.");
+            showDeckCompletionScreen();
+            return;
+        }
+    }
+
     console.log("[Game] Card carregado:", {
         step: currentStep,
         type: currentQuestion?.type,
@@ -1465,6 +1528,10 @@ function loadQuestion() {
     mcAnswerArea.classList.add('hidden');
     if (ankiAnswerContainer) ankiAnswerContainer.classList.add('hidden');
     if (ankiControlsArea) ankiControlsArea.classList.add('hidden');
+    if (voiceControlsArea) voiceControlsArea.classList.add('hidden');
+    if (voiceAnswerContainer) voiceAnswerContainer.classList.add('hidden');
+    if (voiceEvaluatedControls) voiceEvaluatedControls.classList.add('hidden');
+    resetVoiceUIState();
     if (imageArrowsAnswerArea) imageArrowsAnswerArea.classList.add('hidden');
 
     if (actionButtonsArea) actionButtonsArea.classList.remove('hidden');
@@ -1478,6 +1545,15 @@ function loadQuestion() {
             ankiFlippedControls.classList.add('hidden');
         }
         isAnkiFlipped = false;
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+        }
+    } else if (currentQuestion.type === 'voice') {
+        if (actionButtonsArea) actionButtonsArea.classList.add('hidden');
+        if (voiceControlsArea) {
+            voiceControlsArea.classList.remove('hidden');
+            setupVoiceCardUI();
+        }
         if (document.activeElement && typeof document.activeElement.blur === 'function') {
             document.activeElement.blur();
         }
@@ -1787,6 +1863,725 @@ function handleAnkiRating(rating) {
     }
 }
 
+// --- "EXPLICAR EM VOZ ALTA" (VOICE CARD) LOGIC ---
+
+function resetVoiceUIState() {
+    isVoiceRecording = false;
+    isVoiceSubmitting = false;
+    if (audioAnimFrame) {
+        cancelAnimationFrame(audioAnimFrame);
+        audioAnimFrame = null;
+    }
+    if (audioCtx) {
+        try { audioCtx.close(); } catch (e) {}
+        audioCtx = null;
+        audioAnalyser = null;
+    }
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try { mediaRecorder.stop(); } catch {}
+    }
+    mediaRecorder = null;
+    if (mediaStream) {
+        try { mediaStream.getTracks().forEach(t => t.stop()); } catch {}
+        mediaStream = null;
+    }
+    recordedAudioChunks = [];
+
+    if (voiceMicBtn) {
+        voiceMicBtn.classList.remove('voice-button-collapsing', 'hidden');
+        voiceMicBtn.disabled = false;
+        voiceMicBtn.setAttribute('title', 'Gravar Explicação');
+        voiceMicBtn.setAttribute('aria-label', 'Gravar Explicação');
+    }
+    if (voiceMicIcon) voiceMicIcon.textContent = 'mic';
+    if (voiceWavyBlur) {
+        voiceWavyBlur.classList.add('hidden');
+        voiceWavyBlur.classList.remove('voice-blur-collapsing');
+        const topArc = voiceWavyBlur.querySelector('.voice-wave-arc-top');
+        if (topArc) topArc.style.transform = '';
+        const midArc = voiceWavyBlur.querySelector('.voice-wave-arc-mid');
+        if (midArc) midArc.style.transform = '';
+        const botArc = voiceWavyBlur.querySelector('.voice-wave-arc-bot');
+        if (botArc) botArc.style.transform = '';
+        const prismRim = voiceWavyBlur.querySelector('.voice-wave-prism-rim');
+        if (prismRim) {
+            prismRim.style.filter = '';
+            prismRim.style.boxShadow = '';
+        }
+        const bloom = voiceWavyBlur.querySelector('.voice-wave-bloom');
+        if (bloom) {
+            bloom.style.opacity = '';
+            bloom.style.transform = '';
+        }
+    }
+    if (voiceThinkingOrb) voiceThinkingOrb.classList.add('hidden');
+    if (voiceThinkingMsg) voiceThinkingMsg.classList.add('hidden');
+    if (voiceCantSpeakBtn) voiceCantSpeakBtn.classList.remove('hidden');
+    if (voiceAnswerContainer) voiceAnswerContainer.classList.add('hidden');
+    if (voiceEvaluatedControls) voiceEvaluatedControls.classList.add('hidden');
+    if (questionCard) questionCard.classList.remove('voice-border-pulse');
+}
+
+function setupVoiceCardUI() {
+    resetVoiceUIState();
+    if (!isUserPro()) {
+        if (voiceMicBtn) {
+            voiceMicBtn.classList.add('opacity-75');
+            voiceMicBtn.setAttribute('title', t('voice_pro_required_desc'));
+        }
+    }
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const dataUrl = reader.result || '';
+            const base64 = String(dataUrl).split(',')[1] || '';
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function startVoiceRecording() {
+    if (!isUserPro()) {
+        openProModal();
+        return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+        alert(t('voice_not_supported') || 'Gravação de voz não suportada neste navegador.');
+        return;
+    }
+
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        recordedMimeType = 'audio/webm';
+        if (typeof MediaRecorder !== 'undefined') {
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                recordedMimeType = 'audio/webm;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                recordedMimeType = 'audio/webm';
+            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                recordedMimeType = 'audio/mp4';
+            }
+        }
+
+        recordedAudioChunks = [];
+        mediaRecorder = new MediaRecorder(mediaStream, { mimeType: recordedMimeType });
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+                recordedAudioChunks.push(e.data);
+            }
+        };
+
+        mediaRecorder.start(200);
+        isVoiceRecording = true;
+
+        if (voiceMicIcon) voiceMicIcon.textContent = 'check';
+        if (voiceMicBtn) {
+            voiceMicBtn.setAttribute('title', t('click_to_finish') || 'Concluir e Enviar');
+            voiceMicBtn.setAttribute('aria-label', t('click_to_finish') || 'Concluir e Enviar');
+        }
+        if (voiceWavyBlur) voiceWavyBlur.classList.remove('hidden', 'voice-blur-collapsing');
+        triggerHaptic('medium');
+
+        // Start Live Voice Wave Visual Reaction
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                audioCtx = new AudioContextClass();
+                const source = audioCtx.createMediaStreamSource(mediaStream);
+                audioAnalyser = audioCtx.createAnalyser();
+                audioAnalyser.fftSize = 128;
+                audioAnalyser.smoothingTimeConstant = 0.5;
+                source.connect(audioAnalyser);
+
+                const dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+
+                const updateAudioWaves = () => {
+                    if (!isVoiceRecording || !audioAnalyser) return;
+                    audioAnalyser.getByteFrequencyData(dataArray);
+
+                    // Focus on human vocal frequencies (approx bins 1 to 28 in 128-FFT)
+                    const voiceBinCount = Math.min(28, dataArray.length);
+                    let sum = 0;
+                    let maxVal = 0;
+                    for (let i = 1; i < voiceBinCount; i++) {
+                        const val = dataArray[i];
+                        sum += val;
+                        if (val > maxVal) maxVal = val;
+                    }
+                    const avg = sum / (voiceBinCount - 1);
+
+                    // Blend average with peak voice intensity for rapid response to plosives & syllables
+                    const voiceIntensity = (avg * 0.65) + (maxVal * 0.35);
+
+                    // Ambient room noise gate (~4)
+                    const cleanIntensity = Math.max(0, voiceIntensity - 4);
+
+                    // Non-linear power curve: makes subtle whispers & voice modulations strongly visible
+                    const normalized = Math.min(1, cleanIntensity / 36);
+                    const level = Math.pow(normalized, 0.58);
+
+                    if (voiceWavyBlur) {
+                        const topLift = level * 42; // Up to 42px wave crest rise
+                        const topScale = 1 + level * 0.32; // Expands width and crest height
+                        const midLift = level * 26;
+                        const midScale = 1 + level * 0.22;
+                        const botLift = level * 12;
+                        const botScale = 1 + level * 0.14;
+
+                        // Dynamic organic sway based on vocal intensity
+                        const organicSway = Math.sin(Date.now() / 160) * (level * 2.2);
+
+                        const topArc = voiceWavyBlur.querySelector('.voice-wave-arc-top');
+                        if (topArc) {
+                            topArc.style.transform = `translateX(-50%) translateY(-${topLift}px) rotate(${organicSway}deg) scale(${topScale})`;
+                        }
+
+                        const prismRim = voiceWavyBlur.querySelector('.voice-wave-prism-rim');
+                        if (prismRim) {
+                            prismRim.style.filter = `blur(${Math.max(1, 2 - level * 0.8)}px) brightness(${1 + level * 0.85}) contrast(${1.3 + level * 0.5})`;
+                            prismRim.style.boxShadow = `0 0 ${16 + level * 28}px rgba(245, 158, 11, 0.95), 0 0 ${28 + level * 40}px rgba(6, 182, 212, 0.95)`;
+                        }
+
+                        const midArc = voiceWavyBlur.querySelector('.voice-wave-arc-mid');
+                        if (midArc) {
+                            midArc.style.transform = `translateX(-50%) translateY(-${midLift}px) rotate(${-organicSway * 0.6}deg) scale(${midScale})`;
+                        }
+
+                        const botArc = voiceWavyBlur.querySelector('.voice-wave-arc-bot');
+                        if (botArc) {
+                            botArc.style.transform = `translateX(-50%) translateY(-${botLift}px) scale(${botScale})`;
+                        }
+
+                        const bloom = voiceWavyBlur.querySelector('.voice-wave-bloom');
+                        if (bloom) {
+                            bloom.style.opacity = `${0.85 + level * 0.15}`;
+                            bloom.style.transform = `translateX(-50%) scale(${1 + level * 0.2})`;
+                        }
+                    }
+
+                    audioAnimFrame = requestAnimationFrame(updateAudioWaves);
+                };
+                audioAnimFrame = requestAnimationFrame(updateAudioWaves);
+            }
+        } catch (e) {
+            console.warn('[Voice] AudioContext visualizer fallback:', e);
+        }
+
+    } catch (err) {
+        console.error('[Voice] Falha ao acessar microfone:', err);
+        alert(t('voice_mic_permission_denied') || 'Permissão do microfone negada.');
+        resetVoiceUIState();
+    }
+}
+
+function stopVoiceRecording(cleanup = true) {
+    isVoiceRecording = false;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try { mediaRecorder.stop(); } catch {}
+    }
+    mediaRecorder = null;
+    if (mediaStream) {
+        try { mediaStream.getTracks().forEach(t => t.stop()); } catch {}
+        mediaStream = null;
+    }
+    if (cleanup) {
+        resetVoiceUIState();
+    }
+}
+
+async function finishVoiceRecordingAndSend() {
+    if (isVoiceSubmitting) return;
+    isVoiceSubmitting = true;
+    isVoiceRecording = false;
+
+    triggerHaptic('medium');
+
+    // Collect audio recording
+    let audioBlob = null;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        audioBlob = await new Promise((resolve) => {
+            mediaRecorder.onstop = () => {
+                const cleanType = (recordedMimeType || 'audio/webm').split(';')[0];
+                const blob = new Blob(recordedAudioChunks, { type: cleanType });
+                resolve(blob);
+            };
+            try {
+                mediaRecorder.stop();
+            } catch (e) {
+                const cleanType = (recordedMimeType || 'audio/webm').split(';')[0];
+                resolve(new Blob(recordedAudioChunks, { type: cleanType }));
+            }
+        });
+    } else if (recordedAudioChunks.length > 0) {
+        const cleanType = (recordedMimeType || 'audio/webm').split(';')[0];
+        audioBlob = new Blob(recordedAudioChunks, { type: cleanType });
+    }
+
+    if (audioAnimFrame) {
+        cancelAnimationFrame(audioAnimFrame);
+        audioAnimFrame = null;
+    }
+    if (audioCtx) {
+        try { audioCtx.close(); } catch (e) {}
+        audioCtx = null;
+        audioAnalyser = null;
+    }
+
+    if (mediaStream) {
+        try {
+            mediaStream.getTracks().forEach(track => track.stop());
+        } catch (e) {}
+        mediaStream = null;
+    }
+
+    // MOCKUP ANIMATION STEP 1 & 2:
+    // (blue and purple wavy blur around button (click done) -> button collapses away and blur collapses to a circle)
+    if (voiceMicBtn) voiceMicBtn.classList.add('voice-button-collapsing');
+    if (voiceWavyBlur) voiceWavyBlur.classList.add('voice-blur-collapsing');
+    if (voiceCantSpeakBtn) voiceCantSpeakBtn.classList.add('hidden');
+
+    // Collapse transition duration
+    await new Promise(r => setTimeout(r, 450));
+
+    // MOCKUP ANIMATION STEP 3:
+    // (circle rises, gets Google's 3D fluid-mixing colors, pulsates)
+    if (voiceWavyBlur) voiceWavyBlur.classList.add('hidden');
+    if (voiceMicBtn) voiceMicBtn.classList.add('hidden');
+    if (voiceThinkingOrb) voiceThinkingOrb.classList.remove('hidden');
+    if (voiceThinkingMsg) voiceThinkingMsg.classList.remove('hidden');
+
+    try {
+        let base64Audio = '';
+        if (audioBlob && audioBlob.size > 0) {
+            base64Audio = await blobToBase64(audioBlob);
+        }
+
+        const evaluation = await evaluateVoiceAudioWithGemini({
+            question: currentQuestion.description || '',
+            reference: currentQuestion.answer || '',
+            audioBase64: base64Audio,
+            mimeType: (recordedMimeType || 'audio/webm').split(';')[0]
+        });
+
+        // MOCKUP ANIMATION STEP 4:
+        // (gemini is done thinking) -> answer is rendered, border pulsates light blue once
+        if (voiceThinkingOrb) voiceThinkingOrb.classList.add('hidden');
+        if (voiceThinkingMsg) voiceThinkingMsg.classList.add('hidden');
+
+        renderVoiceAnswerAndEvaluation(evaluation, evaluation.user_transcript || '');
+
+        // Border pulsates light blue once
+        if (questionCard) {
+            questionCard.classList.remove('voice-border-pulse');
+            void questionCard.offsetWidth; // Reflow
+            questionCard.classList.add('voice-border-pulse');
+            setTimeout(() => questionCard?.classList.remove('voice-border-pulse'), 1300);
+        }
+
+        // Apply classification via function-call
+        const rating = evaluation.rating || 'good';
+        applyVoiceCardSchedule(rating);
+
+    } catch (err) {
+        console.error('[Voice] Erro durante avaliação do áudio:', err);
+        if (voiceThinkingOrb) voiceThinkingOrb.classList.add('hidden');
+        if (voiceThinkingMsg) voiceThinkingMsg.classList.add('hidden');
+
+        renderVoiceAnswerAndEvaluation({
+            rating: 'good',
+            feedback: 'A conexão com a IA oscilou, mas você pode conferir a explicação de referência abaixo e avaliar seu aprendizado.',
+            user_transcript: '(Áudio gravado)',
+            key_points_covered: [],
+            key_points_missed: []
+        }, '(Áudio gravado)');
+
+        if (questionCard) {
+            questionCard.classList.remove('voice-border-pulse');
+            void questionCard.offsetWidth;
+            questionCard.classList.add('voice-border-pulse');
+            setTimeout(() => questionCard?.classList.remove('voice-border-pulse'), 1300);
+        }
+        applyVoiceCardSchedule('good');
+    } finally {
+        isVoiceSubmitting = false;
+    }
+}
+
+async function evaluateVoiceAudioWithGemini({ question, reference, audioBase64, mimeType }) {
+    const promptInstructions = `
+Você é o avaliador pedagógico de flashcards de alto nível universitário.
+Sua missão é ouvir e avaliar a resposta falada pelo aluno no arquivo de áudio anexado em comparação com a explicação de referência do conceito.
+
+PERGUNTA / CONCEITO:
+${question}
+
+EXPLICAÇÃO CONCEITUAL DE REFERÊNCIA:
+${reference}
+
+DIRETRIZES DE AVALIAÇÃO:
+1. Ouça com atenção o arquivo de áudio do estudante.
+2. Forneça no campo 'user_transcript' uma transcrição concisa do que o aluno explicou no áudio. Se o áudio estiver inaudível, vazio ou contiver apenas ruído, registre isso claramente no 'user_transcript'.
+3. Avalie a compreensão substantiva e técnica. Não exija palavras idênticas, mas sim a precisão da ideia, mecanismos e termos fundamentais.
+4. Seja construtivo e pedagógico no feedback (2 a 3 frases em português) no campo 'feedback'. Destaque o que o estudante acertou e o que faltou ou pode ser refinado.
+5. Classifique o desempenho seguindo as opções dos cards Anki:
+   - "again": Errou conceitos fundamentais, disse algo incoerente, não explicou o conceito pedido ou o áudio estava vazio/inaudível.
+   - "hard": Lembrou de parte do conceito, mas com hesitações graves, definições imprecisas ou faltou elemento essencial.
+   - "good": Boa explicação, cobriu os pilares essenciais do conceito com clareza.
+   - "easy": Explicação completa, precisa, com excelente articulação e domínio técnico.
+6. Chame OBRIGATORIAMENTE a ferramenta 'classify_voice_response' com os campos 'rating', 'feedback', 'user_transcript', 'key_points_covered' e 'key_points_missed'.
+`;
+
+    const classifyVoiceTool = {
+        functionDeclarations: [
+            {
+                name: "classify_voice_response",
+                description: "Avalia a explicação oral no áudio comparando-a com o texto de referência do conceito, fornecendo feedback e classificação Anki (again, hard, good, easy).",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        rating: {
+                            type: "STRING",
+                            enum: ["again", "hard", "good", "easy"],
+                            description: "Classificação do desempenho: again (errei), hard (difícil), good (médio), easy (fácil)."
+                        },
+                        feedback: {
+                            type: "STRING",
+                            description: "Feedback pedagógico claro e construtivo em português."
+                        },
+                        user_transcript: {
+                            type: "STRING",
+                            description: "Transcrição resumida do que o aluno explicou no áudio."
+                        },
+                        key_points_covered: {
+                            type: "ARRAY",
+                            items: { type: "STRING" },
+                            description: "Tópicos ou pontos que o aluno acertou."
+                        },
+                        key_points_missed: {
+                            type: "ARRAY",
+                            items: { type: "STRING" },
+                            description: "Tópicos ou pontos que o aluno errou ou omitiu."
+                        }
+                    },
+                    required: ["rating", "feedback"]
+                }
+            }
+        ]
+    };
+
+    const parts = [];
+    if (audioBase64) {
+        parts.push({
+            inlineData: {
+                mimeType: mimeType || 'audio/webm',
+                data: audioBase64
+            }
+        });
+    }
+    parts.push({ text: promptInstructions });
+
+    const token = await getCurrentUserToken().catch(() => null);
+    const localApiKey = await getApiKey().catch(() => '');
+
+    let res;
+    if (token) {
+        res = await fetch(`${BACKEND_URL}/api/ai/tutor`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                model: 'gemini-flash-lite-latest',
+                contents: [{ role: 'user', parts }],
+                tools: [classifyVoiceTool],
+                toolConfig: {
+                    functionCallingConfig: {
+                        mode: 'ANY',
+                        allowedFunctionNames: ['classify_voice_response']
+                    }
+                }
+            })
+        });
+    } else if (localApiKey) {
+        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${localApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ role: 'user', parts }],
+                tools: [classifyVoiceTool],
+                toolConfig: {
+                    functionCallingConfig: {
+                        mode: 'ANY',
+                        allowedFunctionNames: ['classify_voice_response']
+                    }
+                }
+            })
+        });
+    } else {
+        throw new Error('Sem autenticação ou chave API para consultar o Gemini.');
+    }
+
+    if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Erro na API Gemini (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    const candidate = data.candidates?.[0];
+    const functionCall = candidate?.content?.parts?.find(p => p.functionCall)?.functionCall;
+
+    if (functionCall && functionCall.name === 'classify_voice_response') {
+        const args = functionCall.args || {};
+        return {
+            rating: args.rating || 'good',
+            feedback: args.feedback || 'Avaliação concluída.',
+            user_transcript: args.user_transcript || '',
+            key_points_covered: Array.isArray(args.key_points_covered) ? args.key_points_covered : [],
+            key_points_missed: Array.isArray(args.key_points_missed) ? args.key_points_missed : []
+        };
+    }
+
+    // Text JSON fallback
+    const textPart = candidate?.content?.parts?.[0]?.text;
+    if (textPart) {
+        try {
+            const parsed = JSON.parse(textPart);
+            return {
+                rating: parsed.rating || 'good',
+                feedback: parsed.feedback || textPart,
+                user_transcript: parsed.user_transcript || '',
+                key_points_covered: parsed.key_points_covered || [],
+                key_points_missed: parsed.key_points_missed || []
+            };
+        } catch {}
+    }
+
+    return {
+        rating: 'good',
+        feedback: textPart || 'Conceito revisado com sucesso.',
+        user_transcript: '',
+        key_points_covered: [],
+        key_points_missed: []
+    };
+}
+
+function renderVoiceAnswerAndEvaluation(evaluation, userSpokenText) {
+    if (voiceUserTranscriptDisplay) {
+        voiceUserTranscriptDisplay.textContent = userSpokenText || '(Nenhuma transcrição detectada)';
+    }
+    if (voiceReferenceTextDisplay) {
+        voiceReferenceTextDisplay.innerHTML = renderMathAndMarkdown(currentQuestion.answer || '');
+    }
+    if (voiceAiFeedbackText) {
+        voiceAiFeedbackText.textContent = evaluation.feedback || '';
+    }
+
+    // Setup Rating Badge
+    if (voiceEvaluationRatingBadge) {
+        const rating = evaluation.rating || 'good';
+        const ratingMap = {
+            again: { label: t('anki_again') || 'Errei', class: 'bg-red-100 text-red-800 border-red-300' },
+            hard: { label: t('anki_hard') || 'Difícil', class: 'bg-orange-100 text-orange-800 border-orange-300' },
+            good: { label: t('anki_good') || 'Médio', class: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+            easy: { label: t('anki_easy') || 'Fácil', class: 'bg-blue-100 text-blue-800 border-blue-300' }
+        };
+        const rInfo = ratingMap[rating] || ratingMap.good;
+        voiceEvaluationRatingBadge.className = `text-xs font-black px-2.5 py-0.5 rounded-full border shadow-2xs ${rInfo.class}`;
+        voiceEvaluationRatingBadge.textContent = `${t('voice_classification_label') || 'Classificação da IA:'} ${rInfo.label}`;
+    }
+
+    // Setup Covered & Missed Points Chips
+    const covered = evaluation.key_points_covered || [];
+    const missed = evaluation.key_points_missed || [];
+    if (voiceKeyPointsContainer) {
+        if (covered.length > 0 || missed.length > 0) {
+            voiceKeyPointsContainer.classList.remove('hidden');
+
+            if (voicePointsCoveredRow && voicePointsCoveredChips) {
+                if (covered.length > 0) {
+                    voicePointsCoveredRow.classList.remove('hidden');
+                    voicePointsCoveredChips.innerHTML = covered.map(p => 
+                        `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">${escapeHtml(p)}</span>`
+                    ).join('');
+                } else {
+                    voicePointsCoveredRow.classList.add('hidden');
+                }
+            }
+
+            if (voicePointsMissedRow && voicePointsMissedChips) {
+                if (missed.length > 0) {
+                    voicePointsMissedRow.classList.remove('hidden');
+                    voicePointsMissedChips.innerHTML = missed.map(p => 
+                        `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">${escapeHtml(p)}</span>`
+                    ).join('');
+                } else {
+                    voicePointsMissedRow.classList.add('hidden');
+                }
+            }
+        } else {
+            voiceKeyPointsContainer.classList.add('hidden');
+        }
+    }
+
+    // Highlight selected rating button in evaluated controls
+    highlightVoiceRatingButton(evaluation.rating || 'good');
+
+    if (voiceAnswerContainer) voiceAnswerContainer.classList.remove('hidden');
+    if (voiceEvaluatedControls) voiceEvaluatedControls.classList.remove('hidden');
+}
+
+function highlightVoiceRatingButton(rating) {
+    [
+        { el: voiceBtnAgain, val: 'again' },
+        { el: voiceBtnHard, val: 'hard' },
+        { el: voiceBtnGood, val: 'good' },
+        { el: voiceBtnEasy, val: 'easy' }
+    ].forEach(({ el, val }) => {
+        if (!el) return;
+        if (val === rating) {
+            el.classList.add('ring-2', 'ring-offset-2', 'ring-blue-500', 'scale-105');
+        } else {
+            el.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-500', 'scale-105');
+        }
+    });
+}
+
+function applyVoiceCardSchedule(rating) {
+    if (!currentQuestion || currentQuestion.type !== 'voice') return;
+    lastVoiceRating = rating;
+
+    handleDailyStreakOnCardAnswered();
+
+    const elapsedSeconds = (Date.now() - questionStartTime) / 1000;
+    try {
+        recordStatsAnswer({
+            card: currentQuestion,
+            isCorrect: (rating === 'good' || rating === 'easy'),
+            rating: rating,
+            timeSpentSeconds: elapsedSeconds
+        });
+    } catch (e) {
+        console.error("[Voice] Erro ao gravar estatísticas:", e);
+    }
+
+    if (activeMode === 'notebook') {
+        const schedule = calculateNotebookNextSchedule({
+            card: currentQuestion,
+            quality: rating,
+            currentStep,
+            poolSize: questionsPool.length
+        });
+        Object.assign(currentQuestion, schedule);
+        notebookReviewsCount++;
+
+        const cardInAll = allQuestions.find(q => q === currentQuestion || (q.description && stripHtml(q.description) === stripHtml(currentQuestion.description)));
+        if (cardInAll) {
+            Object.assign(cardInAll, schedule);
+        }
+
+        saveGameState();
+        updateScoreDisplay();
+        checkAndCelebrateNotebookDailyGoal(true);
+        return;
+    }
+
+    if (rating === 'easy') {
+        currentQuestion.correctStreak = (currentQuestion.correctStreak || 0) + 1;
+        const shouldRemove = shouldGraduateCard(currentQuestion, elapsedSeconds);
+
+        if (shouldRemove) {
+            score++;
+            const idx = questionsPool.indexOf(currentQuestion);
+            if (idx !== -1) questionsPool.splice(idx, 1);
+            else if (currentQuestionIndexInPool >= 0 && currentQuestionIndexInPool < questionsPool.length) {
+                questionsPool.splice(currentQuestionIndexInPool, 1);
+            }
+            saveGameState();
+            console.log("[Voice] Card graduado e removido do pool. Restam:", questionsPool.length);
+        } else {
+            const ankiReinforcGap = Math.max(7, Math.min(12, Math.round(questionsPool.length * 0.5)));
+            currentQuestion.dueStep = currentStep + ankiReinforcGap;
+            saveGameState();
+            console.log("[Voice] Card mantido para consolidação. dueStep:", currentQuestion.dueStep);
+        }
+    } else if (rating === 'good') {
+        currentQuestion.correctStreak = (currentQuestion.correctStreak || 0) + 1;
+        currentQuestion.dueStep = currentStep + 10;
+        saveGameState();
+    } else if (rating === 'hard') {
+        const gap = calculateThinkingGap(elapsedSeconds, currentQuestion, questionsPool.length);
+        currentQuestion.dueStep = currentStep + gap;
+        currentQuestion.wrongCount = (currentQuestion.wrongCount || 0) + 1;
+        saveGameState();
+    } else if (rating === 'again') {
+        const gap = Math.max(3, Math.min(6, Math.round(questionsPool.length * 0.35)));
+        currentQuestion.dueStep = currentStep + gap;
+        currentQuestion.wrongCount = (currentQuestion.wrongCount || 0) + 1;
+        saveGameState();
+    }
+}
+
+function handleVoiceRating(rating, autoAdvance = true) {
+    if (!currentQuestion || currentQuestion.type !== 'voice') return;
+    highlightVoiceRatingButton(rating);
+    applyVoiceCardSchedule(rating);
+    if (autoAdvance) {
+        advanceFromVoiceCard();
+    }
+}
+
+function advanceFromVoiceCard() {
+    if (isAnimating) return;
+    if (questionsPool.length === 0) {
+        clearBalls();
+        updateScoreDisplay();
+        showDeckCompletionScreen();
+        return;
+    }
+
+    if (lastVoiceRating === 'easy' || lastVoiceRating === 'good') {
+        createBall(true);
+        triggerHaptic('correct');
+        playFeedbackSound('correct');
+        setTimeout(() => {
+            animateCardToBack(() => {
+                loadQuestion();
+            });
+        }, isAnimationsEnabled() ? 300 : 0);
+    } else {
+        createBall(false);
+        triggerHaptic('shake');
+        playFeedbackSound('wrong');
+        setTimeout(() => {
+            animateCardToBack(() => {
+                loadQuestion();
+            });
+        }, isAnimationsEnabled() ? 350 : 0);
+    }
+}
+
+function skipCurrentVoiceCard() {
+    isVoiceCardsMutedThisSession = true;
+    if (speechCardsSwitch) speechCardsSwitch.selected = false;
+    if (speechCardsSubtitle) speechCardsSubtitle.textContent = t('speech_cards_disabled_desc');
+
+    showNotificationPill(t('speech_cards_muted_toast'), 'voice_explain.svg');
+
+    console.log("[Voice] 'Não posso falar agora' acionado. Pulando cards de fala nesta sessão.");
+    animateCardToBack(() => {
+        loadQuestion();
+    });
+}
+
 let isOpenSubmitting = false;
 let isBeingCorrected = false;
 
@@ -1825,6 +2620,10 @@ function resetUI() {
         ankiAnswerImage.src = '';
     }
     if (ankiControlsArea) ankiControlsArea.classList.add('hidden');
+    if (voiceControlsArea) voiceControlsArea.classList.add('hidden');
+    if (voiceAnswerContainer) voiceAnswerContainer.classList.add('hidden');
+    if (voiceEvaluatedControls) voiceEvaluatedControls.classList.add('hidden');
+    resetVoiceUIState();
 
     submitBtn.disabled = false;
     submitBtn.classList.remove('hidden');
@@ -3813,6 +4612,9 @@ function getActiveTextSelection() {
         }
         if (isInside(ankiAnswer) && !ankiAnswerContainer?.classList.contains('hidden')) {
             return { range: range.cloneRange(), field: 'answer', container: ankiAnswer };
+        }
+        if (isInside(voiceReferenceTextDisplay) && !voiceAnswerContainer?.classList.contains('hidden')) {
+            return { range: range.cloneRange(), field: 'answer', container: voiceReferenceTextDisplay };
         }
     }
 
@@ -5883,6 +6685,43 @@ if (ankiBtnHard) ankiBtnHard.addEventListener('click', () => handleAnkiRating('h
 if (ankiBtnGood) ankiBtnGood.addEventListener('click', () => handleAnkiRating('good'));
 if (ankiBtnEasy) ankiBtnEasy.addEventListener('click', () => handleAnkiRating('easy'));
 
+// --- VOICE CONTROLS LISTENERS ---
+if (voiceMicBtn) {
+    voiceMicBtn.addEventListener('click', () => {
+        if (isVoiceRecording) {
+            finishVoiceRecordingAndSend();
+        } else {
+            startVoiceRecording();
+        }
+    });
+}
+if (voiceCantSpeakBtn) {
+    voiceCantSpeakBtn.addEventListener('click', skipCurrentVoiceCard);
+}
+if (voiceBtnAgain) voiceBtnAgain.addEventListener('click', () => handleVoiceRating('again'));
+if (voiceBtnHard) voiceBtnHard.addEventListener('click', () => handleVoiceRating('hard'));
+if (voiceBtnGood) voiceBtnGood.addEventListener('click', () => handleVoiceRating('good'));
+if (voiceBtnEasy) voiceBtnEasy.addEventListener('click', () => handleVoiceRating('easy'));
+if (voiceContinueBtn) voiceContinueBtn.addEventListener('click', advanceFromVoiceCard);
+
+if (speechCardsSwitch) {
+    speechCardsSwitch.addEventListener('change', () => {
+        isVoiceCardsMutedThisSession = !speechCardsSwitch.selected;
+        if (speechCardsSubtitle) {
+            speechCardsSubtitle.textContent = speechCardsSwitch.selected
+                ? t('speech_cards_enabled_desc')
+                : t('speech_cards_disabled_desc');
+        }
+        showNotificationPill(
+            speechCardsSwitch.selected ? t('speech_cards_unmuted_toast') : t('speech_cards_muted_toast'),
+            'voice_explain.svg'
+        );
+        if (isVoiceCardsMutedThisSession && currentQuestion && currentQuestion.type === 'voice') {
+            loadQuestion();
+        }
+    });
+}
+
 // Question card click to flip for Anki
 if (questionCard) {
     questionCard.addEventListener('click', (e) => {
@@ -5914,9 +6753,12 @@ if (questionCard) {
 initInputController({
     getCurrentQuestion: () => currentQuestion,
     getIsAnkiFlipped: () => isAnkiFlipped,
+    getIsVoiceEvaluated: () => Boolean(voiceAnswerContainer && !voiceAnswerContainer.classList.contains('hidden')),
     getIsAnimating: () => isAnimating,
     onFlipAnki: flipAnkiCard,
     onAnkiRating: handleAnkiRating,
+    onVoiceRating: handleVoiceRating,
+    onVoiceContinue: advanceFromVoiceCard,
     onNextQuestion: () => {
         if (nextQuestionBtn && !nextQuestionBtn.classList.contains('hidden')) {
             nextQuestionBtn.click();
@@ -6264,9 +7106,10 @@ editBtn.addEventListener('click', () => {
     editQuestionInput.value = currentQuestion.description || '';
 
     const cardType = currentQuestion.type || 'open';
-    if (editAnswer1Group) editAnswer1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows');
+    if (editAnswer1Group) editAnswer1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows' || cardType === 'voice');
     if (editAnswer2Group) editAnswer2Group.classList.toggle('hidden', cardType !== 'open_double');
     if (editAnkiAnswerGroup) editAnkiAnswerGroup.classList.toggle('hidden', cardType !== 'anki');
+    if (editVoiceAnswerGroup) editVoiceAnswerGroup.classList.toggle('hidden', cardType !== 'voice');
     if (editMcOptionsGroup) editMcOptionsGroup.classList.toggle('hidden', cardType !== 'multiple_choice');
     if (editAnsImageGroup) editAnsImageGroup.classList.toggle('hidden', cardType !== 'anki');
     if (editFillAnswerGroup) editFillAnswerGroup.classList.toggle('hidden', cardType !== 'fill');
@@ -6285,6 +7128,8 @@ editBtn.addEventListener('click', () => {
         }
     } else if (cardType === 'anki') {
         editAnkiAnswerInput.value = currentQuestion.answer || '';
+    } else if (cardType === 'voice') {
+        if (editVoiceAnswerInput) editVoiceAnswerInput.value = currentQuestion.answer || '';
     } else if (cardType === 'multiple_choice') {
         renderEditMcOptions(currentQuestion.options || ["", "", "", ""], currentQuestion.answer);
     } else if (cardType === 'image_arrows') {
@@ -6332,6 +7177,8 @@ saveEditBtn.addEventListener('click', () => {
             delete currentQuestion.answerImageCrop;
             delete currentQuestion.answerImageArrows;
         }
+    } else if (t === 'voice') {
+        if (editVoiceAnswerInput) currentQuestion.answer = editVoiceAnswerInput.value.trim();
     } else if (t === 'multiple_choice') {
         const optInputs = Array.from(document.querySelectorAll('.edit-mc-opt-val'));
         const options = optInputs.map(inp => inp.value.trim()).filter(Boolean);

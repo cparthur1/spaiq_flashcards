@@ -309,6 +309,11 @@ export async function getApiKeyAsync() {
 }
 
 /**
+ * Alias de conveniência para getApiKeyAsync
+ */
+export const getApiKey = getApiKeyAsync;
+
+/**
  * Salva a API Key:
  * @param {string} key - Chave do Gemini fornecida pelo usuário.
  * @param {boolean} remember - Se verdadeiro, cifra com AES-GCM (chave não-exportável) no IndexedDB e persiste no localStorage.

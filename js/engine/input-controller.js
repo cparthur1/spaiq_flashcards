@@ -102,6 +102,34 @@ function handleKeyDown(e) {
         }
     }
 
+    // Prioridade para cards de Voz (Explicar em voz alta):
+    if (currentQuestion && currentQuestion.type === 'voice') {
+        const isVoiceEvaluated = controllerHandlers.getIsVoiceEvaluated ? controllerHandlers.getIsVoiceEvaluated() : false;
+        if (isVoiceEvaluated) {
+            if (e.key === '1' || e.code === 'Numpad1') {
+                e.preventDefault();
+                if (controllerHandlers.onVoiceRating) controllerHandlers.onVoiceRating('again');
+                return;
+            } else if (e.key === '2' || e.code === 'Numpad2') {
+                e.preventDefault();
+                if (controllerHandlers.onVoiceRating) controllerHandlers.onVoiceRating('hard');
+                return;
+            } else if (e.key === '3' || e.code === 'Numpad3') {
+                e.preventDefault();
+                if (controllerHandlers.onVoiceRating) controllerHandlers.onVoiceRating('good');
+                return;
+            } else if (e.key === '4' || e.code === 'Numpad4') {
+                e.preventDefault();
+                if (controllerHandlers.onVoiceRating) controllerHandlers.onVoiceRating('easy');
+                return;
+            } else if (isSpaceKey(e) || isEnterKey(e)) {
+                e.preventDefault();
+                if (controllerHandlers.onVoiceContinue) controllerHandlers.onVoiceContinue();
+                return;
+            }
+        }
+    }
+
     const isChatOpen = controllerHandlers.isChatOpen ? controllerHandlers.isChatOpen() : false;
 
     // Quando o chatbot estiver aberto (e o campo de texto NÃO estiver focado):
