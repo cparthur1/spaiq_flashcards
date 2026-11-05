@@ -5277,7 +5277,6 @@ async function updateApiSettingsUI() {
         }
     });
 }
-}
 
 function switchSettingsStatsTab(tab) {
     settingsCurrentStatsTab = tab === 'notebook' ? 'notebook' : 'deck';

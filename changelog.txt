@@ -1,3 +1,16 @@
+CHANGELOG: FIX GAME DECK LOADING SYNTAX ERROR (v15.32)
+Date: 2026-11-05
+
+OVERVIEW:
+1. Fix Syntax Error in `js/game.js`:
+   - Removed duplicate closing brace `}` introduced in `updateApiSettingsUI` during webhook registration addition.
+   - Restored full ES module parsing and deck loading initialization across `pages/game.html`.
+2. Cache Busting & Service Worker:
+   - Bumped `CACHE_NAME` to `flashcards-v15.32` in `sw.js`.
+   - Updated script query version to `v=6.7` in `pages/game.html`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: NEW FLASHCARD MODE 'IDENTIFICAR NA IMAGEM' (IMAGE_ARROWS) (v15.29)
 Date: 2026-11-04
 
