@@ -237,7 +237,14 @@ export async function getDocument(serviceAccountConfig, collectionName, docId) {
 export async function setDocument(serviceAccountConfig, collectionName, docId, fieldsToSet) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
   const projectId = serviceAccountConfig.project_id;
-  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${collectionName}/${docId}`;
+  
+  // In Firestore REST API, updateMask is required for PATCH to create/upsert a document if it doesn't already exist.
+  // Without updateMask, Firestore requires the document to already exist and returns 404 NOT_FOUND.
+  const updateMask = Object.keys(fieldsToSet)
+    .map(key => `updateMask.fieldPaths=${encodeURIComponent(key)}`)
+    .join('&');
+  const querySuffix = updateMask ? `?${updateMask}` : '';
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${collectionName}/${docId}${querySuffix}`;
   const firestoreFields = toFirestoreFields(fieldsToSet);
 
   const res = await fetch(url, {
@@ -255,6 +262,54 @@ export async function setDocument(serviceAccountConfig, collectionName, docId, f
   }
 
   return await res.json();
+}
+
+/**
+ * Find user document by apiKey using runQuery
+ */
+export async function findUserByApiKey(serviceAccountConfig, apiKey) {
+  const token = await getGoogleAdminAccessToken(serviceAccountConfig);
+  const projectId = serviceAccountConfig.project_id;
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents:runQuery`;
+
+  const query = {
+    structuredQuery: {
+      from: [{ collectionId: 'users' }],
+      where: {
+        fieldFilter: {
+          field: { fieldPath: 'apiKey' },
+          op: 'EQUAL',
+          value: { stringValue: apiKey }
+        }
+      },
+      limit: 1
+    }
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(query)
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.warn(`[Firestore] Erro ao buscar usuário por apiKey: ${err}`);
+    return null;
+  }
+
+  const results = await res.json();
+  if (Array.isArray(results) && results.length > 0 && results[0].document) {
+    const doc = results[0].document;
+    const fields = fromFirestoreFields(doc.fields);
+    const parts = doc.name.split('/');
+    const uid = parts[parts.length - 1];
+    return { uid, ...fields };
+  }
+  return null;
 }
 
 /**

@@ -10,7 +10,7 @@
 
 import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail } from './google-auth.js';
 import { callGemini } from './gemini.js';
-import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData, deleteDocument } from './firestore.js';
+import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData, deleteDocument, findUserByApiKey } from './firestore.js';
 import {
   getStripeClient,
   createSubscription,
@@ -573,12 +573,14 @@ export default {
         if (!apiKey) {
           const authHeader = request.headers.get('Authorization') || '';
           if (authHeader.startsWith('Bearer ')) {
-            apiKey = authHeader.substring(7).trim();
+            apiKey = authHeader.substring(7);
           }
         }
         if (!apiKey) {
           apiKey = url.searchParams.get('api_key') || url.searchParams.get('key') || '';
         }
+
+        apiKey = (apiKey || '').trim().replace(/^["']|["']$/g, '');
 
         if (!apiKey) {
           return jsonResponse({
@@ -588,21 +590,38 @@ export default {
         }
 
         const serviceAccount = getServiceAccount(env);
-        const keyDoc = await getDocument(serviceAccount, 'api_keys', apiKey).catch(() => null);
+        let keyDoc = await getDocument(serviceAccount, 'api_keys', apiKey).catch(() => null);
+        let userDoc = null;
+        let userId = null;
 
-        if (!keyDoc || !keyDoc.uid) {
+        if (keyDoc && keyDoc.uid) {
+          userId = keyDoc.uid;
+          userDoc = await getUserDocument(serviceAccount, userId).catch(() => null);
+        }
+
+        // Resilient fallback: if api_keys reference doc was missing or not yet indexed, look up user by apiKey directly
+        if (!userDoc) {
+          const userFromQuery = await findUserByApiKey(serviceAccount, apiKey).catch(() => null);
+          if (userFromQuery && userFromQuery.uid) {
+            userId = userFromQuery.uid;
+            userDoc = userFromQuery;
+            // Self-healing: create the api_keys reference document asynchronously for fast subsequent reads
+            ctx.waitUntil(
+              setDocument(serviceAccount, 'api_keys', apiKey, {
+                uid: userId,
+                email: userDoc.email || '',
+                createdAt: userDoc.apiKeyCreatedAt || new Date().toISOString(),
+                lastUsedAt: new Date().toISOString()
+              }).catch(() => {})
+            );
+          }
+        }
+
+        if (!userDoc || !userId) {
           return jsonResponse({
             error: 'invalid_api_key',
             message: 'Chave de API inválida ou revogada.'
           }, 401, publicCorsHeaders);
-        }
-
-        const userDoc = await getUserDocument(serviceAccount, keyDoc.uid).catch(() => null);
-        if (!userDoc) {
-          return jsonResponse({
-            error: 'user_not_found',
-            message: 'Usuário não encontrado.'
-          }, 404, publicCorsHeaders);
         }
 
         // Verify that the user is currently PRO
