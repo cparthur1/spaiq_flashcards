@@ -3040,6 +3040,7 @@ function updateCreatorQImagePreview() {
             crop: pendingCreatorQImageCrop,
             arrows: pendingCreatorQImageArrows,
             showNumbers: isImageArrows,
+            isImageArrows,
             onArrowClick: isImageArrows ? (idx) => focusCreatorArrowInput(idx) : null,
             maxHClass: 'max-h-28'
         });
@@ -3053,6 +3054,8 @@ function updateCreatorQImagePreview() {
         if (creatorEditQImg) creatorEditQImg.classList.add('hidden');
         const oldWrap = creatorQImgPreviewContainer.querySelector('.annotated-image-wrapper');
         if (oldWrap) oldWrap.remove();
+        const oldNotFound = creatorQImgPreviewContainer.querySelector('.image-not-found-placeholder');
+        if (oldNotFound) oldNotFound.remove();
     }
     if (isImageArrows) {
         renderCreatorArrowsInputs(pendingCreatorQImageArrows);
@@ -4128,6 +4131,7 @@ function updateInlineEditQImagePreviewUI() {
             crop: pendingInlineEditQImageCrop,
             arrows: pendingInlineEditQImageArrows,
             showNumbers: isImageArrows,
+            isImageArrows,
             onArrowClick: isImageArrows ? (idx) => focusInlineEditArrowInput(idx) : null,
             maxHClass: 'max-h-36'
         });
@@ -4137,6 +4141,8 @@ function updateInlineEditQImagePreviewUI() {
         inlineEditImagePreviewContainer.classList.add('hidden');
         const oldWrap = inlineEditImagePreviewContainer.querySelector('.annotated-image-wrapper');
         if (oldWrap) oldWrap.remove();
+        const oldNotFound = inlineEditImagePreviewContainer.querySelector('.image-not-found-placeholder');
+        if (oldNotFound) oldNotFound.remove();
     }
     if (isImageArrows) {
         renderInlineEditArrowsInputs(pendingInlineEditQImageArrows);

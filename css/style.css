@@ -2297,6 +2297,15 @@ mark.card-hl-purple {
     }
 }
 
+.image-not-found-placeholder {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--md-sys-color-surface-container-low, #f8fafc);
+    border: 1px dashed var(--md-sys-color-outline-variant, rgba(0, 0, 0, 0.16));
+    border-radius: var(--md-sys-shape-corner-extra-large, 1rem);
+    transition: opacity 0.25s ease-in-out;
+}
+
 /* ==========================================================================
    FILL-IN-THE-BLANK INLINE CORRECTION ANIMATIONS
    ========================================================================== */

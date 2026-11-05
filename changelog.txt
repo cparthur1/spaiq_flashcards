@@ -1,3 +1,20 @@
+CHANGELOG: IMAGE IDENTIFICATION LOADING & NOT FOUND PLACEHOLDERS (v15.34)
+Date: 2026-11-05
+
+OVERVIEW:
+1. Loading & Not Found Placeholders for Image Cards (`js/image-editor-modal.js`, `js/game.js`, `pages/game.html`):
+   - Added active "Carregando imagem..." shimmer placeholder support to image identification card types (`image_arrows`) and preview containers.
+   - Added Material Design 3 "Imagem não encontrada" (`broken_image`) placeholder displayed whenever card images fail to load or when an image identification card has an inaccessible/empty URL.
+   - Extended `renderAnnotatedImage` to automatically inject and manage loading and fallback error placeholders across gameplay, creator sandbox, and editor modals.
+2. Styling & Localization (`css/style.css`, `js/i18n.js`):
+   - Styled `.image-not-found-placeholder` with M3 surface tokens, dashed borders, and smooth transitions.
+   - Added bilingual translations for `image_not_found` and `image_not_found_desc` in `pt-BR` and `en-US`.
+3. Cache Busting & Service Worker:
+   - Bumped `CACHE_NAME` to `flashcards-v15.34` in `sw.js`.
+   - Updated stylesheet version to `v=7.0` and script version to `v=6.9` in `pages/game.html`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: FIX JSON RETURN FORMAT OVERFLOW IN API SETTINGS (v15.33)
 Date: 2026-11-05
 

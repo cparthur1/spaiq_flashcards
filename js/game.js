@@ -119,6 +119,7 @@ const questionCard = document.getElementById('question-card');
 const deleteCardBtn = document.getElementById('delete-card-btn');
 const questionImageContainer = document.getElementById('question-image-container');
 const questionImagePlaceholder = document.getElementById('question-image-placeholder');
+const questionImageError = document.getElementById('question-image-error');
 const questionImage = document.getElementById('question-image');
 
 const deckCompletionView = document.getElementById('deck-completion-view');
@@ -181,6 +182,7 @@ const ankiAnswerContainer = document.getElementById('anki-answer-container');
 const ankiAnswerText = document.getElementById('anki-answer-text');
 const ankiAnswerImageContainer = document.getElementById('anki-answer-image-container');
 const ankiAnswerImagePlaceholder = document.getElementById('anki-answer-image-placeholder');
+const ankiAnswerImageError = document.getElementById('anki-answer-image-error');
 const ankiAnswerImage = document.getElementById('anki-answer-image');
 
 const ankiControlsArea = document.getElementById('anki-controls-area');
@@ -254,13 +256,28 @@ let questionStartTime = Date.now();
 // --- UI UTILITIES ---
 const imageLoadSeqMap = new WeakMap();
 
-function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placeholderElem, crop = null, arrows = [], { showNumbers = false, onArrowClick = null } = {}) {
+function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placeholderElem, crop = null, arrows = [], { showNumbers = false, onArrowClick = null, errorElem = null, isImageArrows = false } = {}) {
     if (!containerElem || !imgElem) return;
 
     const safeUrl = sanitizeImageUrl(srcUrl);
+    const isArrowCard = Boolean(showNumbers || isImageArrows || currentQuestion?.type === 'image_arrows');
+
     if (!safeUrl) {
+        if (isArrowCard) {
+            containerElem.classList.remove('hidden');
+            if (placeholderElem) placeholderElem.classList.add('hidden');
+            imgElem.classList.add('hidden');
+            imgElem.src = '';
+            const oldWrap = containerElem.querySelector('.annotated-image-wrapper');
+            if (oldWrap) oldWrap.remove();
+            if (errorElem) {
+                errorElem.classList.remove('hidden');
+            }
+            return;
+        }
         containerElem.classList.add('hidden');
         if (placeholderElem) placeholderElem.classList.add('hidden');
+        if (errorElem) errorElem.classList.add('hidden');
         imgElem.classList.add('hidden');
         imgElem.classList.remove('opacity-100');
         imgElem.classList.add('opacity-0');
@@ -280,16 +297,19 @@ function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placehold
     imgElem.src = '';
     const oldWrap = containerElem.querySelector('.annotated-image-wrapper');
     if (oldWrap) oldWrap.remove();
+    if (errorElem) errorElem.classList.add('hidden');
 
     renderAnnotatedImage({
         container: containerElem,
         imgElem,
         placeholderElem,
+        errorElem,
         imageUrl: safeUrl,
         crop,
         arrows,
         showNumbers,
         onArrowClick,
+        isImageArrows: isArrowCard,
         alt: imgElem.alt || t('card_image') || 'Imagem do Flashcard',
         maxHClass: containerElem.id === 'anki-answer-image-container' ? 'max-h-48 sm:max-h-72' : 'max-h-36 xs:max-h-48 sm:max-h-64',
         zoomable: true,
@@ -1434,7 +1454,9 @@ function loadQuestion() {
         currentQuestion.imageArrows,
         {
             showNumbers: isImageArrows,
-            onArrowClick: isImageArrows ? (idx) => focusGameArrowInput(idx) : null
+            onArrowClick: isImageArrows ? (idx) => focusGameArrowInput(idx) : null,
+            errorElem: questionImageError,
+            isImageArrows
         }
     );
 
@@ -1573,7 +1595,17 @@ function flipAnkiCard() {
 
     if (ankiAnswerContainer) {
         ankiAnswerText.innerHTML = renderMathAndMarkdown(currentQuestion.answer || '');
-        setupCardImageWithPlaceholder(currentQuestion.answerImage, ankiAnswerImage, ankiAnswerImageContainer, ankiAnswerImagePlaceholder, currentQuestion.answerImageCrop, currentQuestion.answerImageArrows);
+        setupCardImageWithPlaceholder(
+            currentQuestion.answerImage,
+            ankiAnswerImage,
+            ankiAnswerImageContainer,
+            ankiAnswerImagePlaceholder,
+            currentQuestion.answerImageCrop,
+            currentQuestion.answerImageArrows,
+            {
+                errorElem: ankiAnswerImageError
+            }
+        );
         ankiAnswerContainer.classList.remove('hidden');
     }
 
@@ -1784,6 +1816,8 @@ function resetUI() {
     if (ankiAnswerContainer) ankiAnswerContainer.classList.add('hidden');
     if (ankiAnswerImageContainer) ankiAnswerImageContainer.classList.add('hidden');
     if (ankiAnswerImagePlaceholder) ankiAnswerImagePlaceholder.classList.add('hidden');
+    if (ankiAnswerImageError) ankiAnswerImageError.classList.add('hidden');
+    if (questionImageError) questionImageError.classList.add('hidden');
     if (ankiAnswerImage) {
         ankiAnswerImage.classList.add('hidden');
         ankiAnswerImage.classList.remove('opacity-100');
@@ -6041,6 +6075,7 @@ function updateEditImagePreviewUI(imgSrc) {
             crop: pendingEditImageCrop,
             arrows: pendingEditImageArrows,
             showNumbers: isImageArrows,
+            isImageArrows,
             onArrowClick: isImageArrows ? (idx) => focusEditArrowInput(idx) : null,
             maxHClass: 'max-h-40'
         });
@@ -7229,7 +7264,21 @@ window.addEventListener('flashcards:sync-updated', (event) => {
                                 : renderMathAndMarkdown(currentQuestion.description || '');
                             bodyElem.innerHTML = formatted;
                         }
-                        setupCardImageWithPlaceholder(currentQuestion.image, questionImage, questionImageContainer, questionImagePlaceholder, currentQuestion.imageCrop, currentQuestion.imageArrows);
+                        const isImageArrows = currentQuestion?.type === 'image_arrows';
+                        setupCardImageWithPlaceholder(
+                            currentQuestion.image,
+                            questionImage,
+                            questionImageContainer,
+                            questionImagePlaceholder,
+                            currentQuestion.imageCrop,
+                            currentQuestion.imageArrows,
+                            {
+                                showNumbers: isImageArrows,
+                                onArrowClick: isImageArrows ? (idx) => focusGameArrowInput(idx) : null,
+                                errorElem: questionImageError,
+                                isImageArrows
+                            }
+                        );
                     } else {
                         if (questionsPool.length > 0) {
                             loadQuestion();

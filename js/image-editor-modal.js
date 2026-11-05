@@ -223,6 +223,7 @@ export function renderAnnotatedImage({
     container,
     imgElem = null,
     placeholderElem = null,
+    errorElem = null,
     imageUrl,
     crop = null,
     arrows = [],
@@ -231,14 +232,60 @@ export function renderAnnotatedImage({
     zoomable = false,
     showNumbers = false,
     onArrowClick = null,
-    onClick = null
+    onClick = null,
+    isImageArrows = false
 }) {
     if (!container) return;
 
     const safeUrl = sanitizeImageUrl(imageUrl);
+    const isArrowCard = Boolean(showNumbers || isImageArrows);
+
+    const showNotFoundPlaceholder = () => {
+        container.classList.remove('hidden');
+        if (placeholderElem) placeholderElem.classList.add('hidden');
+        const dynamicLoader = container.querySelector('.dynamic-image-loading-placeholder');
+        if (dynamicLoader) dynamicLoader.remove();
+        if (imgElem) {
+            imgElem.classList.add('hidden');
+            imgElem.src = '';
+        }
+        const oldWrap = container.querySelector('.annotated-image-wrapper');
+        if (oldWrap) oldWrap.remove();
+
+        if (errorElem) {
+            errorElem.classList.remove('hidden');
+        } else {
+            let notFound = container.querySelector('.image-not-found-placeholder');
+            if (!notFound) {
+                notFound = document.createElement('div');
+                notFound.className = `image-not-found-placeholder w-full max-w-sm sm:max-w-md ${maxHClass} rounded-2xl border border-dashed border-[var(--md-sys-color-outline-variant,#cbd5e1)] bg-[var(--md-sys-color-surface-container-low,#f8fafc)] flex flex-col items-center justify-center p-4 text-center select-none shadow-xs space-y-1.5 animate-fadeIn`;
+                notFound.innerHTML = `
+                    <span class="material-symbols-rounded text-3xl sm:text-4xl text-[#3b82f7]">broken_image</span>
+                    <p class="text-xs sm:text-sm font-bold text-[var(--md-sys-color-on-surface,#0f172a)]">${t('image_not_found') || 'Imagem não encontrada'}</p>
+                    <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant,#64748b)] max-w-xs leading-normal">${t('image_not_found_desc') || 'O link da imagem está quebrado ou inacessível.'}</p>
+                `;
+                container.appendChild(notFound);
+            }
+            notFound.classList.remove('hidden');
+        }
+    };
+
+    const hideLoaders = () => {
+        if (placeholderElem) placeholderElem.classList.add('hidden');
+        const dynamicLoader = container.querySelector('.dynamic-image-loading-placeholder');
+        if (dynamicLoader) dynamicLoader.remove();
+    };
+
     if (!safeUrl) {
+        if (isArrowCard) {
+            showNotFoundPlaceholder();
+            return;
+        }
         container.classList.add('hidden');
         if (placeholderElem) placeholderElem.classList.add('hidden');
+        if (errorElem) errorElem.classList.add('hidden');
+        const notFound = container.querySelector('.image-not-found-placeholder');
+        if (notFound) notFound.remove();
         if (imgElem) {
             imgElem.classList.add('hidden');
             imgElem.src = '';
@@ -250,7 +297,25 @@ export function renderAnnotatedImage({
     }
 
     container.classList.remove('hidden');
-    if (placeholderElem) placeholderElem.classList.remove('hidden');
+    if (errorElem) errorElem.classList.add('hidden');
+    const existingNotFound = container.querySelector('.image-not-found-placeholder');
+    if (existingNotFound) existingNotFound.remove();
+
+    if (placeholderElem) {
+        placeholderElem.classList.remove('hidden');
+    } else {
+        let dynamicLoader = container.querySelector('.dynamic-image-loading-placeholder');
+        if (!dynamicLoader) {
+            dynamicLoader = document.createElement('div');
+            dynamicLoader.className = `dynamic-image-loading-placeholder image-loading-placeholder w-full max-w-sm sm:max-w-md ${maxHClass} rounded-2xl flex flex-col items-center justify-center gap-2 select-none shadow-sm min-h-[140px]`;
+            dynamicLoader.innerHTML = `
+                <span class="material-symbols-rounded text-3xl text-[var(--md-sys-color-on-surface-variant,#64748b)] opacity-40 animate-pulse">image</span>
+                <span class="text-xs font-medium text-[var(--md-sys-color-on-surface-variant,#64748b)] opacity-60">${t('loading_image') || 'Carregando imagem...'}</span>
+            `;
+            container.appendChild(dynamicLoader);
+        }
+        dynamicLoader.classList.remove('hidden');
+    }
 
     const hasCrop = crop && typeof crop === 'object' &&
         (crop.width > 0 && crop.height > 0 && (crop.x > 0.5 || crop.y > 0.5 || crop.width < 99.5 || crop.height < 99.5));
@@ -273,19 +338,18 @@ export function renderAnnotatedImage({
         if (onClick) {
             imgElem.onclick = onClick;
         }
-        if (placeholderElem) {
-            if (imgElem.complete && imgElem.naturalWidth > 0) {
-                placeholderElem.classList.add('hidden');
-            } else {
-                imgElem.onload = () => {
-                    if (placeholderElem) placeholderElem.classList.add('hidden');
-                };
-                imgElem.onerror = () => {
-                    if (placeholderElem) placeholderElem.classList.add('hidden');
-                    imgElem.classList.add('hidden');
-                    container.classList.add('hidden');
-                };
-            }
+
+        if (imgElem.complete && imgElem.naturalWidth > 0) {
+            hideLoaders();
+        } else {
+            imgElem.onload = () => {
+                hideLoaders();
+            };
+            imgElem.onerror = () => {
+                hideLoaders();
+                imgElem.classList.add('hidden');
+                showNotFoundPlaceholder();
+            };
         }
         return;
     }
@@ -297,7 +361,7 @@ export function renderAnnotatedImage({
     const onImageReady = () => {
         if (handled) return;
         handled = true;
-        if (placeholderElem) placeholderElem.classList.add('hidden');
+        hideLoaders();
 
         const natW = preloader.naturalWidth || 800;
         const natH = preloader.naturalHeight || 600;
@@ -400,12 +464,12 @@ export function renderAnnotatedImage({
     const onImageError = () => {
         if (handled) return;
         handled = true;
-        if (placeholderElem) placeholderElem.classList.add('hidden');
+        hideLoaders();
         if (imgElem) {
             imgElem.classList.add('hidden');
             imgElem.src = '';
         }
-        container.classList.add('hidden');
+        showNotFoundPlaceholder();
     };
 
     preloader.onload = onImageReady;

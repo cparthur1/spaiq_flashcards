@@ -73,7 +73,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="../css/style.css?v=6.9">
+    <link rel="stylesheet" href="../css/style.css?v=7.0">
     <script src="../assets/vendor/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
@@ -461,6 +461,11 @@
                     </svg>
                     <span class="text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] opacity-60" data-i18n="loading_image">Carregando imagem...</span>
                 </div>
+                <div id="question-image-error" class="hidden image-not-found-placeholder w-full max-w-sm sm:max-w-md h-36 xs:h-48 sm:h-56 rounded-2xl border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex flex-col items-center justify-center p-4 text-center select-none shadow-xs space-y-1.5">
+                    <span class="material-symbols-rounded text-3xl sm:text-4xl text-[#3b82f7]">broken_image</span>
+                    <p class="text-xs sm:text-sm font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="image_not_found">Imagem não encontrada</p>
+                    <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] max-w-xs leading-normal" data-i18n="image_not_found_desc">O link da imagem está quebrado ou inacessível.</p>
+                </div>
                 <img id="question-image" src="" alt="Imagem do Flashcard"
                     class="hidden max-h-36 xs:max-h-48 sm:max-h-80 w-auto rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] card-img-zoomable object-contain transition-opacity duration-300 opacity-0">
             </div>
@@ -481,6 +486,11 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                         <span class="text-xs font-medium text-[var(--md-sys-color-on-surface-variant)] opacity-60" data-i18n="loading_image">Carregando imagem...</span>
+                    </div>
+                    <div id="anki-answer-image-error" class="hidden image-not-found-placeholder w-full max-w-sm sm:max-w-md h-36 xs:h-48 sm:h-56 rounded-2xl border border-dashed border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex flex-col items-center justify-center p-4 text-center select-none shadow-xs space-y-1.5">
+                        <span class="material-symbols-rounded text-3xl sm:text-4xl text-[#3b82f7]">broken_image</span>
+                        <p class="text-xs sm:text-sm font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="image_not_found">Imagem não encontrada</p>
+                        <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] max-w-xs leading-normal" data-i18n="image_not_found_desc">O link da imagem está quebrado ou inacessível.</p>
                     </div>
                     <img id="anki-answer-image" src="" alt="Imagem da Resposta" class="hidden max-h-48 sm:max-h-72 w-auto rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] card-img-zoomable object-contain transition-opacity duration-300 opacity-0">
                 </div>
@@ -1542,7 +1552,7 @@
     </div>
 
     <script src="../js/ripple.js" defer></script>
-    <script src="../js/game.js?v=6.8" type="module" defer></script>
+    <script src="../js/game.js?v=6.9" type="module" defer></script>
 </body>
 
 </html>
