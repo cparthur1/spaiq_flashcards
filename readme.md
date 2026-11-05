@@ -94,10 +94,11 @@ O **Spaiq Flashcards** (ou simplesmente **Spaiq**) transforma materiais brutos (
 
 ---
 
-### 8. API REST de Estatísticas & Progresso (Spaiq Pro)
+### 8. API REST de Estatísticas, Webhooks & Integrações (Spaiq Pro)
 - **Integração Externa:** Conecte seus dados de estudo a aplicativos de acompanhamento de progresso, painéis pessoais (Notion, Obsidian, Home Assistant) ou widgets móveis.
-- **Métricas Retornadas em JSON:** Data (`date`), total de cartões revisados no dia (`cards_reviewed`), taxa de retenção (`retention_rate`), tempo de estudo em segundos (`time_spent_seconds`) e sequência consecutiva de dias (`streak_days`).
-- **Autenticação:** Chave secreta de API (`fc_live_...`) solicitada e gerenciada diretamente no menu de **Configurações** do webapp.
+- **Métricas Retornadas em JSON:** Data (`date`), cartões revisados no dia (`cards_reviewed`), taxa de retenção (`retention_rate`), tempo de estudo em segundos (`time_spent_seconds`), sequência de dias (`streak_days`) e séries temporais dos últimos 14 dias (`past_14_days_cards` e `past_14_days_time`).
+- **Webhooks de Meta Diária:** Notificação automática via HTTP POST em tempo real para URLs externas assim que a meta diária for batida.
+- **Conector Oficial com StudyFlow (`track_progress`):** Script em Python pronto ([`scripts/sync_track_progress.py`](./scripts/sync_track_progress.py)) para sincronizar e dar baixa em tarefas de estudo pendentes.
 - **Documentação Técnica Completa:** Consulte a especificação dos endpoints, esquemas de erros e exemplos em Python, Node.js e cURL em [**docs/API.md**](./docs/API.md).
 
 ---

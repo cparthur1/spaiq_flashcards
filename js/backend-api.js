@@ -334,3 +334,61 @@ export async function testStatsApi(apiKey) {
   };
 }
 
+/**
+ * Get user daily goal webhook configuration (exclusive to Pro)
+ */
+export async function getUserWebhook() {
+  const res = await fetchWithAuth('/api/user/webhook');
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) return { isPro: false, webhookUrl: null };
+    throw new Error('Falha ao obter webhook do usuário');
+  }
+  return await res.json();
+}
+
+/**
+ * Save user daily goal webhook URL (exclusive to Pro)
+ */
+export async function saveUserWebhook(webhookUrl) {
+  const res = await fetchWithAuth('/api/user/webhook', {
+    method: 'POST',
+    body: JSON.stringify({ webhookUrl })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Erro ao salvar URL do webhook');
+  }
+  return await res.json();
+}
+
+/**
+ * Test user daily goal webhook URL
+ */
+export async function testUserWebhook(webhookUrl) {
+  const res = await fetchWithAuth('/api/user/webhook/test', {
+    method: 'POST',
+    body: JSON.stringify({ webhookUrl })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || 'Erro ao disparar teste do webhook');
+  }
+  return data;
+}
+
+/**
+ * Dispatch daily goal reached event to configured webhook
+ */
+export async function triggerDailyGoalWebhook({ date, cardsReviewed, dailyGoal }) {
+  try {
+    const res = await fetchWithAuth('/api/user/webhook/trigger', {
+      method: 'POST',
+      body: JSON.stringify({ date, cardsReviewed, dailyGoal })
+    });
+    return await res.json().catch(() => ({}));
+  } catch (err) {
+    console.warn('[Webhook] Falha ao acionar webhook de meta diária:', err);
+    return null;
+  }
+}
+

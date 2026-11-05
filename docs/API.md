@@ -71,7 +71,9 @@ Retorna as métricas de estudo, taxa de retenção, tempo gasto e sequência de 
   "cards_reviewed": 142,
   "retention_rate": 0.88,
   "time_spent_seconds": 1840,
-  "streak_days": 18
+  "streak_days": 18,
+  "past_14_days_time": "180;1250;950;0;1100;540;1400;360;0;600;1300;980;1600;1840",
+  "past_14_days_cards": "12;109;82;0;98;45;120;30;0;50;110;85;140;142"
 }
 ```
 
@@ -84,10 +86,36 @@ Retorna as métricas de estudo, taxa de retenção, tempo gasto e sequência de 
 | `retention_rate` | `float` | Taxa de acerto/retenção cognitiva no dia (entre `0.00` e `1.00`), calculada como `acertos / total_respondidos`. |
 | `time_spent_seconds` | `integer` | Tempo ativo total dedicado ao estudo de flashcards no dia, medido em segundos. |
 | `streak_days` | `integer` | Sequência consecutiva atual de dias com estudo (Spaiq Streak). |
+| `past_14_days_time` | `string` | Tempo de estudo (em segundos) nos últimos 14 dias em ordem cronológica até a data consultada, separados por ponto e vírgula (`;`). |
+| `past_14_days_cards` | `string` | Quantidade de cards respondidos nos últimos 14 dias em ordem cronológica até a data consultada, separados por ponto e vírgula (`;`). |
 
 ---
 
-## 4. Códigos de Status & Erros
+## 4. Webhooks de Meta Diária (Spaiq Pro)
+
+Você pode cadastrar uma **URL de Webhook (POST)** no Spaiq para ser notificado em tempo real assim que a sua **meta diária de estudos** for batida no Caderno!
+
+### Payload do Webhook (POST Event)
+
+```json
+{
+  "event": "daily_goal_reached",
+  "date": "2026-11-05",
+  "cards_reviewed": 25,
+  "daily_goal": 25,
+  "streak_days": 18,
+  "timestamp": "2026-11-05T11:47:00.000Z"
+}
+```
+
+### Configuração no Webapp
+1. Acesse **Configurações** -> **API de Estatísticas (PRO)**.
+2. No bloco **Webhook de Meta Diária**, informe sua URL (ex: `https://seu-servidor.com/webhook` ou `http://localhost:5050/webhook`).
+3. Clique em **Salvar Webhook** e teste o disparo em tempo real clicando em **Testar Webhook**.
+
+---
+
+## 5. Códigos de Status & Erros
 
 A API adota códigos de status HTTP convencionais:
 
@@ -109,7 +137,7 @@ A API adota códigos de status HTTP convencionais:
 
 ---
 
-## 5. Exemplos de Código
+## 6. Exemplos de Código
 
 ### cURL
 ```bash
@@ -179,7 +207,26 @@ fetchFlashcardsStats();
 
 ---
 
-## 6. Casos de Uso Comuns
+## 7. Conector Oficial: Integração com StudyFlow (`track_progress`)
+
+O repositório inclui um script em Python pronto para sincronizar automaticamente suas estatísticas com o gerenciador de estudos **StudyFlow** (`track_progress`):
+
+### 1. Consulta Pontual & Atualização Automática de Tarefas
+Ao executar o conector, ele consulta as estatísticas do dia e marca automaticamente como concluídas todas as tarefas "Flashcards" pendentes nos seus conteúdos de estudo:
+```bash
+python3 scripts/sync_track_progress.py --api-key fc_live_suachaveaqui
+```
+
+### 2. Modo Servidor de Webhook (Tempo Real)
+Inicie o conector como receptor de Webhook em background na porta `5050`:
+```bash
+python3 scripts/sync_track_progress.py --listen 5050
+```
+Em seguida, acesse **Configurações -> API de Estatísticas** no Spaiq Flashcards e aponte o Webhook para `http://localhost:5050/webhook`. Assim que sua meta diária de estudos for batida, o StudyFlow marcará as tarefas de flashcard como concluídas instantaneamente!
+
+---
+
+## 8. Casos de Uso Comuns
 
 - **Aplicativos de Hábitos e Produtividade**: Integre com o aplicativo `track_progress` ou painéis de estudo para registrar o cumprimento da meta de flashcards do dia.
 - **Widgets de Desktop & Mobile**: Crie widgets no Scriptable (iOS) ou KWGT (Android) para exibir sua sequência (`streak_days`) e cartões revisados (`cards_reviewed`) na tela inicial.
@@ -188,7 +235,7 @@ fetchFlashcardsStats();
 
 ---
 
-## 7. Segurança & Boas Práticas
+## 9. Segurança & Boas Práticas
 
 - **Mantenha sua chave confidencial**: Nunca cometa sua chave de API em repositórios públicos do GitHub.
 - **Regeneração Imediata**: Caso sua chave seja exposta acidentalmente, utilize a opção **Regerar Chave** nas Configurações do Spaiq. A chave anterior deixará de funcionar instantaneamente.

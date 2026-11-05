@@ -21,7 +21,7 @@ import { initTransfer } from './transfer.js';
 import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCurrentSession, completeCurrentSession, getCurrentSessionMetrics } from './stats-tracker.js';
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
-import { getUserApiKey, generateUserApiKey, revokeUserApiKey, testStatsApi, BACKEND_URL } from './backend-api.js';
+import { getUserApiKey, generateUserApiKey, revokeUserApiKey, testStatsApi, getUserWebhook, saveUserWebhook, testUserWebhook, triggerDailyGoalWebhook, BACKEND_URL } from './backend-api.js';
 import { onAuthChange, auth } from './firebase-client.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
@@ -2864,6 +2864,15 @@ function checkAndCelebrateNotebookDailyGoal(isFromAnsweringCard = false) {
     const todayStr = getTodayDateString();
     const goalRes = recordNotebookGoalBeaten(todayStr);
 
+    // Dispara webhook se configurado (exclusivo Pro)
+    if (goalRes.newlyAchieved && isUserPro()) {
+        triggerDailyGoalWebhook({
+            date: todayStr,
+            cardsReviewed: reviewedToday,
+            dailyGoal
+        });
+    }
+
     // Apenas celebra visualmente se a stat "para hoje" (remaining) estiver pinada no cabeçalho do caderno
     const pinnedIds = getPinnedHeaderStats('notebook');
     const isParaHojePinned = pinnedIds.includes('remaining');
@@ -4919,6 +4928,7 @@ async function updateSettingsModalState() {
 
 let isApiSettingsLoading = false;
 let currentLoadedApiKey = null;
+let currentLoadedWebhookUrl = null;
 
 async function updateApiSettingsUI() {
     const container = document.getElementById('settings-api-container');
@@ -4937,7 +4947,7 @@ async function updateApiSettingsUI() {
 
                 <div class="bg-white/90 rounded-xl p-2.5 border border-blue-100 font-mono text-[10px] text-gray-700 leading-tight select-all">
                     <span class="text-gray-400 block text-[9px] font-sans font-bold uppercase tracking-wider mb-1">Exemplo de Resposta JSON:</span>
-                    <code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18\n}</code>
+                    <code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18,\n  "past_14_days_time": "180;1250;950;0;1100;540;1400;360;0;600;1300;980;1600;1840",\n  "past_14_days_cards": "12;109;82;0;98;45;120;30;0;50;110;85;140;142"\n}</code>
                 </div>
 
                 <button type="button" id="setting-api-upgrade-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm text-white cursor-pointer transition-all hover:opacity-95" style="background-color: #3b82f7;">
@@ -4952,7 +4962,7 @@ async function updateApiSettingsUI() {
         return;
     }
 
-    // User is Pro: fetch their existing API key
+    // User is Pro: fetch their existing API key and webhook
     if (!currentLoadedApiKey && !isApiSettingsLoading) {
         isApiSettingsLoading = true;
         container.innerHTML = `
@@ -4962,10 +4972,14 @@ async function updateApiSettingsUI() {
             </div>
         `;
         try {
-            const res = await getUserApiKey();
-            currentLoadedApiKey = res?.apiKey || null;
+            const [keyRes, hookRes] = await Promise.all([
+                getUserApiKey().catch(() => null),
+                getUserWebhook().catch(() => null)
+            ]);
+            currentLoadedApiKey = keyRes?.apiKey || null;
+            currentLoadedWebhookUrl = hookRes?.webhookUrl || '';
         } catch (e) {
-            console.warn('[Settings API] Erro ao carregar chave:', e);
+            console.warn('[Settings API] Erro ao carregar chave ou webhook:', e);
         } finally {
             isApiSettingsLoading = false;
         }
@@ -4981,7 +4995,7 @@ async function updateApiSettingsUI() {
 
                 <div class="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80 font-mono text-[10px] text-gray-700 leading-tight">
                     <span class="text-gray-400 block text-[9px] font-sans font-bold uppercase tracking-wider mb-1">Formato do Retorno JSON:</span>
-                    <code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18\n}</code>
+                    <code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18,\n  "past_14_days_time": "180;1250;950;0;1100;540;1400;360;0;600;1300;980;1600;1840",\n  "past_14_days_cards": "12;109;82;0;98;45;120;30;0;50;110;85;140;142"\n}</code>
                 </div>
 
                 <button type="button" id="setting-api-generate-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm text-white cursor-pointer transition-all hover:opacity-95" style="background-color: #3b82f7;">
@@ -5015,7 +5029,7 @@ async function updateApiSettingsUI() {
     const curlCommand = `curl -H "X-API-Key: ${currentLoadedApiKey}" "${endpointUrl}"`;
 
     container.innerHTML = `
-        <div class="space-y-3">
+        <div class="space-y-4">
             <div>
                 <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="settings_api_key_label">
                     ${escapeHtml(t('settings_api_key_label'))}
@@ -5080,6 +5094,36 @@ async function updateApiSettingsUI() {
                     <code class="block text-[10px] text-gray-700 font-mono break-all bg-gray-100 p-1.5 rounded border border-gray-200 select-all">
                         ${escapeHtml(curlCommand)}
                     </code>
+                </div>
+            </div>
+
+            <!-- Webhook Section -->
+            <div class="pt-3 border-t border-[var(--md-sys-color-outline-variant)]/60 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <span class="material-symbols-rounded text-lg text-[#3b82f7]">webhook</span>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="webhook_heading">
+                            ${escapeHtml(t('webhook_heading'))}
+                        </label>
+                    </div>
+                    <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200">POST Event</span>
+                </div>
+                <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-normal" data-i18n="webhook_desc">
+                    ${escapeHtml(t('webhook_desc'))}
+                </p>
+                <div class="flex items-center gap-1.5">
+                    <input type="url" id="setting-webhook-url-input" placeholder="${escapeHtml(t('webhook_url_placeholder'))}" value="${escapeHtml(currentLoadedWebhookUrl || '')}"
+                        class="flex-1 px-3 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-xs font-mono outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="button" id="setting-webhook-save-btn" class="px-3.5 py-2 rounded-xl text-white text-xs font-bold transition shadow-xs cursor-pointer flex-shrink-0 hover:opacity-95" style="background-color: #3b82f7;">
+                        <span data-i18n="webhook_save_btn">${escapeHtml(t('webhook_save_btn'))}</span>
+                    </button>
+                </div>
+                <div class="flex items-center justify-between pt-1">
+                    <button type="button" id="setting-webhook-test-btn" class="px-3 py-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-xs font-bold text-purple-700 transition cursor-pointer flex items-center gap-1">
+                        <span class="material-symbols-rounded text-sm">send</span>
+                        <span data-i18n="webhook_test_btn">${escapeHtml(t('webhook_test_btn'))}</span>
+                    </button>
+                    <span id="setting-webhook-status" class="text-[11px] text-gray-500 font-semibold"></span>
                 </div>
             </div>
         </div>
@@ -5179,6 +5223,60 @@ async function updateApiSettingsUI() {
         }
         updateApiSettingsUI();
     });
+
+    // Webhook Save button
+    document.getElementById('setting-webhook-save-btn')?.addEventListener('click', async () => {
+        const input = document.getElementById('setting-webhook-url-input');
+        const saveBtn = document.getElementById('setting-webhook-save-btn');
+        const urlVal = input ? input.value.trim() : '';
+        if (saveBtn) saveBtn.disabled = true;
+        try {
+            await saveUserWebhook(urlVal);
+            currentLoadedWebhookUrl = urlVal;
+            showNotificationPill(t('webhook_saved_toast'), 'check');
+        } catch (err) {
+            showNotificationPill(err.message || 'Erro ao salvar webhook', 'error');
+        } finally {
+            if (saveBtn) saveBtn.disabled = false;
+        }
+    });
+
+    // Webhook Test button
+    document.getElementById('setting-webhook-test-btn')?.addEventListener('click', async () => {
+        const input = document.getElementById('setting-webhook-url-input');
+        const testBtn = document.getElementById('setting-webhook-test-btn');
+        const statusSpan = document.getElementById('setting-webhook-status');
+        const urlVal = input ? input.value.trim() : '';
+        if (!urlVal) {
+            showNotificationPill('Informe a URL do webhook antes de testar', 'warning');
+            return;
+        }
+        if (testBtn) {
+            testBtn.disabled = true;
+            testBtn.innerHTML = `<span class="material-symbols-rounded text-sm animate-spin">progress_activity</span><span>${escapeHtml(t('webhook_testing'))}</span>`;
+        }
+        if (statusSpan) statusSpan.textContent = '';
+        try {
+            const res = await testUserWebhook(urlVal);
+            if (statusSpan) {
+                statusSpan.textContent = `${t('webhook_test_success')} (${res.status})`;
+                statusSpan.className = 'text-[11px] text-emerald-600 font-semibold';
+            }
+            showNotificationPill(t('webhook_test_success'), 'check');
+        } catch (err) {
+            if (statusSpan) {
+                statusSpan.textContent = err.message;
+                statusSpan.className = 'text-[11px] text-red-600 font-semibold';
+            }
+            showNotificationPill(err.message || 'Falha no teste de webhook', 'error');
+        } finally {
+            if (testBtn) {
+                testBtn.disabled = false;
+                testBtn.innerHTML = `<span class="material-symbols-rounded text-sm">send</span><span>${escapeHtml(t('webhook_test_btn'))}</span>`;
+            }
+        }
+    });
+}
 }
 
 function switchSettingsStatsTab(tab) {

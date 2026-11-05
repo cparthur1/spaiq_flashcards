@@ -244,6 +244,19 @@ export const TRANSLATIONS = {
     settings_api_guide_desc: 'Envie a chave no cabeçalho Authorization: Bearer <chave> ou X-API-Key: <chave> para obter suas estatísticas diárias.',
     settings_api_toggle_visibility: 'Mostrar/Ocultar chave',
 
+    // Webhook settings
+    webhook_heading: 'Webhook de Meta Diária',
+    webhook_subtitle: 'Notifique seus aplicativos quando a meta diária for batida',
+    webhook_url_label: 'URL do Webhook (POST)',
+    webhook_url_placeholder: 'https://meu-app.com/api/flashcards-webhook',
+    webhook_save_btn: 'Salvar Webhook',
+    webhook_test_btn: 'Testar Webhook',
+    webhook_testing: 'Disparando...',
+    webhook_saved_toast: 'URL do webhook salva com sucesso!',
+    webhook_test_success: 'Webhook disparado e recebido com sucesso!',
+    webhook_test_failed: 'Falha ao testar webhook: {error}',
+    webhook_desc: 'Sempre que você bater sua meta diária de estudos, nosso servidor enviará um evento JSON via POST para esta URL com sua sequência e cartões revisados.',
+
     settings_notebook_heading: 'Meta do Caderno & Dados',
     daily_review_goal: 'Meta Diária de Revisão',
     no_limit_goal: 'Sem limite (Estudar todos os cards vencidos)',
@@ -1862,6 +1875,19 @@ export const TRANSLATIONS = {
     settings_api_confirm_revoke: 'Are you sure you want to revoke your API key? External integrations will stop functioning immediately.',
     settings_api_guide_desc: 'Send the key in the Authorization: Bearer <key> or X-API-Key: <key> header to fetch your daily statistics.',
     settings_api_toggle_visibility: 'Show/Hide key',
+
+    // Webhook settings
+    webhook_heading: 'Daily Goal Webhook',
+    webhook_subtitle: 'Notify your apps when your daily study goal is met',
+    webhook_url_label: 'Webhook URL (POST)',
+    webhook_url_placeholder: 'https://my-app.com/api/flashcards-webhook',
+    webhook_save_btn: 'Save Webhook',
+    webhook_test_btn: 'Test Webhook',
+    webhook_testing: 'Dispatching...',
+    webhook_saved_toast: 'Webhook URL saved successfully!',
+    webhook_test_success: 'Webhook dispatched and delivered successfully!',
+    webhook_test_failed: 'Failed to test webhook: {error}',
+    webhook_desc: 'Whenever you hit your daily study goal, our server will send a JSON POST event to this URL with your streak and cards reviewed.',
 
     settings_notebook_heading: 'Notebook Goal & Data',
     daily_review_goal: 'Daily Review Goal',

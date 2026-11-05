@@ -669,18 +669,209 @@ export default {
 
         const timeSpentSeconds = sessionDurationSum;
 
+        // Calculate past 14 days metrics (chronological from targetDate - 13 days to targetDate)
+        const past14DaysCards = [];
+        const past14DaysTime = [];
+        const [tY, tM, tD] = targetDate.split('-').map(Number);
+
+        for (let i = 13; i >= 0; i--) {
+          const dt = new Date(Date.UTC(tY, tM - 1, tD));
+          dt.setUTCDate(dt.getUTCDate() - i);
+          const dayStr = dt.toISOString().slice(0, 10);
+
+          let daySessionCards = 0;
+          let daySessionTime = 0;
+
+          for (const s of sessions) {
+            if (!s) continue;
+            const sTime = s.startTime || s.lastActiveTime || s.endTime;
+            if (!sTime) continue;
+            const sDate = new Date(sTime).toISOString().slice(0, 10);
+            if (sDate === dayStr) {
+              daySessionCards += (Number(s.cardsAnswered) || 0);
+              daySessionTime += (Number(s.durationSeconds || s.activeDurationSeconds) || 0);
+            }
+          }
+
+          const streakDayCount = Number(userDoc.dailyStreak?.history?.[dayStr]) || 0;
+          const dayCards = Math.max(daySessionCards, streakDayCount);
+
+          past14DaysCards.push(dayCards);
+          past14DaysTime.push(daySessionTime);
+        }
+
         // If sample query parameter is explicitly requested, inject sample fallback values
         const isSampleRequested = url.searchParams.get('sample') === 'true';
+
+        let past14CardsStr = past14DaysCards.join(';');
+        let past14TimeStr = past14DaysTime.join(';');
+        if (isSampleRequested && past14DaysCards.every(c => c === 0)) {
+          past14CardsStr = '12;109;82;0;98;45;120;30;0;50;110;85;140;142';
+          past14TimeStr = '180;1250;950;0;1100;540;1400;360;0;600;1300;980;1600;1840';
+        }
 
         const statsPayload = {
           date: targetDate,
           cards_reviewed: isSampleRequested ? (cardsReviewed || 142) : cardsReviewed,
           retention_rate: isSampleRequested ? (retentionRate || 0.88) : retentionRate,
           time_spent_seconds: isSampleRequested ? (timeSpentSeconds || 1840) : timeSpentSeconds,
-          streak_days: isSampleRequested ? (streakDays || 18) : streakDays
+          streak_days: isSampleRequested ? (streakDays || 18) : streakDays,
+          past_14_days_time: past14TimeStr,
+          past_14_days_cards: past14CardsStr
         };
 
         return jsonResponse(statsPayload, 200, publicCorsHeaders);
+      }
+
+      // 3.5 User Daily Goal Webhook Management (Exclusive to Pro)
+      if (path === '/api/user/webhook' && request.method === 'GET') {
+        const user = await authenticateUser();
+        const serviceAccount = getServiceAccount(env);
+        const userDoc = await getUserDocument(serviceAccount, user.uid);
+
+        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
+
+        if (!isPro) {
+          return jsonResponse({ error: 'pro_required', message: 'Webhooks são exclusivos para assinantes Pro.' }, 403, corsHeaders);
+        }
+
+        return jsonResponse({
+          webhookUrl: userDoc?.dailyGoalWebhookUrl || null,
+          lastTriggeredAt: userDoc?.dailyGoalWebhookLastTriggeredAt || null,
+          isPro: true
+        }, 200, corsHeaders);
+      }
+
+      if (path === '/api/user/webhook' && request.method === 'POST') {
+        const user = await authenticateUser();
+        const serviceAccount = getServiceAccount(env);
+        const userDoc = await getUserDocument(serviceAccount, user.uid);
+
+        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
+
+        if (!isPro) {
+          return jsonResponse({ error: 'pro_required', message: 'Webhooks são exclusivos para assinantes Pro.' }, 403, corsHeaders);
+        }
+
+        const body = await request.json().catch(() => ({}));
+        let webhookUrl = (body.webhookUrl || '').trim();
+        if (webhookUrl && !webhookUrl.startsWith('http://') && !webhookUrl.startsWith('https://')) {
+          return jsonResponse({ error: 'invalid_url', message: 'A URL do webhook deve começar com http:// ou https://' }, 400, corsHeaders);
+        }
+
+        await updateUserDocument(serviceAccount, user.uid, {
+          dailyGoalWebhookUrl: webhookUrl || null
+        });
+
+        return jsonResponse({ success: true, webhookUrl: webhookUrl || null }, 200, corsHeaders);
+      }
+
+      if (path === '/api/user/webhook/test' && request.method === 'POST') {
+        const user = await authenticateUser();
+        const serviceAccount = getServiceAccount(env);
+        const userDoc = await getUserDocument(serviceAccount, user.uid);
+
+        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
+
+        if (!isPro) {
+          return jsonResponse({ error: 'pro_required', message: 'Webhooks são exclusivos para assinantes Pro.' }, 403, corsHeaders);
+        }
+
+        const body = await request.json().catch(() => ({}));
+        const targetUrl = (body.webhookUrl || userDoc?.dailyGoalWebhookUrl || '').trim();
+
+        if (!targetUrl) {
+          return jsonResponse({ error: 'missing_url', message: 'Nenhuma URL de webhook configurada para teste.' }, 400, corsHeaders);
+        }
+
+        const testPayload = {
+          event: 'daily_goal_reached',
+          is_test: true,
+          date: new Date().toISOString().slice(0, 10),
+          cards_reviewed: 25,
+          daily_goal: 25,
+          streak_days: Number(userDoc?.dailyStreak?.streak) || 1,
+          timestamp: new Date().toISOString()
+        };
+
+        try {
+          const hookRes = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'SpaiqFlashcards-Webhook/1.0',
+              'X-Spaiq-Event': 'daily_goal_reached'
+            },
+            body: JSON.stringify(testPayload)
+          });
+
+          return jsonResponse({
+            success: true,
+            status: hookRes.status,
+            statusText: hookRes.statusText,
+            delivered: hookRes.ok
+          }, 200, corsHeaders);
+        } catch (err) {
+          return jsonResponse({
+            error: 'dispatch_failed',
+            message: `Falha ao conectar na URL: ${err.message}`
+          }, 502, corsHeaders);
+        }
+      }
+
+      if (path === '/api/user/webhook/trigger' && request.method === 'POST') {
+        const user = await authenticateUser();
+        const serviceAccount = getServiceAccount(env);
+        const userDoc = await getUserDocument(serviceAccount, user.uid);
+
+        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
+
+        if (!isPro) {
+          return jsonResponse({ error: 'pro_required' }, 403, corsHeaders);
+        }
+
+        const webhookUrl = userDoc?.dailyGoalWebhookUrl;
+        if (!webhookUrl) {
+          return jsonResponse({ success: true, dispatched: false, reason: 'no_webhook_configured' }, 200, corsHeaders);
+        }
+
+        const body = await request.json().catch(() => ({}));
+        const todayStr = body.date || new Date().toISOString().slice(0, 10);
+        const cardsReviewed = Number(body.cardsReviewed) || 0;
+        const dailyGoal = Number(body.dailyGoal) || 0;
+        const streakDays = Number(userDoc?.dailyStreak?.streak) || 0;
+
+        const payload = {
+          event: 'daily_goal_reached',
+          date: todayStr,
+          cards_reviewed: cardsReviewed,
+          daily_goal: dailyGoal,
+          streak_days: streakDays,
+          timestamp: new Date().toISOString()
+        };
+
+        ctx.waitUntil(
+          fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'SpaiqFlashcards-Webhook/1.0',
+              'X-Spaiq-Event': 'daily_goal_reached'
+            },
+            body: JSON.stringify(payload)
+          }).then(res => {
+            updateUserDocument(serviceAccount, user.uid, {
+              dailyGoalWebhookLastTriggeredAt: new Date().toISOString(),
+              dailyGoalWebhookLastTriggeredDate: todayStr
+            }).catch(() => {});
+          }).catch(err => console.warn('[Webhook] Falha ao disparar webhook para:', webhookUrl, err.message))
+        );
+
+        return jsonResponse({ success: true, dispatched: true }, 200, corsHeaders);
       }
 
       // 4. Verify Payment Status & Activate Pro immediately
