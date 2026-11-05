@@ -243,6 +243,8 @@ export const TRANSLATIONS = {
     settings_api_confirm_revoke: 'Tem certeza que deseja revogar sua chave de API? Todas as integrações externas deixarão de funcionar.',
     settings_api_guide_desc: 'Envie a chave no cabeçalho Authorization: Bearer <chave> ou X-API-Key: <chave> para obter suas estatísticas diárias.',
     settings_api_toggle_visibility: 'Mostrar/Ocultar chave',
+    settings_api_json_format_label: 'Formato do Retorno JSON:',
+    settings_api_json_example_label: 'Exemplo de Resposta JSON:',
 
     // Webhook settings
     webhook_heading: 'Webhook de Meta Diária',
@@ -1875,6 +1877,8 @@ export const TRANSLATIONS = {
     settings_api_confirm_revoke: 'Are you sure you want to revoke your API key? External integrations will stop functioning immediately.',
     settings_api_guide_desc: 'Send the key in the Authorization: Bearer <key> or X-API-Key: <key> header to fetch your daily statistics.',
     settings_api_toggle_visibility: 'Show/Hide key',
+    settings_api_json_format_label: 'JSON Return Format:',
+    settings_api_json_example_label: 'Example JSON Response:',
 
     // Webhook settings
     webhook_heading: 'Daily Goal Webhook',

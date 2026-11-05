@@ -4945,9 +4945,9 @@ async function updateApiSettingsUI() {
                     </div>
                 </div>
 
-                <div class="bg-white/90 rounded-xl p-2.5 border border-blue-100 font-mono text-[10px] text-gray-700 leading-tight select-all">
-                    <span class="text-gray-400 block text-[9px] font-sans font-bold uppercase tracking-wider mb-1">Exemplo de Resposta JSON:</span>
-                    <code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18,\n  "past_14_days_time": "180;1250;950;0;1100;540;1400;360;0;600;1300;980;1600;1840",\n  "past_14_days_cards": "12;109;82;0;98;45;120;30;0;50;110;85;140;142"\n}</code>
+                <div class="bg-white/90 rounded-xl p-2.5 border border-blue-100 max-w-full overflow-hidden space-y-1.5 select-all">
+                    <span class="text-gray-400 block text-[9px] font-sans font-bold uppercase tracking-wider truncate" data-i18n="settings_api_json_example_label">${escapeHtml(t('settings_api_json_example_label'))}</span>
+                    <pre class="bg-blue-50/40 rounded-lg p-2 border border-blue-100 font-mono text-[10px] text-gray-700 leading-relaxed overflow-x-auto whitespace-pre max-w-full"><code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18,\n  "past_14_days_time": "180;1250;950;0;1100;540;1400;360;0;600;1300;980;1600;1840",\n  "past_14_days_cards": "12;109;82;0;98;45;120;30;0;50;110;85;140;142"\n}</code></pre>
                 </div>
 
                 <button type="button" id="setting-api-upgrade-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm text-white cursor-pointer transition-all hover:opacity-95" style="background-color: #3b82f7;">
@@ -4993,9 +4993,9 @@ async function updateApiSettingsUI() {
                     ${escapeHtml(t('settings_api_generate_desc'))}
                 </p>
 
-                <div class="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80 font-mono text-[10px] text-gray-700 leading-tight">
-                    <span class="text-gray-400 block text-[9px] font-sans font-bold uppercase tracking-wider mb-1">Formato do Retorno JSON:</span>
-                    <code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18,\n  "past_14_days_time": "180;1250;950;0;1100;540;1400;360;0;600;1300;980;1600;1840",\n  "past_14_days_cards": "12;109;82;0;98;45;120;30;0;50;110;85;140;142"\n}</code>
+                <div class="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80 max-w-full overflow-hidden space-y-1.5">
+                    <span class="text-gray-400 block text-[9px] font-sans font-bold uppercase tracking-wider truncate" data-i18n="settings_api_json_format_label">${escapeHtml(t('settings_api_json_format_label'))}</span>
+                    <pre class="bg-white/90 rounded-lg p-2 border border-gray-200 font-mono text-[10px] text-gray-700 leading-relaxed overflow-x-auto whitespace-pre select-all max-w-full"><code>{\n  "date": "2026-11-05",\n  "cards_reviewed": 142,\n  "retention_rate": 0.88,\n  "time_spent_seconds": 1840,\n  "streak_days": 18,\n  "past_14_days_time": "180;1250;950;0;1100;540;1400;360;0;600;1300;980;1600;1840",\n  "past_14_days_cards": "12;109;82;0;98;45;120;30;0;50;110;85;140;142"\n}</code></pre>
                 </div>
 
                 <button type="button" id="setting-api-generate-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm text-white cursor-pointer transition-all hover:opacity-95" style="background-color: #3b82f7;">

@@ -1,3 +1,18 @@
+CHANGELOG: FIX JSON RETURN FORMAT OVERFLOW IN API SETTINGS (v15.33)
+Date: 2026-11-05
+
+OVERVIEW:
+1. Prevent JSON Example Overflow in Settings Modal (`js/game.js`):
+   - Replaced unconstrained inline `<code>` with an overflow-safe `<pre class="... overflow-x-auto whitespace-pre ...">` code block for both Pro ("Formato do Retorno JSON") and Non-Pro ("Exemplo de Resposta JSON") views.
+   - Constrained container divs with `max-w-full overflow-hidden` and added `truncate` on header label spans, preventing horizontal spillage in modal dialogues.
+2. Bilingual Localization (`js/i18n.js`):
+   - Added translation keys `settings_api_json_format_label` and `settings_api_json_example_label` for `pt-BR` and `en-US`.
+3. Cache Busting & Service Worker:
+   - Bumped `CACHE_NAME` to `flashcards-v15.33` in `sw.js`.
+   - Updated script cache-buster to `v=6.8` in `pages/game.html`.
+
+--------------------------------------------------------------------------------
+
 CHANGELOG: FIX GAME DECK LOADING SYNTAX ERROR (v15.32)
 Date: 2026-11-05
 
