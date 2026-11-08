@@ -25,6 +25,7 @@ let loadedImageNaturalWidth = 1;
 let loadedImageNaturalHeight = 1;
 let isPreviewActive = false;
 let resizeObserver = null;
+const activePreloaders = new Set();
 
 const ARROW_COLORS = [
     { name: 'blue', hex: '#3b82f7' },
@@ -328,10 +329,8 @@ export function renderAnnotatedImage({
 
     // Fast-path: plain unannotated image with a dedicated existing <img> element
     if (!isAnnotated && imgElem) {
-        imgElem.src = safeUrl;
+        imgElem.referrerPolicy = 'no-referrer';
         imgElem.alt = alt;
-        imgElem.classList.remove('hidden', 'opacity-0');
-        imgElem.classList.add('opacity-100');
         if (zoomable) {
             imgElem.classList.add('cursor-pointer', 'card-img-zoomable');
         }
@@ -339,28 +338,55 @@ export function renderAnnotatedImage({
             imgElem.onclick = onClick;
         }
 
-        if (imgElem.complete && imgElem.naturalWidth > 0) {
+        let handled = false;
+        const markLoaded = () => {
+            if (handled) return;
+            handled = true;
             hideLoaders();
-        } else {
-            imgElem.onload = () => {
-                hideLoaders();
-            };
-            imgElem.onerror = () => {
-                hideLoaders();
-                imgElem.classList.add('hidden');
-                showNotFoundPlaceholder();
-            };
+            imgElem.classList.remove('hidden', 'opacity-0');
+            imgElem.classList.add('opacity-100');
+        };
+
+        const markError = () => {
+            if (handled) return;
+            handled = true;
+            hideLoaders();
+            imgElem.classList.add('hidden');
+            showNotFoundPlaceholder();
+        };
+
+        // Bind listeners BEFORE setting src to avoid missing synchronous cache events
+        imgElem.onload = markLoaded;
+        imgElem.onerror = markError;
+        imgElem.src = safeUrl;
+
+        // Check if already completed and naturalWidth > 0 (memory/disk cache hit)
+        if (imgElem.complete && imgElem.naturalWidth > 0) {
+            markLoaded();
+        } else if (typeof imgElem.decode === 'function') {
+            imgElem.decode().then(markLoaded).catch(() => {
+                if (imgElem.complete && imgElem.naturalWidth > 0) {
+                    markLoaded();
+                }
+            });
         }
         return;
     }
 
     // Preload image to get natural dimensions for cropping / SVG positioning
     const preloader = new Image();
+    preloader.referrerPolicy = 'no-referrer';
+    activePreloaders.add(preloader);
     let handled = false;
+
+    const cleanupPreloader = () => {
+        activePreloaders.delete(preloader);
+    };
 
     const onImageReady = () => {
         if (handled) return;
         handled = true;
+        cleanupPreloader();
         hideLoaders();
 
         const natW = preloader.naturalWidth || 800;
@@ -378,6 +404,7 @@ export function renderAnnotatedImage({
                 img.className = `w-auto ${maxHClass} rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant,#e2e8f0)] object-contain select-none`;
                 container.appendChild(img);
             }
+            img.referrerPolicy = 'no-referrer';
             img.src = safeUrl;
             img.alt = alt;
             img.classList.remove('hidden', 'opacity-0');
@@ -422,6 +449,7 @@ export function renderAnnotatedImage({
 
         // 2. Inner image offset & scaled to display only cropped frame
         const innerImg = document.createElement('img');
+        innerImg.referrerPolicy = 'no-referrer';
         innerImg.src = safeUrl;
         innerImg.alt = alt;
         innerImg.className = 'absolute max-w-none max-h-none select-none pointer-events-none';
@@ -464,6 +492,7 @@ export function renderAnnotatedImage({
     const onImageError = () => {
         if (handled) return;
         handled = true;
+        cleanupPreloader();
         hideLoaders();
         if (imgElem) {
             imgElem.classList.add('hidden');
@@ -477,6 +506,12 @@ export function renderAnnotatedImage({
     preloader.src = safeUrl;
     if (preloader.complete && preloader.naturalWidth > 0) {
         onImageReady();
+    } else if (typeof preloader.decode === 'function') {
+        preloader.decode().then(onImageReady).catch(() => {
+            if (preloader.complete && preloader.naturalWidth > 0) {
+                onImageReady();
+            }
+        });
     }
 }
 

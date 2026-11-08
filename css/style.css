@@ -657,7 +657,7 @@ body {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 #delete-card-btn {
@@ -3447,213 +3447,132 @@ input[type="search"].fill-blank-input::-webkit-search-results-decoration {
    VOICE CARD MODE: "EXPLICAR EM VOZ ALTA" (PRO FEATURE & ANIMATIONS)
    ========================================================================== */
 
-/* 1. Wavy Organic Wave Crests (Recreating blur-wavy exemplo with chromatic crest & upward movement) */
-.voice-wavy-halo {
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 320px;
-    height: 195px;
-    z-index: 10;
-    pointer-events: none;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: flex-end;
+/* Safeguards for visibility and layout suppression (zero GPU/CPU overhead when hidden) */
+.voice-gemini-glow.hidden,
+.voice-gemini-glow.hidden *,
+#voice-mic-container.hidden,
+#voice-evaluated-controls.hidden {
+    display: none !important;
+    animation: none !important;
+    visibility: hidden !important;
+}
+
+/* 1. Dynamic Responsive Button Stage */
+#voice-btn-stage {
+    min-height: 80px;
+    transition: min-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease;
+}
+
+#voice-btn-stage.voice-stage-recording {
+    min-height: 185px;
+    align-items: center;
     justify-content: center;
 }
 
 @media (min-width: 640px) {
-    .voice-wavy-halo {
-        bottom: 4px;
-        width: 380px;
-        height: 225px;
+    #voice-btn-stage {
+        min-height: 96px;
+    }
+    #voice-btn-stage.voice-stage-recording {
+        min-height: 200px;
     }
 }
 
-/* Base Ambient Sapphire Bloom */
-.voice-wave-bloom {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    height: 100%;
-    border-radius: 50% 50% 30% 30% / 60% 60% 20% 20%;
-    background: radial-gradient(ellipse 100% 120% at 50% 95%, rgba(59, 130, 247, 0.8) 0%, rgba(37, 99, 235, 0.5) 45%, rgba(124, 58, 237, 0.22) 72%, transparent 92%);
-    filter: blur(28px);
-    opacity: 0.95;
-    animation: voiceBloomBreathe 2.8s ease-in-out infinite alternate;
+#voice-btn-stage.voice-stage-thinking {
+    min-height: 140px;
+    align-items: center;
+    justify-content: center;
 }
 
-/* General Wave Arc Style */
-.voice-wave-arc {
+/* 2. Voice Gemini Glow (Exact match to tutor thinking glow in chat, pulsing dynamically with user voice) */
+.voice-gemini-glow {
     position: absolute;
-    bottom: 0;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    border-radius: 50% 50% 20% 20% / 70% 70% 20% 20%;
+    transform: translate(-50%, -50%) translateZ(0);
+    width: 320px;
+    height: 160px;
     pointer-events: none;
-    transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s ease;
+    overflow: visible;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    will-change: transform, opacity;
 }
 
-/* Bottom / Inner Wave Arc */
-.voice-wave-arc-bot {
+.voice-gemini-glow:not(.hidden) {
+    opacity: 1;
+}
+
+.voice-gemini-glow .gemini-glow-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(48px);
+    pointer-events: none;
+    will-change: transform;
+}
+
+.voice-gemini-glow .gemini-glow-blue {
     width: 220px;
-    height: 80px;
-    background: radial-gradient(ellipse 90% 100% at 50% 100%, rgba(96, 165, 250, 0.85) 0%, rgba(37, 99, 235, 0.5) 55%, transparent 85%);
-    filter: blur(10px);
-    box-shadow: 0 -3px 14px rgba(147, 197, 253, 0.7);
-    animation: voiceWavePulseBot 2.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+    height: 150px;
+    top: 50%;
+    left: 15%;
+    bottom: auto;
+    right: auto;
+    margin-top: -75px;
+    background: radial-gradient(circle, rgba(59, 130, 247, 0.68) 0%, rgba(96, 165, 250, 0.36) 45%, transparent 75%);
+    animation: geminiFloatBlue 3.6s ease-in-out infinite alternate;
 }
 
-/* Middle Wave Arc */
-.voice-wave-arc-mid {
-    width: 290px;
-    height: 135px;
-    background: radial-gradient(ellipse 90% 100% at 50% 100%, rgba(59, 130, 247, 0.9) 0%, rgba(29, 78, 216, 0.55) 60%, transparent 90%);
-    filter: blur(14px);
-    box-shadow: 0 -4px 18px rgba(96, 165, 250, 0.75), inset 0 3px 12px rgba(191, 219, 254, 0.85);
-    animation: voiceWavePulseMid 2.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
-    animation-delay: -0.6s;
+.voice-gemini-glow .gemini-glow-purple {
+    width: 230px;
+    height: 160px;
+    top: 50%;
+    right: 15%;
+    bottom: auto;
+    left: auto;
+    margin-top: -80px;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.68) 0%, rgba(192, 132, 252, 0.36) 45%, transparent 75%);
+    animation: geminiFloatPurple 4s ease-in-out infinite alternate;
 }
 
-/* Top / Outer Wave Arc with Chromatic Prism Rim */
-.voice-wave-arc-top {
-    width: 340px;
-    height: 185px;
-    background: radial-gradient(ellipse 95% 100% at 50% 100%, rgba(37, 99, 235, 0.92) 0%, rgba(29, 78, 216, 0.6) 55%, rgba(30, 58, 138, 0.25) 80%, transparent 100%);
-    filter: blur(16px);
-    box-shadow: 0 -5px 24px rgba(59, 130, 247, 0.85);
-    animation: voiceWavePulseTop 2.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
-    animation-delay: -1.2s;
-    overflow: hidden;
+.voice-gemini-glow .gemini-glow-center {
+    width: 200px;
+    height: 130px;
+    top: 50%;
+    left: 50%;
+    bottom: auto;
+    right: auto;
+    margin-top: -65px;
+    margin-left: -100px;
+    background: radial-gradient(circle, rgba(147, 197, 253, 0.55) 0%, rgba(196, 181, 253, 0.38) 50%, transparent 75%);
+    animation: geminiFloatCenter 4.8s ease-in-out infinite alternate;
 }
 
 @media (min-width: 640px) {
-    .voice-wave-arc-top {
-        width: 385px;
-        height: 215px;
+    .voice-gemini-glow {
+        width: 380px;
+        height: 190px;
     }
-    .voice-wave-arc-mid {
-        width: 320px;
-        height: 155px;
+    .voice-gemini-glow .gemini-glow-blue {
+        width: 260px;
+        height: 180px;
+        margin-top: -90px;
     }
-    .voice-wave-arc-bot {
-        width: 250px;
-        height: 105px;
+    .voice-gemini-glow .gemini-glow-purple {
+        width: 270px;
+        height: 190px;
+        margin-top: -95px;
     }
-}
-
-/* Chromatic Spectrum / Rainbow Prism Rim at the Crest (From example video) */
-.voice-wave-prism-rim {
-    position: absolute;
-    top: 0;
-    left: 8%;
-    right: 8%;
-    height: 5px;
-    border-radius: 50% 50% 0 0;
-    background: linear-gradient(90deg, 
-        rgba(239, 68, 68, 0) 0%, 
-        rgba(239, 68, 68, 0.95) 20%, 
-        rgba(245, 158, 11, 0.98) 38%, 
-        rgba(16, 185, 129, 0.95) 54%, 
-        rgba(6, 182, 212, 0.98) 72%, 
-        rgba(59, 130, 247, 0.95) 88%, 
-        rgba(59, 130, 247, 0) 100%
-    );
-    filter: blur(2px) contrast(1.5);
-    box-shadow: 0 0 16px rgba(245, 158, 11, 0.9), 0 0 28px rgba(6, 182, 212, 0.95);
-    animation: voicePrismShimmer 2.4s ease-in-out infinite alternate;
-}
-
-@keyframes voicePrismShimmer {
-    0% {
-        opacity: 0.85;
-        transform: scaleX(0.94);
-        filter: blur(2px) brightness(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scaleX(1.04);
-        filter: blur(1.5px) brightness(1.3);
-    }
-    100% {
-        opacity: 0.9;
-        transform: scaleX(0.98);
-        filter: blur(2px) brightness(1.1);
+    .voice-gemini-glow .gemini-glow-center {
+        width: 240px;
+        height: 150px;
+        margin-top: -75px;
+        margin-left: -120px;
     }
 }
 
-@keyframes voiceBloomBreathe {
-    0% {
-        transform: translateX(-50%) scale(0.95);
-        opacity: 0.85;
-        filter: blur(24px);
-    }
-    50% {
-        transform: translateX(-50%) scale(1.08);
-        opacity: 1;
-        filter: blur(30px);
-    }
-    100% {
-        transform: translateX(-50%) scale(0.98);
-        opacity: 0.9;
-        filter: blur(26px);
-    }
-}
-
-@keyframes voiceWavePulseTop {
-    0% {
-        transform: translateX(-50%) translateY(0) scale(0.94);
-        border-radius: 54% 46% 25% 25% / 68% 68% 20% 20%;
-        filter: blur(15px);
-    }
-    40% {
-        transform: translateX(-50%) translateY(-14px) scale(1.06);
-        border-radius: 48% 52% 30% 30% / 62% 62% 25% 25%;
-        filter: blur(18px);
-    }
-    75% {
-        transform: translateX(-50%) translateY(-8px) scale(1.02);
-        border-radius: 52% 48% 28% 28% / 65% 65% 22% 22%;
-        filter: blur(16px);
-    }
-    100% {
-        transform: translateX(-50%) translateY(-18px) scale(1.1);
-        border-radius: 50% 50% 32% 32% / 60% 60% 26% 26%;
-        filter: blur(19px);
-    }
-}
-
-@keyframes voiceWavePulseMid {
-    0% {
-        transform: translateX(-50%) translateY(0) scale(0.95);
-        border-radius: 52% 48% 25% 25% / 65% 65% 20% 20%;
-    }
-    50% {
-        transform: translateX(-50%) translateY(-10px) scale(1.07);
-        border-radius: 46% 54% 28% 28% / 60% 60% 24% 24%;
-    }
-    100% {
-        transform: translateX(-50%) translateY(-5px) scale(1.01);
-        border-radius: 50% 50% 26% 26% / 62% 62% 22% 22%;
-    }
-}
-
-@keyframes voiceWavePulseBot {
-    0% {
-        transform: translateX(-50%) scale(0.96);
-    }
-    50% {
-        transform: translateX(-50%) scale(1.09);
-    }
-    100% {
-        transform: translateX(-50%) scale(1);
-    }
-}
-
-/* 2. Collapsing state: Button collapses away & wave blur collapses into circle */
+/* 3. Collapsing state: Button collapses away */
 .voice-mic-trigger {
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, box-shadow 0.3s ease;
 }
@@ -3664,120 +3583,7 @@ input[type="search"].fill-blank-input::-webkit-search-results-decoration {
     pointer-events: none !important;
 }
 
-.voice-wavy-halo.voice-blur-collapsing {
-    width: 64px !important;
-    height: 64px !important;
-    border-radius: 50% !important;
-    bottom: 38px !important;
-    left: 50% !important;
-    transform: translate(-50%, 50%) scale(0.85) !important;
-    filter: blur(8px) !important;
-    opacity: 0.9 !important;
-    animation: none !important;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-@media (min-width: 640px) {
-    .voice-wavy-halo.voice-blur-collapsing {
-        bottom: 44px !important;
-    }
-}
-
-.voice-wavy-halo.voice-blur-collapsing .voice-wave-arc,
-.voice-wavy-halo.voice-blur-collapsing .voice-wave-prism-rim {
-    opacity: 0 !important;
-    transform: scale(0.2) !important;
-    transition: all 0.35s ease !important;
-}
-
-/* 3. Thinking state: Google Gemini AI Energy Orb (Pure Energy, Light & Radiant Gradient - No Gloss) */
-.voice-thinking-circle {
-    position: absolute;
-    bottom: 38px;
-    left: 50%;
-    width: 78px;
-    height: 78px;
-    margin-bottom: -39px;
-    margin-left: -39px;
-    border-radius: 50%;
-    z-index: 25;
-    pointer-events: none;
-    box-shadow: 
-        0 0 35px rgba(56, 118, 242, 0.85),
-        0 0 65px rgba(236, 72, 153, 0.6),
-        0 0 95px rgba(0, 229, 255, 0.45),
-        0 0 120px rgba(251, 191, 36, 0.35);
-    animation: geminiEnergyFloat 3s ease-in-out infinite alternate;
-    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
-}
-
-@media (min-width: 640px) {
-    .voice-thinking-circle {
-        bottom: 44px;
-    }
-}
-
-.voice-thinking-circle-inner {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background:
-        radial-gradient(circle at 48% 46%, #ffffff 0%, #a5f3fc 18%, rgba(6, 182, 212, 0.5) 32%, transparent 62%),
-        radial-gradient(circle at 72% 32%, #ec4899 0%, rgba(236, 72, 153, 0) 58%),
-        radial-gradient(circle at 28% 70%, #00e5ff 0%, rgba(0, 229, 255, 0) 58%),
-        radial-gradient(circle at 70% 72%, #fbbf24 0%, rgba(251, 191, 36, 0) 52%),
-        conic-gradient(from 0deg at 50% 50%, #3876f2, #00e5ff, #8b5cf6, #ec4899, #fbbf24, #3876f2);
-    filter: blur(5px) saturate(1.75) contrast(1.2);
-    animation: geminiEnergySwirl 3.6s linear infinite, geminiEnergyBreathe 2.4s ease-in-out infinite alternate;
-}
-
-@keyframes geminiEnergyFloat {
-    0% {
-        transform: translateY(-50px) scale(0.96);
-        box-shadow: 
-            0 0 30px rgba(56, 118, 242, 0.8),
-            0 0 55px rgba(236, 72, 153, 0.5),
-            0 0 80px rgba(0, 229, 255, 0.4);
-    }
-    50% {
-        transform: translateY(-72px) scale(1.08);
-        box-shadow: 
-            0 0 42px rgba(56, 118, 242, 0.95),
-            0 0 75px rgba(236, 72, 153, 0.7),
-            0 0 110px rgba(0, 229, 255, 0.55),
-            0 0 135px rgba(251, 191, 36, 0.4);
-    }
-    100% {
-        transform: translateY(-54px) scale(0.98);
-        box-shadow: 
-            0 0 34px rgba(56, 118, 242, 0.85),
-            0 0 60px rgba(236, 72, 153, 0.55),
-            0 0 90px rgba(0, 229, 255, 0.45);
-    }
-}
-
-@keyframes geminiEnergySwirl {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes geminiEnergyBreathe {
-    0% {
-        filter: blur(5px) saturate(1.7) contrast(1.15) brightness(1);
-    }
-    50% {
-        filter: blur(4px) saturate(1.9) contrast(1.25) brightness(1.2);
-    }
-    100% {
-        filter: blur(6px) saturate(1.7) contrast(1.15) brightness(1.05);
-    }
-}
-
-/* 4. Answer rendered: Card border pulsates light blue once */
+/* 5. Answer rendered: Card border pulsates light blue once */
 .voice-border-pulse {
     animation: lightBlueBorderPulse 1.25s cubic-bezier(0.2, 0, 0, 1) 1 !important;
 }

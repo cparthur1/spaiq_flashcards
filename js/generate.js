@@ -1,4 +1,4 @@
-import { callWithRetry, checkAndResetModelFallback, sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import { callWithRetry, sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserProStatus, refreshUserProStatus } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
@@ -4875,7 +4875,6 @@ window.addEventListener('flashcards:pro-updated', () => {
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
-    checkAndResetModelFallback();
     updateAiConfigStatusUI();
 
     // Check if loading an existing deck for editing

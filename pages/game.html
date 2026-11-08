@@ -73,7 +73,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="../css/style.css?v=7.0">
+    <link rel="stylesheet" href="../css/style.css?v=7.3">
     <script src="../assets/vendor/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
@@ -87,7 +87,7 @@
 </head>
 
 <body
-    class="bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-background)] flex items-start sm:items-center justify-center min-h-screen p-4">
+    class="bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-background)] flex flex-col justify-start items-center min-h-screen p-3 sm:p-4 md:p-6">
 
     <canvas id="background-canvas" class="fixed top-0 left-0 w-full h-full" style="z-index: -1;"></canvas>
     <div id="shockwave-container" class="fixed inset-0 pointer-events-none overflow-hidden" style="z-index: 25;"></div>
@@ -432,7 +432,7 @@
     </header>
 
     <div id="game-container"
-        class="w-full max-w-2xl mx-auto m3-card-expressive p-3.5 sm:p-6 sm:p-8 transition-all duration-300 relative">
+        class="w-full max-w-2xl mx-auto my-auto m3-card-expressive p-3.5 sm:p-6 sm:p-8 transition-all duration-300 relative">
         <!-- STREAK COUNTER PILL (Centralized on top of the deck holder) -->
         <div id="streak-pill-container" class="absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 select-none flex justify-center pointer-events-none">
             <div id="streak-pill"
@@ -480,7 +480,7 @@
                     <p class="text-xs sm:text-sm font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="image_not_found">Imagem não encontrada</p>
                     <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] max-w-xs leading-normal" data-i18n="image_not_found_desc">O link da imagem está quebrado ou inacessível.</p>
                 </div>
-                <img id="question-image" src="" alt="Imagem do Flashcard"
+                <img id="question-image" src="" alt="Imagem do Flashcard" referrerpolicy="no-referrer"
                     class="hidden max-h-36 xs:max-h-48 sm:max-h-80 w-auto rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] card-img-zoomable object-contain transition-opacity duration-300 opacity-0">
             </div>
             <p id="question-text" class="text-center text-base sm:text-lg font-medium text-[var(--md-sys-color-on-surface)] whitespace-pre-line leading-relaxed">
@@ -506,7 +506,7 @@
                         <p class="text-xs sm:text-sm font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="image_not_found">Imagem não encontrada</p>
                         <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] max-w-xs leading-normal" data-i18n="image_not_found_desc">O link da imagem está quebrado ou inacessível.</p>
                     </div>
-                    <img id="anki-answer-image" src="" alt="Imagem da Resposta" class="hidden max-h-48 sm:max-h-72 w-auto rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] card-img-zoomable object-contain transition-opacity duration-300 opacity-0">
+                    <img id="anki-answer-image" src="" alt="Imagem da Resposta" referrerpolicy="no-referrer" class="hidden max-h-48 sm:max-h-72 w-auto rounded-2xl shadow-md border border-[var(--md-sys-color-outline-variant)] card-img-zoomable object-contain transition-opacity duration-300 opacity-0">
                 </div>
             </div>
 
@@ -704,21 +704,13 @@
             <!-- Recording & Action Hub -->
             <div id="voice-mic-container" class="relative flex flex-col items-center justify-center select-none w-full max-w-sm mx-auto">
                 
-                <!-- Stage for Wavy Blur, Thinking Orb, and Action Button -->
-                <div id="voice-btn-stage" class="relative w-full h-[220px] sm:h-[250px] flex items-end justify-center pb-3 sm:pb-4">
-                    <!-- Wavy Blur halo underneath button (recreating blur-wavy example with 3 concentric wave crests & chromatic prism rim) -->
-                    <div id="voice-wavy-blur" class="voice-wavy-halo hidden pointer-events-none" aria-hidden="true">
-                        <div class="voice-wave-bloom"></div>
-                        <div class="voice-wave-arc voice-wave-arc-bot"></div>
-                        <div class="voice-wave-arc voice-wave-arc-mid"></div>
-                        <div class="voice-wave-arc voice-wave-arc-top">
-                            <div class="voice-wave-prism-rim"></div>
-                        </div>
-                    </div>
-
-                    <!-- Thinking Orb (Google Gemini AI Energy Orb - Pure Light, Radiant Gradient & Living Aura) -->
-                    <div id="voice-thinking-orb" class="voice-thinking-circle hidden pointer-events-none" aria-hidden="true">
-                        <div class="voice-thinking-circle-inner"></div>
+                <!-- Stage for Gemini Voice Glow and Action Button -->
+                <div id="voice-btn-stage" class="relative w-full flex items-center justify-center py-2 sm:py-3 transition-all duration-300">
+                    <!-- Ambient Gemini Voice Glow (Exact match to tutor thinking glow in chat, pulsing dynamically with user's voice) -->
+                    <div id="voice-gemini-glow" class="voice-gemini-glow hidden pointer-events-none" aria-hidden="true">
+                        <div class="gemini-glow-orb gemini-glow-blue"></div>
+                        <div class="gemini-glow-orb gemini-glow-purple"></div>
+                        <div class="gemini-glow-orb gemini-glow-center"></div>
                     </div>
 
                     <!-- Main Action Button (Starts as Mic, transforms into Done on click) -->
@@ -878,7 +870,7 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="question_image_label">Link da Imagem da Pergunta (Opcional)</label>
                     <div class="space-y-2">
                         <div id="edit-image-preview-container" class="hidden relative group w-full max-h-48 overflow-hidden rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex items-center justify-center p-2">
-                            <img id="edit-image-preview" src="" alt="Preview" class="max-h-40 w-auto object-contain rounded-xl">
+                            <img id="edit-image-preview" src="" alt="Preview" referrerpolicy="no-referrer" class="max-h-40 w-auto object-contain rounded-xl">
                             <button type="button" id="edit-crop-image-btn" class="absolute bottom-2 right-2 bg-[#3b82f7] hover:bg-blue-600 text-white px-2.5 py-1 rounded-xl shadow text-xs font-semibold flex items-center gap-1 transition" title="Cortar / Setas" data-i18n-title="edit_image_crop_arrows">
                                 <span class="material-symbols-rounded text-sm">crop</span>
                                 <span data-i18n="edit_image_crop_arrows">Cortar / Setas</span>
@@ -894,7 +886,7 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="answer_image_label">Link da Imagem da Resposta (Anki)</label>
                     <div class="space-y-2">
                         <div id="edit-ans-image-preview-container" class="hidden relative group w-full max-h-48 overflow-hidden rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex items-center justify-center p-2">
-                            <img id="edit-ans-image-preview" src="" alt="Preview" class="max-h-40 w-auto object-contain rounded-xl">
+                            <img id="edit-ans-image-preview" src="" alt="Preview" referrerpolicy="no-referrer" class="max-h-40 w-auto object-contain rounded-xl">
                             <button type="button" id="edit-crop-ans-image-btn" class="absolute bottom-2 right-2 bg-[#3b82f7] hover:bg-blue-600 text-white px-2.5 py-1 rounded-xl shadow text-xs font-semibold flex items-center gap-1 transition" title="Cortar / Setas" data-i18n-title="edit_image_crop_arrows">
                                 <span class="material-symbols-rounded text-sm">crop</span>
                                 <span data-i18n="edit_image_crop_arrows">Cortar / Setas</span>

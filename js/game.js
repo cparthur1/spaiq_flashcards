@@ -1,4 +1,4 @@
-import { normalizeString, calculateSimilarity, shuffleArray, checkAndResetModelFallback, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import { normalizeString, calculateSimilarity, shuffleArray, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { isPlayableCard, calculateThinkingGap, selectNextCard, isLeechCard, shouldGraduateCard, formatTimeDisplay, getCardTopic } from './engine/scheduler.js';
 import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString, recordNotebookGoalBeaten, getNotebookDailyGoal } from './engine/notebook-scheduler.js';
 import {
@@ -209,8 +209,8 @@ const voicePointsMissedChips = document.getElementById('voice-points-missed-chip
 
 const voiceControlsArea = document.getElementById('voice-controls-area');
 const voiceMicContainer = document.getElementById('voice-mic-container');
-const voiceWavyBlur = document.getElementById('voice-wavy-blur');
-const voiceThinkingOrb = document.getElementById('voice-thinking-orb');
+const voiceBtnStage = document.getElementById('voice-btn-stage');
+const voiceGeminiGlow = document.getElementById('voice-gemini-glow');
 const voiceMicBtn = document.getElementById('voice-mic-btn');
 const voiceMicIcon = document.getElementById('voice-mic-icon');
 const voiceThinkingMsg = document.getElementById('voice-thinking-msg');
@@ -340,11 +340,10 @@ function setupCardImageWithPlaceholder(srcUrl, imgElem, containerElem, placehold
     const loadSeq = (imageLoadSeqMap.get(imgElem) || 0) + 1;
     imageLoadSeqMap.set(imgElem, loadSeq);
 
-    // CRITICAL: Immediately clear src and hide previous card's image to prevent rendering the previous image
+    // Hide previous card's image and old wrappers while the new image loads
     imgElem.classList.add('hidden');
     imgElem.classList.remove('opacity-100');
     imgElem.classList.add('opacity-0');
-    imgElem.src = '';
     const oldWrap = containerElem.querySelector('.annotated-image-wrapper');
     if (oldWrap) oldWrap.remove();
     if (errorElem) errorElem.classList.add('hidden');
@@ -1111,6 +1110,54 @@ function handleDailyStreakOnCardAnswered() {
 
 // --- SPACED REPETITION & LEAN ALGORITHM HELPERS delegados para ./engine/scheduler.js & ./engine/notebook-scheduler.js ---
 let precomputedNextCard = null;
+const prefetchedImageUrls = new Set();
+const activeBackgroundPrefetchers = [];
+
+/**
+ * Pre-fetches and decodes card images in background (Phase 3: while user interacts with current card).
+ * Ensures instantaneous rendering when user advances to the next card.
+ */
+function prefetchNextCardImages(card) {
+    if (!card) return;
+    const urls = [
+        card.image,
+        card.imageUrl,
+        card.img,
+        card.answerImage,
+        card.answerImageUrl,
+        card.ansImage
+    ].filter(Boolean);
+
+    urls.forEach(rawUrl => {
+        const safeUrl = sanitizeImageUrl(rawUrl);
+        if (!safeUrl || prefetchedImageUrls.has(safeUrl)) return;
+        prefetchedImageUrls.add(safeUrl);
+
+        try {
+            // 1. Native Image decoding into GPU memory cache
+            const preloader = new Image();
+            preloader.referrerPolicy = 'no-referrer';
+            preloader.src = safeUrl;
+            activeBackgroundPrefetchers.push(preloader);
+            if (activeBackgroundPrefetchers.length > 20) {
+                activeBackgroundPrefetchers.shift();
+            }
+
+            if (typeof preloader.decode === 'function') {
+                preloader.decode().catch(() => {});
+            }
+
+            // 2. Background low-priority network fetch for HTTP disk cache warming
+            if (typeof window.fetch === 'function') {
+                fetch(safeUrl, {
+                    mode: 'no-cors',
+                    referrerPolicy: 'no-referrer',
+                    priority: 'low'
+                }).catch(() => {});
+            }
+        } catch (_) {}
+    });
+}
 
 /**
  * Precomputes candidate for the next step while the user is thinking on the current card.
@@ -1125,6 +1172,7 @@ function precomputeNextCandidate() {
     if (questionsPool.length === 1) {
         precomputedNextCard = questionsPool[0];
         console.log("[Algorithm] Apenas 1 card no pool. Próximo selecionado:", (precomputedNextCard.description || '').slice(0, 30));
+        prefetchNextCardImages(precomputedNextCard);
         return;
     }
 
@@ -1142,6 +1190,10 @@ function precomputeNextCandidate() {
         });
     } else {
         precomputedNextCard = selectNextCard(poolToUse, nextStep, consecutiveDueCardsCount, lastCardTopic, currentQuestion, consecutiveNewCardsCount);
+    }
+
+    if (precomputedNextCard) {
+        prefetchNextCardImages(precomputedNextCard);
     }
 }
 
@@ -1508,8 +1560,9 @@ function loadQuestion() {
     }
 
     const isImageArrows = currentQuestion?.type === 'image_arrows';
+    const cardImg = currentQuestion?.image || currentQuestion?.imageUrl || currentQuestion?.img || '';
     setupCardImageWithPlaceholder(
-        currentQuestion.image,
+        cardImg,
         questionImage,
         questionImageContainer,
         questionImagePlaceholder,
@@ -1538,6 +1591,10 @@ function loadQuestion() {
     deleteCardBtn.classList.remove('hidden');
 
     if (currentQuestion.type === 'anki') {
+        const ansImg = currentQuestion?.answerImage || currentQuestion?.answerImageUrl || currentQuestion?.ansImage;
+        if (ansImg) {
+            prefetchNextCardImages({ image: ansImg });
+        }
         if (actionButtonsArea) actionButtonsArea.classList.add('hidden');
         if (ankiControlsArea) {
             ankiControlsArea.classList.remove('hidden');
@@ -1671,8 +1728,9 @@ function flipAnkiCard() {
 
     if (ankiAnswerContainer) {
         ankiAnswerText.innerHTML = renderMathAndMarkdown(currentQuestion.answer || '');
+        const ansImg = currentQuestion?.answerImage || currentQuestion?.answerImageUrl || currentQuestion?.ansImage || '';
         setupCardImageWithPlaceholder(
-            currentQuestion.answerImage,
+            ansImg,
             ankiAnswerImage,
             ankiAnswerImageContainer,
             ankiAnswerImagePlaceholder,
@@ -1887,6 +1945,9 @@ function resetVoiceUIState() {
     }
     recordedAudioChunks = [];
 
+    if (voiceMicContainer) voiceMicContainer.classList.remove('hidden');
+    if (voiceBtnStage) voiceBtnStage.classList.remove('voice-stage-recording', 'voice-stage-thinking');
+
     if (voiceMicBtn) {
         voiceMicBtn.classList.remove('voice-button-collapsing', 'hidden');
         voiceMicBtn.disabled = false;
@@ -1894,27 +1955,10 @@ function resetVoiceUIState() {
         voiceMicBtn.setAttribute('aria-label', 'Gravar Explicação');
     }
     if (voiceMicIcon) voiceMicIcon.textContent = 'mic';
-    if (voiceWavyBlur) {
-        voiceWavyBlur.classList.add('hidden');
-        voiceWavyBlur.classList.remove('voice-blur-collapsing');
-        const topArc = voiceWavyBlur.querySelector('.voice-wave-arc-top');
-        if (topArc) topArc.style.transform = '';
-        const midArc = voiceWavyBlur.querySelector('.voice-wave-arc-mid');
-        if (midArc) midArc.style.transform = '';
-        const botArc = voiceWavyBlur.querySelector('.voice-wave-arc-bot');
-        if (botArc) botArc.style.transform = '';
-        const prismRim = voiceWavyBlur.querySelector('.voice-wave-prism-rim');
-        if (prismRim) {
-            prismRim.style.filter = '';
-            prismRim.style.boxShadow = '';
-        }
-        const bloom = voiceWavyBlur.querySelector('.voice-wave-bloom');
-        if (bloom) {
-            bloom.style.opacity = '';
-            bloom.style.transform = '';
-        }
+    if (voiceGeminiGlow) {
+        voiceGeminiGlow.classList.add('hidden');
+        voiceGeminiGlow.style.transform = '';
     }
-    if (voiceThinkingOrb) voiceThinkingOrb.classList.add('hidden');
     if (voiceThinkingMsg) voiceThinkingMsg.classList.add('hidden');
     if (voiceCantSpeakBtn) voiceCantSpeakBtn.classList.remove('hidden');
     if (voiceAnswerContainer) voiceAnswerContainer.classList.add('hidden');
@@ -1987,10 +2031,17 @@ async function startVoiceRecording() {
             voiceMicBtn.setAttribute('title', t('click_to_finish') || 'Concluir e Enviar');
             voiceMicBtn.setAttribute('aria-label', t('click_to_finish') || 'Concluir e Enviar');
         }
-        if (voiceWavyBlur) voiceWavyBlur.classList.remove('hidden', 'voice-blur-collapsing');
+        if (voiceBtnStage) {
+            voiceBtnStage.classList.add('voice-stage-recording');
+            voiceBtnStage.classList.remove('voice-stage-thinking');
+        }
+        if (voiceGeminiGlow) {
+            voiceGeminiGlow.classList.remove('hidden');
+            voiceGeminiGlow.style.transform = 'translate(-50%, -50%) scale(1) translateZ(0)';
+        }
         triggerHaptic('medium');
 
-        // Start Live Voice Wave Visual Reaction
+        // Start Live Voice Wave Visual Reaction (dynamic pulse matching tutor thinking glow)
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (AudioContextClass) {
@@ -1998,12 +2049,13 @@ async function startVoiceRecording() {
                 const source = audioCtx.createMediaStreamSource(mediaStream);
                 audioAnalyser = audioCtx.createAnalyser();
                 audioAnalyser.fftSize = 128;
-                audioAnalyser.smoothingTimeConstant = 0.5;
+                audioAnalyser.smoothingTimeConstant = 0.65;
                 source.connect(audioAnalyser);
 
                 const dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+                let smoothedLevel = 0;
 
-                const updateAudioWaves = () => {
+                const updateAudioWaves = (timestamp) => {
                     if (!isVoiceRecording || !audioAnalyser) return;
                     audioAnalyser.getByteFrequencyData(dataArray);
 
@@ -2026,45 +2078,16 @@ async function startVoiceRecording() {
 
                     // Non-linear power curve: makes subtle whispers & voice modulations strongly visible
                     const normalized = Math.min(1, cleanIntensity / 36);
-                    const level = Math.pow(normalized, 0.58);
+                    const targetLevel = Math.pow(normalized, 0.58);
 
-                    if (voiceWavyBlur) {
-                        const topLift = level * 42; // Up to 42px wave crest rise
-                        const topScale = 1 + level * 0.32; // Expands width and crest height
-                        const midLift = level * 26;
-                        const midScale = 1 + level * 0.22;
-                        const botLift = level * 12;
-                        const botScale = 1 + level * 0.14;
+                    // Liquid exponential smoothing: avoids frame stutter and jitter
+                    smoothedLevel = smoothedLevel * 0.68 + targetLevel * 0.32;
+                    const level = smoothedLevel;
 
-                        // Dynamic organic sway based on vocal intensity
-                        const organicSway = Math.sin(Date.now() / 160) * (level * 2.2);
-
-                        const topArc = voiceWavyBlur.querySelector('.voice-wave-arc-top');
-                        if (topArc) {
-                            topArc.style.transform = `translateX(-50%) translateY(-${topLift}px) rotate(${organicSway}deg) scale(${topScale})`;
-                        }
-
-                        const prismRim = voiceWavyBlur.querySelector('.voice-wave-prism-rim');
-                        if (prismRim) {
-                            prismRim.style.filter = `blur(${Math.max(1, 2 - level * 0.8)}px) brightness(${1 + level * 0.85}) contrast(${1.3 + level * 0.5})`;
-                            prismRim.style.boxShadow = `0 0 ${16 + level * 28}px rgba(245, 158, 11, 0.95), 0 0 ${28 + level * 40}px rgba(6, 182, 212, 0.95)`;
-                        }
-
-                        const midArc = voiceWavyBlur.querySelector('.voice-wave-arc-mid');
-                        if (midArc) {
-                            midArc.style.transform = `translateX(-50%) translateY(-${midLift}px) rotate(${-organicSway * 0.6}deg) scale(${midScale})`;
-                        }
-
-                        const botArc = voiceWavyBlur.querySelector('.voice-wave-arc-bot');
-                        if (botArc) {
-                            botArc.style.transform = `translateX(-50%) translateY(-${botLift}px) scale(${botScale})`;
-                        }
-
-                        const bloom = voiceWavyBlur.querySelector('.voice-wave-bloom');
-                        if (bloom) {
-                            bloom.style.opacity = `${0.85 + level * 0.15}`;
-                            bloom.style.transform = `translateX(-50%) scale(${1 + level * 0.2})`;
-                        }
+                    if (voiceGeminiGlow) {
+                        // Dynamically pulses expanding and contracting with user vocal intensity
+                        const scale = 1 + level * 0.52;
+                        voiceGeminiGlow.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)}) translateZ(0)`;
                     }
 
                     audioAnimFrame = requestAnimationFrame(updateAudioWaves);
@@ -2142,20 +2165,24 @@ async function finishVoiceRecordingAndSend() {
         mediaStream = null;
     }
 
-    // MOCKUP ANIMATION STEP 1 & 2:
-    // (blue and purple wavy blur around button (click done) -> button collapses away and blur collapses to a circle)
+    // Button collapses away smoothly
     if (voiceMicBtn) voiceMicBtn.classList.add('voice-button-collapsing');
-    if (voiceWavyBlur) voiceWavyBlur.classList.add('voice-blur-collapsing');
     if (voiceCantSpeakBtn) voiceCantSpeakBtn.classList.add('hidden');
 
     // Collapse transition duration
-    await new Promise(r => setTimeout(r, 450));
+    await new Promise(r => setTimeout(r, 400));
 
-    // MOCKUP ANIMATION STEP 3:
-    // (circle rises, gets Google's 3D fluid-mixing colors, pulsates)
-    if (voiceWavyBlur) voiceWavyBlur.classList.add('hidden');
+    // Tutor thinking state: button hidden, stage enters thinking mode,
+    // exact same gemini glow continues floating smoothly at scale(1)
     if (voiceMicBtn) voiceMicBtn.classList.add('hidden');
-    if (voiceThinkingOrb) voiceThinkingOrb.classList.remove('hidden');
+    if (voiceBtnStage) {
+        voiceBtnStage.classList.remove('voice-stage-recording');
+        voiceBtnStage.classList.add('voice-stage-thinking');
+    }
+    if (voiceGeminiGlow) {
+        voiceGeminiGlow.classList.remove('hidden');
+        voiceGeminiGlow.style.transform = 'translate(-50%, -50%) scale(1) translateZ(0)';
+    }
     if (voiceThinkingMsg) voiceThinkingMsg.classList.remove('hidden');
 
     try {
@@ -2171,9 +2198,8 @@ async function finishVoiceRecordingAndSend() {
             mimeType: (recordedMimeType || 'audio/webm').split(';')[0]
         });
 
-        // MOCKUP ANIMATION STEP 4:
-        // (gemini is done thinking) -> answer is rendered, border pulsates light blue once
-        if (voiceThinkingOrb) voiceThinkingOrb.classList.add('hidden');
+        // Gemini is done thinking -> glow & thinking msg hide, answer is rendered
+        if (voiceGeminiGlow) voiceGeminiGlow.classList.add('hidden');
         if (voiceThinkingMsg) voiceThinkingMsg.classList.add('hidden');
 
         renderVoiceAnswerAndEvaluation(evaluation, evaluation.user_transcript || '');
@@ -2192,7 +2218,7 @@ async function finishVoiceRecordingAndSend() {
 
     } catch (err) {
         console.error('[Voice] Erro durante avaliação do áudio:', err);
-        if (voiceThinkingOrb) voiceThinkingOrb.classList.add('hidden');
+        if (voiceGeminiGlow) voiceGeminiGlow.classList.add('hidden');
         if (voiceThinkingMsg) voiceThinkingMsg.classList.add('hidden');
 
         renderVoiceAnswerAndEvaluation({
@@ -2376,7 +2402,7 @@ DIRETRIZES DE AVALIAÇÃO:
 
 function renderVoiceAnswerAndEvaluation(evaluation, userSpokenText) {
     if (voiceUserTranscriptDisplay) {
-        voiceUserTranscriptDisplay.textContent = userSpokenText || '(Nenhuma transcrição detectada)';
+        voiceUserTranscriptDisplay.textContent = userSpokenText || t('voice_no_transcript_detected') || '(Nenhuma transcrição detectada)';
     }
     if (voiceReferenceTextDisplay) {
         voiceReferenceTextDisplay.innerHTML = renderMathAndMarkdown(currentQuestion.answer || '');
@@ -2435,6 +2461,9 @@ function renderVoiceAnswerAndEvaluation(evaluation, userSpokenText) {
     // Highlight selected rating button in evaluated controls
     highlightVoiceRatingButton(evaluation.rating || 'good');
 
+    // Hide recording mic container to eliminate dead whitespace, reveal answers and rating controls
+    if (voiceMicContainer) voiceMicContainer.classList.add('hidden');
+    if (voiceBtnStage) voiceBtnStage.classList.remove('voice-stage-recording', 'voice-stage-thinking');
     if (voiceAnswerContainer) voiceAnswerContainer.classList.remove('hidden');
     if (voiceEvaluatedControls) voiceEvaluatedControls.classList.remove('hidden');
 }
@@ -6804,15 +6833,17 @@ initInputController({
 // --- IMAGE LIGHTBOX ZOOM ---
 if (questionImage && imageZoomModal && zoomedImage) {
     questionImage.addEventListener('click', () => {
-        if (currentQuestion.image && !questionImage.classList.contains('hidden')) {
-            openZoomForCard(currentQuestion.image, currentQuestion.imageCrop, currentQuestion.imageArrows);
+        const cardImg = currentQuestion?.image || currentQuestion?.imageUrl || currentQuestion?.img || '';
+        if (cardImg && !questionImage.classList.contains('hidden')) {
+            openZoomForCard(cardImg, currentQuestion.imageCrop, currentQuestion.imageArrows);
         }
     });
 }
 if (ankiAnswerImage && imageZoomModal && zoomedImage) {
     ankiAnswerImage.addEventListener('click', () => {
-        if (currentQuestion.answerImage && !ankiAnswerImage.classList.contains('hidden')) {
-            openZoomForCard(currentQuestion.answerImage, currentQuestion.answerImageCrop, currentQuestion.answerImageArrows);
+        const ansImg = currentQuestion?.answerImage || currentQuestion?.answerImageUrl || currentQuestion?.ansImage || '';
+        if (ansImg && !ankiAnswerImage.classList.contains('hidden')) {
+            openZoomForCard(ansImg, currentQuestion.answerImageCrop, currentQuestion.answerImageArrows);
         }
     });
 }
@@ -7774,7 +7805,6 @@ function initMobileFocusHelpers() {
 }
 
 async function initGame() {
-    checkAndResetModelFallback();
     resizeCanvas(); animate();
 
     initTransfer(); // Initialize P2P logic from transfer.js
@@ -7878,7 +7908,9 @@ async function initGame() {
     updateHapticUI();
     initPomodoro();
     initHeaderStats();
-    initBackgroundCategorization();
+    if (isUserPro()) {
+        initBackgroundCategorization();
+    }
     const initialGamepads = (navigator.getGamepads ? navigator.getGamepads() : []).filter(Boolean);
     if (initialGamepads.length > 0) {
         startGamepadLoop();
@@ -7888,6 +7920,9 @@ async function initGame() {
 
 async function initBackgroundCategorization() {
     try {
+        if (!isUserPro()) {
+            return;
+        }
         const existingCategories = getStoredAiCategories();
         if (existingCategories?.cardTopicsBySignature && allQuestions && allQuestions.length > 0) {
             const sigMap = existingCategories.cardTopicsBySignature;
@@ -8112,8 +8147,9 @@ window.addEventListener('flashcards:sync-updated', (event) => {
                             bodyElem.innerHTML = formatted;
                         }
                         const isImageArrows = currentQuestion?.type === 'image_arrows';
+                        const cardImg = currentQuestion?.image || currentQuestion?.imageUrl || currentQuestion?.img || '';
                         setupCardImageWithPlaceholder(
-                            currentQuestion.image,
+                            cardImg,
                             questionImage,
                             questionImageContainer,
                             questionImagePlaceholder,
