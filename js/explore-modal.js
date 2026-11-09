@@ -382,6 +382,24 @@ function injectModalHtml() {
             <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
             <span data-i18n="pro_feat_unlimited">Estude em qualquer lugar sem limites</span>
           </div>
+          <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
+            <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
+            <span data-i18n="pro_feat_gorit_pro">${t('pro_feat_gorit_pro')}</span>
+          </div>
+        </div>
+
+        <!-- Gorit PRO Included Bonus Banner -->
+        <div class="p-3 bg-purple-50/90 border border-purple-200/90 rounded-2xl flex items-center gap-3 text-left mb-4 shadow-2xs">
+          <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-rounded text-lg text-purple-600">stars</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <p class="text-xs font-bold text-purple-900" data-i18n="pro_gorit_bonus_title">${t('pro_gorit_bonus_title')}</p>
+              <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-200/80 text-purple-800" data-i18n="pro_included_badge">${t('pro_included_badge')}</span>
+            </div>
+            <p class="text-[11px] text-purple-700 leading-tight mt-0.5" data-i18n="pro_gorit_bonus_desc">${t('pro_gorit_bonus_desc')}</p>
+          </div>
         </div>
 
         <div class="mb-5">
@@ -448,6 +466,7 @@ function injectModalHtml() {
             <span class="material-symbols-rounded text-base text-purple-600">workspace_premium</span>
             <span data-i18n="flashcards_pro_monthly_btn">${t('flashcards_pro_monthly_btn')}</span>
           </button>
+          <p class="text-[11px] text-purple-700 font-semibold text-center" data-i18n="extra_deck_gorit_bonus">${t('extra_deck_gorit_bonus')}</p>
           <div id="extra-deck-google-login-wrapper"></div>
         </div>
 

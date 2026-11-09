@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Google Hero Gradient (Matching Flashcards) -->
+    <linearGradient id="heroGrad" x1="12%" y1="8%" x2="88%" y2="92%">
+      <stop offset="0%" stop-color="#b8caff"/>
+      <stop offset="20%" stop-color="#82a6ff"/>
+      <stop offset="50%" stop-color="#3b82f7"/>
+      <stop offset="82%" stop-color="#1d61e8"/>
+      <stop offset="100%" stop-color="#1042b5"/>
+    </linearGradient>
+
+    <!-- Deep Cobalt Spine / Back Layer -->
+    <linearGradient id="spineGrad" x1="10%" y1="10%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#09215c"/>
+    </linearGradient>
+
+    <!-- Chrome / Platinum Ring Gradient -->
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+
+    <!-- Subject Divider Tabs Gradients -->
+    <linearGradient id="tabOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+
+    <linearGradient id="tabEmerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <linearGradient id="tabPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+
+    <!-- M3 Depth Filter -->
+    <filter id="binderShadow" x="-25%" y="-20%" width="150%" height="145%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="14" result="blur1"/>
+      <feOffset in="blur1" dx="0" dy="16" result="offset1"/>
+      <feFlood flood-color="#06163a" flood-opacity="0.24" result="color1"/>
+      <feComposite in="color1" in2="offset1" operator="in" result="shadow1"/>
+
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur2"/>
+      <feOffset in="blur2" dx="0" dy="4" result="offset2"/>
+      <feFlood flood-color="#06163a" flood-opacity="0.16" result="color2"/>
+      <feComposite in="color2" in2="offset2" operator="in" result="shadow2"/>
+
+      <feMerge>
+        <feMergeNode in="shadow1"/>
+        <feMergeNode in="shadow2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Inter-layer Tab Shadow -->
+    <filter id="tabShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3.5" result="b"/>
+      <feOffset in="b" dx="-2" dy="3" result="o"/>
+      <feFlood flood-color="#06163a" flood-opacity="0.22" result="c"/>
+      <feComposite in="c" in2="o" operator="in" result="s"/>
+      <feMerge>
+        <feMergeNode in="s"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Ring Drop Shadow -->
+    <filter id="ringShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="rb"/>
+      <feOffset in="rb" dx="0" dy="3" result="ro"/>
+      <feFlood flood-color="#06163a" flood-opacity="0.35" result="rc"/>
+      <feComposite in="rc" in2="ro" operator="in" result="rs"/>
+      <feMerge>
+        <feMergeNode in="rs"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Centered Composition -->
+  <g transform="translate(238, 258)">
+
+    <!-- 1. SUBJECT DIVIDER TABS (Peeking from behind on the right edge) -->
+    <!-- Tab 1: Orange (Top) -->
+    <g transform="translate(150, -112)">
+      <path d="M 0 0 L 32 0 C 46 0 56 10 56 24 L 56 46 C 56 60 46 70 32 70 L 0 70 Z" fill="url(#tabOrange)"/>
+      <circle cx="32" cy="35" r="5" fill="#ffffff" opacity="0.9"/>
+    </g>
+
+    <!-- Tab 2: Emerald (Middle) -->
+    <g transform="translate(150, -26)">
+      <path d="M 0 0 L 32 0 C 46 0 56 10 56 24 L 56 46 C 56 60 46 70 32 70 L 0 70 Z" fill="url(#tabEmerald)"/>
+      <circle cx="32" cy="35" r="5" fill="#ffffff" opacity="0.9"/>
+    </g>
+
+    <!-- Tab 3: Purple (Bottom) -->
+    <g transform="translate(150, 60)">
+      <path d="M 0 0 L 32 0 C 46 0 56 10 56 24 L 56 46 C 56 60 46 70 32 70 L 0 70 Z" fill="url(#tabPurple)"/>
+      <circle cx="32" cy="35" r="5" fill="#ffffff" opacity="0.9"/>
+    </g>
+
+    <!-- 2. BACK COVER UNDERLAY (Gives physical notebook thickness) -->
+    <rect x="-164" y="-186" width="328" height="396" rx="44" fill="url(#spineGrad)"/>
+
+    <!-- 3. HERO FRONT PLANNER FOLIO (Material You Expressive) -->
+    <g filter="url(#binderShadow)">
+      <rect x="-168" y="-190" width="324" height="390" rx="42" fill="url(#heroGrad)"/>
+
+      <!-- Subtle inner border highlight -->
+      <rect x="-167" y="-189" width="322" height="388" rx="41" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+
+      <!-- Circular Punch Holes for Binder Rings -->
+      <g opacity="0.45">
+        <circle cx="-105" cy="-165" r="8" fill="#06163a"/>
+        <circle cx="-35" cy="-165" r="8" fill="#06163a"/>
+        <circle cx="35" cy="-165" r="8" fill="#06163a"/>
+        <circle cx="105" cy="-165" r="8" fill="#06163a"/>
+      </g>
+
+      <!-- HERO EMBLEM: Study Progress Ring + Dynamic Checkmark (Center) -->
+      <g transform="translate(0, -32)">
+        <!-- Background Track -->
+        <circle cx="0" cy="0" r="58" fill="none" stroke="#ffffff" stroke-width="10" opacity="0.25"/>
+        <!-- Progress Arc: 78% clockwise from 12 oclock -->
+        <circle cx="0" cy="0" r="58" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"
+                stroke-dasharray="280 365" stroke-dashoffset="0" transform="rotate(-90)"/>
+        
+        <!-- Center Floating Solid Badge -->
+        <circle cx="0" cy="0" r="40" fill="#ffffff" filter="url(#tabShadow)"/>
+        
+        <!-- Checkmark (Study & Exam Tasks Complete) -->
+        <path d="M -15 -1 L -4 10 L 17 -11" fill="none" stroke="#1d61e8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+
+      <!-- CHECKLIST TRACKS / STUDY MILESTONES (Bottom) -->
+      <!-- Task 1 (Completed) -->
+      <g transform="translate(0, 62)">
+        <circle cx="-92" cy="0" r="9" fill="#ffffff"/>
+        <path d="M -96 0 L -93 3 L -88 -2" fill="none" stroke="#1d61e8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="-68" y="-7" width="152" height="14" rx="7" fill="#ffffff" opacity="0.95"/>
+      </g>
+
+      <!-- Task 2 (Completed) -->
+      <g transform="translate(0, 98)">
+        <circle cx="-92" cy="0" r="9" fill="#ffffff"/>
+        <path d="M -96 0 L -93 3 L -88 -2" fill="none" stroke="#1d61e8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="-68" y="-7" width="118" height="14" rx="7" fill="#ffffff" opacity="0.95"/>
+      </g>
+
+      <!-- Task 3 (Pending / In Progress with pulse dot) -->
+      <g transform="translate(0, 134)">
+        <circle cx="-92" cy="0" r="9" fill="none" stroke="#ffffff" stroke-width="2.5" opacity="0.85"/>
+        <circle cx="-92" cy="0" r="3.5" fill="#ffffff" opacity="0.85"/>
+        <rect x="-68" y="-7" width="80" height="14" rx="7" fill="#ffffff" opacity="0.70"/>
+      </g>
+    </g>
+
+    <!-- 4. TOP BINDER RINGS (Metallic twin loops arching over the top edge) -->
+    <g filter="url(#ringShadow)">
+      <!-- Ring 1 -->
+      <rect x="-115" y="-210" width="20" height="52" rx="10" fill="url(#ringGrad)"/>
+      <rect x="-111" y="-206" width="5" height="44" rx="2.5" fill="#ffffff" opacity="0.8"/>
+
+      <!-- Ring 2 -->
+      <rect x="-45" y="-210" width="20" height="52" rx="10" fill="url(#ringGrad)"/>
+      <rect x="-41" y="-206" width="5" height="44" rx="2.5" fill="#ffffff" opacity="0.8"/>
+
+      <!-- Ring 3 -->
+      <rect x="25" y="-210" width="20" height="52" rx="10" fill="url(#ringGrad)"/>
+      <rect x="29" y="-206" width="5" height="44" rx="2.5" fill="#ffffff" opacity="0.8"/>
+
+      <!-- Ring 4 -->
+      <rect x="95" y="-210" width="20" height="52" rx="10" fill="url(#ringGrad)"/>
+      <rect x="99" y="-206" width="5" height="44" rx="2.5" fill="#ffffff" opacity="0.8"/>
+    </g>
+
+  </g>
+</svg>

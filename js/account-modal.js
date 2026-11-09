@@ -208,6 +208,10 @@ async function renderAccountModalContent() {
               <span class="material-symbols-rounded text-base text-blue-600">bolt</span>
               <span>${t('pro_unlimited_tutor_generations')}</span>
             </div>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-rounded text-base text-blue-600">checklist_rtl</span>
+              <span><a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer" class="underline font-semibold hover:text-blue-700 inline-flex items-center gap-1">${t('pro_active_gorit_perk')} <span class="material-symbols-rounded text-xs">open_in_new</span></a></span>
+            </div>
           </div>
         `}
 
@@ -282,6 +286,7 @@ async function renderAccountModalContent() {
             <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_tutor')}</li>
             <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_synonyms')}</li>
             <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_cloud')}</li>
+            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_gorit')}</li>
           </ul>
         </div>
 

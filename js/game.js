@@ -17,7 +17,6 @@ import {
     updateNotificationsUI, checkAndTriggerScheduledNotifications
 } from './engine/notifications.js';
 import { isDeckCategorized, callGeminiFlashLiteCategorization, getStoredAiCategories, getCardSignature } from './stats-ai.js';
-import { initTransfer } from './transfer.js';
 import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCurrentSession, completeCurrentSession, getCurrentSessionMetrics } from './stats-tracker.js';
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
@@ -7804,10 +7803,42 @@ function initMobileFocusHelpers() {
     }
 }
 
+let transferModulePromise = null;
+function getTransferModule() {
+    if (!transferModulePromise) {
+        transferModulePromise = import('./transfer.js').then(mod => {
+            mod.initTransfer();
+            return mod;
+        });
+    }
+    return transferModulePromise;
+}
+
+function initTransferLazy() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('prog')) {
+        getTransferModule();
+        return;
+    }
+    const transferBtn = document.getElementById('transfer-session-btn');
+    const receiveBtn = document.getElementById('receive-session-btn');
+
+    if (transferBtn) {
+        transferBtn.addEventListener('click', () => {
+            getTransferModule().then(m => m.openTransferModal());
+        }, { once: true });
+    }
+    if (receiveBtn) {
+        receiveBtn.addEventListener('click', () => {
+            getTransferModule().then(m => m.openScanner());
+        }, { once: true });
+    }
+}
+
 async function initGame() {
     resizeCanvas(); animate();
 
-    initTransfer(); // Initialize P2P logic from transfer.js
+    initTransferLazy(); // Lazy load P2P logic and QR scripts on demand
     initExploreModal(); // Initialize Explore Files & Pro Modal
     initPwaInstallBanner(); // PWA Install Notification on Mobile/Tablet
 

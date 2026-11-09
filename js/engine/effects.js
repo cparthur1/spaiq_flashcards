@@ -278,11 +278,50 @@ export function setBallColor(index, color) {
     }
 }
 
-function startCanvasLoop() {
+export function startCanvasLoop() {
     if (!isCanvasLoopRunning) {
         isCanvasLoopRunning = true;
         canvasAnimationId = requestAnimationFrame(animate);
     }
+}
+
+export function pauseCanvasLoop() {
+    if (canvasAnimationId) {
+        cancelAnimationFrame(canvasAnimationId);
+        canvasAnimationId = null;
+    }
+    isCanvasLoopRunning = false;
+}
+
+export function resumeCanvasLoop() {
+    if (isCanvasLoopRunning) return;
+    if (balls.some(b => !b.isStatic) || celebrationParticles.length > 0) {
+        startCanvasLoop();
+    } else {
+        redrawCanvas();
+    }
+}
+
+export function redrawCanvas() {
+    if (!canvasElement || !canvasCtx) return;
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    balls.forEach(ball => {
+        canvasCtx.beginPath();
+        canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        canvasCtx.fillStyle = ball.color;
+        canvasCtx.fill();
+        canvasCtx.closePath();
+    });
+}
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            pauseCanvasLoop();
+        } else {
+            resumeCanvasLoop();
+        }
+    });
 }
 
 export function clearBalls() {
@@ -496,6 +535,7 @@ export function animate() {
             if (ball.y + ball.radius >= canvasElement.height) {
                 ball.y = canvasElement.height - ball.radius;
                 ball.isStatic = true;
+                ball.dy = 0;
                 continue;
             }
             let isTouchingStatic = false;
@@ -515,12 +555,17 @@ export function animate() {
                     ball.x += Math.cos(angle) * overlap;
                     ball.y += Math.sin(angle) * overlap;
                     ball.x += dx * 0.08;
+                    if (Math.abs(ball.dy) < 0.25) {
+                        ball.isStatic = true;
+                        ball.dy = 0;
+                    }
                     break;
                 }
             }
             if (isTouchingStatic && ball.firstContactTime) {
-                if (Date.now() - ball.firstContactTime > 5000) {
+                if (Date.now() - ball.firstContactTime > 350) {
                     ball.isStatic = true;
+                    ball.dy = 0;
                 }
             }
         }

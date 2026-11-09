@@ -23,6 +23,41 @@ const syncDebugLog = document.getElementById('sync-debug-log');
 
 let html5QrCode = null;
 
+function loadScript(src, integrity) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) {
+            return resolve();
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        if (integrity) {
+            script.integrity = integrity;
+            script.crossOrigin = 'anonymous';
+        }
+        script.onload = () => resolve();
+        script.onerror = (e) => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+export async function ensureQRCode() {
+    if (typeof QRCode !== 'undefined') return window.QRCode;
+    await loadScript(
+        'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js',
+        'sha384-HGmnkDZJy7mRkoARekrrj0VjEFSh9a0Z8qxGri/kTTAJkgR8hqD1lHsYSh3JdzRi'
+    );
+    return window.QRCode;
+}
+
+export async function ensureHtml5Qrcode() {
+    if (typeof Html5Qrcode !== 'undefined') return window.Html5Qrcode;
+    await loadScript(
+        'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+        'sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+'
+    );
+    return window.Html5Qrcode;
+}
+
 function logSync(msg) {
     if (syncDebugLog) {
         syncDebugLog.appendChild(document.createElement('br'));
@@ -59,19 +94,23 @@ export function initTransfer() {
 
 // --- SENDER LOGIC ---
 
-function openTransferModal() {
+export function openTransferModal() {
+    if (!transferModal) return;
     transferModal.classList.remove('hidden');
     setTimeout(() => {
-        transferModalContent.classList.remove('scale-95', 'opacity-0');
-        transferModalContent.classList.add('scale-100', 'opacity-100');
+        if (transferModalContent) {
+            transferModalContent.classList.remove('scale-95', 'opacity-0');
+            transferModalContent.classList.add('scale-100', 'opacity-100');
+        }
     }, 10);
     startSender();
 }
 
-function closeTransferModal() {
+export function closeTransferModal() {
+    if (!transferModalContent) return;
     transferModalContent.classList.remove('scale-100', 'opacity-100');
     transferModalContent.classList.add('scale-95', 'opacity-0');
-    setTimeout(() => transferModal.classList.add('hidden'), 300);
+    setTimeout(() => transferModal?.classList.add('hidden'), 300);
 }
 
 /**
@@ -85,7 +124,7 @@ function getActiveStorageKey() {
 }
 
 function startSender() {
-    transferStatus.textContent = t('optimizing_qr');
+    if (transferStatus) transferStatus.textContent = t('optimizing_qr');
     const rawData = localStorage.getItem(getActiveStorageKey());
     if (!rawData) return;
 
@@ -113,54 +152,70 @@ function startSender() {
         
         console.log("Bitset Data Size:", jsonString.length, "Compressed:", currentCompressedState.length);
 
-        transferStatus.textContent = t('ready_use_camera');
-        transferStatus.classList.add('text-green-600');
+        if (transferStatus) {
+            transferStatus.textContent = t('ready_use_camera');
+            transferStatus.classList.add('text-green-600');
+        }
         generateQR(currentCompressedState);
     } catch (err) {
         console.error(err);
     }
 }
 
-function generateQR(stateString) {
+async function generateQR(stateString) {
     const host = window.location.host;
     const protocol = window.location.protocol;
     const path = window.location.pathname;
     const fullUrl = `${protocol}//${host}${path}?prog=${stateString}`;
 
-    QRCode.toCanvas(qrCanvas, fullUrl, { 
-        width: 256, // Slightly larger for better scanning
-        margin: 2,
-        errorCorrectionLevel: 'M' 
-    });
+    try {
+        await ensureQRCode();
+        if (qrCanvas && window.QRCode) {
+            window.QRCode.toCanvas(qrCanvas, fullUrl, { 
+                width: 256, // Slightly larger for better scanning
+                margin: 2,
+                errorCorrectionLevel: 'M' 
+            });
+        }
+    } catch (err) {
+        console.error("Falha ao gerar QR:", err);
+        if (transferStatus) {
+            transferStatus.textContent = "Erro ao carregar o gerador de QR.";
+            transferStatus.classList.remove('text-green-600');
+            transferStatus.classList.add('text-red-600');
+        }
+    }
 }
 
 // --- RECEIVER LOGIC (SCANNER) ---
 
-async function openScanner() {
+export async function openScanner() {
     // Check for Secure Context (HTTPS)
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
         alert(t('camera_blocked_http_alert'));
         return;
     }
 
-    scannerModal.classList.remove('hidden');
-    html5QrCode = new Html5Qrcode("reader");
+    if (scannerModal) scannerModal.classList.remove('hidden');
     
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
     try {
+        await ensureHtml5Qrcode();
+        html5QrCode = new window.Html5Qrcode("reader");
+        
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
         await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
     } catch (err) {
+        console.error("Falha ao inicializar o leitor de QR:", err);
         alert(t('camera_error_permissions'));
         closeScanner();
     }
 }
 
-async function closeScanner() {
+export async function closeScanner() {
     if (html5QrCode && html5QrCode.isScanning) {
         await html5QrCode.stop();
     }
-    scannerModal.classList.add('hidden');
+    if (scannerModal) scannerModal.classList.add('hidden');
 }
 
 function onScanSuccess(decodedText) {

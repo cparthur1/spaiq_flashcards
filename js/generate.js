@@ -3693,8 +3693,12 @@ function renderCardsList(fullReRender = false, preserveScroll = true) {
     // Capture current scroll positions before DOM changes
     const prevScrollTop = cardsList ? cardsList.scrollTop : 0;
     const prevWindowY = window.scrollY || document.documentElement.scrollTop || 0;
+    const prevScrollHeight = cardsList ? cardsList.scrollHeight : 0;
 
     if (fullReRender) {
+        if (cardsList && prevScrollHeight > 0) {
+            cardsList.style.minHeight = prevScrollHeight + 'px';
+        }
         const fragment = document.createDocumentFragment();
         for (let i = 0; i < deckCards.length; i++) {
             const item = deckCards[i];
@@ -3732,7 +3736,10 @@ function renderCardsList(fullReRender = false, preserveScroll = true) {
         if (cardsList) cardsList.scrollTop = prevScrollTop;
         window.scrollTo({ top: prevWindowY, behavior: 'instant' });
         requestAnimationFrame(() => {
-            if (cardsList) cardsList.scrollTop = prevScrollTop;
+            if (cardsList) {
+                cardsList.scrollTop = prevScrollTop;
+                cardsList.style.minHeight = '';
+            }
             window.scrollTo({ top: prevWindowY, behavior: 'instant' });
         });
     }
@@ -4390,7 +4397,18 @@ saveInlineEditBtn.addEventListener('click', (e) => {
     }
 
     inlineEditModal.classList.add('hidden');
-    renderCardsList(true);
+
+    // In-place update of edited card to prevent entire list layout thrashing & scroll collapsing
+    const targetCardEl = cardsList ? cardsList.querySelector(`[data-index="${idx}"]`) : null;
+    if (targetCardEl && cardsList) {
+        const newCardEl = (card.type === 'divisor' || card.type === 'divider' || card.type === 'note')
+            ? createDivisorElement(card, idx, false)
+            : createCardElement(card, idx, false);
+        targetCardEl.replaceWith(newCardEl);
+        updateCardsBorderRadius();
+    } else {
+        renderCardsList(true);
+    }
     syncCurrentDeckToSlotAndCloud();
 
     if (cardsList) cardsList.scrollTop = inlineEditSavedScrollTop;
