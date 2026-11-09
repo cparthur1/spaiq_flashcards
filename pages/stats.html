@@ -63,8 +63,9 @@
         }
     </script>
     <link rel="stylesheet" href="../css/style.css">
-    <script src="../assets/vendor/purify.min.js"></script>
-    <script src="../js/console.js"></script>
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <script src="../assets/vendor/purify.min.js" defer></script>
+    <script src="../js/console.js" defer></script>
     <style>
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
@@ -78,8 +79,6 @@
             border-radius: 9999px;
         }
     </style>
-    <!-- Stripe.js (Dahlia) for embedded checkout -->
-    <script src="https://js.stripe.com/dahlia/stripe.js"></script>
 </head>
 
 <body class="bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-background)] min-h-screen flex flex-col p-3 sm:p-6 antialiased selection:bg-blue-500 selection:text-white">

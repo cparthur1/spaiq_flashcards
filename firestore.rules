@@ -1,26 +1,79 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Shared decks can be read publicly by anyone with the link
+
+    // Helper: Protected server-only fields on /users/{userId}
+    function protectedUserFields() {
+      return [
+        'subscription',
+        'pro',
+        'extraGenerations',
+        'monthlyGenerationsUsed',
+        'quotaLastResetMonth',
+        'freeAiDeckUsed',
+        'freeAiDeckUsedAt',
+        'paidSessionIds',
+        'apiKey',
+        'apiKeyCreatedAt',
+        'apiKeyLastUsedAt',
+        'dailyGoalWebhookUrl',
+        'dailyGoalWebhookLastTriggeredAt',
+        'dailyGoalWebhookLastTriggeredDate'
+      ];
+    }
+
+    // Shared decks can be read publicly by anyone with the link.
+    // Writes are schema-validated and hard deletes are forbidden (soft-delete only).
     match /shares/{shareSlug} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if request.resource.data.keys().hasOnly([
+          'shareSlug', 'title', 'cardCount', 'deckData',
+          'deleted', 'deletedAt', 'updatedAt', 'createdAt'
+        ])
+        && (!('shareSlug' in request.resource.data) || (request.resource.data.shareSlug is string && request.resource.data.shareSlug == shareSlug))
+        && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 500))
+        && (!('cardCount' in request.resource.data) || (request.resource.data.cardCount is number && request.resource.data.cardCount >= 0 && request.resource.data.cardCount <= 10000))
+        && (!('deleted' in request.resource.data) || request.resource.data.deleted is bool);
+      allow delete: if false;
     }
 
-    // Decks can be read if user is authenticated, or if document is marked as shared
+    // Decks are strictly isolated to their ownerUid (unless explicitly marked isShared == true for read)
     match /decks/{deckId} {
-      allow read: if request.auth != null || (resource != null && resource.data.isShared == true);
-      allow write: if request.auth != null;
+      allow get: if (resource != null && resource.data.isShared == true)
+        || (request.auth != null && (resource == null || resource.data.ownerUid == request.auth.uid));
+      allow list: if (resource != null && resource.data.isShared == true)
+        || (request.auth != null && resource.data.ownerUid == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid
+        && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 500));
+      allow update: if request.auth != null
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 500));
+      allow delete: if request.auth != null
+        && resource.data.ownerUid == request.auth.uid;
     }
 
-    // User private data (slots, streaks, stats)
+    // User private data (slots, streaks, stats).
+    // Clients cannot create or mutate billing, quota, API key, or webhook fields.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && !request.resource.data.keys().hasAny(protectedUserFields());
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields());
+      allow delete: if false;
     }
 
     // API keys mapping (only accessible via backend Admin Service Account)
     match /api_keys/{apiKey} {
+      allow read, write: if false;
+    }
+
+    // Default deny for any other collection
+    match /{document=**} {
       allow read, write: if false;
     }
   }

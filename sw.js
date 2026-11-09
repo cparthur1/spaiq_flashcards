@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.39'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.40'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -28,6 +28,9 @@ const RAW_ASSETS = [
   '/js/game.js',
   '/js/account-modal.js',
   '/js/image-editor-modal.js',
+  '/js/image-editor-ui.js',
+  '/js/transfer.js',
+  '/js/console.js',
   '/js/firebase-client.js',
   '/js/backend-api.js',
   '/js/slot-manager.js',
@@ -104,7 +107,8 @@ const RAW_ASSETS = [
   '/assets/img/apple_add.png',
   '/assets/img/apple_add.svg',
   '/assets/img/Google__G__logo.svg',
-  '/assets/img/google_g_logo.svg'
+  '/assets/img/google_g_logo.svg',
+  '/assets/img/gorit-logo.svg'
 ];
 
 const ASSETS_TO_CACHE = RAW_ASSETS.map(p => p === '/' ? (BASE_PATH || '/') : `${BASE_PATH}${p}`);
@@ -183,30 +187,70 @@ const ALLOWED_CDN_HOSTS = new Set([
   'esm.run'
 ]);
 
+const IMMUTABLE_LOCAL_REGEX = /\.(?:woff2?|png|svg|ico|webp|jpg|jpeg)$|\/assets\/vendor\//i;
+
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
   const url = new URL(event.request.url);
 
-  // Strategy: Network-first with no-cache for origin assets to always deliver fresh code
-  if (ASSETS_TO_CACHE.includes(url.pathname) || url.origin === self.location.origin) {
-    event.respondWith(fetch(event.request, { cache: 'no-cache' }));
+  // 1. Same-origin requests
+  if (url.origin === self.location.origin) {
+    // 1a. Cache-First for immutable local assets (fonts, icons, vendor bundles)
+    if (IMMUTABLE_LOCAL_REGEX.test(url.pathname)) {
+      event.respondWith(
+        caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request).then((response) => {
+            if (response && response.ok) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            }
+            return response;
+          });
+        })
+      );
+      return;
+    }
+
+    // 1b. Network-First with Offline Cache Fallback for HTML, JS, CSS, Manifest
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
+        .then((response) => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const exactMatch = await caches.match(event.request);
+          if (exactMatch) return exactMatch;
+          const baseMatch = await caches.match(event.request, { ignoreSearch: true });
+          if (baseMatch) return baseMatch;
+          if (event.request.mode === 'navigate') {
+            return caches.match(`${BASE_PATH}/index.html`, { ignoreSearch: true });
+          }
+          return new Response('Offline', { status: 503, statusText: 'Offline' });
+        })
+    );
     return;
   }
 
-  // Strategy: Cache-First for whitelisted CDNs
+  // 2. Strategy: Cache-First for whitelisted CDNs
   if (ALLOWED_CDN_HOSTS.has(url.hostname)) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        return cached || fetch(event.request).then((response) => {
-          return caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, response.clone());
-            return response;
-          });
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response && (response.ok || response.type === 'opaque')) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
         });
       })
     );
     return;
   }
-
-  // Default: Network-only
-  event.respondWith(fetch(event.request));
 });

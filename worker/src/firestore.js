@@ -145,20 +145,26 @@ export async function deleteUserDocument(serviceAccountConfig, uid) {
   const projectId = serviceAccountConfig.project_id;
   const userUrl = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${uid}`;
 
-  // First fetch user doc to find deck IDs and shares
+  // First fetch user doc to find deck IDs and API keys
   const userDoc = await getUserDocument(serviceAccountConfig, uid);
+  const cleanupTasks = [
+    deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {})
+  ];
+
   if (userDoc?.deckSlots && Array.isArray(userDoc.deckSlots)) {
     for (const slot of userDoc.deckSlots) {
       if (slot.deckId) {
-        await deleteDeckDocument(serviceAccountConfig, slot.deckId).catch(() => {});
+        cleanupTasks.push(deleteDeckDocument(serviceAccountConfig, slot.deckId).catch(() => {}));
       }
     }
   }
 
   // Delete API key if present
   if (userDoc?.apiKey) {
-    await deleteDocument(serviceAccountConfig, 'api_keys', userDoc.apiKey).catch(() => {});
+    cleanupTasks.push(deleteDocument(serviceAccountConfig, 'api_keys', userDoc.apiKey).catch(() => {}));
   }
+
+  await Promise.all(cleanupTasks);
 
   // Delete the user doc
   await fetch(userUrl, {
@@ -175,20 +181,24 @@ export async function deleteUserDocument(serviceAccountConfig, uid) {
 export async function clearUserCloudData(serviceAccountConfig, uid) {
   try {
     const userDoc = await getUserDocument(serviceAccountConfig, uid);
+    const cleanupTasks = [
+      deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {})
+    ];
+
     if (userDoc?.deckSlots && Array.isArray(userDoc.deckSlots)) {
       for (const slot of userDoc.deckSlots) {
         if (slot.deckId) {
-          await deleteDeckDocument(serviceAccountConfig, slot.deckId).catch(() => {});
+          cleanupTasks.push(deleteDeckDocument(serviceAccountConfig, slot.deckId).catch(() => {}));
         }
       }
     }
-    // Delete notebook deck
-    await deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {});
 
     // Delete API key if present
     if (userDoc?.apiKey) {
-      await deleteDocument(serviceAccountConfig, 'api_keys', userDoc.apiKey).catch(() => {});
+      cleanupTasks.push(deleteDocument(serviceAccountConfig, 'api_keys', userDoc.apiKey).catch(() => {}));
     }
+
+    await Promise.all(cleanupTasks);
 
     // Clear cloud slots and data on user document
     await updateUserDocument(serviceAccountConfig, uid, {

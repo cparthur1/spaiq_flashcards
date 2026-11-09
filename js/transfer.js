@@ -58,6 +58,15 @@ export async function ensureHtml5Qrcode() {
     return window.Html5Qrcode;
 }
 
+export async function ensureLZString() {
+    if (typeof LZString !== 'undefined') return window.LZString;
+    await loadScript(
+        'https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js',
+        'sha384-+pWnyi8LtZx+cgXfD2arWgUX7pHIaEL215cEPPk9WrsegNlgvDL9DNjaqsceQq6o'
+    );
+    return window.LZString;
+}
+
 function logSync(msg) {
     if (syncDebugLog) {
         syncDebugLog.appendChild(document.createElement('br'));
@@ -123,12 +132,13 @@ function getActiveStorageKey() {
     return 'flashcardsSave';
 }
 
-function startSender() {
+async function startSender() {
     if (transferStatus) transferStatus.textContent = t('optimizing_qr');
     const rawData = localStorage.getItem(getActiveStorageKey());
     if (!rawData) return;
 
     try {
+        await ensureLZString();
         const gameData = JSON.parse(rawData);
         
         // BITSET OPTIMIZATION:
@@ -231,11 +241,12 @@ function onScanSuccess(decodedText) {
     }
 }
 
-function applyProgress(stateString) {
+async function applyProgress(stateString) {
     syncOverlay.classList.remove('hidden');
     logSync(t('reading_optimized_progress'));
 
     try {
+        await ensureLZString();
         const decompressed = LZString.decompressFromEncodedURIComponent(stateString);
         if (!decompressed) throw new Error(t('invalid_data'));
 

@@ -22,7 +22,6 @@ import { initExploreModal, openExploreModal, openProModal, isUserPro } from './e
 import { openAccountModal } from './account-modal.js';
 import { getUserApiKey, generateUserApiKey, revokeUserApiKey, testStatsApi, getUserWebhook, saveUserWebhook, testUserWebhook, triggerDailyGoalWebhook, BACKEND_URL } from './backend-api.js';
 import { onAuthChange, auth, getCurrentUserToken } from './firebase-client.js';
-import { getApiKey } from './key-manager.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
@@ -2314,46 +2313,28 @@ DIRETRIZES DE AVALIAÇÃO:
     parts.push({ text: promptInstructions });
 
     const token = await getCurrentUserToken().catch(() => null);
-    const localApiKey = await getApiKey().catch(() => '');
-
-    let res;
-    if (token) {
-        res = await fetch(`${BACKEND_URL}/api/ai/tutor`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                model: 'gemini-flash-lite-latest',
-                contents: [{ role: 'user', parts }],
-                tools: [classifyVoiceTool],
-                toolConfig: {
-                    functionCallingConfig: {
-                        mode: 'ANY',
-                        allowedFunctionNames: ['classify_voice_response']
-                    }
-                }
-            })
-        });
-    } else if (localApiKey) {
-        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${localApiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ role: 'user', parts }],
-                tools: [classifyVoiceTool],
-                toolConfig: {
-                    functionCallingConfig: {
-                        mode: 'ANY',
-                        allowedFunctionNames: ['classify_voice_response']
-                    }
-                }
-            })
-        });
-    } else {
-        throw new Error('Sem autenticação ou chave API para consultar o Gemini.');
+    if (!token) {
+        throw new Error('Autenticação necessária para utilizar o modo de voz com IA.');
     }
+
+    const res = await fetch(`${BACKEND_URL}/api/ai/tutor`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            model: 'gemini-flash-lite-latest',
+            contents: [{ role: 'user', parts }],
+            tools: [classifyVoiceTool],
+            toolConfig: {
+                functionCallingConfig: {
+                    mode: 'ANY',
+                    allowedFunctionNames: ['classify_voice_response']
+                }
+            }
+        })
+    });
 
     if (!res.ok) {
         const errText = await res.text().catch(() => '');

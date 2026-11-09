@@ -38,6 +38,77 @@ export const LIFETIME_PRO_EMAILS = [
   'manuelapinhadias@gmail.com'
 ];
 
+const ALLOWED_GEMINI_MODELS = new Set([
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite'
+]);
+
+function sanitizeGeminiModel(requestedModel, fallbackModel = 'gemini-flash-lite-latest') {
+  if (typeof requestedModel === 'string' && ALLOWED_GEMINI_MODELS.has(requestedModel.trim())) {
+    return requestedModel.trim();
+  }
+  return fallbackModel;
+}
+
+function getSafeOrigin(request) {
+  const origin = request.headers.get('Origin');
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
+function sanitizeReturnUrl(candidateUrl, request) {
+  const fallback = `${getSafeOrigin(request)}/?session_id={CHECKOUT_SESSION_ID}`;
+  if (!candidateUrl || typeof candidateUrl !== 'string') return fallback;
+  try {
+    const parsed = new URL(candidateUrl);
+    if (!ALLOWED_ORIGINS.includes(parsed.origin)) {
+      return fallback;
+    }
+    return candidateUrl;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Validate user-configured webhook URL to prevent SSRF against internal/private networks
+ */
+function validateWebhookUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return { valid: false, reason: 'URL ausente.' };
+  }
+  let parsed;
+  try {
+    parsed = new URL(rawUrl.trim());
+  } catch {
+    return { valid: false, reason: 'Formato de URL inválido.' };
+  }
+  if (parsed.protocol !== 'https:') {
+    return { valid: false, reason: 'A URL do webhook deve utilizar HTTPS (https://).' };
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (
+    host === 'localhost' ||
+    host === '0.0.0.0' ||
+    host === '[::1]' ||
+    host === '::1' ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal') ||
+    host.endsWith('.localhost') ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+  ) {
+    return { valid: false, reason: 'Endereços de rede privada ou local não são permitidos.' };
+  }
+  return { valid: true, url: parsed.toString() };
+}
+
 function getCorsHeaders(request) {
   const origin = request.headers.get('Origin');
   const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
@@ -141,7 +212,7 @@ export default {
           // Authentication is optional for initial checkout session creation, but links user if logged in
         }
 
-        const returnUrl = `${request.headers.get('Origin') || 'https://flashcards.camblu.org'}/?session_id={CHECKOUT_SESSION_ID}`;
+        const returnUrl = `${getSafeOrigin(request)}/?session_id={CHECKOUT_SESSION_ID}`;
         try {
           const session = await createSubscription({ env, user, returnUrl });
           return jsonResponse({ client_secret: session.client_secret }, 200, corsHeaders);
@@ -172,7 +243,7 @@ export default {
         }
 
         const body = await request.json().catch(() => ({}));
-        const returnUrl = body.returnUrl || `${request.headers.get('Origin') || 'https://flashcards.camblu.org'}/?session_id={CHECKOUT_SESSION_ID}`;
+        const returnUrl = sanitizeReturnUrl(body.returnUrl, request);
         try {
           const session = await createExtraGenerationPayment({ env, user, isPro, returnUrl });
           return jsonResponse({ url: session.url, client_secret: session.client_secret, sessionId: session.sessionId }, 200, corsHeaders);
@@ -307,22 +378,22 @@ export default {
         }
 
         const deckSlots = userDoc.deckSlots || [];
-        // Populate full deckData for each slot if present
-        for (const slot of deckSlots) {
-          if (slot.deckId) {
-            const deckDoc = await getDocument(serviceAccount, 'decks', slot.deckId).catch(() => null);
-            if (deckDoc) {
-              slot.deckData = deckDoc.deckData;
-            }
-          }
-        }
+        // Populate full deckData for each slot and notebook in parallel
+        const [, notebookDoc] = await Promise.all([
+          Promise.all(
+            deckSlots.map(async (slot) => {
+              if (slot.deckId) {
+                const deckDoc = await getDocument(serviceAccount, 'decks', slot.deckId).catch(() => null);
+                if (deckDoc) {
+                  slot.deckData = deckDoc.deckData;
+                }
+              }
+            })
+          ),
+          getDocument(serviceAccount, 'decks', `notebook_${user.uid}`).catch(() => null)
+        ]);
 
-        // Get notebook deckData
-        let notebookData = null;
-        const notebookDoc = await getDocument(serviceAccount, 'decks', `notebook_${user.uid}`).catch(() => null);
-        if (notebookDoc) {
-          notebookData = notebookDoc.deckData;
-        }
+        const notebookData = notebookDoc ? notebookDoc.deckData : null;
 
         return jsonResponse({
           isPro: true,
@@ -635,9 +706,9 @@ export default {
           }, 403, publicCorsHeaders);
         }
 
-        // Asynchronously update lastUsedAt on key document
+        // Asynchronously update lastUsedAt on user document
         ctx.waitUntil(
-          updateUserDocument(serviceAccount, keyDoc.uid, {
+          updateUserDocument(serviceAccount, userId, {
             'apiKeyLastUsedAt': new Date().toISOString()
           }).catch(() => {})
         );
@@ -776,8 +847,12 @@ export default {
 
         const body = await request.json().catch(() => ({}));
         let webhookUrl = (body.webhookUrl || '').trim();
-        if (webhookUrl && !webhookUrl.startsWith('http://') && !webhookUrl.startsWith('https://')) {
-          return jsonResponse({ error: 'invalid_url', message: 'A URL do webhook deve começar com http:// ou https://' }, 400, corsHeaders);
+        if (webhookUrl) {
+          const check = validateWebhookUrl(webhookUrl);
+          if (!check.valid) {
+            return jsonResponse({ error: 'invalid_url', message: check.reason }, 400, corsHeaders);
+          }
+          webhookUrl = check.url;
         }
 
         await updateUserDocument(serviceAccount, user.uid, {
@@ -806,6 +881,11 @@ export default {
           return jsonResponse({ error: 'missing_url', message: 'Nenhuma URL de webhook configurada para teste.' }, 400, corsHeaders);
         }
 
+        const check = validateWebhookUrl(targetUrl);
+        if (!check.valid) {
+          return jsonResponse({ error: 'invalid_url', message: check.reason }, 400, corsHeaders);
+        }
+
         const testPayload = {
           event: 'daily_goal_reached',
           is_test: true,
@@ -817,14 +897,15 @@ export default {
         };
 
         try {
-          const hookRes = await fetch(targetUrl, {
+          const hookRes = await fetch(check.url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'User-Agent': 'SpaiqFlashcards-Webhook/1.0',
               'X-Spaiq-Event': 'daily_goal_reached'
             },
-            body: JSON.stringify(testPayload)
+            body: JSON.stringify(testPayload),
+            signal: AbortSignal.timeout(8000)
           });
 
           return jsonResponse({
@@ -858,6 +939,11 @@ export default {
           return jsonResponse({ success: true, dispatched: false, reason: 'no_webhook_configured' }, 200, corsHeaders);
         }
 
+        const check = validateWebhookUrl(webhookUrl);
+        if (!check.valid) {
+          return jsonResponse({ success: false, dispatched: false, reason: 'invalid_webhook_url' }, 400, corsHeaders);
+        }
+
         const body = await request.json().catch(() => ({}));
         const todayStr = body.date || new Date().toISOString().slice(0, 10);
         const cardsReviewed = Number(body.cardsReviewed) || 0;
@@ -874,20 +960,21 @@ export default {
         };
 
         ctx.waitUntil(
-          fetch(webhookUrl, {
+          fetch(check.url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'User-Agent': 'SpaiqFlashcards-Webhook/1.0',
               'X-Spaiq-Event': 'daily_goal_reached'
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(8000)
           }).then(res => {
             updateUserDocument(serviceAccount, user.uid, {
               dailyGoalWebhookLastTriggeredAt: new Date().toISOString(),
               dailyGoalWebhookLastTriggeredDate: todayStr
             }).catch(() => {});
-          }).catch(err => console.warn('[Webhook] Falha ao disparar webhook para:', webhookUrl, err.message))
+          }).catch(err => console.warn('[Webhook] Falha ao disparar webhook para:', check.url, err.message))
         );
 
         return jsonResponse({ success: true, dispatched: true }, 200, corsHeaders);
@@ -904,11 +991,9 @@ export default {
 
         const body = await request.json().catch(() => ({}));
         const sessionId = body.session_id || url.searchParams.get('session_id');
+        const serviceAccount = getServiceAccount(env);
 
         if (user) {
-          const serviceAccount = getServiceAccount(env);
-          const userDoc = await getUserDocument(serviceAccount, user.uid).catch(() => null);
-
           const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
           if (isLifetime) {
             await setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {});
@@ -925,9 +1010,20 @@ export default {
             if (sessionId && typeof sessionId === 'string' && sessionId.startsWith('cs_')) {
               const session = await stripe.checkout.sessions.retrieve(sessionId);
               if (session && (session.status === 'complete' || session.payment_status === 'paid')) {
+                // Verify session ownership if session is bound to a specific user UID or email
+                const sessionUid = session.client_reference_id || session.metadata?.uid || null;
+                const sessionEmail = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
+                const userEmail = (user?.email || '').toLowerCase().trim();
+
+                if (user && sessionUid && sessionUid !== user.uid) {
+                  return jsonResponse({ error: 'forbidden', message: 'Esta sessão de pagamento pertence a outra conta.' }, 403, corsHeaders);
+                }
+                if (user && !sessionUid && sessionEmail && userEmail && sessionEmail !== userEmail) {
+                  return jsonResponse({ error: 'forbidden', message: 'O e-mail da sessão de pagamento não corresponde à conta autenticada.' }, 403, corsHeaders);
+                }
+
                 if (session.mode === 'payment' || session.metadata?.type === 'extra_deck') {
                   if (user) {
-                    const serviceAccount = getServiceAccount(env);
                     const userDoc = await getUserDocument(serviceAccount, user.uid).catch(() => null);
                     const paidSessions = Array.isArray(userDoc?.paidSessionIds) ? [...userDoc.paidSessionIds] : [];
                     let currentExtras = userDoc?.extraGenerations || 0;
@@ -945,7 +1041,6 @@ export default {
                     return jsonResponse({ isPro: false, extraGenerations: 1, type: 'extra_deck', sessionId: session.id, paid: true }, 200, corsHeaders);
                   }
                 } else if (user) {
-                  const serviceAccount = getServiceAccount(env);
                   await Promise.all([
                     setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
                     updateUserDocument(serviceAccount, user.uid, {
@@ -965,7 +1060,7 @@ export default {
             }
 
             // 2. Direct customer check by email in Stripe
-            if (user.email) {
+            if (user && user.email) {
               const stripeStatus = await checkCustomerProStatusInStripe({ env, email: user.email });
               if (stripeStatus.isPro) {
                 await Promise.all([
@@ -1257,7 +1352,7 @@ export default {
 
         // Proxy Gemini call
         const geminiRes = await callGemini({
-          model: reqBody.model || 'gemini-flash-latest',
+          model: sanitizeGeminiModel(reqBody.model, 'gemini-flash-latest'),
           contents: reqBody.contents,
           systemInstruction: reqBody.systemInstruction,
           generationConfig: reqBody.generationConfig,
@@ -1303,7 +1398,7 @@ export default {
 
         const reqBody = await request.json();
         const geminiRes = await callGemini({
-          model: reqBody.model || 'gemini-flash-lite-latest',
+          model: sanitizeGeminiModel(reqBody.model, 'gemini-flash-lite-latest'),
           contents: reqBody.contents,
           systemInstruction: reqBody.systemInstruction,
           generationConfig: reqBody.generationConfig,
@@ -1348,7 +1443,7 @@ export default {
 
         const reqBody = await request.json();
         const geminiRes = await callGemini({
-          model: reqBody.model || 'gemini-flash-lite-latest',
+          model: sanitizeGeminiModel(reqBody.model, 'gemini-flash-lite-latest'),
           contents: reqBody.contents,
           systemInstruction: reqBody.systemInstruction,
           generationConfig: reqBody.generationConfig,

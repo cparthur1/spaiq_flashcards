@@ -1137,12 +1137,55 @@ async function readTextFile(file) {
     });
 }
 
+function loadExternalVendorScript(src, integrity) {
+    return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) {
+            if (existing.dataset.loaded === 'true') return resolve();
+            existing.addEventListener('load', () => resolve(), { once: true });
+            existing.addEventListener('error', () => reject(new Error(`Falha ao carregar ${src}`)), { once: true });
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        if (integrity) {
+            script.integrity = integrity;
+            script.crossOrigin = 'anonymous';
+        }
+        script.onload = () => {
+            script.dataset.loaded = 'true';
+            resolve();
+        };
+        script.onerror = () => reject(new Error(`Falha ao carregar ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+async function ensureMammoth() {
+    if (typeof mammoth !== 'undefined') return window.mammoth;
+    await loadExternalVendorScript(
+        'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js',
+        'sha384-/cXAMbzovUIKbBERjPmR3SnPTh8siWr5lsvFYj1Uq4XP0yaJUZJmsh0YXyGv5P0y'
+    );
+    return window.mammoth;
+}
+
+async function ensureJSZip() {
+    if (typeof JSZip !== 'undefined') return window.JSZip;
+    await loadExternalVendorScript(
+        'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+        'sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG'
+    );
+    return window.JSZip;
+}
+
 // Robust text extractor supporting .txt, .docx (with mammoth), and .doc
 async function extractTextFromFile(file) {
     const ext = getFileExtension(file.name);
     if (ext === 'txt') {
         return await readTextFile(file);
     } else if (ext === 'docx') {
+        await ensureMammoth().catch(() => null);
         if (typeof mammoth !== 'undefined') {
             const arrayBuffer = await file.arrayBuffer();
             const result = await mammoth.extractRawText({ arrayBuffer });
@@ -1152,6 +1195,7 @@ async function extractTextFromFile(file) {
         }
     } else if (ext === 'doc') {
         try {
+            await ensureMammoth().catch(() => null);
             if (typeof mammoth !== 'undefined') {
                 const arrayBuffer = await file.arrayBuffer();
                 const result = await mammoth.extractRawText({ arrayBuffer });
@@ -1173,6 +1217,7 @@ async function extractTextFromFile(file) {
 
 // PPTX text extractor using JSZip
 async function extractTextFromPPTX(file) {
+    await ensureJSZip().catch(() => null);
     if (typeof JSZip !== 'undefined') {
         try {
             const zip = await JSZip.loadAsync(file);

@@ -7,10 +7,13 @@
 // Cached Google JWKS for verifying client Firebase ID Tokens
 let cachedJwks = null;
 let jwksExpiry = 0;
+const cachedPublicCryptoKeys = new Map();
 
-// Cached Google OAuth2 Admin access token
+// Cached Google OAuth2 Admin access token & private CryptoKey
 let cachedAdminToken = null;
 let adminTokenExpiry = 0;
+let cachedPrivateKey = null;
+let cachedPrivateKeyPem = null;
 
 function base64UrlEncode(strOrBuffer) {
   let base64;
@@ -49,9 +52,9 @@ function base64UrlDecodeBytes(str) {
 /**
  * Fetch and cache Google Firebase Auth JWKS
  */
-async function getGoogleJwks() {
+async function getGoogleJwks(forceRefresh = false) {
   const now = Date.now();
-  if (cachedJwks && now < jwksExpiry) {
+  if (!forceRefresh && cachedJwks && now < jwksExpiry) {
     return cachedJwks;
   }
 
@@ -67,6 +70,7 @@ async function getGoogleJwks() {
 
   const data = await res.json();
   cachedJwks = data.keys || [];
+  cachedPublicCryptoKeys.clear();
   return cachedJwks;
 }
 
@@ -85,7 +89,7 @@ export async function verifyFirebaseIdToken(token, projectId) {
   const header = JSON.parse(base64UrlDecodeUtf8(headerB64));
   const payload = JSON.parse(base64UrlDecodeUtf8(payloadB64));
 
-  // Check timing
+  // Check timing & claims
   const now = Math.floor(Date.now() / 1000);
   if (payload.exp && payload.exp < now) {
     throw new Error('Token expirado');
@@ -96,23 +100,35 @@ export async function verifyFirebaseIdToken(token, projectId) {
   if (payload.iss !== `https://securetoken.google.com/${projectId}`) {
     throw new Error('Emissor (iss) do token inválido');
   }
-
-  const jwks = await getGoogleJwks();
-  const jwk = jwks.find(k => k.kid === header.kid);
-  if (!jwk) {
-    throw new Error('Chave pública do Firebase não encontrada para o kid fornecido');
+  if (!payload.sub || typeof payload.sub !== 'string') {
+    throw new Error('Subject (sub) do token inválido');
   }
 
-  const cryptoKey = await crypto.subtle.importKey(
-    'jwk',
-    jwk,
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-256'
-    },
-    false,
-    ['verify']
-  );
+  let cryptoKey = cachedPublicCryptoKeys.get(header.kid);
+  if (!cryptoKey) {
+    let jwks = await getGoogleJwks(false);
+    let jwk = jwks.find(k => k.kid === header.kid);
+    if (!jwk) {
+      // Key rotation fallback: force refresh JWKS once
+      jwks = await getGoogleJwks(true);
+      jwk = jwks.find(k => k.kid === header.kid);
+    }
+    if (!jwk) {
+      throw new Error('Chave pública do Firebase não encontrada para o kid fornecido');
+    }
+
+    cryptoKey = await crypto.subtle.importKey(
+      'jwk',
+      jwk,
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        hash: 'SHA-256'
+      },
+      false,
+      ['verify']
+    );
+    cachedPublicCryptoKeys.set(header.kid, cryptoKey);
+  }
 
   const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
   const signature = base64UrlDecodeBytes(signatureB64);
@@ -132,16 +148,19 @@ export async function verifyFirebaseIdToken(token, projectId) {
 }
 
 /**
- * Convert PEM private key (PKCS#8) to CryptoKey
+ * Convert PEM private key (PKCS#8) to CryptoKey (cached in isolate memory)
  */
 async function importPrivateKey(pem) {
+  if (cachedPrivateKey && cachedPrivateKeyPem === pem) {
+    return cachedPrivateKey;
+  }
   const cleanPem = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, '')
     .replace(/-----END PRIVATE KEY-----/, '')
     .replace(/\s+/g, '');
   const binaryDer = Uint8Array.from(atob(cleanPem), c => c.charCodeAt(0));
 
-  return await crypto.subtle.importKey(
+  cachedPrivateKey = await crypto.subtle.importKey(
     'pkcs8',
     binaryDer.buffer,
     {
@@ -151,6 +170,8 @@ async function importPrivateKey(pem) {
     false,
     ['sign']
   );
+  cachedPrivateKeyPem = pem;
+  return cachedPrivateKey;
 }
 
 /**

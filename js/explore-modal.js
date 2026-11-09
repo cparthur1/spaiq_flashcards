@@ -637,6 +637,35 @@ function attachModalEventListeners() {
  * Mount Stripe Embedded Checkout Form
  */
 let activeCheckoutForm = null;
+let stripeLoadPromise = null;
+
+export function ensureStripeLoaded() {
+  if (typeof window !== 'undefined' && window.Stripe) {
+    return Promise.resolve(window.Stripe);
+  }
+  if (stripeLoadPromise) return stripeLoadPromise;
+
+  stripeLoadPromise = new Promise((resolve) => {
+    const existing = document.querySelector('script[src*="js.stripe.com"]');
+    if (existing) {
+      if (window.Stripe) return resolve(window.Stripe);
+      existing.addEventListener('load', () => resolve(window.Stripe || null), { once: true });
+      existing.addEventListener('error', () => { stripeLoadPromise = null; resolve(null); }, { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://js.stripe.com/dahlia/stripe.js';
+    script.async = true;
+    script.onload = () => resolve(window.Stripe || null);
+    script.onerror = () => {
+      stripeLoadPromise = null;
+      resolve(null);
+    };
+    document.head.appendChild(script);
+  });
+
+  return stripeLoadPromise;
+}
 
 async function mountStripeEmbeddedForm() {
   const container = document.getElementById('checkout-form');
@@ -644,6 +673,8 @@ async function mountStripeEmbeddedForm() {
   if (!container) return;
 
   const publishableKey = window.STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder';
+
+  await ensureStripeLoaded();
 
   if (!window.Stripe) {
     if (loadingEl) {
@@ -829,6 +860,8 @@ async function mountExtraDeckEmbeddedForm() {
   if (!container) return;
 
   const publishableKey = window.STRIPE_PUBLISHABLE_KEY || 'pk_live_51UWEHsRynl9tIFFYm32d9vyXApB9FLeUcI5oNBuaCwkkxA0yc0pAVjKioRBO0Zy8j7CVQU6LSp09mM5Lss3EaDNg00qvRJ4VIT';
+
+  await ensureStripeLoaded();
 
   if (!window.Stripe) {
     if (loadingEl) {
