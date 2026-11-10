@@ -188,6 +188,13 @@ const ankiControlsArea = document.getElementById('anki-controls-area');
 const ankiUnflippedControls = document.getElementById('anki-unflipped-controls');
 const ankiFlippedControls = document.getElementById('anki-flipped-controls');
 const ankiFlipBtn = document.getElementById('anki-flip-btn');
+const ankiSplitBtnGroup = document.getElementById('anki-split-btn-group');
+const ankiSplitMainBtn = document.getElementById('anki-split-main-btn');
+const ankiSplitMainIcon = document.getElementById('anki-split-main-icon');
+const ankiSplitMainText = document.getElementById('anki-split-main-text');
+const ankiSplitShortcutHint = document.getElementById('anki-split-shortcut-hint');
+const ankiSplitSecondaryBtn = document.getElementById('anki-split-secondary-btn');
+const ankiSplitSecondaryIcon = document.getElementById('anki-split-secondary-icon');
 const ankiBtnAgain = document.getElementById('anki-btn-again');
 const ankiBtnHard = document.getElementById('anki-btn-hard');
 const ankiBtnGood = document.getElementById('anki-btn-good');
@@ -1843,17 +1850,10 @@ function loadQuestion() {
         consecutiveNewCardsCount++;
     }
 
-    if (isVoiceCardsMutedThisSession && currentQuestion && currentQuestion.type === 'voice') {
-        const nextPlayable = questionsPool.find(q => q.type !== 'voice');
-        if (nextPlayable) {
-            currentQuestion = nextPlayable;
-            currentQuestionIndexInPool = questionsPool.indexOf(nextPlayable);
-            lastCardTopic = getCardTopic(currentQuestion);
-        } else {
-            console.log("[Voice] Apenas cards de voz restam nesta sessão (mutados). Concluindo.");
-            showDeckCompletionScreen();
-            return;
-        }
+    // Anki card response mode: determine active main/secondary action based on defaultResponse and mute setting
+    const isAnkiCard = currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice');
+    if (isAnkiCard) {
+        updateAnkiSplitButtonUI();
     }
 
     console.log("[Game] Card carregado:", {
@@ -1951,7 +1951,7 @@ function loadQuestion() {
     if (actionButtonsArea) actionButtonsArea.classList.remove('hidden');
     deleteCardBtn.classList.remove('hidden');
 
-    if (currentQuestion.type === 'anki') {
+    if (currentQuestion.type === 'anki' || currentQuestion.type === 'voice') {
         const ansImg = currentQuestion?.answerImage || currentQuestion?.answerImageUrl || currentQuestion?.ansImage;
         if (ansImg) {
             prefetchNextCardImages({ image: ansImg });
@@ -1962,16 +1962,8 @@ function loadQuestion() {
             ankiUnflippedControls.classList.remove('hidden');
             ankiFlippedControls.classList.add('hidden');
         }
+        updateAnkiSplitButtonUI();
         isAnkiFlipped = false;
-        if (document.activeElement && typeof document.activeElement.blur === 'function') {
-            document.activeElement.blur();
-        }
-    } else if (currentQuestion.type === 'voice') {
-        if (actionButtonsArea) actionButtonsArea.classList.add('hidden');
-        if (voiceControlsArea) {
-            voiceControlsArea.classList.remove('hidden');
-            setupVoiceCardUI();
-        }
         if (document.activeElement && typeof document.activeElement.blur === 'function') {
             document.activeElement.blur();
         }
@@ -2080,8 +2072,87 @@ function formatMultiParagraphText(text) {
     return text;
 }
 
+// --- ANKI & VOICE RESPONSE MODE CONTROLLER (M3 SPLIT BUTTON) ---
+let currentAnkiMainMode = 'flip'; // 'flip' | 'voice'
+
+function getEffectiveAnkiMode(card) {
+    if (!card) return 'flip';
+    if (isVoiceCardsMutedThisSession) return 'flip';
+    const def = card.defaultResponse || (card.type === 'voice' ? 'voice' : 'traditional');
+    return def === 'voice' ? 'voice' : 'flip';
+}
+
+function updateAnkiSplitButtonUI() {
+    if (!ankiSplitBtnGroup) return;
+    const effectiveMain = getEffectiveAnkiMode(currentQuestion);
+    currentAnkiMainMode = effectiveMain;
+
+    if (effectiveMain === 'voice') {
+        // Main: Explicar (com voz)
+        if (ankiSplitMainIcon) ankiSplitMainIcon.src = '../assets/img/mic.svg';
+        if (ankiSplitMainText) ankiSplitMainText.textContent = t('explain_btn_label') || 'Explicar';
+        if (ankiSplitShortcutHint) ankiSplitShortcutHint.textContent = '(Espaço)';
+        if (ankiSplitMainBtn) {
+            ankiSplitMainBtn.setAttribute('title', `${t('explain_btn_label') || 'Explicar'} (Espaço)`);
+            ankiSplitMainBtn.setAttribute('aria-label', `${t('explain_btn_label') || 'Explicar'}`);
+        }
+        // Secondary: Girar
+        if (ankiSplitSecondaryIcon) ankiSplitSecondaryIcon.src = '../assets/img/flip.svg';
+        if (ankiSplitSecondaryBtn) {
+            ankiSplitSecondaryBtn.setAttribute('title', t('flip_btn_label') || 'Girar');
+            ankiSplitSecondaryBtn.setAttribute('aria-label', t('flip_btn_label') || 'Girar');
+        }
+    } else {
+        // Main: Girar
+        if (ankiSplitMainIcon) ankiSplitMainIcon.src = '../assets/img/flip.svg';
+        if (ankiSplitMainText) ankiSplitMainText.textContent = t('flip_btn_label') || 'Girar';
+        if (ankiSplitShortcutHint) ankiSplitShortcutHint.textContent = '(Espaço)';
+        if (ankiSplitMainBtn) {
+            ankiSplitMainBtn.setAttribute('title', `${t('flip_btn_label') || 'Girar'} (Espaço)`);
+            ankiSplitMainBtn.setAttribute('aria-label', `${t('flip_btn_label') || 'Girar'}`);
+        }
+        // Secondary: Explicar
+        if (ankiSplitSecondaryIcon) ankiSplitSecondaryIcon.src = '../assets/img/mic.svg';
+        if (ankiSplitSecondaryBtn) {
+            ankiSplitSecondaryBtn.setAttribute('title', t('explain_btn_label') || 'Explicar');
+            ankiSplitSecondaryBtn.setAttribute('aria-label', t('explain_btn_label') || 'Explicar');
+        }
+    }
+}
+
+function triggerAnkiVoiceResponse() {
+    if (!isUserPro()) {
+        openProModal();
+        return;
+    }
+    // Transiciona para a interface de gravação e avaliação do Gemini
+    if (ankiControlsArea) ankiControlsArea.classList.add('hidden');
+    if (voiceControlsArea) {
+        voiceControlsArea.classList.remove('hidden');
+        setupVoiceCardUI();
+    }
+    startVoiceRecording();
+}
+
+function handleAnkiSplitMainAction() {
+    if (currentAnkiMainMode === 'voice') {
+        triggerAnkiVoiceResponse();
+    } else {
+        flipAnkiCard();
+    }
+}
+
+function handleAnkiSplitSecondaryAction() {
+    if (currentAnkiMainMode === 'voice') {
+        flipAnkiCard();
+    } else {
+        triggerAnkiVoiceResponse();
+    }
+}
+
 function flipAnkiCard() {
-    if (currentQuestion.type !== 'anki' || isAnkiFlipped) return;
+    const isAnkiLike = currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice');
+    if (!isAnkiLike || isAnkiFlipped) return;
     isAnkiFlipped = true;
 
     triggerHaptic('cardFlip');
@@ -2109,7 +2180,8 @@ function flipAnkiCard() {
 }
 
 function handleAnkiRating(rating) {
-    if (currentQuestion.type !== 'anki' || !isAnkiFlipped) return;
+    const isAnkiLike = currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice');
+    if (!isAnkiLike || !isAnkiFlipped) return;
     if (isAnimating) {
         console.warn("[Anki] Avaliação ignorada: animação em andamento.");
         return;
@@ -7056,6 +7128,8 @@ deleteCorrectionBtn.addEventListener('click', handleDelete);
 
 // --- ANKI CONTROLS & GAMEPAD LOGIC ---
 if (ankiFlipBtn) ankiFlipBtn.addEventListener('click', flipAnkiCard);
+if (ankiSplitMainBtn) ankiSplitMainBtn.addEventListener('click', handleAnkiSplitMainAction);
+if (ankiSplitSecondaryBtn) ankiSplitSecondaryBtn.addEventListener('click', handleAnkiSplitSecondaryAction);
 if (ankiBtnAgain) ankiBtnAgain.addEventListener('click', () => handleAnkiRating('again'));
 if (ankiBtnHard) ankiBtnHard.addEventListener('click', () => handleAnkiRating('hard'));
 if (ankiBtnGood) ankiBtnGood.addEventListener('click', () => handleAnkiRating('good'));
@@ -7092,8 +7166,9 @@ if (speechCardsSwitch) {
             speechCardsSwitch.selected ? t('speech_cards_unmuted_toast') : t('speech_cards_muted_toast'),
             'voice_explain.svg'
         );
-        if (isVoiceCardsMutedThisSession && currentQuestion && currentQuestion.type === 'voice') {
-            loadQuestion();
+        // Atualiza a interface do Split Button imediatamente caso estejamos em um card Anki
+        if (currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice') && !isAnkiFlipped) {
+            updateAnkiSplitButtonUI();
         }
     });
 }
@@ -7131,7 +7206,7 @@ initInputController({
     getIsAnkiFlipped: () => isAnkiFlipped,
     getIsVoiceEvaluated: () => Boolean(voiceAnswerContainer && !voiceAnswerContainer.classList.contains('hidden')),
     getIsAnimating: () => isAnimating,
-    onFlipAnki: flipAnkiCard,
+    onFlipAnki: handleAnkiSplitMainAction,
     onAnkiRating: handleAnkiRating,
     onVoiceRating: handleVoiceRating,
     onVoiceContinue: advanceFromVoiceCard,
@@ -7480,6 +7555,35 @@ if (editAddMcOptBtn) {
     });
 }
 
+function setGameEditAnkiDefaultResponse(mode) {
+    if (mode === 'voice' && !isUserPro()) {
+        openProModal();
+        return;
+    }
+    const val = mode === 'voice' ? 'voice' : 'traditional';
+    const input = document.getElementById('edit-anki-default-response-input');
+    const tradBtn = document.getElementById('game-edit-anki-mode-traditional');
+    const voiceBtn = document.getElementById('game-edit-anki-mode-voice');
+    if (input) input.value = val;
+    if (tradBtn) {
+        const isTrad = val === 'traditional';
+        tradBtn.className = isTrad
+            ? 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] shadow-2xs border border-[var(--md-sys-color-outline-variant)] cursor-pointer select-none'
+            : 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] cursor-pointer select-none';
+    }
+    if (voiceBtn) {
+        const isV = val === 'voice';
+        voiceBtn.className = isV
+            ? 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] shadow-2xs border border-[var(--md-sys-color-outline-variant)] cursor-pointer select-none'
+            : 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] cursor-pointer select-none';
+    }
+}
+
+const gameEditAnkiTradBtn = document.getElementById('game-edit-anki-mode-traditional');
+const gameEditAnkiVoiceBtn = document.getElementById('game-edit-anki-mode-voice');
+if (gameEditAnkiTradBtn) gameEditAnkiTradBtn.addEventListener('click', () => setGameEditAnkiDefaultResponse('traditional'));
+if (gameEditAnkiVoiceBtn) gameEditAnkiVoiceBtn.addEventListener('click', () => setGameEditAnkiDefaultResponse('voice'));
+
 editBtn.addEventListener('click', () => {
     editQuestionInput.value = currentQuestion.description || '';
 
@@ -7506,6 +7610,7 @@ editBtn.addEventListener('click', () => {
         }
     } else if (cardType === 'anki') {
         editAnkiAnswerInput.value = currentQuestion.answer || '';
+        setGameEditAnkiDefaultResponse(currentQuestion.defaultResponse || 'traditional');
     } else if (cardType === 'voice') {
         if (editVoiceAnswerInput) editVoiceAnswerInput.value = currentQuestion.answer || '';
     } else if (cardType === 'multiple_choice') {
@@ -7544,6 +7649,10 @@ saveEditBtn.addEventListener('click', () => {
         currentQuestion.answers = val.split(';').map(s => s.trim()).filter(Boolean);
     } else if (t === 'anki') {
         currentQuestion.answer = editAnkiAnswerInput.value;
+        const defaultRespInput = document.getElementById('edit-anki-default-response-input');
+        if (defaultRespInput) {
+            currentQuestion.defaultResponse = defaultRespInput.value === 'voice' ? 'voice' : 'traditional';
+        }
         if (pendingEditAnsImage) {
             currentQuestion.answerImage = pendingEditAnsImage;
             if (pendingEditAnsImageCrop) currentQuestion.answerImageCrop = pendingEditAnsImageCrop;

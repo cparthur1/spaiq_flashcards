@@ -696,13 +696,24 @@
 
         <!-- Anki Gamepad / Control Area -->
         <div id="anki-controls-area" class="mt-6 relative z-10 hidden">
-            <!-- Unflipped: Flip button -->
-            <div id="anki-unflipped-controls">
-                <button id="anki-flip-btn"
-                    class="m3-btn-expressive m3-btn-filled w-full py-4 px-4 text-base font-bold flex items-center justify-center gap-2 cursor-pointer select-none shadow-md">
-                    <span class="material-symbols-rounded text-xl">sync</span>
-                    <span data-i18n="flip_card">Virar Cartão</span> <span class="text-xs opacity-80 font-normal ml-1" data-i18n="space_shortcut">(Espaço)</span>
-                </button>
+            <!-- Unflipped: M3 Split Button (Tradicional vs Explique com voz) -->
+            <div id="anki-unflipped-controls" class="w-full flex justify-center">
+                <div id="anki-split-btn-group" class="m3-split-btn-container w-full max-w-md">
+                    <!-- Leading Action Button (Parte Grande) -->
+                    <button type="button" id="anki-split-main-btn"
+                        class="m3-split-btn-leading"
+                        title="Virar Cartão" aria-label="Virar Cartão">
+                        <img id="anki-split-main-icon" src="../assets/img/flip.svg" class="w-5 h-5 flex-shrink-0" alt="">
+                        <span id="anki-split-main-text" class="truncate font-bold">Girar</span>
+                        <span id="anki-split-shortcut-hint" class="text-xs opacity-75 font-normal ml-1">(Espaço)</span>
+                    </button>
+                    <!-- Trailing Secondary Toggle/Action Button (Parte Pequena) -->
+                    <button type="button" id="anki-split-secondary-btn"
+                        class="m3-split-btn-trailing"
+                        title="Alternar modo" aria-label="Ação alternativa">
+                        <img id="anki-split-secondary-icon" src="../assets/img/mic.svg" class="w-5 h-5 flex-shrink-0" alt="">
+                    </button>
+                </div>
             </div>
 
             <!-- Flipped: Gamepad Rating Buttons (Errei, Difícil, Médio, Fácil) -->
@@ -862,10 +873,33 @@
                     <input type="text" id="edit-answer-2-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true"
                         class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none text-sm text-[var(--md-sys-color-on-surface)]">
                 </div>
-                <div id="edit-anki-answer-group" class="hidden">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="detailed_answer_label">Resposta Detalhada</label>
-                    <textarea id="edit-anki-answer-input" rows="5" spellcheck="false"
-                        class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none resize-y text-sm text-[var(--md-sys-color-on-surface)]" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="anki_answer_placeholder"></textarea>
+                <div id="edit-anki-answer-group" class="hidden space-y-3">
+                    <!-- Default Response Mode Segmented Switch -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5" data-i18n="default_response_mode">Resposta padrão</label>
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-[var(--md-sys-color-surface-container)] rounded-xl border border-[var(--md-sys-color-outline-variant)]">
+                            <button type="button" id="game-edit-anki-mode-traditional"
+                                class="py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] shadow-2xs border border-[var(--md-sys-color-outline-variant)] cursor-pointer select-none"
+                                data-mode="traditional">
+                                <span class="material-symbols-rounded text-sm text-[#3b82f7]">sync</span>
+                                <span data-i18n="response_mode_traditional">Tradicional</span>
+                            </button>
+                            <button type="button" id="game-edit-anki-mode-voice"
+                                class="py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)] cursor-pointer select-none"
+                                data-mode="voice">
+                                <span class="material-symbols-rounded text-sm text-[#3b82f7]">mic</span>
+                                <span data-i18n="response_mode_voice">Explique com voz</span>
+                                <span class="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white ml-0.5">PRO</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="edit-anki-default-response-input" value="traditional">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="detailed_answer_label">Resposta Detalhada</label>
+                        <textarea id="edit-anki-answer-input" rows="5" spellcheck="false"
+                            class="w-full p-3 bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] rounded-2xl focus:border-blue-500 focus:outline-none resize-y text-sm text-[var(--md-sys-color-on-surface)]" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="anki_answer_placeholder"></textarea>
+                    </div>
                 </div>
                 <div id="edit-voice-answer-group" class="hidden">
                     <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="voice_desc_label">Explicação de Referência do Conceito</label>

@@ -178,6 +178,9 @@ const creatorAnsFill = document.getElementById('creator-ans-fill');
 
 const creatorGroupAnki = document.getElementById('creator-group-anki');
 const creatorAnsAnki = document.getElementById('creator-ans-anki');
+const creatorAnkiModeTraditional = document.getElementById('creator-anki-mode-traditional');
+const creatorAnkiModeVoice = document.getElementById('creator-anki-mode-voice');
+const creatorAnkiDefaultResponse = document.getElementById('creator-anki-default-response');
 const creatorAnsImgUrl = document.getElementById('creator-ans-img-url');
 const creatorAnsImgPreviewContainer = document.getElementById('creator-ans-img-preview-container');
 const creatorAnsImgPreview = document.getElementById('creator-ans-img-preview');
@@ -232,6 +235,9 @@ const editCardFillGroup = document.getElementById('edit-card-fill-group');
 const editCardFillAnswer = document.getElementById('edit-card-fill-answer');
 const editCardAnkiGroup = document.getElementById('edit-card-anki-group');
 const editCardAnkiAnswer = document.getElementById('edit-card-anki-answer');
+const editAnkiModeTraditional = document.getElementById('edit-anki-mode-traditional');
+const editAnkiModeVoice = document.getElementById('edit-anki-mode-voice');
+const editCardAnkiDefaultResponse = document.getElementById('edit-card-anki-default-response');
 const editCardVoiceGroup = document.getElementById('edit-card-voice-group');
 const editCardVoiceAnswer = document.getElementById('edit-card-voice-answer');
 const editCardMcGroup = document.getElementById('edit-card-mc-group');
@@ -661,12 +667,6 @@ const toolFunctions = {
     },
     adicionar_card: (args) => {
         const card = normalizeCard(args) || args;
-        if (card && card.type === 'voice') {
-            const voiceCount = deckCards.filter(c => c && c.type === 'voice').length;
-            if (voiceCount >= 5) {
-                return { success: false, message: "Limite de 5 cards de voz por baralho atingido." };
-            }
-        }
         appendNewCardWithElasticCollision(card);
         return { success: true, message: "Card adicionado com sucesso." };
     },
@@ -708,12 +708,7 @@ const toolFunctions = {
     adicionar_varios_cards: (args) => {
         const cardsToAdd = (args.cards || []).map(c => normalizeCard(c) || c);
         let addedCount = 0;
-        let voiceCount = deckCards.filter(c => c && c.type === 'voice').length;
         for (const card of cardsToAdd) {
-            if (card && card.type === 'voice') {
-                if (voiceCount >= 5) continue;
-                voiceCount++;
-            }
             appendNewCardWithElasticCollision(card);
             addedCount++;
         }
@@ -2803,10 +2798,6 @@ function getTypeHint(type) {
 
 // --- M3 CUSTOM CARD TYPE SELECT CONTROLLER ---
 function selectCardType(type, triggerChange = true) {
-    if (type === 'voice' && !isUserPro()) {
-        openProModal();
-        return;
-    }
     const input = document.getElementById('creator-card-type');
     if (!input) return;
     input.value = type;
@@ -2933,6 +2924,63 @@ function initCardTypeSelect() {
 // Initialize custom select controller
 initCardTypeSelect();
 
+// Segmented switches for Anki Default Response Mode (Creator & Modal)
+function setCreatorAnkiDefaultResponse(mode) {
+    if (mode === 'voice' && !isUserPro()) {
+        openProModal();
+        return;
+    }
+    const val = mode === 'voice' ? 'voice' : 'traditional';
+    if (creatorAnkiDefaultResponse) creatorAnkiDefaultResponse.value = val;
+    if (creatorAnkiModeTraditional) {
+        const isTrad = val === 'traditional';
+        creatorAnkiModeTraditional.className = isTrad
+            ? 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-white text-gray-800 shadow-2xs border border-gray-200/80 cursor-pointer select-none'
+            : 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-600 hover:text-gray-900 cursor-pointer select-none';
+    }
+    if (creatorAnkiModeVoice) {
+        const isV = val === 'voice';
+        creatorAnkiModeVoice.className = isV
+            ? 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-white text-gray-800 shadow-2xs border border-gray-200/80 cursor-pointer select-none'
+            : 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-600 hover:text-gray-900 cursor-pointer select-none';
+    }
+}
+
+if (creatorAnkiModeTraditional) {
+    creatorAnkiModeTraditional.addEventListener('click', () => setCreatorAnkiDefaultResponse('traditional'));
+}
+if (creatorAnkiModeVoice) {
+    creatorAnkiModeVoice.addEventListener('click', () => setCreatorAnkiDefaultResponse('voice'));
+}
+
+function setEditCardAnkiDefaultResponse(mode) {
+    if (mode === 'voice' && !isUserPro()) {
+        openProModal();
+        return;
+    }
+    const val = mode === 'voice' ? 'voice' : 'traditional';
+    if (editCardAnkiDefaultResponse) editCardAnkiDefaultResponse.value = val;
+    if (editAnkiModeTraditional) {
+        const isTrad = val === 'traditional';
+        editAnkiModeTraditional.className = isTrad
+            ? 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-white text-gray-800 shadow-2xs border border-gray-200/80 cursor-pointer select-none'
+            : 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-600 hover:text-gray-900 cursor-pointer select-none';
+    }
+    if (editAnkiModeVoice) {
+        const isV = val === 'voice';
+        editAnkiModeVoice.className = isV
+            ? 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-white text-gray-800 shadow-2xs border border-gray-200/80 cursor-pointer select-none'
+            : 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-600 hover:text-gray-900 cursor-pointer select-none';
+    }
+}
+
+if (editAnkiModeTraditional) {
+    editAnkiModeTraditional.addEventListener('click', () => setEditCardAnkiDefaultResponse('traditional'));
+}
+if (editAnkiModeVoice) {
+    editAnkiModeVoice.addEventListener('click', () => setEditCardAnkiDefaultResponse('voice'));
+}
+
 creatorCardType.addEventListener('change', () => {
     const tVal = creatorCardType.value;
     creatorTypeHint.textContent = getTypeHint(tVal);
@@ -2946,7 +2994,6 @@ creatorCardType.addEventListener('change', () => {
     if (creatorGroupImageArrows) creatorGroupImageArrows.classList.toggle('hidden', tVal !== 'image_arrows');
     if (creatorGroupVoice) {
         creatorGroupVoice.classList.toggle('hidden', tVal !== 'voice');
-        if (tVal === 'voice') updateVoiceLimitBadge();
     }
 
     const qImgContainer = creatorQImgUrl?.parentElement?.parentElement;
@@ -3307,6 +3354,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
             return;
         }
         newCard.answer = ans;
+        newCard.defaultResponse = (creatorAnkiDefaultResponse && creatorAnkiDefaultResponse.value === 'voice') ? 'voice' : 'traditional';
         if (pendingCreatorAnsImage) {
             newCard.answerImage = pendingCreatorAnsImage;
             if (pendingCreatorAnsImageCrop) newCard.answerImageCrop = pendingCreatorAnsImageCrop;
@@ -3392,11 +3440,6 @@ creatorSubmitCardBtn.addEventListener('click', () => {
             openProModal();
             return;
         }
-        const currentVoiceCards = deckCards.filter(c => c && c.type === 'voice').length;
-        if (currentVoiceCards >= 5) {
-            alert(t('alert_voice_limit_reached') || 'Limite de 5 cards de "Explicar em voz alta" por baralho atingido para economizar gastos de IA.');
-            return;
-        }
         const ans = creatorAnsVoice ? creatorAnsVoice.value.trim() : '';
         if (!ans) {
             alert(t('alert_voice_desc_empty') || 'Preencha a explicação de referência para o Gemini avaliar.');
@@ -3414,6 +3457,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     creatorAnsDouble1.value = '';
     creatorAnsDouble2.value = '';
     creatorAnsAnki.value = '';
+    setCreatorAnkiDefaultResponse('traditional');
     if (creatorAnsVoice) creatorAnsVoice.value = '';
     if (creatorAnsFill) creatorAnsFill.value = '';
     creatorRemoveQImg.click();
@@ -3599,14 +3643,7 @@ function updateCardsBorderRadius() {
 function updateVoiceLimitBadge() {
     const badge = document.getElementById('voice-deck-limit-badge');
     if (!badge) return;
-    const voiceCount = deckCards.filter(c => c && c.type === 'voice').length;
-    const label = t('voice_limit_badge') || 'Máx. 5 por baralho';
-    badge.textContent = `${label} (${voiceCount}/5)`;
-    if (voiceCount >= 5) {
-        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
-    } else {
-        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200';
-    }
+    badge.classList.add('hidden');
 }
 
 // --- APPEND NEW CARD WITH PHYSICAL ELASTIC COLLISION & AUTO-SCROLL ---
@@ -4109,6 +4146,7 @@ function openInlineEditModal(index) {
         editCardAns2.value = card.answer2 || '';
     } else if (cardType === 'anki') {
         editCardAnkiAnswer.value = card.answer || '';
+        setEditCardAnkiDefaultResponse(card.defaultResponse || 'traditional');
     } else if (cardType === 'voice') {
         if (editCardVoiceAnswer) editCardVoiceAnswer.value = card.answer || '';
     } else if (cardType === 'multiple_choice') {
@@ -4409,6 +4447,7 @@ saveInlineEditBtn.addEventListener('click', (e) => {
         card.answer2 = editCardAns2.value.trim();
     } else if (card.type === 'anki') {
         card.answer = editCardAnkiAnswer.value.trim();
+        card.defaultResponse = (editCardAnkiDefaultResponse && editCardAnkiDefaultResponse.value === 'voice') ? 'voice' : 'traditional';
         if (pendingInlineEditAnsImage) {
             card.answerImage = pendingInlineEditAnsImage;
             if (pendingInlineEditAnsImageCrop) card.answerImageCrop = pendingInlineEditAnsImageCrop;
@@ -5076,4 +5115,29 @@ export function loadTutorialDeck() {
 if (typeof window !== 'undefined') {
     window.loadTutorialDeck = loadTutorialDeck;
 }
+
+// PageUp and PageDown keyboard navigation for the cards deck list
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'PageUp' && e.key !== 'PageDown') return;
+
+    // Do not interfere if user is typing in inputs or textareas
+    const activeEl = document.activeElement;
+    if (activeEl && (
+        activeEl.tagName === 'INPUT' ||
+        activeEl.tagName === 'TEXTAREA' ||
+        activeEl.tagName === 'SELECT' ||
+        activeEl.isContentEditable
+    )) {
+        return;
+    }
+
+    if (!cardsList) return;
+
+    e.preventDefault();
+    if (e.key === 'PageUp') {
+        cardsList.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (e.key === 'PageDown') {
+        cardsList.scrollTo({ top: cardsList.scrollHeight, behavior: 'smooth' });
+    }
+});
 

@@ -902,20 +902,6 @@
                                     </svg>
                                 </div>
                             </div>
-
-                            <!-- 8. Explicar em voz alta (voice - PRO) -->
-                            <div class="m3-select-item" data-value="voice" data-label="Explicar em voz alta" data-icon="../assets/img/voice_explain.svg" role="option" aria-selected="false" tabindex="0">
-                                <div class="flex items-center gap-2.5 min-w-0">
-                                    <img src="../assets/img/voice_explain.svg" class="w-5 h-5 flex-shrink-0" alt="Explicar em voz alta">
-                                    <span class="truncate" data-i18n="card_type_voice">Explicar em voz alta</span>
-                                    <span class="ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-2xs">PRO</span>
-                                </div>
-                                <div class="m3-select-check">
-                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -982,6 +968,27 @@
 
                 <!-- GROUP: ANKI LIKE -->
                 <div id="creator-group-anki" class="space-y-3 hidden">
+                    <!-- Default Response Mode Segmented Switch -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5" data-i18n="default_response_mode">Resposta padrão</label>
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+                            <button type="button" id="creator-anki-mode-traditional"
+                                class="py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-white text-gray-800 shadow-2xs border border-gray-200/80 cursor-pointer select-none"
+                                data-mode="traditional">
+                                <span class="material-symbols-rounded text-sm text-[#3b82f7]">sync</span>
+                                <span data-i18n="response_mode_traditional">Tradicional</span>
+                            </button>
+                            <button type="button" id="creator-anki-mode-voice"
+                                class="py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-600 hover:text-gray-900 cursor-pointer select-none"
+                                data-mode="voice">
+                                <span class="material-symbols-rounded text-sm text-[#3b82f7]">mic</span>
+                                <span data-i18n="response_mode_voice">Explique com voz</span>
+                                <span class="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white ml-0.5">PRO</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="creator-anki-default-response" value="traditional">
+                    </div>
+
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="anki_desc_label">Resposta / Descrição Longa</label>
                         <textarea id="creator-ans-anki" rows="5" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm resize-y" placeholder="Explicação detalhada revelada ao virar o cartão... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="anki_desc_placeholder"></textarea>
@@ -1210,6 +1217,27 @@
 
                 <!-- Anki Answer -->
                 <div id="edit-card-anki-group" class="hidden space-y-3">
+                    <!-- Default Response Mode Segmented Switch -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5" data-i18n="default_response_mode">Resposta padrão</label>
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl border border-gray-200">
+                            <button type="button" id="edit-anki-mode-traditional"
+                                class="py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-white text-gray-800 shadow-2xs border border-gray-200/80 cursor-pointer select-none"
+                                data-mode="traditional">
+                                <span class="material-symbols-rounded text-sm text-[#3b82f7]">sync</span>
+                                <span data-i18n="response_mode_traditional">Tradicional</span>
+                            </button>
+                            <button type="button" id="edit-anki-mode-voice"
+                                class="py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-600 hover:text-gray-900 cursor-pointer select-none"
+                                data-mode="voice">
+                                <span class="material-symbols-rounded text-sm text-[#3b82f7]">mic</span>
+                                <span data-i18n="response_mode_voice">Explique com voz</span>
+                                <span class="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white ml-0.5">PRO</span>
+                            </button>
+                        </div>
+                        <input type="hidden" id="edit-card-anki-default-response" value="traditional">
+                    </div>
+
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1" data-i18n="edit_detailed_answer_label">Resposta Detalhada</label>
                         <textarea id="edit-card-anki-answer" rows="5" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 text-sm resize-y" placeholder="Explicação detalhada... Suporta Markdown, listas e fórmulas LaTeX ($x^2$)" data-i18n-placeholder="edit_anki_placeholder"></textarea>

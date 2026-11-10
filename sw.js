@@ -102,6 +102,7 @@ const RAW_ASSETS = [
   '/assets/img/img_deck.svg',
   '/assets/img/voice_explain.svg',
   '/assets/img/mic.svg',
+  '/assets/img/flip.svg',
   '/assets/img/settings.svg',
   '/assets/img/notifications.svg',
   '/assets/img/paywall.svg',
