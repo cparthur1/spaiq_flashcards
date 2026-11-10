@@ -4012,6 +4012,76 @@ input[type="search"].fill-blank-input::-webkit-search-results-decoration {
     }
 }
 
+/* ==========================================================================
+   DECK COMPLETION VICTORY SCREEN (Video Game Rank Seal & Rolling Counter)
+   ========================================================================== */
+
+#completion-rank-emblem {
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    will-change: transform;
+}
+
+@keyframes rankStampSlam {
+    0% {
+        transform: scale(0.35) rotate(-12deg);
+        opacity: 0;
+        filter: brightness(1.7) drop-shadow(0 0 20px rgba(59, 130, 247, 0.8));
+    }
+    50% {
+        transform: scale(1.22) rotate(3deg);
+        opacity: 1;
+        filter: brightness(1.2) drop-shadow(0 0 15px rgba(59, 130, 247, 0.5));
+    }
+    75% {
+        transform: scale(0.95) rotate(-1deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+        filter: brightness(1) drop-shadow(0 10px 25px rgba(0, 0, 0, 0.15));
+    }
+}
+
+.rank-stamp-slam {
+    animation: rankStampSlam 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes rankPillFadeIn {
+    0% {
+        transform: translateY(8px) scale(0.9);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.rank-pill-enter {
+    animation: rankPillFadeIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes statCardPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+}
+
+.stat-card-pop {
+    animation: statCardPop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rank-stamp-slam,
+    .rank-pill-enter,
+    .stat-card-pop {
+        animation: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+}
+
+
 
 
 

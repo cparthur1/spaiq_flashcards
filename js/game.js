@@ -422,6 +422,189 @@ function showNotificationPill(message, iconName, isWarning = false) {
     }, 4000);
 }
 
+// --- TROPHY NOTIFICATIONS (CADERNO & MISTURA DE BARALHOS) ---
+let mixDeckStatsTracker = {};
+
+function getTrophyAssetUrl(path) {
+    const isSubdir = window.location.pathname.includes('/pages/');
+    const prefix = isSubdir ? '../' : '';
+    return `${prefix}${path}`;
+}
+
+export function playTrophySound() {
+    if (!isSoundEnabled()) return;
+    try {
+        const audio = new Audio(getTrophyAssetUrl('assets/audio/trophy.mp3'));
+        audio.volume = 0.65;
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(err => {
+                console.log('[Trophy] Audio autoplay blocked or paused, using synth fallback:', err);
+                playFeedbackSound('rank_s');
+            });
+        }
+    } catch (e) {
+        playFeedbackSound('rank_s');
+    }
+}
+
+function getCardDeckName(card) {
+    if (!card) return 'Baralho';
+    if (card.sourceDeck) return card.sourceDeck;
+    if (activeMode === 'exam' && card.deckId) {
+        let examData = {};
+        try { examData = JSON.parse(localStorage.getItem('flashcardsExam')) || {}; } catch(e){}
+        const found = (examData.decks || []).find(d => d.id === card.deckId);
+        if (found && found.name) return found.name;
+    }
+    if (card.deckTitle) return card.deckTitle;
+    if (card.deckName) return card.deckName;
+    return (activeMode === 'notebook' ? 'Caderno' : (activeMode === 'exam' ? 'Mistura' : (deckTitle?.textContent || 'Baralho')));
+}
+
+function showTrophyNotification(tier, deckName, accuracy) {
+    let msgKey = '';
+    let tierColorBorder = '';
+
+    if (tier === 'platina') {
+        msgKey = 'trophy_platina_toast';
+        tierColorBorder = 'border-cyan-400 shadow-cyan-300/40 bg-gradient-to-r from-cyan-50 via-white to-blue-50';
+    } else if (tier === 'ouro') {
+        msgKey = 'trophy_ouro_toast';
+        tierColorBorder = 'border-amber-400 shadow-amber-300/40 bg-gradient-to-r from-amber-50 via-white to-yellow-50';
+    } else if (tier === 'prata') {
+        msgKey = 'trophy_prata_toast';
+        tierColorBorder = 'border-slate-300 shadow-slate-300/40 bg-gradient-to-r from-slate-50 via-white to-gray-50';
+    } else {
+        msgKey = 'trophy_bronze_toast';
+        tierColorBorder = 'border-amber-700/40 shadow-amber-900/20 bg-gradient-to-r from-amber-100/70 via-white to-orange-50';
+    }
+
+    const message = t(msgKey, { deck: deckName, acc: accuracy });
+
+    const existing = document.getElementById('notification-pill');
+    if (existing) existing.remove();
+
+    const pill = document.createElement('div');
+    pill.id = 'notification-pill';
+    pill.className = `fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-2.5 rounded-full shadow-2xl backdrop-blur-xl border-2 transition-all duration-500 transform -translate-y-20 opacity-0 ${tierColorBorder}`;
+
+    const iconImg = document.createElement('img');
+    iconImg.src = getTrophyAssetUrl('assets/img/trophy.svg');
+    iconImg.className = 'w-6 h-6 flex-shrink-0';
+    iconImg.alt = 'Troféu';
+
+    const msgSpan = document.createElement('span');
+    msgSpan.className = 'text-[13px] font-bold text-gray-900 whitespace-nowrap';
+    msgSpan.textContent = message;
+
+    pill.append(iconImg, msgSpan);
+    document.body.appendChild(pill);
+
+    requestAnimationFrame(() => {
+        pill.classList.remove('-translate-y-20', 'opacity-0');
+        pill.classList.add('translate-y-0', 'opacity-100');
+    });
+
+    playTrophySound();
+
+    setTimeout(() => {
+        pill.classList.remove('translate-y-0', 'opacity-100');
+        pill.classList.add('-translate-y-20', 'opacity-0');
+        setTimeout(() => pill.remove(), 500);
+    }, 4500);
+}
+
+function checkDeckTrophiesInMix(card, isCorrect, isCorrection = false) {
+    if (activeMode !== 'notebook' && activeMode !== 'exam') return;
+    if (!card) return;
+
+    const deckName = getCardDeckName(card);
+    if (!deckName) return;
+
+    if (!mixDeckStatsTracker[deckName]) {
+        mixDeckStatsTracker[deckName] = {
+            totalAnswered: 0,
+            correctCount: 0,
+            uniqueCardsAnswered: new Set(),
+            unlockedTrophies: {
+                bronze: false,
+                prata: false,
+                ouro: false,
+                platina: false
+            }
+        };
+    }
+
+    const stats = mixDeckStatsTracker[deckName];
+    if (!isCorrection) {
+        stats.totalAnswered += 1;
+        if (isCorrect) stats.correctCount += 1;
+    }
+    const cardId = card.id || card.description || Math.random();
+    stats.uniqueCardsAnswered.add(cardId);
+
+    // Começa a mandar notificações apenas quando pelo menos 10 cards do baralho forem respondidos!
+    if (stats.totalAnswered < 10) return;
+
+    const accuracy = Math.round((stats.correctCount / stats.totalAnswered) * 100);
+
+    // Total de cards jogáveis pertencentes a esse baralho na mistura
+    const totalDeckCards = (allQuestions || []).filter(q => isPlayableCard(q) && getCardDeckName(q) === deckName).length;
+    const allStudied = totalDeckCards > 0 && stats.uniqueCardsAnswered.size >= totalDeckCards;
+
+    // Platina: todos os cards do baralho estudados e acertos > 90%
+    if (allStudied && accuracy > 90 && !stats.unlockedTrophies.platina) {
+        stats.unlockedTrophies.platina = true;
+        stats.unlockedTrophies.ouro = true;
+        stats.unlockedTrophies.prata = true;
+        stats.unlockedTrophies.bronze = true;
+        showTrophyNotification('platina', deckName, accuracy);
+        return;
+    }
+
+    // Ouro: >= 90%
+    if (accuracy >= 90 && !stats.unlockedTrophies.ouro) {
+        stats.unlockedTrophies.ouro = true;
+        stats.unlockedTrophies.prata = true;
+        stats.unlockedTrophies.bronze = true;
+        showTrophyNotification('ouro', deckName, accuracy);
+        return;
+    }
+
+    // Prata: >= 80%
+    if (accuracy >= 80 && !stats.unlockedTrophies.prata && !stats.unlockedTrophies.ouro) {
+        stats.unlockedTrophies.prata = true;
+        stats.unlockedTrophies.bronze = true;
+        showTrophyNotification('prata', deckName, accuracy);
+        return;
+    }
+
+    // Bronze: >= 70%
+    if (accuracy >= 70 && !stats.unlockedTrophies.bronze && !stats.unlockedTrophies.prata && !stats.unlockedTrophies.ouro) {
+        stats.unlockedTrophies.bronze = true;
+        showTrophyNotification('bronze', deckName, accuracy);
+        return;
+    }
+}
+
+function recordMixDeckAiCorrection(card) {
+    if (!card) return;
+    const deckName = getCardDeckName(card);
+    const stats = mixDeckStatsTracker[deckName];
+    if (stats) {
+        stats.correctCount = Math.min(stats.totalAnswered, stats.correctCount + 1);
+        checkDeckTrophiesInMix(card, true, true);
+    }
+}
+
+// Helper global para teste rápido de troféu no console
+if (typeof window !== 'undefined') {
+    window.testTrophyNotification = (tier = 'ouro', deck = 'Histologia', acc = 90) => {
+        showTrophyNotification(tier, deck, acc);
+    };
+}
+
 // --- HAPTIC FEEDBACK (VIBRATION API) delegado para ./engine/effects.js ---
 
 // --- CARD ANIMATION UTILITIES ---
@@ -1249,6 +1432,184 @@ function updateDeckCompletionTip() {
     if (tipText) tipText.textContent = advice.text;
 }
 
+// --- PERFORMANCE RANK & ROLLING STATS ---
+let rollingStatsAnimationId = null;
+
+function getPerformanceRank(accuracy) {
+    if (accuracy >= 90) {
+        return {
+            rank: 'S',
+            titleKey: accuracy === 100 ? 'rank_s_perfect_title' : 'rank_s_title',
+            descKey: 'rank_s_desc',
+            pillClass: 'bg-amber-100 text-amber-900 border border-amber-300',
+            emblemClass: 'bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 text-amber-950 shadow-amber-500/30',
+            glowClass: 'bg-amber-400',
+            icon: accuracy === 100 ? 'auto_awesome' : 'military_tech',
+            sound: 'rank_s',
+            confetti: 65
+        };
+    } else if (accuracy >= 80) {
+        return {
+            rank: 'A',
+            titleKey: 'rank_a_title',
+            descKey: 'rank_a_desc',
+            pillClass: 'bg-emerald-100 text-emerald-900 border border-emerald-300',
+            emblemClass: 'bg-gradient-to-tr from-emerald-400 via-teal-300 to-emerald-600 text-emerald-950 shadow-emerald-500/30',
+            glowClass: 'bg-emerald-400',
+            icon: 'workspace_premium',
+            sound: 'rank_a',
+            confetti: 40
+        };
+    } else if (accuracy >= 65) {
+        return {
+            rank: 'B',
+            titleKey: 'rank_b_title',
+            descKey: 'rank_b_desc',
+            pillClass: 'bg-blue-100 text-blue-900 border border-blue-300',
+            emblemClass: 'bg-gradient-to-tr from-blue-500 via-sky-400 to-indigo-600 text-white shadow-blue-500/30',
+            glowClass: 'bg-blue-400',
+            icon: 'thumb_up',
+            sound: 'rank_b',
+            confetti: 15
+        };
+    } else {
+        return {
+            rank: 'C',
+            titleKey: 'rank_c_title',
+            descKey: 'rank_c_desc',
+            pillClass: 'bg-purple-100 text-purple-900 border border-purple-300',
+            emblemClass: 'bg-gradient-to-tr from-purple-500 via-fuchsia-400 to-slate-700 text-white shadow-purple-500/30',
+            glowClass: 'bg-purple-400',
+            icon: 'trending_up',
+            sound: 'rank_c',
+            confetti: 0
+        };
+    }
+}
+
+function revealRankEmblem(rankInfo) {
+    const rankEmblem = document.getElementById('completion-rank-emblem');
+    const rankLetter = document.getElementById('completion-rank-letter');
+    const rankGlow = document.getElementById('completion-rank-glow');
+    const rankSubicon = document.getElementById('completion-rank-subicon');
+    const rankPill = document.getElementById('completion-rank-pill');
+    const rankTitle = document.getElementById('completion-rank-title');
+    const rankPillIcon = document.getElementById('completion-rank-pill-icon');
+
+    if (rankLetter) rankLetter.textContent = rankInfo.rank;
+    if (rankSubicon) rankSubicon.textContent = rankInfo.icon;
+
+    if (rankEmblem) {
+        rankEmblem.className = `w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center shadow-xl relative overflow-hidden transition-all ${rankInfo.emblemClass} rank-stamp-slam`;
+    }
+    if (rankGlow) {
+        rankGlow.className = `absolute inset-0 rounded-3xl opacity-40 blur-md ${rankInfo.glowClass}`;
+    }
+
+    if (rankPill) {
+        rankPill.className = `inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black shadow-2xs mb-2.5 transition-all ${rankInfo.pillClass} rank-pill-enter`;
+        if (rankTitle) rankTitle.textContent = t(rankInfo.titleKey);
+        if (rankPillIcon) rankPillIcon.textContent = rankInfo.icon;
+    }
+
+    // Play rank victory fanfare sound
+    playFeedbackSound(rankInfo.sound);
+
+    // Launch celebratory confetti if Rank S or A
+    if (rankInfo.confetti > 0) {
+        setTimeout(() => {
+            launchCelebrationParticles(rankInfo.confetti);
+        }, 120);
+    }
+}
+
+function animateCompletionStats({ targetCards, targetAcc, targetSeconds, targetStreak, rankInfo }) {
+    if (rollingStatsAnimationId) {
+        cancelAnimationFrame(rollingStatsAnimationId);
+        rollingStatsAnimationId = null;
+    }
+
+    const duration = isAnimationsEnabled() ? 1200 : 0;
+    const startTime = performance.now();
+    let lastTickTime = 0;
+
+    // Reset displayed values
+    if (completionStatCards) completionStatCards.textContent = '0';
+    if (completionStatAcc) completionStatAcc.textContent = '0%';
+    if (completionStatTime) completionStatTime.textContent = '00:00';
+    if (completionStatStreak) completionStatStreak.textContent = '0';
+
+    // Prepare Rank Emblem in calculating state
+    const rankEmblem = document.getElementById('completion-rank-emblem');
+    const rankLetter = document.getElementById('completion-rank-letter');
+    const rankGlow = document.getElementById('completion-rank-glow');
+    const rankSubicon = document.getElementById('completion-rank-subicon');
+    const rankPill = document.getElementById('completion-rank-pill');
+
+    if (rankEmblem) {
+        rankEmblem.className = 'w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center shadow-xl relative overflow-hidden bg-gradient-to-tr from-gray-200 to-gray-300 text-gray-500 transition-all';
+        rankEmblem.classList.remove('rank-stamp-slam');
+    }
+    if (rankGlow) {
+        rankGlow.className = 'absolute inset-0 rounded-3xl opacity-20 blur-md bg-gray-300';
+    }
+    if (rankLetter) rankLetter.textContent = '?';
+    if (rankSubicon) rankSubicon.textContent = 'hourglass_empty';
+    if (rankPill) {
+        rankPill.classList.add('opacity-0');
+        rankPill.classList.remove('rank-pill-enter');
+    }
+
+    if (duration === 0) {
+        if (completionStatCards) completionStatCards.textContent = String(targetCards);
+        if (completionStatAcc) completionStatAcc.textContent = `${targetAcc}%`;
+        if (completionStatTime) completionStatTime.textContent = formatTimeDisplay(targetSeconds);
+        if (completionStatStreak) completionStatStreak.textContent = String(targetStreak);
+        revealRankEmblem(rankInfo);
+        return;
+    }
+
+    function step(now) {
+        const elapsed = now - startTime;
+        const rawProgress = Math.min(1, elapsed / duration);
+        // Easing: easeOutCubic
+        const progress = 1 - Math.pow(1 - rawProgress, 3);
+
+        const currentCards = Math.round(targetCards * progress);
+        const currentAcc = Math.round(targetAcc * progress);
+        const currentSeconds = Math.round(targetSeconds * progress);
+        const currentStreakVal = Math.round(targetStreak * progress);
+
+        if (completionStatCards) completionStatCards.textContent = String(currentCards);
+        if (completionStatAcc) completionStatAcc.textContent = `${currentAcc}%`;
+        if (completionStatTime) completionStatTime.textContent = formatTimeDisplay(currentSeconds);
+        if (completionStatStreak) completionStatStreak.textContent = String(currentStreakVal);
+
+        // Sound tick throttled every 75ms while counting
+        if (now - lastTickTime > 75 && rawProgress < 0.96) {
+            playFeedbackSound('counter_tick');
+            lastTickTime = now;
+        }
+
+        if (rawProgress < 1) {
+            rollingStatsAnimationId = requestAnimationFrame(step);
+        } else {
+            rollingStatsAnimationId = null;
+            // Pop the stat cards slightly on completion
+            document.querySelectorAll('.completion-stat-card').forEach(el => {
+                el.classList.remove('stat-card-pop');
+                void el.offsetWidth;
+                el.classList.add('stat-card-pop');
+            });
+
+            // Reveal and slam the Rank badge!
+            revealRankEmblem(rankInfo);
+        }
+    }
+
+    rollingStatsAnimationId = requestAnimationFrame(step);
+}
+
 function showDeckCompletionScreen() {
     try {
         clearBalls();
@@ -1267,11 +1628,6 @@ function showDeckCompletionScreen() {
         // Silky-smooth translucent gradient shockwave (GPU-composited)
         playCompletionShockwave();
 
-        // Lightweight victory confetti with small delay to keep framerates locked at 60fps
-        setTimeout(() => {
-            launchCelebrationParticles(45);
-        }, 420);
-
         // Hide normal card UI elements
         deleteCardBtn?.classList.add('hidden');
         bookmarkCardBtn?.classList.add('hidden');
@@ -1287,23 +1643,15 @@ function showDeckCompletionScreen() {
         flashcardAnswerForm?.classList.add('hidden');
         correctionOptions?.classList.add('hidden');
 
-        // Populate completion stats
+        // Populate completion stats with animated rolling counter & rank
         const total = completedSession?.cardsAnswered || (allQuestions ? allQuestions.filter(isPlayableCard).length : 0);
-        if (completionStatCards) {
-            completionStatCards.textContent = total;
-        }
-        if (completionStatAcc) {
-            const acc = completedSession?.accuracy !== undefined ? completedSession.accuracy :
-                (total > 0 && completedSession?.correctCount !== undefined ? Math.round((completedSession.correctCount / total) * 100) : 100);
-            completionStatAcc.textContent = `${acc}%`;
-        }
-        if (completionStatTime) {
-            completionStatTime.textContent = formatTimeDisplay(completedSession?.durationSeconds || 0);
-        }
-        if (completionStatStreak) {
-            const streakVal = completedSession?.bestStreak || completedSession?.maxStreak || currentStreak || 0;
-            completionStatStreak.textContent = streakVal;
-        }
+        const acc = completedSession?.accuracy !== undefined ? completedSession.accuracy :
+            (total > 0 && completedSession?.correctCount !== undefined ? Math.round((completedSession.correctCount / total) * 100) : 100);
+        const durationSeconds = completedSession?.durationSeconds || 0;
+        const streakVal = completedSession?.bestStreak || completedSession?.maxStreak || currentStreak || 0;
+
+        const rankInfo = getPerformanceRank(acc);
+
         if (deckCompletionSubtitle) {
             const dTitle = (deckTitle?.textContent || '').trim() || 'deste baralho';
             deckCompletionSubtitle.textContent = t('all_cards_completed_subtitle', { title: dTitle });
@@ -1322,6 +1670,15 @@ function showDeckCompletionScreen() {
             deckCompletionView.classList.remove('hidden');
         }
         questionCard?.classList.remove('hidden');
+
+        // Start rolling stats animation and rank reveal
+        animateCompletionStats({
+            targetCards: total,
+            targetAcc: acc,
+            targetSeconds: durationSeconds,
+            targetStreak: streakVal,
+            rankInfo
+        });
     } catch (err) {
         console.error("[Game] Erro em showDeckCompletionScreen:", err);
         // Fallback: guarantee view is shown no matter what
@@ -1331,6 +1688,10 @@ function showDeckCompletionScreen() {
 }
 
 function hideDeckCompletionScreen() {
+    if (rollingStatsAnimationId) {
+        cancelAnimationFrame(rollingStatsAnimationId);
+        rollingStatsAnimationId = null;
+    }
     if (deckCompletionView) {
         deckCompletionView.classList.add('hidden');
     }
@@ -1343,6 +1704,8 @@ function hideDeckCompletionScreen() {
 }
 
 function restartDeckSession() {
+    hideDeckCompletionScreen();
+    mixDeckStatsTracker = {};
     clearBalls();
     cleanShockwaveContainer();
     score = 0;
@@ -1767,6 +2130,7 @@ function handleAnkiRating(rating) {
     } catch (e) {
         console.error("[Anki] Erro ao gravar stats anki:", e);
     }
+    checkDeckTrophiesInMix(currentQuestion, rating === 'good' || rating === 'easy');
 
     if (activeMode === 'notebook') {
         const schedule = calculateNotebookNextSchedule({
@@ -2481,6 +2845,7 @@ function applyVoiceCardSchedule(rating) {
     } catch (e) {
         console.error("[Voice] Erro ao gravar estatísticas:", e);
     }
+    checkDeckTrophiesInMix(currentQuestion, rating === 'good' || rating === 'easy');
 
     if (activeMode === 'notebook') {
         const schedule = calculateNotebookNextSchedule({
@@ -3042,6 +3407,7 @@ function showFeedback(isCorrect, element) {
         } catch (statErr) {
             console.error("[Game] Erro ao registrar estatística (não bloqueante):", statErr);
         }
+        checkDeckTrophiesInMix(currentQuestion, isCorrect);
 
         handleDailyStreakOnCardAnswered();
 
@@ -4188,6 +4554,7 @@ async function checkAnswerWithAi(questionObj, actualAnswer, ballIdx) {
                 explanation: evalData.justificativa,
                 currentStreak: currentStreak
             });
+            recordMixDeckAiCorrection(questionObj);
 
             if (shouldRemove) {
                 score++;
@@ -7614,6 +7981,7 @@ function updateMenuButtonsForActiveMode() {
 function switchActiveMode(newMode) {
     saveGameState();
     archiveCurrentSession(false);
+    mixDeckStatsTracker = {};
 
     activeMode = newMode;
     localStorage.setItem('flashcardsActiveMode', newMode);

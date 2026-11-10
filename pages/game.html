@@ -581,9 +581,23 @@
 
             <!-- Deck Completion Celebration View (Placed directly on the card holder) -->
             <div id="deck-completion-view" class="hidden w-full flex flex-col items-center justify-center text-center py-4 px-2 select-none">
-                <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center shadow-lg mb-3 flex-shrink-0 text-amber-950">
-                    <span class="material-symbols-rounded text-4xl sm:text-5xl text-amber-950">emoji_events</span>
+                <!-- Video Game Rank Seal Emblem -->
+                <div class="relative mb-2.5 flex-shrink-0">
+                    <div id="completion-rank-emblem" class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center shadow-xl relative overflow-hidden transition-all bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 text-amber-950">
+                        <div id="completion-rank-glow" class="absolute inset-0 rounded-3xl opacity-40 blur-md bg-amber-400"></div>
+                        <div class="relative z-10 flex flex-col items-center justify-center">
+                            <span id="completion-rank-letter" class="text-4xl sm:text-5xl font-black tracking-tighter leading-none select-none">S</span>
+                            <span id="completion-rank-subicon" class="material-symbols-rounded text-sm sm:text-base font-bold mt-0.5 opacity-90">auto_awesome</span>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Rank Performance Pill -->
+                <div id="completion-rank-pill" class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black shadow-2xs mb-2.5 transition-all">
+                    <span id="completion-rank-pill-icon" class="material-symbols-rounded text-sm">military_tech</span>
+                    <span id="completion-rank-title">Rank S · Impecável</span>
+                </div>
+
                 <h2 class="text-xl sm:text-2xl font-black text-[var(--md-sys-color-on-surface)] tracking-tight mb-1 flex items-center justify-center gap-1.5">
                     <span data-i18n="deck_completed_title">Parabéns! Deck Concluído!</span>
                     <span class="material-symbols-rounded text-2xl text-amber-500">celebration</span>
@@ -592,21 +606,21 @@
                     Todos os cards deste baralho foram respondidos com sucesso nesta rodada!
                 </p>
 
-                <!-- Mini Session Stats Grid -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-md mb-6">
-                    <div class="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
+                <!-- Mini Session Stats Grid with Rolling Counters -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-md mb-6" id="completion-stats-grid">
+                    <div class="completion-stat-card p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center transition-transform">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="completed_cards">Cards</span>
                         <span id="completion-stat-cards" class="text-base sm:text-lg font-extrabold text-[var(--md-sys-color-on-surface)]">0</span>
                     </div>
-                    <div class="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
+                    <div class="completion-stat-card p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center transition-transform">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="accuracy">Precisão</span>
-                        <span id="completion-stat-acc" class="text-base sm:text-lg font-extrabold text-emerald-600">100%</span>
+                        <span id="completion-stat-acc" class="text-base sm:text-lg font-extrabold text-emerald-600">0%</span>
                     </div>
-                    <div class="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
+                    <div class="completion-stat-card p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center transition-transform">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="duration">Tempo</span>
                         <span id="completion-stat-time" class="text-base sm:text-lg font-extrabold text-purple-600">00:00</span>
                     </div>
-                    <div class="p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center">
+                    <div class="completion-stat-card p-2.5 rounded-2xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)] flex flex-col items-center transition-transform">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="streak">Sequência</span>
                         <span class="inline-flex items-center gap-1 text-amber-500">
                             <span id="completion-stat-streak" class="text-base sm:text-lg font-extrabold">0</span>
@@ -1707,7 +1721,7 @@
     </div>
 
     <script src="../js/ripple.js" defer></script>
-    <script src="../js/game.js?v=6.9" type="module" defer></script>
+    <script src="../js/game.js?v=7.1" type="module" defer></script>
 
     <!-- Onboarding Tutorial: Conditionally loaded ONLY for first-time users (Zero overhead for returning players) -->
     <script>

@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.46'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.48'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -28,6 +28,8 @@ const RAW_ASSETS = [
   '/assets/audio/tutorial_listen.mp3',
   '/assets/audio/tutorial_look.mp3',
   '/assets/audio/tutorial_out.mp3',
+  '/assets/audio/trophy.mp3',
+  '/assets/img/trophy.svg',
   '/js/i18n.js',
   '/js/tutorial.js',
   '/js/index.js',
