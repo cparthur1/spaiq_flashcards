@@ -64,3 +64,10 @@
    - Storage: Zero raster files. Arrows are stored as array of objects in `card.imageArrows`: `{ startX, startY, endX, endY, color, label }`.
    - Interaction: Circular numbered badge is anchored at arrow start `(startX, startY)`. Answer fields are tinted according to `getArrowColorTheme(hex)` with high-contrast text and border. Clicking an arrow on the image focuses and rings the corresponding answer box.
    - Gameplay: Evaluates text inputs against `arrow.label` (handling synonyms separated by `/`). Provides per-structure inline green/red validation and reveals correct answer when wrong.
+
+13. **First-Time Interactive Onboarding Tutorial (Navi Fairy Blue Orb)**:
+   - Guided interactive experience triggered when user enters for the first time (`!localStorage.getItem('flashcards_tutorial_completed')`).
+   - Visual: Glowing blue orb (`#3b82f7`) with 3D fluttering wings and a dynamic canvas particle trail (`#tutorial-particle-canvas`) as it flies between targets.
+   - Script follows steps A through H across `index.html`, `pages/generate.html`, and `pages/game.html`, synchronized with audio cues (`tutorial_hello.mp3`, `tutorial_hey.mp3`, `tutorial_listen.mp3`, `tutorial_look.mp3`, `tutorial_out.mp3`).
+   - Speech bubbles styled with Material Design 3 cards, `#3b82f7` action buttons, and accessible skip controls (no emojis).
+   - Fully localized in Portuguese (`pt-BR`) and English (`en-US`) in `js/i18n.js`. Developers can replay anytime via `window.replayTutorial()`.

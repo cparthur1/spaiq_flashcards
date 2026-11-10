@@ -1708,6 +1708,56 @@
 
     <script src="../js/ripple.js" defer></script>
     <script src="../js/game.js?v=6.9" type="module" defer></script>
+
+    <!-- Onboarding Tutorial: Conditionally loaded ONLY for first-time users (Zero overhead for returning players) -->
+    <script>
+        (function() {
+            try {
+                var isForceReplay = sessionStorage.getItem('flashcards_tutorial_force_replay') === 'true';
+                var isCompleted = localStorage.getItem('flashcards_tutorial_completed') === 'true';
+                var activeStep = localStorage.getItem('flashcards_tutorial_step');
+
+                if (isCompleted && !isForceReplay) {
+                    window.replayTutorial = function() {
+                        localStorage.removeItem('flashcards_tutorial_completed');
+                        localStorage.removeItem('flashcards_tutorial_step');
+                        sessionStorage.setItem('flashcards_tutorial_force_replay', 'true');
+                        window.location.href = '../index.html';
+                    };
+                    return;
+                }
+
+                if (!activeStep && !isForceReplay) {
+                    var hasPlayed = Boolean(
+                        localStorage.getItem('flashcardsSave') ||
+                        localStorage.getItem('flashcardsExam') ||
+                        localStorage.getItem('flashcardsNotebook') ||
+                        localStorage.getItem('flashcardsActiveMode') ||
+                        localStorage.getItem('flashcards_stats') ||
+                        localStorage.getItem('flashcardsStats') ||
+                        localStorage.getItem('flashcards_daily_streak') ||
+                        localStorage.getItem('flashcards_slots_manifest')
+                    );
+                    if (hasPlayed) {
+                        localStorage.setItem('flashcards_tutorial_completed', 'true');
+                        window.replayTutorial = function() {
+                            localStorage.removeItem('flashcards_tutorial_completed');
+                            localStorage.removeItem('flashcards_tutorial_step');
+                            sessionStorage.setItem('flashcards_tutorial_force_replay', 'true');
+                            window.location.href = '../index.html';
+                        };
+                        return;
+                    }
+                }
+
+                var script = document.createElement('script');
+                script.type = 'module';
+                script.src = '../js/tutorial.js';
+                script.defer = true;
+                document.head.appendChild(script);
+            } catch (e) {}
+        })();
+    </script>
 </body>
 
 </html>

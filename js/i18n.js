@@ -58,6 +58,26 @@ export const TRANSLATIONS = {
     daily_study_streak: 'Sequência diária de estudos',
     open_source_footer: 'Esse app é OpenSource, verifique o código e contribua em',
 
+    // First-Time Interactive Tutorial (Navi Fairy)
+    tutorial_step_a: 'Você é novo por aqui?',
+    tutorial_step_b: 'Se você não tem um baralho, o melhor a fazer é criar um',
+    tutorial_step_c: 'Aqui você pode criar baralhos de várias formas, a melhor maneira de começar é usando o que você já tem',
+    tutorial_step_d: 'Clique aqui para enviar suas anotações de aula, slides, fotos, questões... e transformá-los em um baralho',
+    tutorial_step_e: 'Aqui você pode criar cartões manualmente ou pedir para o robô editar ou adicionar novos cartões. Vamos esperar a IA pensar e criar nosso primeiro baralho',
+    tutorial_step_f: 'O baralho está pronto! Vamos para o jogo',
+    tutorial_step_g: 'Você pode começar a aprender agora respondendo a esses novos cartões. Volte todos os dias para melhorar a memória. Você pode criar quantos baralhos quiser, voltando ao início',
+    tutorial_step_h: 'Tchau!',
+    tutorial_btn_yes: 'Sim!',
+    tutorial_btn_create_deck: 'Criar Baralho',
+    tutorial_btn_next: 'Próximo',
+    tutorial_btn_generate_ai: 'Criar de materiais',
+    tutorial_btn_play_now: 'Jogar Agora',
+    tutorial_btn_continue: 'Começar Agora',
+    tutorial_skip: 'Pular tutorial',
+    tutorial_sample_deck_title: 'Semana de Provas',
+    tutorial_modal_tip: 'Envie seus materiais de estudo e clique em "Gerar com IA" para usar seu teste grátis!',
+    tutorial_btn_use_sample: 'Usar baralho de exemplo',
+
     // Exam Week Modal
     exam_week: 'Semana de Provas',
     exam_week_subtitle: 'Misture múltiplos baralhos para estudar',
@@ -1733,6 +1753,26 @@ export const TRANSLATIONS = {
     streak_label_plural: 'day streak',
     daily_study_streak: 'Daily study streak',
     open_source_footer: 'This app is Open Source, check the code and contribute at',
+
+    // First-Time Interactive Tutorial (Navi Fairy)
+    tutorial_step_a: 'Are you new here?',
+    tutorial_step_b: 'If you dont have a deck, the best thig to do is to create one',
+    tutorial_step_c: 'Here you can create decks in lots of ways, the best to get started is using what you already have',
+    tutorial_step_d: 'Click here to upload your school notes, slides, photos, questions... and make them into a deck',
+    tutorial_step_e: 'Here you can create cards manually or ask the robot to edit or add new cards. Lets wait for the rock to think and create our first deck',
+    tutorial_step_f: 'The deck is done! Lets jump to the game',
+    tutorial_step_g: 'You can start learning now by answering this fresh cards. Come back everyday to improve memory. You can create as many decks as you want, going back to the beggining',
+    tutorial_step_h: 'Bye!',
+    tutorial_btn_yes: 'Yes!',
+    tutorial_btn_create_deck: 'Create Deck',
+    tutorial_btn_next: 'Next',
+    tutorial_btn_generate_ai: 'Create from materials',
+    tutorial_btn_play_now: 'Play Now',
+    tutorial_btn_continue: 'Start Learning',
+    tutorial_skip: 'Skip tutorial',
+    tutorial_sample_deck_title: 'Exam Week',
+    tutorial_modal_tip: 'Upload your study materials and click "Generate with AI" to use your free trial!',
+    tutorial_btn_use_sample: 'Use sample deck',
 
     // Exam Week Modal
     exam_week: 'Exam Week',

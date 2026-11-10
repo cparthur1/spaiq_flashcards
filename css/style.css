@@ -3607,6 +3607,412 @@ input[type="search"].fill-blank-input::-webkit-search-results-decoration {
     }
 }
 
+/* ==========================================================================
+   INTERACTIVE ONBOARDING TUTORIAL (Navi Fairy & Particle Trail)
+   ========================================================================== */
+
+#tutorial-particle-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9998;
+}
+
+#tutorial-fairy-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    width: 100px;
+    height: 100px;
+    z-index: 9999;
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s ease-out;
+    will-change: transform;
+}
+
+#tutorial-fairy-container:hover {
+    filter: brightness(1.15);
+}
+
+#tutorial-fairy-container:active {
+    filter: brightness(0.95);
+}
+
+.tutorial-fairy-wrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fairyHoverBob 2.6s ease-in-out infinite alternate;
+}
+
+.tutorial-fairy-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* Fuzzy Soft Light Breathing & Glow */
+.fairy-fuzzy-ambient {
+    transform-origin: 100px 100px;
+    animation: fairyFuzzyAmbientBreathe 2.8s ease-in-out infinite alternate;
+}
+
+.fairy-fuzzy-halo {
+    transform-origin: 100px 100px;
+    animation: fairyFuzzyHaloBreathe 2.0s ease-in-out infinite alternate;
+}
+
+.fairy-fuzzy-core {
+    transform-origin: 100px 100px;
+    animation: fairyFuzzyCoreBreathe 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes fairyFuzzyAmbientBreathe {
+    0% {
+        opacity: 0.65;
+        transform: scale(0.92);
+    }
+    100% {
+        opacity: 0.95;
+        transform: scale(1.12);
+    }
+}
+
+@keyframes fairyFuzzyHaloBreathe {
+    0% {
+        opacity: 0.75;
+        transform: scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.06);
+    }
+}
+
+@keyframes fairyFuzzyCoreBreathe {
+    0% {
+        opacity: 0.85;
+        transform: scale(0.96);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.08);
+    }
+}
+
+/* Animated Wings (3D Perspective Flutter) */
+.fairy-wing-tl {
+    transform-origin: 90px 95px;
+    animation: fairyFlapTL 0.15s ease-in-out infinite alternate;
+}
+
+.fairy-wing-tr {
+    transform-origin: 110px 95px;
+    animation: fairyFlapTR 0.15s ease-in-out infinite alternate;
+}
+
+.fairy-wing-bl {
+    transform-origin: 92px 108px;
+    animation: fairyFlapBL 0.15s ease-in-out infinite alternate 0.03s;
+}
+
+.fairy-wing-br {
+    transform-origin: 108px 108px;
+    animation: fairyFlapBR 0.15s ease-in-out infinite alternate 0.03s;
+}
+
+/* Faster wing flapping when flying between targets */
+.fairy-flying .fairy-wing-tl,
+.fairy-flying .fairy-wing-tr,
+.fairy-flying .fairy-wing-bl,
+.fairy-flying .fairy-wing-br {
+    animation-duration: 0.08s !important;
+}
+
+@keyframes fairyFlapTL {
+    0% {
+        transform: rotate(0deg) scaleX(1);
+    }
+    100% {
+        transform: rotate(-18deg) scaleX(0.25) skewY(14deg);
+    }
+}
+
+@keyframes fairyFlapTR {
+    0% {
+        transform: rotate(0deg) scaleX(1);
+    }
+    100% {
+        transform: rotate(18deg) scaleX(0.25) skewY(-14deg);
+    }
+}
+
+@keyframes fairyFlapBL {
+    0% {
+        transform: rotate(0deg) scaleX(1);
+    }
+    100% {
+        transform: rotate(-12deg) scaleX(0.3) skewY(10deg);
+    }
+}
+
+@keyframes fairyFlapBR {
+    0% {
+        transform: rotate(0deg) scaleX(1);
+    }
+    100% {
+        transform: rotate(12deg) scaleX(0.3) skewY(-10deg);
+    }
+}
+
+@keyframes fairyHoverBob {
+    0% {
+        transform: translateY(-5px);
+    }
+    100% {
+        transform: translateY(5px);
+    }
+}
+
+@keyframes fairyThinkingPulse {
+    0% {
+        filter: drop-shadow(0 0 14px rgba(59, 130, 247, 0.7));
+        transform: scale(0.97);
+    }
+    50% {
+        filter: drop-shadow(0 0 32px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 10px #ffffff);
+        transform: scale(1.08);
+    }
+    100% {
+        filter: drop-shadow(0 0 14px rgba(59, 130, 247, 0.7));
+        transform: scale(0.97);
+    }
+}
+
+.fairy-thinking .tutorial-fairy-wrapper {
+    animation: fairyThinkingPulse 1.4s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   MATERIAL YOU EXPRESSIVE SPEECH BUBBLE (Cute Asymmetrical Shape + Spring Motion)
+   ========================================================================== */
+
+#tutorial-speech-bubble {
+    position: fixed;
+    z-index: 10000;
+    max-width: 320px;
+    min-width: 250px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(239, 246, 255, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1.5px solid rgba(59, 130, 247, 0.28);
+    border-radius: 28px 28px 28px 12px;
+    box-shadow: 0 20px 48px -10px rgba(59, 130, 247, 0.25), 0 8px 18px -4px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    padding: 16px 20px 16px 20px;
+    opacity: 0;
+    transform: scale(0.8) translateY(12px);
+    pointer-events: auto;
+    cursor: default;
+    transition: opacity 0.22s ease;
+}
+
+#tutorial-speech-bubble.is-visible {
+    opacity: 1;
+    animation: bubbleSpringBounce 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes bubbleSpringBounce {
+    0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(14px);
+    }
+    70% {
+        opacity: 1;
+        transform: scale(1.03) translateY(-3px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.tutorial-bubble-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.tutorial-badge-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4.5px;
+    background: rgba(219, 234, 254, 0.85);
+    border: 1px solid rgba(147, 197, 253, 0.7);
+    border-radius: 9999px;
+    padding: 3px 10px 3px 7px;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    user-select: none;
+}
+
+.tutorial-sparkle-icon {
+    font-size: 14px !important;
+    color: #3b82f7;
+    animation: sparkleSpin 4s ease-in-out infinite;
+}
+
+@keyframes sparkleSpin {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.15) rotate(15deg); }
+}
+
+.tutorial-skip-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant, #64748b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+    padding: 0;
+}
+
+.tutorial-skip-btn:hover {
+    background: rgba(226, 232, 240, 0.8);
+    color: var(--md-sys-color-on-surface, #0f172a);
+    transform: scale(1.1);
+}
+
+.tutorial-skip-btn:active {
+    transform: scale(0.9);
+}
+
+.tutorial-skip-btn .material-symbols-rounded {
+    font-size: 18px;
+}
+
+.tutorial-bubble-text {
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 550;
+    color: #0f172a;
+    min-height: 44px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tutorial-typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: #3b82f7;
+    margin-left: 2px;
+    vertical-align: -1px;
+    border-radius: 1px;
+    animation: typingBlink 0.65s infinite;
+}
+
+@keyframes typingBlink {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+.tutorial-bubble-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-height: 36px;
+}
+
+.tutorial-action-btn {
+    background: linear-gradient(135deg, #3b82f7 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border-radius: 9999px !important;
+    padding: 7px 16px 7px 18px !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 14px rgba(59, 130, 247, 0.38) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    opacity: 1;
+    transform: scale(1);
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease, box-shadow 0.18s !important;
+}
+
+.tutorial-action-btn:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    transform: scale(1.05) translateY(-1px) !important;
+    box-shadow: 0 6px 18px rgba(59, 130, 247, 0.48) !important;
+}
+
+.tutorial-action-btn:active {
+    transform: scale(0.96) !important;
+}
+
+.tutorial-action-btn.is-hidden {
+    opacity: 0 !important;
+    transform: scale(0.85) !important;
+    pointer-events: none !important;
+}
+
+/* Target Element Highlight Ring */
+.tutorial-target-highlight {
+    position: relative !important;
+    outline: 3px solid #3b82f7 !important;
+    outline-offset: 4px !important;
+    box-shadow: 0 0 24px rgba(59, 130, 247, 0.45) !important;
+    animation: tutorialTargetPulse 1.6s ease-in-out infinite alternate !important;
+}
+
+@keyframes tutorialTargetPulse {
+    0% {
+        outline-color: rgba(59, 130, 247, 0.4);
+        box-shadow: 0 0 8px rgba(59, 130, 247, 0.2);
+    }
+    100% {
+        outline-color: rgba(59, 130, 247, 1);
+        box-shadow: 0 0 26px rgba(59, 130, 247, 0.6);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tutorial-fairy-wrapper {
+        animation: none !important;
+    }
+    .fairy-wing-tl,
+    .fairy-wing-tr,
+    .fairy-wing-bl,
+    .fairy-wing-br {
+        animation-duration: 0.5s !important;
+    }
+    .tutorial-target-highlight {
+        animation: none !important;
+    }
+}
+
+
 
 
 

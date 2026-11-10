@@ -2223,6 +2223,7 @@ async function executeAiGenerationFromMaterials(files, customInstructions = '', 
 
     modal21.classList.add('hidden');
     openEditorView('ai');
+    window.dispatchEvent(new CustomEvent('flashcardsDeckGenerationStarted', { detail: { filesCount: files.length } }));
 
     deckCards = [];
     deckTitleDisplay.value = files[0].name.replace(/\.[^/.]+$/, "");
@@ -3513,6 +3514,9 @@ function finishGeneratingAnimation(success = true, count = 0) {
 
     if (success && count > 0) {
         syncCurrentDeckToSlotAndCloud();
+        window.dispatchEvent(new CustomEvent('flashcardsDeckGenerationDone', { detail: { success, count } }));
+    } else {
+        window.dispatchEvent(new CustomEvent('flashcardsDeckGenerationDone', { detail: { success: false, count: 0 } }));
     }
 
     const bannerContainer = document.getElementById('generation-banner-container');
@@ -5002,3 +5006,74 @@ window.addEventListener('DOMContentLoaded', async () => {
         handlePostPaymentGeneration();
     }
 });
+
+// Interactive Onboarding Tutorial Sample Deck Loader
+export function loadTutorialDeck() {
+    const isPt = getCurrentLanguage() === 'pt-BR';
+    deckCards = isPt ? [
+        {
+            type: 'open',
+            description: 'camada mais superficial da pele, constituída de epitélio pavimentoso estratificado queratinizado. Possui 5 camadas',
+            answer: 'Epiderme'
+        },
+        {
+            type: 'open',
+            description: 'mais interna, próxima ao tecido conjuntivo (derme), composta por uma única camada de células cúbicas, basófilas e de grandes núcleos',
+            answer: 'Camada basal'
+        },
+        {
+            type: 'open',
+            description: 'células unidas por desmossomos. Possuitonofilamentos (forma precursora e viva da citoqueratina da camada de queratina epitelial) e feixes de filamentos de queratina, essa composição permite que a epiderme seja resistente a atritos',
+            answer: 'Camada espinhosa / Malpighi'
+        },
+        {
+            type: 'open',
+            description: 'composta por células achatadas com citoplasma rico em grânulos de querato-hialina + grânulos lamelares (estruturas responsáveis pela liberação de lipídios), os quais formam uma barreira na epiderme promovendo impermeabilização',
+            answer: 'Camada granulosa'
+        },
+        {
+            type: 'open',
+            description: 'constituída de queratinócitos pavimentosos com núcleo citoqueratinizado e está presente nas regiões em que a pele é mais espessa como, por exemplo, plantas e palmas. e nos lábios',
+            answer: 'Camada lúcida'
+        }
+    ] : [
+        {
+            type: 'open',
+            description: 'Outermost layer of the skin, composed of stratified squamous keratinized epithelium. It has 5 layers',
+            answer: 'Epidermis'
+        },
+        {
+            type: 'open',
+            description: 'Innermost layer, closest to connective tissue (dermis), composed of a single layer of cuboidal cells with large basophilic nuclei',
+            answer: 'Basal layer'
+        },
+        {
+            type: 'open',
+            description: 'Cells bound by desmosomes with tonofilaments that allow the epidermis to resist friction',
+            answer: 'Stratum spinosum'
+        },
+        {
+            type: 'open',
+            description: 'Composed of flattened cells with cytoplasm rich in keratohyalin granules and lamellar granules forming a waterproof epidermal barrier',
+            answer: 'Stratum granulosum'
+        },
+        {
+            type: 'open',
+            description: 'Consists of flattened keratinocytes present in thick skin areas such as palms and soles',
+            answer: 'Stratum lucidum'
+        }
+    ];
+
+    const title = isPt ? 'Semana de Provas' : 'Exam Week';
+    if (deckTitleDisplay) {
+        deckTitleDisplay.value = title;
+    }
+    document.title = `${title} | Editor`;
+    openEditorView('creator');
+    renderCardsList(true);
+}
+
+if (typeof window !== 'undefined') {
+    window.loadTutorialDeck = loadTutorialDeck;
+}
+
