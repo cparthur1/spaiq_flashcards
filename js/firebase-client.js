@@ -20,6 +20,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   collection,
   serverTimestamp
@@ -104,6 +105,7 @@ export {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   collection,
   serverTimestamp

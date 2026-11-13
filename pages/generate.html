@@ -221,7 +221,7 @@
                         </div>
                         <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2" data-i18n="convert_doc_title">Converta um doc</h3>
                         <p class="text-gray-600 text-sm leading-relaxed" data-i18n="convert_doc_desc">
-                            Escreva no Word ou txt e converta em um deck
+                            Converta Word, txt ou decks do Anki (.apkg) em um deck
                         </p>
                     </div>
                     <div class="relative z-10 mt-6 sm:mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
@@ -352,18 +352,41 @@
                 
                 <!-- 1. TOPO: Selecionar Arquivo -->
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2" data-i18n="file_types_txt_doc">Arquivo (.txt, .doc, .docx)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2" data-i18n="file_types_txt_doc">Arquivo (.txt, .doc, .docx, .apkg)</label>
                     <div class="relative border-2 border-dashed border-gray-300 hover:border-blue-500 rounded-2xl p-5 text-center transition cursor-pointer bg-gray-50/70 hover:bg-blue-50/40 group" id="modal-1-2-dropzone">
-                        <input type="file" id="modal-1-2-file" accept=".txt,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                        <input type="file" id="modal-1-2-file" accept=".txt,.doc,.docx,.apkg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
                         <div class="flex flex-col items-center justify-center">
                             <div class="w-10 h-10 rounded-xl bg-blue-100/70 text-[#3b82f7] flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
                                 <span class="material-symbols-rounded text-2xl select-none">upload_file</span>
                             </div>
                             <p class="font-semibold text-sm text-gray-800" id="modal-1-2-file-name" data-i18n="drop_file_here">Clique ou arraste o arquivo aqui</p>
-                            <p class="text-xs text-gray-500 mt-0.5" data-i18n="supports_txt_doc">Suporta arquivos .txt, .doc ou .docx</p>
+                            <p class="text-xs text-gray-500 mt-0.5" data-i18n="supports_txt_doc">Suporta .txt, .doc, .docx ou decks do Anki (.apkg)</p>
                         </div>
                     </div>
                     <p id="modal-1-2-error" class="text-xs text-red-500 font-medium mt-1.5 empty:hidden"></p>
+                    <p id="modal-1-2-status" class="text-xs text-[#3b82f7] font-medium mt-1.5 hidden"></p>
+
+                    <!-- Opções específicas para pacotes Anki (.apkg) -->
+                    <div id="modal-1-2-apkg-options" class="hidden mt-3 bg-blue-50/70 border border-blue-200/90 rounded-2xl p-3.5 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-rounded text-base text-[#3b82f7] select-none">inventory_2</span>
+                            <span class="text-xs font-bold text-gray-800" data-i18n="apkg_options_title">Conversão de cards do Anki (.apkg)</span>
+                        </div>
+                        <div class="grid grid-cols-1 gap-1.5 text-xs">
+                            <label class="flex items-center gap-2 p-2 rounded-xl bg-white/90 border border-blue-100 cursor-pointer hover:border-blue-300 transition">
+                                <input type="radio" name="modal-1-2-apkg-mode" value="anki" checked class="accent-[#3b82f7]">
+                                <span class="text-gray-700 font-medium" data-i18n="apkg_mode_anki_label">Frente e Verso (estilo Anki) + Cloze em lacunas (Recomendado)</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-xl bg-white/90 border border-blue-100 cursor-pointer hover:border-blue-300 transition">
+                                <input type="radio" name="modal-1-2-apkg-mode" value="auto" class="accent-[#3b82f7]">
+                                <span class="text-gray-700 font-medium" data-i18n="apkg_mode_auto_label">Inteligente: digitar resposta (aberta) quando for curta e simples</span>
+                            </label>
+                        </div>
+                        <p class="text-[11px] text-blue-900/80 leading-snug flex items-start gap-1.5 pt-0.5">
+                            <span class="material-symbols-rounded text-sm text-[#3b82f7] shrink-0 select-none">link</span>
+                            <span data-i18n="apkg_image_link_note">Imagens incorporadas no .apkg serão sinalizadas com um comentário para você adicionar como link.</span>
+                        </p>
+                    </div>
                 </div>
 
                 <!-- 2. MEIO: Explicação das Tags e Formatação -->
@@ -432,6 +455,17 @@
                             </div>
                             <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_mc">
                                 Múltipla escolha. Coloque a alternativa correta antes dos dois-pontos; as demais alternativas podem ser editadas ou geradas pelo assistente no editor.
+                            </p>
+                        </div>
+
+                        <!-- flowchart -->
+                        <div class="bg-white/90 border border-blue-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-sky-100 text-sky-800">(flowchart)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(flowchart) Título : Etapa 1 -&gt; Etapa 2 com {termo} -&gt; Etapa 3</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_flowchart">
+                                Fluxograma (cascatas e fisiopatologias). Separe etapas lineares com <code>-&gt;</code> ou use <code>[1] ... -&gt; 2,3</code> para ramificações; use <code>{termo}</code> para lacunas opcionais.
                             </p>
                         </div>
 
@@ -724,6 +758,17 @@
                             </p>
                         </div>
 
+                        <!-- flowchart -->
+                        <div class="bg-white/90 border border-purple-100 rounded-xl p-3 text-gray-800 shadow-2xs">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-sky-100 text-sky-800">(flowchart)</span>
+                                <code class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700 font-mono text-[11px]">(flowchart) Título : Etapa 1 -&gt; Etapa 2 com {termo} -&gt; Etapa 3</code>
+                            </div>
+                            <p class="text-gray-600 leading-relaxed" data-i18n="tag_desc_flowchart">
+                                Fluxograma (cascatas e fisiopatologias). Separe etapas lineares com <code>-&gt;</code> ou use <code>[1] ... -&gt; 2,3</code> para ramificações; use <code>{termo}</code> para lacunas opcionais.
+                            </p>
+                        </div>
+
                         <!-- Divisor / Seção -->
                         <div class="bg-white/90 border border-purple-100 rounded-xl p-3 text-gray-800 shadow-2xs">
                             <div class="flex items-center gap-2 mb-1 flex-wrap">
@@ -902,6 +947,19 @@
                                     </svg>
                                 </div>
                             </div>
+
+                            <!-- 8. Fluxograma (flowchart) -->
+                            <div class="m3-select-item" data-value="flowchart" data-label="Fluxograma" data-icon="../assets/img/flowchart.svg" role="option" aria-selected="false" tabindex="0">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <img src="../assets/img/flowchart.svg" class="w-5 h-5 flex-shrink-0" alt="Fluxograma" data-i18n-alt="card_type_flowchart">
+                                    <span class="truncate" data-i18n="card_type_flowchart">Fluxograma</span>
+                                </div>
+                                <div class="m3-select-check">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1041,6 +1099,24 @@
                     <div id="creator-arrows-inputs-list" class="space-y-2">
                         <!-- Dynamically populated answer boxes per arrow -->
                     </div>
+                </div>
+
+                <!-- GROUP: FLOWCHART (FLUXOGRAMA) -->
+                <div id="creator-group-flowchart" class="space-y-3 hidden">
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="flowchart_steps_label">Etapas e Conexões do Fluxograma</label>
+                        <span id="creator-flowchart-count-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">0</span>
+                    </div>
+                    <div id="creator-flowchart-steps-list" class="space-y-2.5">
+                        <!-- Dynamically populated flowchart steps -->
+                    </div>
+                    <button type="button" id="creator-add-flowchart-step-btn" class="w-full py-2 border border-dashed border-gray-300 hover:border-[#3b82f7] text-xs font-bold text-[#3b82f7] rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
+                        <span class="material-symbols-rounded text-base">add</span>
+                        <span data-i18n="flowchart_add_step">Adicionar Etapa</span>
+                    </button>
+                    <p class="text-[11px] text-gray-500 leading-relaxed" data-i18n="flowchart_steps_help">
+                        Use {termo} ou _ dentro de uma etapa para criar lacunas opcionais (sinônimos com /). Marque para quais etapas cada passo se conecta.
+                    </p>
                 </div>
 
                 <!-- GROUP: EXPLAIN OUT LOUD (VOICE - PRO) -->
@@ -1278,6 +1354,22 @@
                         <p data-i18n="image_arrows_empty_guide_desc">Clique em "Cortar / Setas" na imagem para desenhar as setas.</p>
                     </div>
                     <div id="inline-edit-arrows-inputs-list" class="space-y-2"></div>
+                </div>
+
+                <!-- Flowchart Steps Editor -->
+                <div id="edit-card-flowchart-group" class="hidden space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-500" data-i18n="flowchart_steps_label">Etapas e Conexões do Fluxograma</label>
+                        <span id="inline-edit-flowchart-count-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">0</span>
+                    </div>
+                    <div id="inline-edit-flowchart-steps-list" class="space-y-2.5"></div>
+                    <button type="button" id="inline-edit-add-flowchart-step-btn" class="w-full py-2 border border-dashed border-gray-300 hover:border-[#3b82f7] text-xs font-bold text-[#3b82f7] rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
+                        <span class="material-symbols-rounded text-base">add</span>
+                        <span data-i18n="flowchart_add_step">Adicionar Etapa</span>
+                    </button>
+                    <p class="text-[11px] text-gray-500 leading-relaxed" data-i18n="flowchart_steps_help">
+                        Use {termo} ou _ dentro de uma etapa para criar lacunas opcionais (sinônimos com /). Marque para quais etapas cada passo se conecta.
+                    </p>
                 </div>
 
                 <!-- Card Image -->

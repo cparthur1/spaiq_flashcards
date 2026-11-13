@@ -381,6 +381,18 @@ export function inferNotebookQuality({ card, isCorrect, elapsedSeconds = 2, rati
         return 'hard';
     }
 
+    if (type === 'flowchart') {
+        const nodeCount = Math.max(2, Array.isArray(card?.nodes) ? card.nodes.length : 3);
+        const blankCount = Array.isArray(card?.nodes)
+            ? card.nodes.reduce((sum, n) => sum + (Array.isArray(n.blanks) ? n.blanks.length : 0), 0)
+            : 0;
+        const easyCeiling = 2.0 * nodeCount + 1.5 * blankCount;
+        const goodCeiling = 4.5 * nodeCount + 3.0 * blankCount;
+        if (t < easyCeiling && !hadPriorWrongs) return 'easy';
+        if (t <= goodCeiling) return 'good';
+        return 'hard';
+    }
+
     // Aberta / Dupla
     if (t < 3.2 && !hadPriorWrongs) return 'easy';
     if (t <= 9.0) return 'good';
@@ -407,75 +419,261 @@ export function inferNotebookQuality({ card, isCorrect, elapsedSeconds = 2, rati
  * @param {string} [params.todayStr]
  * @returns {Object} Atualizações calculadas para o card
  */
-export function calculateNotebookNextSchedule({ card, quality, currentStep, poolSize = 30, todayStr = getTodayDateString() }) {
-    const c = card || {};
-    const ease = Math.max(1.3, Number(c.easeFactor) || 2.5);
+const NOTEBOOK_SCHEDULER_KEY = 'flashcards_notebook_scheduler';
+const NOTEBOOK_DESIRED_RETENTION_KEY = 'flashcards_notebook_desired_retention';
+
+const FSRS_DECAY = -0.5;
+const FSRS_FACTOR = 19 / 81;
+const FSRS_DEFAULT_WEIGHTS = [
+    0.40255, 1.18385, 3.173, 15.69105,
+    7.1949, 0.5345, 1.4604, 0.0046,
+    1.54575, 0.1192, 1.01925,
+    1.9395, 0.11, 0.29605, 2.2698,
+    0.2315, 2.9898,
+    0.51655, 0.6621
+];
+
+function clampNumber(val, min, max) {
+    return Math.min(max, Math.max(min, val));
+}
+
+/**
+ * Retorna o algoritmo configurado para o Caderno ('fsrs' | 'sm2').
+ * @returns {'fsrs' | 'sm2'}
+ */
+export function getNotebookSchedulerMode() {
+    try {
+        if (typeof localStorage === 'undefined') return 'fsrs';
+        const val = localStorage.getItem(NOTEBOOK_SCHEDULER_KEY);
+        return val === 'sm2' ? 'sm2' : 'fsrs';
+    } catch (e) {
+        return 'fsrs';
+    }
+}
+
+/**
+ * Define e persiste o algoritmo do Caderno ('fsrs' | 'sm2').
+ * @param {'fsrs'|'sm2'} mode
+ */
+export function setNotebookSchedulerMode(mode) {
+    try {
+        if (typeof localStorage === 'undefined') return;
+        const normalized = mode === 'sm2' ? 'sm2' : 'fsrs';
+        localStorage.setItem(NOTEBOOK_SCHEDULER_KEY, normalized);
+        localStorage.setItem('flashcards_settings_updated_at', String(Date.now()));
+        debouncedSyncSlotsToCloud();
+    } catch (e) {}
+}
+
+/**
+ * Retorna a retenção alvo do FSRS (padrão 0.90 = 90%).
+ * @returns {number}
+ */
+export function getNotebookDesiredRetention() {
+    try {
+        if (typeof localStorage === 'undefined') return 0.90;
+        const raw = Number(localStorage.getItem(NOTEBOOK_DESIRED_RETENTION_KEY));
+        if (!Number.isFinite(raw) || raw <= 0) return 0.90;
+        return clampNumber(raw, 0.75, 0.97);
+    } catch (e) {
+        return 0.90;
+    }
+}
+
+/**
+ * Define e persiste a retenção alvo do FSRS (entre 0.75 e 0.97).
+ * @param {number} retention
+ */
+export function setNotebookDesiredRetention(retention) {
+    try {
+        if (typeof localStorage === 'undefined') return;
+        const clamped = clampNumber(Number(retention) || 0.90, 0.75, 0.97);
+        localStorage.setItem(NOTEBOOK_DESIRED_RETENTION_KEY, String(clamped));
+        localStorage.setItem('flashcards_settings_updated_at', String(Date.now()));
+        debouncedSyncSlotsToCloud();
+    } catch (e) {}
+}
+
+/**
+ * Calcula o tempo real decorrido em dias desde a última revisão do card.
+ * Retorna 0 para cards novos ou com data inválida/futura.
+ *
+ * @param {Object} card
+ * @param {string} [todayStr=getTodayDateString()]
+ * @returns {number}
+ */
+export function computeElapsedDays(card, todayStr = getTodayDateString()) {
+    if (!card || !card.lastReviewedDate) return 0;
+    const lastDays = parseDateToDays(card.lastReviewedDate);
+    const todayDays = parseDateToDays(todayStr);
+    if (lastDays === null || todayDays === null) return 0;
+    return Math.max(0, todayDays - lastDays);
+}
+
+function deterministicUnitHash(seedStr) {
+    let h = 2166136261;
+    for (let i = 0; i < seedStr.length; i++) {
+        h ^= seedStr.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return ((h >>> 0) % 100000) / 100000;
+}
+
+/**
+ * Aplica fuzz determinístico inspirado no Anki para intervalos >= 3 dias,
+ * evitando acúmulo de revisões ("avalanches") no mesmo dia futuro.
+ *
+ * @param {number} intervalDays
+ * @param {Object} [card=null]
+ * @param {Object} [bounds]
+ * @param {number} [bounds.minInterval=2]
+ * @param {number} [bounds.maxInterval=36500]
+ * @returns {number}
+ */
+export function applyIntervalFuzz(intervalDays, card = null, { minInterval = 2, maxInterval = 36500 } = {}) {
+    const base = Math.max(1, Math.round(Number(intervalDays) || 1));
+    if (base < 3) {
+        return clampNumber(base, 1, maxInterval);
+    }
+
+    let deltaRange;
+    if (base < 7) {
+        deltaRange = 1;
+    } else if (base < 30) {
+        deltaRange = Math.max(1, Math.round(base * 0.10));
+    } else {
+        deltaRange = Math.max(2, Math.round(base * 0.05));
+    }
+
+    const low = Math.max(minInterval, base - deltaRange);
+    const high = Math.min(maxInterval, base + deltaRange);
+    if (low >= high) return low;
+
+    const idPart = String(card?.id || card?.description || 'card').slice(0, 48);
+    const seed = `${idPart}|${card?.repetitions || 0}|${card?.lapses || 0}|${card?.lastReviewedDate || ''}|${base}`;
+    const u = deterministicUnitHash(seed);
+    return Math.floor(low + u * (high - low + 1));
+}
+
+function computeNotebookInSessionGap(poolSize, isAgain = true) {
+    if (poolSize <= 2) return 1;
+    if (poolSize <= 10) return poolSize - 1;
+    const ratio = isAgain ? 0.28 : 0.40;
+    const minGap = isAgain ? 12 : 20;
+    const calculated = Math.floor(poolSize * ratio);
+    return Math.min(poolSize - 1, Math.max(minGap, calculated));
+}
+
+function scheduleWithImprovedSM2({ c, quality, currentStep, poolSize, todayStr, elapsedDays, applyFuzz }) {
+    const ease = clampNumber(Number(c.easeFactor) || 2.5, 1.3, 3.2);
     const reps = Number(c.repetitions) || 0;
     const currentInterval = Math.max(1, Number(c.intervalDays) || 1);
-
-    // Distância na sessão (in-session gap) para evitar loops:
-    // Em decks pequenos (ex: 8 cards), o gap é limitado ao tamanho disponível.
-    // Em decks grandes (ex: 100+ cards), o gap varia entre 15 e 40 cards.
-    const computeInSessionGap = (isAgain = true) => {
-        if (poolSize <= 2) return 1;
-        if (poolSize <= 10) return poolSize - 1;
-
-        const ratio = isAgain ? 0.28 : 0.40;
-        const minGap = isAgain ? 12 : 20;
-        const calculated = Math.floor(poolSize * ratio);
-        return Math.min(poolSize - 1, Math.max(minGap, calculated));
-    };
+    const prevState = c.srsState || (c.lastReviewedDate ? (reps >= 2 ? 'review' : 'learning') : 'new');
+    const sameDayRelearn = prevState === 'relearning' && c.lastReviewedDate === todayStr;
 
     let newIntervalDays = 1;
     let newReps = reps;
     let newLapses = Number(c.lapses) || 0;
     let newEase = ease;
-    let newDueStep = Infinity; // Por padrão, cards aprendidos não repetem na mesma sessão
+    let newState = prevState;
+    let newDueStep = null;
 
     if (quality === 'again') {
-        newIntervalDays = 1;
-        newReps = 0;
-        newLapses += 1;
-        newEase = Math.max(1.3, ease - 0.20);
-        newDueStep = currentStep + computeInSessionGap(true);
+        if (!sameDayRelearn) {
+            if (prevState === 'review' || reps >= 2) {
+                newLapses += 1;
+                newEase = Math.max(1.3, ease - 0.20);
+            }
+        }
+        newState = (prevState === 'review' || reps >= 2) ? 'relearning' : 'learning';
+        newReps = (prevState === 'review' || reps >= 2) ? 1 : 0;
+        newIntervalDays = (prevState === 'review' || reps >= 2)
+            ? Math.max(1, Math.min(14, Math.round(currentInterval * 0.25)))
+            : 1;
+        newDueStep = currentStep + computeNotebookInSessionGap(poolSize, true);
     } else if (quality === 'hard') {
-        newReps += 1;
-        // Incremento modesto de dias para reforçar consolidação
-        newIntervalDays = Math.max(1, Math.round(currentInterval * 1.25));
-        newEase = Math.max(1.3, ease - 0.15);
-        // Em hard, se o card ainda é recente (intervalo <= 1d), dá mais uma passada adiante na sessão
-        if (newIntervalDays <= 1) {
-            newDueStep = currentStep + computeInSessionGap(false);
+        if (prevState === 'new' || prevState === 'learning' || prevState === 'relearning' || reps < 2) {
+            newState = 'learning';
+            newIntervalDays = 1;
+            newDueStep = currentStep + computeNotebookInSessionGap(poolSize, false);
         } else {
-            newDueStep = Infinity;
+            newReps = reps + 1;
+            newState = 'review';
+            newEase = Math.max(1.3, ease - 0.15);
+            if (elapsedDays === 0) {
+                newIntervalDays = currentInterval;
+            } else if (elapsedDays < currentInterval) {
+                const fullTarget = Math.round(currentInterval * 1.2);
+                const gain = (fullTarget - currentInterval) * (elapsedDays / currentInterval);
+                newIntervalDays = Math.max(currentInterval, Math.round(currentInterval + gain));
+            } else {
+                const daysLate = elapsedDays - currentInterval;
+                newIntervalDays = Math.max(currentInterval + 1, Math.round((currentInterval + daysLate / 4) * 1.2));
+            }
+            newDueStep = null;
         }
     } else if (quality === 'good') {
-        newReps += 1;
-        if (newReps === 1) {
+        if (reps === 0) {
+            newReps = 1;
+            newState = 'learning';
             newIntervalDays = 1;
-        } else if (newReps === 2) {
+        } else if (reps === 1) {
+            newReps = 2;
+            newState = 'review';
             newIntervalDays = 3;
         } else {
-            newIntervalDays = Math.max(2, Math.round(currentInterval * newEase));
+            newReps = reps + 1;
+            newState = 'review';
+            if (elapsedDays === 0) {
+                newIntervalDays = currentInterval;
+            } else if (elapsedDays < currentInterval) {
+                const fullTarget = Math.round(currentInterval * newEase);
+                const gain = (fullTarget - currentInterval) * (elapsedDays / currentInterval);
+                newIntervalDays = Math.max(currentInterval, Math.round(currentInterval + gain));
+            } else {
+                const daysLate = elapsedDays - currentInterval;
+                newIntervalDays = Math.max(currentInterval + 1, Math.round((currentInterval + daysLate / 2) * newEase));
+            }
         }
-        newDueStep = Infinity;
+        newDueStep = null;
     } else if (quality === 'easy') {
-        newReps += 1;
-        if (newReps === 1) {
+        newEase = Math.min(3.2, ease + 0.15);
+        if (reps === 0) {
+            newReps = 2;
+            newState = 'review';
             newIntervalDays = 3;
-        } else if (newReps === 2) {
+        } else if (reps === 1) {
+            newReps = 2;
+            newState = 'review';
             newIntervalDays = 7;
         } else {
-            newIntervalDays = Math.max(4, Math.round(currentInterval * newEase * 1.35));
+            newReps = reps + 1;
+            newState = 'review';
+            if (elapsedDays === 0) {
+                newIntervalDays = Math.max(currentInterval + 1, Math.round(currentInterval * 1.1));
+            } else if (elapsedDays < currentInterval) {
+                const fullTarget = Math.round(currentInterval * newEase * 1.3);
+                const gain = (fullTarget - currentInterval) * (elapsedDays / currentInterval);
+                newIntervalDays = Math.max(currentInterval + 1, Math.round(currentInterval + gain));
+            } else {
+                const daysLate = elapsedDays - currentInterval;
+                newIntervalDays = Math.max(currentInterval + 2, Math.round((currentInterval + daysLate) * newEase * 1.3));
+            }
         }
-        newEase = Math.min(3.2, ease + 0.15);
-        newDueStep = Infinity;
+        newDueStep = null;
+    }
+
+    if (applyFuzz && quality !== 'again' && newIntervalDays >= 3) {
+        newIntervalDays = applyIntervalFuzz(newIntervalDays, c, { minInterval: 2 });
     }
 
     const dueDate = addDaysToDateString(todayStr, newIntervalDays);
 
     return {
+        schedulerUsed: 'sm2',
+        srsState: newState,
         intervalDays: newIntervalDays,
+        elapsedDays,
         dueDate,
         dueStep: newDueStep,
         lastReviewedDate: todayStr,
@@ -485,6 +683,245 @@ export function calculateNotebookNextSchedule({ card, quality, currentStep, pool
         lapses: newLapses,
         reviewTimestamp: Date.now()
     };
+}
+
+function scheduleWithFSRS({ c, quality, currentStep, poolSize, todayStr, elapsedDays, desiredRetention, applyFuzz }) {
+    const w = FSRS_DEFAULT_WEIGHTS;
+    const ratingMap = { again: 1, hard: 2, good: 3, easy: 4 };
+    const G = ratingMap[quality] || 3;
+
+    const reps = Number(c.repetitions) || 0;
+    const prevLapses = Number(c.lapses) || 0;
+    const ease = clampNumber(Number(c.easeFactor) || 2.5, 1.3, 3.2);
+    const currentInterval = Math.max(1, Number(c.intervalDays) || 1);
+    const isNewCard = !c.lastReviewedDate;
+    const prevState = c.srsState || (isNewCard ? 'new' : (reps >= 2 ? 'review' : 'learning'));
+    const sameDayRelearn = prevState === 'relearning' && c.lastReviewedDate === todayStr;
+
+    let stability = Number(c.fsrsStability);
+    let difficulty = Number(c.fsrsDifficulty);
+    if (!isNewCard && (!Number.isFinite(stability) || stability <= 0 || !Number.isFinite(difficulty))) {
+        stability = Math.max(0.5, currentInterval);
+        difficulty = clampNumber(11 - ((ease - 1.3) / (3.2 - 1.3)) * 8, 1, 10);
+    }
+
+    let newS;
+    let newD;
+    let newLapses = prevLapses;
+    let newReps = reps;
+    let newState = prevState;
+    let newDueStep = null;
+    let retrievability = 1;
+
+    if (isNewCard) {
+        newS = Math.max(0.1, w[G - 1]);
+        newD = clampNumber(w[4] - Math.exp(w[5] * (G - 1)) + 1, 1, 10);
+        if (G === 1) {
+            newState = 'learning';
+            newReps = 0;
+            newDueStep = currentStep + computeNotebookInSessionGap(poolSize, true);
+        } else if (G === 2) {
+            newState = 'learning';
+            newReps = 0;
+            newDueStep = currentStep + computeNotebookInSessionGap(poolSize, false);
+        } else {
+            newState = 'review';
+            newReps = 1;
+            newDueStep = null;
+        }
+    } else if (elapsedDays === 0) {
+        retrievability = 1;
+        const shortTermFactor = Math.exp(w[17] * (G - 3 + w[18]));
+        if (G === 1) {
+            newS = Math.max(0.1, Math.min(stability, stability * shortTermFactor));
+            newD = sameDayRelearn ? difficulty : clampNumber(difficulty + w[6] * 1.5, 1, 10);
+            if (!sameDayRelearn && (prevState === 'review' || reps >= 1)) {
+                newLapses += 1;
+            }
+            newState = 'relearning';
+            newReps = 0;
+            newDueStep = currentStep + computeNotebookInSessionGap(poolSize, true);
+        } else {
+            const cappedFactor = G >= 3 ? Math.min(1.25, Math.max(1.0, shortTermFactor)) : Math.min(1.05, Math.max(0.85, shortTermFactor));
+            newS = Math.max(0.1, stability * cappedFactor);
+            newD = sameDayRelearn ? difficulty : clampNumber(difficulty - w[6] * (G - 3) * 0.5, 1, 10);
+            newState = G === 2 && prevState === 'learning' ? 'learning' : 'review';
+            newReps = reps + 1;
+            newDueStep = (G === 2 && prevState === 'learning')
+                ? currentStep + computeNotebookInSessionGap(poolSize, false)
+                : null;
+        }
+    } else {
+        retrievability = Math.pow(1 + FSRS_FACTOR * (elapsedDays / stability), FSRS_DECAY);
+        const d0Easy = clampNumber(w[4] - Math.exp(w[5] * 3) + 1, 1, 10);
+        const deltaD = -w[6] * (G - 3);
+        const dNext = difficulty + deltaD * ((10 - difficulty) / 9);
+        newD = clampNumber(w[7] * d0Easy + (1 - w[7]) * dNext, 1, 10);
+
+        if (G === 1) {
+            const forgetStability =
+                w[11] *
+                Math.pow(newD, -w[12]) *
+                (Math.pow(stability + 1, w[13]) - 1) *
+                Math.exp(w[14] * (1 - retrievability));
+            newS = clampNumber(forgetStability, 0.1, stability);
+            newLapses += 1;
+            newReps = 0;
+            newState = 'relearning';
+            newDueStep = currentStep + computeNotebookInSessionGap(poolSize, true);
+        } else {
+            const hardPenalty = G === 2 ? w[15] : 1;
+            const easyBonus = G === 4 ? w[16] : 1;
+            const recallGrowth =
+                1 +
+                Math.exp(w[8]) *
+                (11 - newD) *
+                Math.pow(stability, -w[9]) *
+                (Math.exp(w[10] * (1 - retrievability)) - 1) *
+                hardPenalty *
+                easyBonus;
+            newS = Math.max(0.1, stability * recallGrowth);
+            newReps = reps + 1;
+            newState = 'review';
+            newDueStep = null;
+        }
+    }
+
+    const rawInterval = (newS / FSRS_FACTOR) * (Math.pow(desiredRetention, 1 / FSRS_DECAY) - 1);
+    let newIntervalDays;
+    if (G === 1) {
+        newIntervalDays = Math.max(1, Math.min(14, Math.round(rawInterval)));
+    } else if (G === 2 && isNewCard) {
+        newIntervalDays = 1;
+    } else if (G === 4) {
+        newIntervalDays = Math.max(2, Math.round(rawInterval));
+    } else {
+        newIntervalDays = Math.max(1, Math.round(rawInterval));
+    }
+
+    if (applyFuzz && G !== 1 && newIntervalDays >= 3) {
+        newIntervalDays = applyIntervalFuzz(newIntervalDays, c, { minInterval: 2 });
+    }
+
+    const dueDate = addDaysToDateString(todayStr, newIntervalDays);
+    const mappedEase = clampNumber(3.2 - ((newD - 1) / 9) * 1.9, 1.3, 3.2);
+
+    return {
+        schedulerUsed: 'fsrs',
+        srsState: newState,
+        fsrsStability: Math.round(newS * 1000) / 1000,
+        fsrsDifficulty: Math.round(newD * 1000) / 1000,
+        lastRetrievability: Math.round(retrievability * 1000) / 1000,
+        intervalDays: newIntervalDays,
+        elapsedDays,
+        dueDate,
+        dueStep: newDueStep,
+        lastReviewedDate: todayStr,
+        lastQuality: quality,
+        easeFactor: Math.round(mappedEase * 100) / 100,
+        repetitions: newReps,
+        lapses: newLapses,
+        reviewTimestamp: Date.now()
+    };
+}
+
+/**
+ * Calcula o próximo agendamento do cartão no Caderno (FSRS ou SM-2 Melhorado),
+ * usando tempo real decorrido e interval fuzz determinístico.
+ *
+ * @param {Object} params
+ * @param {Object} params.card
+ * @param {'again'|'hard'|'good'|'easy'} params.quality
+ * @param {number} params.currentStep
+ * @param {number} [params.poolSize=30]
+ * @param {string} [params.todayStr]
+ * @param {'fsrs'|'sm2'} [params.schedulerMode]
+ * @param {number} [params.desiredRetention]
+ * @param {boolean} [params.applyFuzz=true]
+ * @returns {Object} Atualizações calculadas para o card
+ */
+export function calculateNotebookNextSchedule({
+    card,
+    quality,
+    currentStep = 0,
+    poolSize = 30,
+    todayStr = getTodayDateString(),
+    schedulerMode = getNotebookSchedulerMode(),
+    desiredRetention = getNotebookDesiredRetention(),
+    applyFuzz = true
+}) {
+    const c = card || {};
+    const elapsedDays = computeElapsedDays(c, todayStr);
+    const mode = schedulerMode === 'sm2' ? 'sm2' : 'fsrs';
+
+    const result = mode === 'sm2'
+        ? scheduleWithImprovedSM2({
+            c,
+            quality,
+            currentStep,
+            poolSize,
+            todayStr,
+            elapsedDays,
+            applyFuzz
+        })
+        : scheduleWithFSRS({
+            c,
+            quality,
+            currentStep,
+            poolSize,
+            todayStr,
+            elapsedDays,
+            desiredRetention,
+            applyFuzz
+        });
+
+    // Preserva e atualiza contagem histórica de revisões/acertos para cálculo justo de dificuldade
+    const legacyReps = Math.max(0, Number(c.repetitions) || 0);
+    const prevTotalReviews = c.totalReviews !== undefined ? (Number(c.totalReviews) || 0) : legacyReps;
+    const prevTotalCorrect = c.totalCorrect !== undefined
+        ? (Number(c.totalCorrect) || 0)
+        : (c.correctCount !== undefined ? (Number(c.correctCount) || 0) : legacyReps);
+    const isPass = quality === 'good' || quality === 'easy';
+
+    result.totalReviews = prevTotalReviews + 1;
+    result.totalCorrect = isPass ? prevTotalCorrect + 1 : prevTotalCorrect;
+    if (quality === 'again') {
+        result.historicalWrongs = (Number(c.historicalWrongs) || 0) + 1;
+    }
+
+    return result;
+}
+
+/**
+ * Gera previsão dos próximos intervalos para os 4 botões de avaliação sem mutar o card.
+ *
+ * @param {Object} params
+ * @returns {{ again: number, hard: number, good: number, easy: number }}
+ */
+export function previewNotebookIntervals({
+    card,
+    currentStep = 0,
+    poolSize = 30,
+    todayStr = getTodayDateString(),
+    schedulerMode = getNotebookSchedulerMode(),
+    desiredRetention = getNotebookDesiredRetention()
+}) {
+    const ratings = ['again', 'hard', 'good', 'easy'];
+    const result = {};
+    for (const quality of ratings) {
+        const res = calculateNotebookNextSchedule({
+            card,
+            quality,
+            currentStep,
+            poolSize,
+            todayStr,
+            schedulerMode,
+            desiredRetention,
+            applyFuzz: false
+        });
+        result[quality] = res.intervalDays;
+    }
+    return result;
 }
 
 /**
@@ -532,18 +969,27 @@ export function selectNextNotebookCard({
     const validCandidates = pool.filter(c => c !== currentQuestion);
     const candidatePool = validCandidates.length > 0 ? validCandidates : pool;
 
-    // 1. Separa por disponibilidade na sessão
-    const availableInSession = candidatePool.filter(c => c.dueStep === undefined || c.dueStep <= currentStep);
-    
-    // Se todos estiverem em espera de gap na sessão, pega o que tem menor dueStep
+    const isInSessionCooldown = (c) =>
+        typeof c.dueStep === 'number' && Number.isFinite(c.dueStep) && c.dueStep > currentStep;
+
+    const isDismissedToday = (c) =>
+        c.dueStep === null && c.lastReviewedDate === todayStr;
+
+    // 1. Separa por disponibilidade na sessão de hoje (corrige dueStep=null após serialização JSON)
+    const availableInSession = candidatePool.filter(c => !isInSessionCooldown(c) && !isDismissedToday(c));
+
     let workingPool = availableInSession;
     if (workingPool.length === 0) {
-        let minDue = Infinity;
-        for (const c of candidatePool) {
-            const d = c.dueStep || 0;
-            if (d < minDue) minDue = d;
+        const cooldownCards = candidatePool.filter(isInSessionCooldown);
+        if (cooldownCards.length > 0) {
+            let minDue = Infinity;
+            for (const c of cooldownCards) {
+                if (c.dueStep < minDue) minDue = c.dueStep;
+            }
+            workingPool = cooldownCards.filter(c => c.dueStep === minDue);
+        } else {
+            workingPool = candidatePool;
         }
-        workingPool = candidatePool.filter(c => (c.dueStep || 0) === minDue);
     }
 
     // 2. Classifica cartões do dia
@@ -571,7 +1017,6 @@ export function selectNextNotebookCard({
     // 4. Seleção prioritária
     // Prioridade 1: Cards com revisão atrasada ou vencida hoje
     if (overdueCards.length > 0) {
-        // Ordena pelos mais antigos na fila de vencimento (menor dueDate)
         overdueCards.sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
         const topSlice = overdueCards.slice(0, Math.max(3, Math.floor(overdueCards.length * 0.4)));
         const interleaved = applyInterleaving(topSlice);
@@ -585,10 +1030,10 @@ export function selectNextNotebookCard({
     }
 
     // Prioridade 3: Se todo o caderno de hoje estiver zerado, avança cards futuros (menor dueDate)
-    workingPool.sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
-    const topUpcoming = workingPool.slice(0, Math.max(4, Math.floor(workingPool.length * 0.35)));
+    const sortedUpcoming = [...workingPool].sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
+    const topUpcoming = sortedUpcoming.slice(0, Math.max(4, Math.floor(sortedUpcoming.length * 0.35)));
     const interleaved = applyInterleaving(topUpcoming);
-    return interleaved[Math.floor(secureRandom() * interleaved.length)] || workingPool[0];
+    return interleaved[Math.floor(secureRandom() * interleaved.length)] || sortedUpcoming[0];
 }
 
 /**
@@ -687,21 +1132,30 @@ export function isDifficultCard(card, strugglingMap = null) {
 
     const wrongs = Number(card.wrongCount) || 0;
     const lapses = Number(card.lapses) || 0;
+    const reps = Number(card.repetitions) || 0;
+    const recoveredInSrs = card.srsState === 'review' && reps >= 3 && (Number(card.fsrsDifficulty) || 0) < 7.5;
 
-    // Critério 1: Acúmulo de 3 ou mais erros na sessão/deck
-    if (wrongs >= 3) return true;
+    // Critério 1: Acúmulo de 3 ou mais erros recentes sem recuperação consecutiva
+    if (wrongs >= 3 && !recoveredInSrs) return true;
 
-    // Critério 2: Falhas repetidas de retenção no SRS (lapses >= 2)
-    if (lapses >= 2) return true;
+    // Critério 2: Falhas repetidas de retenção no SRS (lapses >= 2) sem recuperação
+    if (lapses >= 2 && !recoveredInSrs) return true;
 
-    // Critério 3: Identificado como Leech (persistência de erro crônica > 4)
-    if (isLeechCard(card)) return true;
+    // Critério 3: Leech ativo ou dificuldade alta comprovada
+    if (isLeechCard(card) && !recoveredInSrs) return true;
+    if ((Number(card.difficultyScore) || 0) >= 0.6 && !recoveredInSrs) return true;
+    if ((Number(card.fsrsDifficulty) || 0) >= 7.5 && lapses >= 1) return true;
 
-    // Critério 4: Histórico de acurácia baixa (< 50% de acertos com ao menos 3 revisões)
-    const reps = Number(card.repetitions || card.totalReviews || 0);
-    const correct = Number(card.correctCount) || 0;
-    if (reps >= 3 && (correct / reps) < 0.5) {
-        return true;
+    // Critério 4: Histórico de acurácia baixa (< 50% com ao menos 3 revisões explicitamente registradas)
+    const hasExplicitAccuracy =
+        Number(card.totalReviews) >= 3 &&
+        (card.totalCorrect !== undefined || card.correctCount !== undefined);
+    if (hasExplicitAccuracy) {
+        const totalRevs = Number(card.totalReviews);
+        const totalOk = Number(card.totalCorrect ?? card.correctCount ?? 0);
+        if ((totalOk / totalRevs) < 0.5) {
+            return true;
+        }
     }
 
     // Critério 5: Presente no mapa de strugglingCards da sessão com >= 2 erros

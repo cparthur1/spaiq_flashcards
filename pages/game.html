@@ -689,6 +689,65 @@
             </div>
         </div>
 
+        <!-- Flowchart Answer Area (Interactive DAG Builder + Optional Inline Blanks) -->
+        <div id="flowchart-answer-area" class="relative z-10 hidden mt-3 sm:mt-5 space-y-3">
+            <!-- Canvas Header & Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-lg text-[#3b82f7]">account_tree</span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="flowchart_canvas_title">Seu Fluxograma</span>
+                    <span id="flowchart-progress-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">0/0</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" id="flowchart-new-branch-btn"
+                        class="flowchart-toolbar-btn"
+                        title="Próxima etapa será um início paralelo" data-i18n-title="flowchart_new_branch_btn">
+                        <span class="material-symbols-rounded text-sm text-[#3b82f7]">alt_route</span>
+                        <span data-i18n="flowchart_new_branch_btn">Novo início paralelo</span>
+                    </button>
+                    <button type="button" id="flowchart-clear-btn"
+                        class="flowchart-toolbar-btn"
+                        title="Limpar" data-i18n-title="flowchart_clear_btn">
+                        <span class="material-symbols-rounded text-sm text-[var(--md-sys-color-on-surface-variant)]">restart_alt</span>
+                        <span data-i18n="flowchart_clear_btn">Limpar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Origin / Link Mode Status Banner -->
+            <div id="flowchart-status-banner" class="hidden text-xs px-3 py-2 rounded-xl border border-blue-200/80 bg-blue-50/70 text-[var(--md-sys-color-on-surface)] flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span id="flowchart-status-icon" class="material-symbols-rounded text-base text-[#3b82f7] flex-shrink-0">arrow_downward</span>
+                    <span id="flowchart-status-text" class="truncate font-medium"></span>
+                </div>
+                <button type="button" id="flowchart-cancel-mode-btn" class="hidden text-[11px] font-bold text-[#3b82f7] hover:underline flex-shrink-0">OK</button>
+            </div>
+
+            <!-- Canvas with SVG Connectors + Level Rows -->
+            <div id="flowchart-canvas" class="flowchart-canvas">
+                <div id="flowchart-levels-wrapper" class="flowchart-levels-wrapper">
+                    <svg id="flowchart-edges-svg" class="flowchart-edges-svg" aria-hidden="true"></svg>
+                    <div id="flowchart-levels-container" class="flowchart-levels-container"></div>
+                </div>
+            </div>
+
+            <!-- Available Shuffled Steps Tray -->
+            <div id="flowchart-tray-wrapper" class="space-y-2">
+                <div class="flex items-center gap-1.5 px-1 text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)]">
+                    <span class="material-symbols-rounded text-base text-[#3b82f7]">drag_indicator</span>
+                    <span data-i18n="flowchart_tray_title">Etapas disponíveis — clique na ordem ou arraste para o fluxo</span>
+                </div>
+                <div id="flowchart-tray-list" class="flex flex-wrap gap-2"></div>
+                <div id="flowchart-tray-empty" class="hidden text-xs font-semibold text-emerald-700 bg-emerald-50/80 border border-emerald-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                    <span class="material-symbols-rounded text-base text-emerald-600 flex-shrink-0">check_circle</span>
+                    <span data-i18n="flowchart_tray_empty">Todas as etapas foram encadeadas! Preencha eventuais lacunas e verifique.</span>
+                </div>
+            </div>
+
+            <!-- Solution / Answer Key (Shown after wrong submission) -->
+            <div id="flowchart-solution-container" class="hidden flowchart-solution-card"></div>
+        </div>
+
         <!-- Dynamic Multiple Choice Area (2 to 6 options) -->
         <div id="mc-answer-area" class="relative z-10 hidden">
             <!-- Buttons dynamically generated in game.js -->
@@ -933,6 +992,18 @@
                         <p data-i18n="image_arrows_empty_guide_desc">Clique em "Cortar / Setas" na imagem para desenhar as setas.</p>
                     </div>
                     <div id="edit-arrows-inputs-list" class="space-y-2"></div>
+                </div>
+                <div id="edit-flowchart-group" class="hidden space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]" data-i18n="flowchart_steps_label">Etapas e Conexões do Fluxograma</label>
+                        <span id="edit-flowchart-count-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">0 etapas</span>
+                    </div>
+                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed" data-i18n="flowchart_steps_help">Use {termo} ou _ dentro de uma etapa para criar lacunas opcionais (sinônimos com /). Marque para quais etapas cada passo se conecta.</p>
+                    <div id="edit-flowchart-steps-list" class="space-y-2.5"></div>
+                    <button type="button" id="edit-add-flowchart-step-btn" class="w-full py-2.5 border border-dashed border-blue-400 text-xs font-bold text-[#3b82f7] rounded-xl hover:bg-blue-50/70 transition flex items-center justify-center gap-1.5">
+                        <span class="material-symbols-rounded text-base">add_circle</span>
+                        <span data-i18n="flowchart_add_step">Adicionar Etapa</span>
+                    </button>
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="question_image_label">Link da Imagem da Pergunta (Opcional)</label>
@@ -1386,6 +1457,20 @@
                             </select>
                             <p id="setting-notebook-goal-info" class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5" data-i18n="notebook_goal_info_auto">
                                 Progresso de hoje calculado automaticamente.
+                            </p>
+                        </div>
+
+                        <!-- Algoritmo SRS (FSRS / SM-2 Melhorado) -->
+                        <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)]/60">
+                            <label for="setting-notebook-scheduler-select" class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1" data-i18n="notebook_scheduler_label">
+                                Algoritmo de Repetição Espaçada
+                            </label>
+                            <select id="setting-notebook-scheduler-select" name="notebookScheduler" class="w-full px-3 py-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                                <option value="fsrs" data-i18n="scheduler_fsrs">FSRS (Padrão Anki Moderno)</option>
+                                <option value="sm2" data-i18n="scheduler_sm2">SM-2 Melhorado (Clássico)</option>
+                            </select>
+                            <p id="setting-notebook-scheduler-info" class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1.5" data-i18n="notebook_scheduler_desc_fsrs">
+                                Modelo DSR com cálculo de estabilidade, dificuldade e tempo real decorrido + fuzz.
                             </p>
                         </div>
 

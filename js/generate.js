@@ -7,6 +7,7 @@ import { syncSharedDeckToFirestore, shareDeckToCloud, showShareSuccessDialog } f
 import { t, getCurrentLanguage } from './i18n.js';
 import { savePendingGeneration, getPendingGeneration, clearPendingGeneration, hasPendingGenerationFlag } from './pending-generation.js';
 import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated, getArrowColorTheme } from './image-editor-modal.js';
+import { importApkgFile } from './engine/apkg-importer.js';
 
 try {
     initExploreModal();
@@ -51,6 +52,8 @@ const submitModal12Btn = document.getElementById('submit-modal-1-2-btn');
 const modal12File = document.getElementById('modal-1-2-file');
 const modal12FileName = document.getElementById('modal-1-2-file-name');
 const modal12Error = document.getElementById('modal-1-2-error');
+const modal12Status = document.getElementById('modal-1-2-status');
+const modal12ApkgOptions = document.getElementById('modal-1-2-apkg-options');
 const modal12SandboxInput = document.getElementById('modal-1-2-sandbox-input');
 const modal12PreviewCards = document.getElementById('modal-1-2-preview-cards');
 const modal12PreviewCount = document.getElementById('modal-1-2-preview-count');
@@ -196,6 +199,11 @@ const creatorArrowsCountBadge = document.getElementById('creator-arrows-count-ba
 const creatorArrowsEmptyMsg = document.getElementById('creator-arrows-empty-msg');
 const creatorArrowsInputsList = document.getElementById('creator-arrows-inputs-list');
 
+const creatorGroupFlowchart = document.getElementById('creator-group-flowchart');
+const creatorFlowchartCountBadge = document.getElementById('creator-flowchart-count-badge');
+const creatorFlowchartStepsList = document.getElementById('creator-flowchart-steps-list');
+const creatorAddFlowchartStepBtn = document.getElementById('creator-add-flowchart-step-btn');
+
 const creatorGroupVoice = document.getElementById('creator-group-voice');
 const creatorAnsVoice = document.getElementById('creator-ans-voice');
 
@@ -248,6 +256,11 @@ const inlineEditImageArrowsGroup = document.getElementById('inline-edit-image-ar
 const inlineEditArrowsCountBadge = document.getElementById('inline-edit-arrows-count-badge');
 const inlineEditArrowsEmptyMsg = document.getElementById('inline-edit-arrows-empty-msg');
 const inlineEditArrowsInputsList = document.getElementById('inline-edit-arrows-inputs-list');
+
+const editCardFlowchartGroup = document.getElementById('edit-card-flowchart-group');
+const inlineEditFlowchartCountBadge = document.getElementById('inline-edit-flowchart-count-badge');
+const inlineEditFlowchartStepsList = document.getElementById('inline-edit-flowchart-steps-list');
+const inlineEditAddFlowchartStepBtn = document.getElementById('inline-edit-add-flowchart-step-btn');
 
 const inlineEditImagePreviewContainer = document.getElementById('inline-edit-image-preview-container');
 const inlineEditImagePreview = document.getElementById('inline-edit-image-preview');
@@ -413,67 +426,84 @@ let lastFailedLocalCards = null;
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const FILES_DEFAULT_SVG = '<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>';
 
-const systemInstruction = "Sua função é gerenciar um baralho de flashcards para um estudante universitário. Você pode adicionar, editar ou remover cards usando as ferramentas fornecidas. Tipos suportados: 'open' (conceito aberto), 'open_double' (dupla resposta), 'multiple_choice' (múltipla escolha com 2 a 6 opções), 'fill' (preencher lacunas marcadas por '_' em frases ou textos), e 'anki' (conceito/pergunta e explicação detalhada para repetição espaçada).\n\n" +
+const systemInstruction = "Sua função é gerenciar um baralho de flashcards para um estudante universitário no Spaiq. Você pode adicionar, editar ou remover cards usando as ferramentas fornecidas. TODOS os modos suportados pela plataforma: 'open' (conceito aberto), 'open_double' (dupla resposta), 'multiple_choice' (múltipla escolha com 2 a 6 opções), 'fill' (preencher lacunas marcadas por '_' em frases, listas ou tabelas Markdown), 'anki' (conceito/pergunta e explicação detalhada para repetição espaçada, com opção de resposta por voz via 'defaultResponse': 'voice' quando solicitado), 'flowchart' (fluxograma interativo com etapas embaralhadas para interligar em ordem linear ou ramificada/convergente e lacunas opcionais {termo}/'_' em cada etapa — excelente para cascatas e fisiopatologias), e 'divisor' (separador/título de seção).\n\n" +
     "REGRAS MANDATÓRIAS DE RESPOSTA E FORMATAÇÃO:\n" +
-    "1. PERGUNTAS E ENUNCIADOS ('description'): As perguntas de TODOS os tipos de cartões — inclusive cartões de resposta escrita ('open', 'open_double' e 'fill') — PODEM e DEVEM conter elementos Markdown ricos (**negrito**, *itálico*, listas, tabelas) e fórmulas LaTeX ($...$ e $$...$$) livremente para destacar termos essenciais e organizar o raciocínio.\n" +
-    "2. RESPOSTAS DIGITADAS NA GAMEPLAY ('open', 'open_double' e lacunas de 'fill'): A ÚNICA coisa que NÃO pode conter Markdown é a resposta que o estudante precisa digitar na gameplay. Os campos 'answer', 'answer2' e itens do array 'answers' DEVEM ser estritamente TEXTO PURO (sem negrito **, sem itálico *, sem crases ` de código).\n" +
-    "3. FÓRMULAS NUNCA DEVEM SER RESPOSTAS DIGITADAS: Fórmulas matemáticas, químicas ou expressões em LaTeX ($...$, $$...$$, frações, potências, etc.) JAMAIS devem ser respostas digitadas nos tipos 'open', 'open_double' ou 'fill'. O estudante digita com teclado comum e não pode digitar fórmulas complexas. Se o conteúdo for sobre uma fórmula ou equação, crie OBRIGATORIAMENTE um card do tipo 'anki' (frente com o conceito e verso com a fórmula em LaTeX) ou 'multiple_choice' (onde o estudante seleciona a alternativa).\n" +
-    "4. LIBERDADE TOTAL DE MARKDOWN EM 'ANKI' E 'MULTIPLE_CHOICE': Os tipos 'anki' (frente e verso) e 'multiple_choice' (enunciado, opções e resposta) podem e devem usar Markdown rico (tabelas, listas, negrito) e fórmulas LaTeX ($...$ e $$...$$) livremente.\n" +
-    "5. NO TIPO 'FILL': O enunciado ('description') pode conter Markdown e fórmulas LaTeX para contextualização, mas as lacunas '_' devem ser preenchidas apenas com termos simples, números ou parâmetros em texto puro, sem Markdown.\n" +
-    "6. RESPOSTAS CONVERSACIONAIS NO CHAT DO AGENTE: Em suas mensagens de resposta ao usuário no chat do assistente, utilize sempre formatação Markdown estruturada e limpa (títulos curtos como ###, listas com marcadores -, destaques em **negrito**, códigos em `...` e tabelas ou fórmulas LaTeX quando aplicável). Mantenha as respostas concisas, bem diagramadas e visualmente organizadas para leitura rápida.\n" +
-    "7. CLASSIFICAÇÃO TAXONÔMICA ('subject' e 'topic'): Ao adicionar novos cards ('adicionar_card' ou 'adicionar_varios_cards'), atribua sempre 'subject' (disciplina ampla de alto nível, ex: 'Cardiologia') e 'topic' (assunto específico conciso, ex: 'Valvopatias') para possibilitar estatísticas e métricas de desempenho detalhadas.\n\n" +
+    "1. PERGUNTAS E ENUNCIADOS ('description'): As perguntas de TODOS os tipos de cartões — inclusive cartões de resposta escrita ('open', 'open_double', 'fill' e etapas de 'flowchart') — PODEM e DEVEM conter elementos Markdown ricos (**negrito**, *itálico*, listas, citações >, blocos de código `, tabelas Markdown GFM | A | B |) e fórmulas LaTeX ($...$ e $$...$$) livremente para destacar termos essenciais e organizar o raciocínio.\n" +
+    "2. RESPOSTAS DIGITADAS NA GAMEPLAY ('open', 'open_double', lacunas de 'fill' e 'blanks' de 'flowchart'): A ÚNICA coisa que NÃO pode conter Markdown é a resposta que o estudante precisa digitar na gameplay. Os campos 'answer', 'answer2', itens de 'answers' e itens de 'blanks' DEVEM ser estritamente TEXTO PURO (sem negrito **, sem itálico *, sem crases ` de código). Sinônimos aceitáveis podem ser separados por '/'.\n" +
+    "3. FÓRMULAS NUNCA DEVEM SER RESPOSTAS DIGITADAS: Fórmulas matemáticas, químicas ou expressões em LaTeX ($...$, $$...$$, frações, potências, etc.) JAMAIS devem ser respostas digitadas nos tipos 'open', 'open_double', 'fill' ou lacunas de 'flowchart'. Se o conteúdo for sobre uma fórmula ou equação, crie OBRIGATORIAMENTE um card do tipo 'anki' (frente com o conceito e verso com a fórmula em LaTeX) ou 'multiple_choice' (onde o estudante seleciona a alternativa).\n" +
+    "4. LIBERDADE TOTAL DE MARKDOWN EM 'ANKI' E 'MULTIPLE_CHOICE': Os tipos 'anki' (frente e verso) e 'multiple_choice' (enunciado, opções e resposta) podem e devem usar Markdown rico (tabelas comparativas, listas, blocos de código, negrito) e fórmulas LaTeX ($...$ e $$...$$) livremente.\n" +
+    "5. NO TIPO 'FILL': O enunciado ('description') PODE e DEVE usar tabelas Markdown, listas e fórmulas LaTeX para contextualizar o texto com as lacunas '_', mas as lacunas '_' devem ser preenchidas apenas com termos simples, números ou parâmetros em texto puro, sem Markdown.\n" +
+    "6. NO TIPO 'FLOWCHART': Forneça 'description' (título/pergunta da cascata ou fisiopatologia) e 'nodes': array de objetos { id, text, next, blanks? } (2 a 8 etapas). Cada 'text' pode ter Markdown/LaTeX e lacunas opcionais com {termo} (ou '_' + 'blanks'). 'next' é um array de IDs das etapas seguintes (suporta sequência linear, bifurcações e convergências).\n" +
+    "7. RESPOSTAS CONVERSACIONAIS NO CHAT DO AGENTE: Em suas mensagens de resposta ao usuário no chat do assistente, utilize sempre formatação Markdown estruturada e limpa (títulos curtos como ###, listas com marcadores -, destaques em **negrito**, códigos em `...` e tabelas ou fórmulas LaTeX quando aplicável). Mantenha as respostas concisas, bem diagramadas e visualmente organizadas para leitura rápida.\n" +
+    "8. CLASSIFICAÇÃO TAXONÔMICA ('subject' e 'topic'): Ao adicionar novos cards ('adicionar_card' ou 'adicionar_varios_cards'), atribua sempre 'subject' (disciplina ampla de alto nível, ex: 'Cardiologia') e 'topic' (assunto específico conciso, ex: 'Valvopatias') para possibilitar estatísticas e métricas de desempenho detalhadas.\n\n" +
     "Mantenha o tom profissional, analítico e pragmático.";
 
-const generationSystemInstruction = `Você é um especialista em educação e elaboração de flashcards acadêmicos de alto rendimento.
-Sua missão é sintetizar materiais de estudo (artigos, livros, apresentações, apostilas ou anotações) em flashcards de nível universitário/pós-graduação com máxima precisão conceitual, adaptando-se com rigor e profundidade ao domínio temático abordado (ciências da saúde, biológicas, exatas, engenharia, direito, humanas ou tecnologia).
+const generationSystemInstruction = `Você é um especialista em educação e elaboração de flashcards acadêmicos de alto rendimento no Spaiq.
+Sua missão é sintetizar materiais de estudo (artigos, livros, apresentações, apostilas ou anotações) em flashcards de nível universitário/pós-graduação com máxima precisão conceitual, aproveitando TODOS os modos e recursos visuais/didáticos do aplicativo e adaptando-se ao domínio temático abordado (ciências da saúde, biológicas, exatas, engenharia, direito, humanas ou tecnologia).
 
 DIRETRIZES DE FORMATO E QUALIDADE:
 1. Retorne EXCLUSIVAMENTE um array JSON ([]) contendo os objetos de flashcards.
 2. PROIBIDO incluir texto explicativo, introduções ou notas fora do array JSON.
-3. Linhas ou anotações iniciadas por "#" nos arquivos de texto/documentos são notas ou títulos e devem ser ignoradas como perguntas diretas.
+3. Linhas ou anotações iniciadas por "#" nos arquivos de texto/documentos são notas ou títulos e devem ser ignoradas como perguntas diretas (ou convertidas em cards normais conforme o conteúdo).
 
 CLASSIFICAÇÃO TAXONÔMICA OBRIGATÓRIA ("subject" e "topic"):
 Para CADA flashcard gerado, atribua OBRIGATORIAMENTE os seguintes campos de metadados:
 - "subject": Nome da matéria ou disciplina ampla de alto nível (ex: "Cardiologia", "Fisiologia Humana", "Bioquímica", "Direito Constitucional", "Cálculo"). Mantenha a mesma matéria para todos os cards provenientes do mesmo material/disciplina.
 - "topic": Nome do assunto ou subtópico conciso e específico agrupador (ex: "Valvopatias", "Eletrocardiograma", "Ciclo de Krebs", "Controle de Constitucionalidade", "Limites e Derivadas"). Agrupe cards sobre o mesmo conceito sob o mesmo "topic" padronizado para permitir acompanhamento de maestria e fraquezas do estudante por assunto.
 
+RECURSOS DISPONÍVEIS DENTRO DOS CARDS (USE ATIVAMENTE QUANDO AGREGAR VALOR):
+• MARKDOWN RICO (GFM): Tabelas Markdown ("| Col A | Col B |"), listas com marcadores ou numeradas, títulos curtos ("###"), citações (">"), **negrito**, *itálico* e blocos de código ("\`código\`" ou cercas "\`\`\`").
+  - DICA PEDAGÓGICA: Sempre que houver comparações (ex: diagnósticos diferenciais, classes farmacológicas, critérios diagnósticos, complexidades de algoritmos, comparações legais), USE TABELAS MARKDOWN! Você pode colocar tabelas tanto no verso de cards "anki", quanto no enunciado de cards "open"/"multiple_choice", e até criar **tabelas com lacunas "_"** no modo "fill"!
+• FÓRMULAS LATEX / KATEX: Inline "$fórmula$" e em bloco "$$fórmula$$".
+• SINÔNIMOS ACEITOS: Em respostas digitadas ("open", "open_double", "fill" e lacunas de "flowchart"), você pode indicar múltiplos sinônimos aceitos separados por "/" (ex: "IECA / inibidor da ECA").
+
 REGRAS MANDATÓRIAS DE RESPOSTA E FORMATAÇÃO:
 • PERGUNTAS E ENUNCIADOS PODEM USAR MARKDOWN LIVREMENTE:
-  - As perguntas e enunciados ("description") de TODOS os tipos de cartões — inclusive cartões de resposta escrita ("open", "open_double", "fill") — PODEM E DEVEM usar elementos Markdown (**negrito**, *itálico*, listas, tabelas) e fórmulas LaTeX ($...$ e $$...$$) livremente para destacar termos essenciais e organizar o raciocínio.
+  - As perguntas e enunciados ("description") de TODOS os tipos de cartões — inclusive cartões de resposta escrita ("open", "open_double", "fill" e "flowchart") — PODEM E DEVEM usar elementos Markdown (**negrito**, *itálico*, listas, tabelas) e fórmulas LaTeX ($...$ e $$...$$) livremente para destacar termos essenciais e organizar o raciocínio.
 • PROIBIDO O USO DE MARKDOWN EM RESPOSTAS DIGITADAS NA GAMEPLAY:
   - A ÚNICA coisa que NÃO PODE conter Markdown é a resposta que o usuário precisa digitar na gameplay.
-  - Nos cartões com resposta digitada ("open", "open_double" e as lacunas de "fill"), os campos "answer", "answer2" e cada item do array "answers" DEVEM CONTER EXCLUSIVAMENTE TEXTO PURO (plain text).
+  - Nos cartões com resposta digitada ("open", "open_double", as lacunas de "fill" e os campos "blanks" de "flowchart"), os campos "answer", "answer2", cada item de "answers" e cada item de "blanks" DEVEM CONTER EXCLUSIVAMENTE TEXTO PURO (plain text).
   - NUNCA use negrito (**texto**), itálico (*texto* ou _texto_), crases de código (\`texto\`), cabeçalhos (#) ou delimitadores matemáticos nesses campos de resposta digitada.
 • FÓRMULAS NUNCA DEVEM SER RESPOSTAS DIGITADAS:
-  - Fórmulas matemáticas, equações físicas, reações químicas ou expressões em LaTeX ($...$, $$...$$, frações \\frac, potências, etc.) JAMAIS devem ser a resposta a ser digitada pelo estudante nos tipos "open", "open_double" ou "fill". O estudante utiliza teclado comum e não dispõe de teclado LaTeX para digitar fórmulas.
+  - Fórmulas matemáticas, equações físicas, reações químicas ou expressões em LaTeX ($...$, $$...$$, frações \\frac, potências, etc.) JAMAIS devem ser a resposta a ser digitada pelo estudante nos tipos "open", "open_double", "fill" ou lacunas de "flowchart". O estudante utiliza teclado comum e não dispõe de teclado LaTeX para digitar fórmulas.
   - Se o material exigir a memorização de uma fórmula matemática ou científica:
     * Crie OBRIGATORIAMENTE um cartão "anki" (frente com o questionamento/conceito e verso com a fórmula completa em LaTeX KaTeX e explicação detalhada) OU um cartão "multiple_choice" (onde as alternativas contêm as fórmulas para o estudante reconhecer e escolher).
     * NUNCA crie perguntas abertas ou lacunas cuja resposta digitada seja uma fórmula!
 • LIBERDADE DE MARKDOWN E LATEX EM "ANKI" E "MULTIPLE_CHOICE":
-  - Cartões "anki": Uso de Markdown rico (tabelas, listas com marcadores, negrito de destaque) e fórmulas matemáticas/científicas em LaTeX ($fórmula$ inline e $$fórmula$$ em bloco) é TOTALMENTE LIBERADO E INCENTIVADO na frente ("description") e no verso/explicação ("answer").
+  - Cartões "anki": Uso de Markdown rico (tabelas comparativas, listas com marcadores, negrito de destaque, código) e fórmulas matemáticas/científicas em LaTeX ($fórmula$ inline e $$fórmula$$ em bloco) é TOTALMENTE LIBERADO E INCENTIVADO na frente ("description") e no verso/explicação ("answer").
   - Cartões "multiple_choice": Uso de Markdown e fórmulas LaTeX ($...$) é TOTALMENTE LIBERADO na pergunta ("description"), nas opções ("options") e na resposta correta ("answer").
 • NO TIPO "FILL":
-  - O enunciado ("description") PODE usar tabelas, listas e fórmulas LaTeX para contextualizar o texto com as lacunas "_".
+  - O enunciado ("description") PODE usar tabelas Markdown, listas e fórmulas LaTeX para contextualizar o texto com as lacunas "_".
   - Porém, as lacunas omitidas e suas respectivas respostas em "answers" DEVEM ser termos simples, palavras-chave, dosagens ou números em texto puro digitável, NUNCA código LaTeX ou fórmulas.
 
-DISTRIBUIÇÃO E REGRAS POR TIPO DE CARTÃO:
+DISTRIBUIÇÃO E REGRAS POR TIPO DE CARTÃO (ESCOLHA O MODO IDEAL PARA CADA CONTEÚDO):
 - "open":
-  • Pergunta ("description"): Formulação clara, direta e objetiva de um conceito, termo, estrutura, lei, patologia ou princípio. Pode e deve conter formatação Markdown (**negrito**, *itálico*, listas, destaques) e fórmulas LaTeX ($...$).
+  • Pergunta ("description"): Formulação clara, direta e objetiva de um conceito, termo, estrutura, lei, patologia ou princípio. Pode conter Markdown (listas, tabelas, **negrito**) e LaTeX ($...$).
   • Resposta ("answer"): Curta, telegráfica e precisa (idealmente de 1 a 3 palavras) em TEXTO PURO, SEM Markdown (sem **, *, \`) e SEM fórmulas.
 - "open_double":
-  • Pergunta ("description"): Questionamento comparativo ou que envolva dois conceitos interligados (ex: causa e efeito, agonista e antagonista, dois parâmetros ou limites). Pode e deve conter formatação Markdown e fórmulas LaTeX ($...$).
+  • Pergunta ("description"): Questionamento comparativo ou que envolva dois conceitos interligados (ex: causa e efeito, agonista e antagonista, dois parâmetros ou limites). Pode conter Markdown e LaTeX ($...$).
   • Respostas ("answer" e "answer2"): Duas respostas diretas em TEXTO PURO, SEM Markdown e SEM fórmulas.
   • Rótulos ("placeholder1" e "placeholder2"): Rótulos descritivos e concisos para cada campo de resposta.
 - "fill":
-  • Enunciado / Frase ("description"): Texto, tabela, lista estruturada ou frase contendo lacunas representadas por "_" (ou "___") nos locais exatos onde os valores numéricos, dosagens, parâmetros ou termos foram omitidos para o estudante preencher diretamente no texto. Pode conter formatação Markdown e LaTeX no enunciado para contextualizar.
+  • Enunciado / Frase ("description"): Texto, tabela Markdown comparativa, lista estruturada ou frase contendo lacunas representadas por "_" nos locais exatos onde os valores numéricos, dosagens, parâmetros ou termos foram omitidos para o estudante preencher diretamente no texto.
   • Respostas ("answer" e "answers"): As respostas corretas em TEXTO PURO (sem Markdown, sem LaTeX e sem fórmulas), na ordem exata de aparição das lacunas no texto. Forneça como array "answers" (ex: ["30", "3", "300"]) e como string "answer" separada por ponto e vírgula ";" (ex: "30; 3; 300"). Quando houver sinônimos aceitáveis para uma mesma lacuna, separe por "/" (ex: "30 / trinta").
 - "multiple_choice":
-  • Enunciado ("description"): Questão bem contextualizada, cenário aplicado, problema técnico ou pergunta conceitual.
+  • Enunciado ("description"): Questão bem contextualizada, cenário clínico/aplicado, problema técnico ou pergunta conceitual (pode conter tabelas e listas).
   • Resposta ("answer"): A alternativa correta exata. Pode conter Markdown e fórmulas LaTeX ($...$).
   • Opções ("options"): Array com 4 alternativas plausíveis (1 correta e 3 distratores inteligentes). A resposta correta DEVE estar contida obrigatoriamente neste array.
 - "anki":
   • Frente ("description"): Conceito, processo, dedução ou pergunta sobre fórmula a ser compreendida e memorizada. Suporta Markdown e fórmulas LaTeX ($...$).
-  • Verso ("answer"): Explicação aprofundada, completa e estruturada para repetição espaçada. Suporta e deve utilizar Markdown rico (tópicos com marcadores, negrito para termos-chave, tabelas comparativas) e fórmulas matemáticas/científicas em LaTeX/KaTeX ($fórmula$ inline ou $$fórmula$$ em bloco) quando pertinentes.
+  • Verso ("answer"): Explicação aprofundada, completa e estruturada para repetição espaçada. Utilize Markdown rico (tópicos, **negrito**, **tabelas comparativas**, blocos de código quando técnico) e fórmulas LaTeX/KaTeX ($...$ ou $$...$$). Prefira organizar em tópicos e utilize linguagem clara estilo ASD-STE100 adaptada ao idioma.
+  • Opcional: Para conceitos em que explicar verbalmente consolida muito o aprendizado (se solicitado ou pertinente), pode definir "defaultResponse": "voice" (padrão é "traditional").
+- "flowchart":
+  • QUANDO USAR: OBRIGATORIAMENTE aproveite este modo sempre que o material apresentar **cascatas (coagulação, complemento, sinalização intracelular), fisiopatologias passo a passo, vias metabólicas, algoritmos diagnósticos/terapêuticos, ritos processuais ou cadeias causais**!
+  • Como funciona na gameplay: O estudante recebe as etapas embaralhadas, deve interligá-las na ordem certa (suportando tanto fluxos lineares quanto **ramificações e convergências**) e opcionalmente preencher lacunas dentro da descrição de algumas etapas.
+  • Campos:
+    - "description": Título/pergunta do fluxograma (ex: "Fisiopatologia da Insuficiência Cardíaca: Ativação Neuro-hormonal" ou "Cascata da Coagulação: Vias Extrínseca, Intrínseca e Comum").
+    - "nodes": Array ordenado de 3 a 7 objetos de etapa, cada um com:
+      * "id": identificador curto único (ex: "s1", "s2", "s3"...).
+      * "text": descrição clara da etapa. PODE incluir lacunas opcionais entre chaves "{resposta}" (ou "_" se fornecer "blanks") para termos-chave que o usuário deverá digitar (sem Markdown/LaTeX dentro das chaves!). Nem toda etapa precisa ter lacuna (algumas etapas podem ser apenas texto para ordenar).
+      * "next": array de strings com os "id"s das etapas seguintes que recebem seta a partir desta (ex: ["s2"], ou ["s3"] vindo de duas etapas paralelas para convergir, ou ["s2", "s3"] para bifurcar, e [] na(s) etapa(s) final(is)). NUNCA crie ciclos.
 
 EXEMPLOS DE ESTRUTURA (FEW-SHOT):
 [
@@ -496,7 +526,7 @@ EXEMPLOS DE ESTRUTURA (FEW-SHOT):
   },
   {
     "type": "fill",
-    "description": "Quais são as faixas de categorização da albuminúria pela Relação Albumina/Creatinina (RAC) em amostra isolada de urina?\\n\\nEstadiamento da Albuminúria (KDIGO / SBD):\\n• A1 (Normoalbuminúria ou ligeiro aumento): RAC < _ mg/g (< _ mg/mmol)\\n• A2 (Microalbuminúria / Aumento moderado): RAC entre _ e _ mg/g (_ — _ mg/mmol)\\n• A3 (Macroalbuminúria / Aumento grave): RAC > _ mg/g (> _ mg/mmol)",
+    "description": "Complete os critérios de estadiamento da Albuminúria (KDIGO / SBD):\\n\\n| Categoria | Relação Albumina/Creatinina (mg/g) | Equivalente (mg/mmol) |\\n|---|---|---|\\n| A1 (Normal/ligeiro aumento) | < _ | < _ |\\n| A2 (Microalbuminúria) | _ a _ | _ a _ |\\n| A3 (Macroalbuminúria) | > _ | > _ |",
     "answer": "30; 3; 30; 300; 3; 30; 300; 30",
     "answers": ["30", "3", "30", "300", "3", "30", "300", "30"],
     "topic": "Nefropatias e Albuminúria",
@@ -517,10 +547,43 @@ EXEMPLOS DE ESTRUTURA (FEW-SHOT):
   },
   {
     "type": "anki",
-    "description": "Qual é a base biofísica do potencial de equilíbrio de um íon e sua respectiva formulação matemática?",
-    "answer": "O potencial de equilíbrio é a diferença de potencial elétrico transmembrana que contrabalança com exatidão a tendência termodinâmica de difusão de um íon gerada por seu gradiente de concentração.\\n\\n### Equação de Nernst:\\n$$E_{ion} = \\\\frac{RT}{zF} \\\\ln\\\\left(\\\\frac{[ion]_{ext}}{[ion]_{int}}\\\\right)$$\\n\\n**Pontos essenciais:**\\n- Para o íon $K^+$ em temperatura corporal ($37^\\\\circ\\\\text{C}$): $E_K \\\\approx -90\\\\text{ mV}$.\\n- Determina a voltagem em que o fluxo iônico líquido resultante é zero.",
+    "description": "Qual é a base biofísica do potencial de equilíbrio de um íon e sua comparação resumida entre $K^+$ e $Na^+$?",
+    "answer": "O potencial de equilíbrio é a diferença de potencial elétrico transmembrana que contrabalança o gradiente de concentração.\\n\\n### Equação de Nernst:\\n$$E_{ion} = \\\\frac{RT}{zF} \\\\ln\\\\left(\\\\frac{[ion]_{ext}}{[ion]_{int}}\\\\right)$$\\n\\n| Íon | Predomínio | $E_{ion}$ típico ($37^\\\\circ\\\\text{C}$) |\\n|---|---|---|\\n| $K^+$ | Intracelular | $\\\\approx -90\\\\text{ mV}$ |\\n| $Na^+$ | Extracelular | $\\\\approx +60\\\\text{ mV}$ |",
     "topic": "Potenciais de Membrana",
     "subject": "Biofísica Celular"
+  },
+  {
+    "type": "flowchart",
+    "description": "Cascata da Coagulação: convergência da Via Extrínseca e Via Intrínseca na Via Comum",
+    "nodes": [
+      {
+        "id": "s1",
+        "text": "**Via Extrínseca:** Lesão vascular expõe o {Fator Tecidual / FT} que ativa o Fator VII",
+        "next": ["s3"]
+      },
+      {
+        "id": "s2",
+        "text": "**Via Intrínseca:** Ativação por contato do Fator XII em cascata (XI -> IX com cofator VIII)",
+        "next": ["s3"]
+      },
+      {
+        "id": "s3",
+        "text": "**Via Comum:** Ativação do {Fator X} em Xa (com cofator Va)",
+        "next": ["s4"]
+      },
+      {
+        "id": "s4",
+        "text": "Clivagem da protrombina em {trombina} (Fator IIa)",
+        "next": ["s5"]
+      },
+      {
+        "id": "s5",
+        "text": "Conversão de fibrinogênio em polímeros de fibrina estabilizados pelo Fator XIIIa",
+        "next": []
+      }
+    ],
+    "topic": "Hemostasia e Coagulação",
+    "subject": "Hematologia"
   }
 ]`;
 
@@ -534,12 +597,27 @@ const deckTools = [
                 parameters: {
                     type: "OBJECT",
                     properties: {
-                        type: { type: "STRING", enum: ["open", "open_double", "multiple_choice", "anki", "divisor", "fill"], description: "Tipo do card: 'open', 'open_double', 'multiple_choice', 'anki', 'divisor' ou 'fill' (preencher lacunas '_')" },
-                        description: { type: "STRING", description: "Pergunta, conceito, texto do divisor ou frase com lacunas '_' (para tipo 'fill'). As perguntas de TODOS os tipos de cartões (incluindo 'open', 'open_double', 'fill', 'anki') podem e devem usar Markdown (**negrito**, *itálico*, listas) e fórmulas LaTeX ($...$ ou $$...$$)." },
-                        answer: { type: "STRING", description: "Resposta principal, explicação detalhada ou respostas das lacunas separadas por ';' (tipo 'fill'). REGRA: Para respostas digitadas ('open', 'open_double', 'fill'), use estritamente texto puro SEM Markdown (sem **, *, `) e NUNCA use fórmulas matemáticas/LaTeX como resposta digitada. Fórmulas e Markdown rico são permitidos apenas para 'anki' e 'multiple_choice'." },
+                        type: { type: "STRING", enum: ["open", "open_double", "multiple_choice", "anki", "divisor", "fill", "flowchart"], description: "Tipo do card: 'open', 'open_double', 'multiple_choice', 'anki', 'divisor', 'fill' (preencher lacunas '_') ou 'flowchart' (fluxograma de etapas ordenadas/ramificadas)" },
+                        description: { type: "STRING", description: "Pergunta, conceito, título do fluxograma, texto do divisor ou frase com lacunas '_' (para tipo 'fill'). As perguntas de TODOS os tipos de cartões (incluindo 'open', 'open_double', 'fill', 'anki', 'flowchart') podem e devem usar Markdown (**negrito**, *itálico*, listas, tabelas | A | B |) e fórmulas LaTeX ($...$ ou $$...$$)." },
+                        answer: { type: "STRING", description: "Resposta principal, explicação detalhada ou respostas das lacunas separadas por ';' (tipo 'fill'). REGRA: Para respostas digitadas ('open', 'open_double', 'fill', lacunas de 'flowchart'), use estritamente texto puro SEM Markdown (sem **, *, `) e NUNCA use fórmulas matemáticas/LaTeX como resposta digitada. Fórmulas e Markdown rico (tabelas, listas, etc.) são permitidos para 'anki' e 'multiple_choice'." },
                         answer2: { type: "STRING", description: "Resposta secundária (apenas para open_double). Estritamente texto puro, sem Markdown e sem fórmulas." },
                         answers: { type: "ARRAY", items: { type: "STRING" }, description: "Lista ordenada de respostas para preencher as lacunas '_' no tipo 'fill'. Use estritamente texto puro sem Markdown e sem fórmulas." },
                         options: { type: "ARRAY", items: { type: "STRING" }, description: "Opções (apenas para multiple_choice). Suporta Markdown e fórmulas LaTeX." },
+                        nodes: {
+                            type: "ARRAY",
+                            description: "Etapas do fluxograma (apenas para type 'flowchart', 2 a 8 etapas). Suporta sequência linear, ramificações e convergências, com lacunas opcionais {termo}.",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    id: { type: "STRING", description: "ID curto único da etapa (ex: 's1', 's2')" },
+                                    text: { type: "STRING", description: "Descrição da etapa (pode conter {termo} para lacuna opcional)" },
+                                    next: { type: "ARRAY", items: { type: "STRING" }, description: "IDs das etapas seguintes conectadas a partir desta etapa ([] se etapa final)" },
+                                    blanks: { type: "ARRAY", items: { type: "STRING" }, description: "Opcional: respostas das lacunas '_' desta etapa em texto puro" }
+                                },
+                                required: ["id", "text"]
+                            }
+                        },
+                        defaultResponse: { type: "STRING", enum: ["traditional", "voice"], description: "Apenas para 'anki': 'traditional' (virar cartão) ou 'voice' (explicar com voz)." },
                         topic: { type: "STRING", description: "Assunto específico conciso agrupador do card (ex: 'Valvopatias', 'Eletrocardiograma', 'Controle Concentrado')." },
                         subject: { type: "STRING", description: "Matéria ou disciplina ampla à qual o card pertence (ex: 'Cardiologia', 'Direito Constitucional')." },
                         image: { type: "STRING", description: "URL ou Base64 da imagem da pergunta (opcional)" },
@@ -555,12 +633,27 @@ const deckTools = [
                     type: "OBJECT",
                     properties: {
                         index: { type: "NUMBER", description: "O índice (começando em 0) do card a ser editado." },
-                        type: { type: "STRING", enum: ["open", "open_double", "multiple_choice", "anki", "divisor", "fill"] },
-                        description: { type: "STRING", description: "Pergunta, conceito, texto do divisor ou frase com lacunas '_' (para tipo 'fill'). Suporta e incentiva Markdown e fórmulas LaTeX para todos os tipos de card." },
+                        type: { type: "STRING", enum: ["open", "open_double", "multiple_choice", "anki", "divisor", "fill", "flowchart"] },
+                        description: { type: "STRING", description: "Pergunta, conceito, título do fluxograma, texto do divisor ou frase com lacunas '_' (para tipo 'fill'). Suporta e incentiva Markdown (incluindo tabelas) e fórmulas LaTeX para todos os tipos de card." },
                         answer: { type: "STRING", description: "Resposta, explicação detalhada ou respostas das lacunas separadas por ';' (tipo 'fill'). REGRA: Para respostas digitadas ('open', 'open_double', 'fill'), use estritamente texto puro SEM Markdown e SEM fórmulas." },
                         answer2: { type: "STRING", description: "Resposta secundária (apenas para open_double). Estritamente texto puro, sem Markdown e sem fórmulas." },
                         answers: { type: "ARRAY", items: { type: "STRING" }, description: "Lista ordenada de respostas das lacunas (tipo 'fill'). Use estritamente texto puro sem Markdown e sem fórmulas." },
                         options: { type: "ARRAY", items: { type: "STRING" } },
+                        nodes: {
+                            type: "ARRAY",
+                            description: "Etapas do fluxograma (apenas para type 'flowchart').",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    id: { type: "STRING" },
+                                    text: { type: "STRING" },
+                                    next: { type: "ARRAY", items: { type: "STRING" } },
+                                    blanks: { type: "ARRAY", items: { type: "STRING" } }
+                                },
+                                required: ["id", "text"]
+                            }
+                        },
+                        defaultResponse: { type: "STRING", enum: ["traditional", "voice"] },
                         topic: { type: "STRING", description: "Assunto específico agrupador do card." },
                         subject: { type: "STRING", description: "Matéria ampla à qual o card pertence." },
                         image: { type: "STRING" },
@@ -606,12 +699,27 @@ const deckTools = [
                             items: {
                                 type: "OBJECT",
                                 properties: {
-                                    type: { type: "STRING", enum: ["open", "open_double", "multiple_choice", "anki", "divisor", "fill"] },
-                                    description: { type: "STRING", description: "Pergunta, conceito, texto do divisor ou frase com lacunas '_' (tipo 'fill'). Suporta e incentiva Markdown e fórmulas LaTeX para todos os tipos de card." },
+                                    type: { type: "STRING", enum: ["open", "open_double", "multiple_choice", "anki", "divisor", "fill", "flowchart"] },
+                                    description: { type: "STRING", description: "Pergunta, conceito, título do fluxograma, texto do divisor ou frase com lacunas '_' (tipo 'fill'). Suporta e incentiva Markdown (inclusive tabelas) e fórmulas LaTeX para todos os tipos de card." },
                                     answer: { type: "STRING", description: "Resposta principal, explicação detalhada ou respostas das lacunas separadas por ';' (tipo 'fill'). REGRA: Para respostas digitadas ('open', 'open_double', 'fill'), use estritamente texto puro SEM Markdown e SEM fórmulas." },
                                     answer2: { type: "STRING", description: "Resposta secundária (apenas para open_double). Estritamente texto puro, sem Markdown e sem fórmulas." },
                                     answers: { type: "ARRAY", items: { type: "STRING" }, description: "Lista ordenada de respostas das lacunas (tipo 'fill'). Use estritamente texto puro sem Markdown e sem fórmulas." },
                                     options: { type: "ARRAY", items: { type: "STRING" } },
+                                    nodes: {
+                                        type: "ARRAY",
+                                        description: "Etapas do fluxograma (apenas para type 'flowchart').",
+                                        items: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                id: { type: "STRING" },
+                                                text: { type: "STRING" },
+                                                next: { type: "ARRAY", items: { type: "STRING" } },
+                                                blanks: { type: "ARRAY", items: { type: "STRING" } }
+                                            },
+                                            required: ["id", "text"]
+                                        }
+                                    },
+                                    defaultResponse: { type: "STRING", enum: ["traditional", "voice"] },
                                     topic: { type: "STRING", description: "Assunto específico conciso agrupador do card (ex: 'Valvopatias', 'Eletrocardiograma')." },
                                     subject: { type: "STRING", description: "Matéria ou disciplina ampla à qual o card pertence (ex: 'Cardiologia', 'Direito Constitucional')." },
                                     image: { type: "STRING" },
@@ -778,6 +886,173 @@ function containsComplexFormula(str) {
     return /\\(?:frac|sqrt|int|sum|prod|partial|pm|times|div|alpha|beta|gamma|delta|theta|lambda|mu|sigma|omega|approx|leq|geq|infty|lim|sin|cos|tan|log|ln)\b|\$\$|\\begin\{|\b[a-zA-Z]\s*=\s*[^;,\n]{4,}/.test(str);
 }
 
+/**
+ * Extracts optional `{term}` blanks inside a flowchart step text into `_` + `blanks[]`.
+ * Typed blanks are always sanitized to plain text (preserving `/` synonyms).
+ */
+function parseFlowchartStepTextAndBlanks(rawText = '', explicitBlanks = null) {
+    let text = String(rawText || '').trim();
+    const braceRegex = /\{([^{}]+)\}/g;
+    const braceBlanks = [];
+    let match;
+    while ((match = braceRegex.exec(text)) !== null) {
+        const inner = stripMarkdownFromTypedAnswer(match[1]);
+        if (inner) braceBlanks.push(inner);
+    }
+
+    let blanks = Array.isArray(explicitBlanks)
+        ? explicitBlanks.map(b => stripMarkdownFromTypedAnswer(String(b || ''))).filter(Boolean)
+        : [];
+
+    if (braceBlanks.length > 0) {
+        text = text.replace(/\{([^{}]+)\}/g, (full, inner) => {
+            return inner.trim().length > 0 ? '_' : full;
+        });
+        if (blanks.length === 0) {
+            blanks = braceBlanks;
+        }
+    }
+
+    return { text, blanks };
+}
+
+/**
+ * Reconstructs `{term}` inline syntax from a normalized flowchart node so editors can
+ * edit step text and optional blanks seamlessly in a single field.
+ */
+function formatFlowchartNodeForEditor(node) {
+    if (!node) return '';
+    let text = String(node.text || '');
+    const blanks = Array.isArray(node.blanks) ? node.blanks : [];
+    if (blanks.length === 0) return text;
+    let idx = 0;
+    const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/g;
+    return text.replace(blankRegex, (full) => {
+        const b = blanks[idx++];
+        return b ? `{${b}}` : full;
+    });
+}
+
+/**
+ * Normalizes flowchart nodes & edges, supporting both DAG graphs and linear step arrays,
+ * stripping self-loops and accidental cycles while generating a readable summary answer.
+ */
+function normalizeFlowchartNodes(rawNodes, rawSteps) {
+    const source = Array.isArray(rawNodes) && rawNodes.length > 0
+        ? rawNodes
+        : (Array.isArray(rawSteps) && rawSteps.length > 0 ? rawSteps : []);
+    if (source.length === 0) return { nodes: [], summary: '' };
+
+    const isAllStrings = source.every(item => typeof item === 'string');
+    const nodes = [];
+    const seenIds = new Set();
+
+    source.forEach((item, i) => {
+        const obj = typeof item === 'string' ? { text: item } : (item || {});
+        let id = String(obj.id || `s${i + 1}`).trim();
+        while (!id || seenIds.has(id)) {
+            id = `s${i + 1}_${seenIds.size + 1}`;
+        }
+        seenIds.add(id);
+
+        const rawText = obj.text || obj.label || obj.description || obj.step || '';
+        const { text, blanks } = parseFlowchartStepTextAndBlanks(rawText, obj.blanks || obj.answers);
+        if (!text) return;
+
+        let rawNext = [];
+        if (Array.isArray(obj.next)) rawNext = obj.next;
+        else if (Array.isArray(obj.to)) rawNext = obj.to;
+        else if (typeof obj.next === 'string' && obj.next.trim()) rawNext = obj.next.split(',').map(s => s.trim());
+
+        nodes.push({
+            id,
+            text,
+            blanks,
+            _rawNext: rawNext.map(n => String(n).trim()).filter(Boolean)
+        });
+    });
+
+    const validIds = new Set(nodes.map(n => n.id));
+    const hasExplicitEdges = !isAllStrings && nodes.some(n => n._rawNext.length > 0);
+
+    nodes.forEach((node, i) => {
+        if (!hasExplicitEdges && nodes[i + 1]) {
+            node.next = [nodes[i + 1].id];
+        } else {
+            node.next = [...new Set(node._rawNext)].filter(targetId => targetId !== node.id && validIds.has(targetId));
+        }
+        delete node._rawNext;
+    });
+
+    // Break any accidental cycles using DFS recursion stack so level layout stays a valid DAG
+    const visiting = new Set();
+    const visited = new Set();
+    const nodeById = new Map(nodes.map(n => [n.id, n]));
+    function breakCycles(node) {
+        visiting.add(node.id);
+        node.next = node.next.filter(targetId => {
+            if (visiting.has(targetId)) return false;
+            if (!visited.has(targetId)) {
+                const targetNode = nodeById.get(targetId);
+                if (targetNode) breakCycles(targetNode);
+            }
+            return true;
+        });
+        visiting.delete(node.id);
+        visited.add(node.id);
+    }
+    nodes.forEach(n => {
+        if (!visited.has(n.id)) breakCycles(n);
+    });
+
+    const summary = nodes.map(n => {
+        const filled = formatFlowchartNodeForEditor(n).replace(/\{([^{}]+)\}/g, '$1');
+        return filled;
+    }).join(' -> ');
+
+    return { nodes, summary };
+}
+
+/**
+ * Parses text-syntax flowchart body after `:` (supports linear `A -> B -> C`
+ * and branching `[1] A -> 2,3 | [2] B -> 4 ...`).
+ */
+function parseFlowchartFromTextBody(content = '') {
+    const colonIndex = content.indexOf(':');
+    const title = colonIndex !== -1 ? content.substring(0, colonIndex).trim() : 'Fluxograma';
+    const body = colonIndex !== -1 ? content.substring(colonIndex + 1).trim() : content.trim();
+    if (!body) return null;
+
+    let rawNodes = [];
+    // Branching shorthand: [1] text -> 2,3 | [2] text -> 4
+    if (/\[\s*[a-zA-Z0-9_-]+\s*\]/.test(body) && body.includes('|')) {
+        const segments = body.split('|').map(s => s.trim()).filter(Boolean);
+        rawNodes = segments.map((seg, i) => {
+            const m = seg.match(/^\[\s*([a-zA-Z0-9_-]+)\s*\]\s*([\s\S]*?)(?:\s*->\s*([a-zA-Z0-9_,\s-]+))?$/);
+            if (!m) return { id: String(i + 1), text: seg, next: [] };
+            const nextList = m[3] ? m[3].split(',').map(s => s.trim()).filter(Boolean) : [];
+            return { id: m[1].trim(), text: m[2].trim(), next: nextList };
+        });
+    } else {
+        const parts = body.split(/\s*->\s*/).map(s => s.trim()).filter(Boolean);
+        if (parts.length < 2) return null;
+        rawNodes = parts.map((txt, i) => ({
+            id: `s${i + 1}`,
+            text: txt,
+            next: i < parts.length - 1 ? [`s${i + 2}`] : []
+        }));
+    }
+
+    const { nodes, summary } = normalizeFlowchartNodes(rawNodes, null);
+    if (nodes.length < 2) return null;
+    return {
+        type: 'flowchart',
+        description: title,
+        nodes,
+        answer: summary
+    };
+}
+
 // Normalizes and validates card properties across all supported modes and aliases
 function normalizeCard(raw) {
     if (!raw || typeof raw !== 'object') return null;
@@ -793,7 +1068,9 @@ function normalizeCard(raw) {
             answer: ''
         };
     }
-    if (type === 'image_arrows' || type === 'arrows' || type === 'setas' || type === 'imagearrows') {
+    if (type === 'flowchart' || type === 'fluxograma' || type === 'flow' || type === 'cascata' || type === 'cascade' || type === 'sequencia' || type === 'sequence' || type === 'diagrama') {
+        type = 'flowchart';
+    } else if (type === 'image_arrows' || type === 'arrows' || type === 'setas' || type === 'imagearrows') {
         type = 'image_arrows';
     } else if (type === 'multiple_choice' || type === 'multipla_escolha' || type === 'mc') {
         type = 'multiple_choice';
@@ -803,10 +1080,14 @@ function normalizeCard(raw) {
         type = 'fill';
     } else if (type === 'anki' || type === 'anki_like') {
         type = 'anki';
+    } else if (type === 'voice' || type === 'voz') {
+        type = 'voice';
     } else if (type === 'open' || type === 'open_ended' || type === 'traditional' || type === 'aberto') {
         type = 'open';
     } else {
-        if (Array.isArray(raw.options) && raw.options.length >= 2) type = 'multiple_choice';
+        if (Array.isArray(raw.nodes) && raw.nodes.length >= 2) type = 'flowchart';
+        else if (Array.isArray(raw.steps) && raw.steps.length >= 2) type = 'flowchart';
+        else if (Array.isArray(raw.options) && raw.options.length >= 2) type = 'multiple_choice';
         else if (raw.answer2) type = 'open_double';
         else if (raw.answers && Array.isArray(raw.answers)) type = 'fill';
         else if (raw.description && /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/.test(raw.description) && (raw.answer && raw.answer.includes(';'))) type = 'fill';
@@ -815,7 +1096,31 @@ function normalizeCard(raw) {
     }
 
     let description = (raw.description || raw.question || raw.pergunta || raw.frente || raw.phrase || raw.text || '').trim();
-    if (!description) return null;
+    if (!description && type !== 'flowchart') return null;
+
+    if (type === 'flowchart') {
+        const { nodes, summary } = normalizeFlowchartNodes(raw.nodes, raw.steps || raw.etapas);
+        if (nodes.length < 2) return null;
+        const flowCard = {
+            type: 'flowchart',
+            description: description || t('card_type_flowchart'),
+            nodes,
+            answer: (raw.answer || summary || '').trim()
+        };
+        const topic = (raw.topic || raw.aiTopic || '').toString().trim();
+        if (topic) {
+            flowCard.topic = topic;
+            flowCard.aiTopic = topic;
+        }
+        const subject = (raw.subject || raw.aiSubject || '').toString().trim();
+        if (subject) {
+            flowCard.subject = subject;
+            flowCard.aiSubject = subject;
+        }
+        if (raw.image) flowCard.image = raw.image;
+        if (raw.imageCrop) flowCard.imageCrop = raw.imageCrop;
+        return flowCard;
+    }
 
     let answer = (raw.answer || raw.resposta || raw.verso || '').trim();
     let answer2 = (raw.answer2 || raw.resposta2 || '').trim();
@@ -904,6 +1209,9 @@ function normalizeCard(raw) {
     }
     if (type === 'multiple_choice') {
         card.options = options;
+    }
+    if (type === 'anki' && raw.defaultResponse === 'voice') {
+        card.defaultResponse = 'voice';
     }
     if (raw.explanation) card.explanation = raw.explanation;
     if (raw.image) card.image = raw.image;
@@ -1262,13 +1570,17 @@ function convertDocumentToCards(text, mode = 'open') {
             continue;
         }
 
+        const flowchartMatch = line.match(/^[\(\[]\s*(?:flowchart|fluxograma|cascata)\s*[\)\]]:?\s*(.*)$/i);
         const openDoubleMatch = line.match(/^[\(\[]\s*(?:open[_-]?double|duplo)\s*[\)\]]:?\s*(.*)$/i);
         const fillMatch = line.match(/^[\(\[]\s*(?:fill|preencher|lacunas?|cloze)\s*[\)\]]:?\s*(.*)$/i);
         const mcMatch = line.match(/^[\(\[]\s*(?:multiple[_-]?choice|multipla[_-]?escolha|mc)\s*[\)\]]:?\s*(.*)$/i);
         const ankiMatch = line.match(/^[\(\[]\s*(?:anki[_-]?like|anki)\s*[\)\]]:?\s*(.*)$/i);
         const openMatch = line.match(/^[\(\[]\s*(?:open|tradicional|aberta?)\s*[\)\]]:?\s*(.*)$/i);
 
-        if (fillMatch) {
+        if (flowchartMatch) {
+            const parsedFlow = parseFlowchartFromTextBody(flowchartMatch[1].trim());
+            if (parsedFlow) cards.push(parsedFlow);
+        } else if (fillMatch) {
             const content = fillMatch[1].trim();
 
             // 1. New braces syntax: (fill) frase de pergunta {com} espaços e {respostas} indicadas por "{}"
@@ -1453,12 +1765,15 @@ function parseTxtToJSONWithPlaceholders(text) {
             continue;
         }
 
+        const flowchartMatch = line.match(/^[\(\[]\s*(?:flowchart|fluxograma|cascata)\s*[\)\]]:?\s*(.*)$/i);
         const openDoubleMatch = line.match(/^[\(\[]\s*(?:open[_-]?double|duplo)\s*[\)\]]:?\s*(.*)$/i);
         const fillMatch = line.match(/^[\(\[]\s*(?:fill|preencher|lacunas?|cloze)\s*[\)\]]:?\s*(.*)$/i);
         const mcMatch = line.match(/^[\(\[]\s*(?:multiple[_-]?choice|multipla[_-]?escolha|mc)\s*[\)\]]:?\s*(.*)$/i);
         const ankiMatch = line.match(/^[\(\[]\s*(?:anki[_-]?like|anki)\s*[\)\]]:?\s*(.*)$/i);
 
-        if (fillMatch) {
+        if (flowchartMatch) {
+            card = parseFlowchartFromTextBody(flowchartMatch[1].trim());
+        } else if (fillMatch) {
             const content = fillMatch[1].trim();
 
             // 1. New braces syntax: (fill) frase de pergunta {com} espaços e {respostas} indicadas por "{}"
@@ -1954,14 +2269,16 @@ Mitocôndria : Qual organela celular é responsável pela síntese aeróbica de 
 (anki_like) Efeito Bohr : Redução da afinidade da hemoglobina por O2 em ambiente ácido
 (fill) Os osmorreceptores hipotalâmicos regulam a secreção de {ADH} para controlar a retenção de {água}.
 (open_double) Cefaleia em salvas;Oxigênio 100% : Homem jovem com dor periorbitária em facada e lacrimejamento. Diagnóstico e conduta:
-(multiple_choice) Brasil : Qual é o maior país da América do Sul em área territorial?`;
+(multiple_choice) Brasil : Qual é o maior país da América do Sul em área territorial?
+(flowchart) Eixo Renina-Angiotensina : Queda da pressão renal libera {Renina} -> Converte angiotensinogênio em Angiotensina I -> {ECA} converte em Angiotensina II -> Vasoconstrição e Aldosterona`;
 
 const MODAL_1_2_DEFAULT_TEXT_EN = `# Module 1: Biology Fundamentals
 Mitochondria : Which cellular organelle is responsible for aerobic ATP synthesis?
 (anki_like) Bohr Effect : Shift in hemoglobin oxygen affinity under acidosis
 (fill) Hypothalamic osmoreceptors regulate {ADH} secretion to govern {water} retention.
 (open_double) Cluster headache;100% Oxygen : Young patient with severe unilateral periorbital pain. Diagnosis and acute therapy:
-(multiple_choice) Brazil : What is the largest country in South America by land area?`;
+(multiple_choice) Brazil : What is the largest country in South America by land area?
+(flowchart) Renin-Angiotensin System : Low renal perfusion releases {Renin} -> Converts angiotensinogen to Angiotensin I -> {ACE} converts to Angiotensin II -> Vasoconstriction and Aldosterone`;
 
 function getModal12DefaultText() {
     return getCurrentLanguage() === 'en-US' ? MODAL_1_2_DEFAULT_TEXT_EN : MODAL_1_2_DEFAULT_TEXT_PT;
@@ -2040,6 +2357,22 @@ function renderModal12LivePreview(cards) {
                     <div><span class="font-bold text-teal-950">Resp 2:</span> ${escapeHtml(c.answer2 || '')}</div>
                 </div>
             `;
+        } else if (c.type === 'flowchart') {
+            cardEl.className += ' border-sky-100';
+            const nodes = Array.isArray(c.nodes) ? c.nodes : [];
+            const stepsHtml = nodes.map((n, i) => `<span class="px-2 py-0.5 bg-white border border-sky-200 rounded font-medium text-[11px] text-sky-900">${i + 1}. ${escapeHtml(formatFlowchartNodeForEditor(n))}</span>`).join('<span class="text-sky-400 font-bold">→</span>');
+            cardEl.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-sky-100 text-sky-800 font-sans">(flowchart) Fluxograma</span>
+                    <span class="text-[11px] text-gray-400 font-sans">${nodes.length} etapas</span>
+                </div>
+                <div class="text-xs text-gray-900 leading-relaxed font-sans">
+                    <span class="font-bold text-gray-500">Título:</span> ${escapeHtml(c.description || '')}
+                </div>
+                <div class="text-xs text-sky-900 bg-sky-50/70 border border-sky-100 p-2 rounded-lg font-sans flex items-center gap-1.5 flex-wrap">
+                    ${stepsHtml}
+                </div>
+            `;
         } else if (c.type === 'multiple_choice') {
             cardEl.className += ' border-purple-100';
             cardEl.innerHTML = `
@@ -2082,9 +2415,16 @@ function updateModal12SandboxLivePreview() {
     renderModal12LivePreview(cards);
 }
 
-// 1.2 Converta um doc — Importe um txt ou word já feito
+// 1.2 Converta um doc — Importe um txt, word ou deck .apkg já feito
 cardMode12.addEventListener('click', () => {
     modal12Error.textContent = '';
+    if (modal12Status) {
+        modal12Status.textContent = '';
+        modal12Status.classList.add('hidden');
+    }
+    if (modal12ApkgOptions) {
+        modal12ApkgOptions.classList.add('hidden');
+    }
     modal12File.value = '';
     modal12FileName.textContent = t('drop_file_here');
     if (modal12SandboxInput && !modal12SandboxInput.value.trim()) {
@@ -2098,8 +2438,20 @@ closeModal12Btn.addEventListener('click', () => modal12.classList.add('hidden'))
 cancelModal12Btn.addEventListener('click', () => modal12.classList.add('hidden'));
 
 modal12File.addEventListener('change', () => {
+    modal12Error.textContent = '';
+    if (modal12Status) {
+        modal12Status.textContent = '';
+        modal12Status.classList.add('hidden');
+    }
     if (modal12File.files.length > 0) {
-        modal12FileName.textContent = modal12File.files[0].name;
+        const selectedFile = modal12File.files[0];
+        modal12FileName.textContent = selectedFile.name;
+        const isApkg = getFileExtension(selectedFile.name) === 'apkg';
+        if (modal12ApkgOptions) {
+            modal12ApkgOptions.classList.toggle('hidden', !isApkg);
+        }
+    } else if (modal12ApkgOptions) {
+        modal12ApkgOptions.classList.add('hidden');
     }
 });
 
@@ -2132,15 +2484,54 @@ modal12UseSandboxBtn?.addEventListener('click', () => {
 
 submitModal12Btn.addEventListener('click', async () => {
     modal12Error.textContent = '';
+    if (modal12Status) {
+        modal12Status.textContent = '';
+        modal12Status.classList.add('hidden');
+    }
     if (!modal12File.files || modal12File.files.length === 0) {
         modal12Error.textContent = t('select_txt_doc_error');
         return;
     }
 
     const file = modal12File.files[0];
+    const ext = getFileExtension(file.name);
     const selectedMode = 'open';
 
+    submitModal12Btn.disabled = true;
     try {
+        if (ext === 'apkg') {
+            const checkedRadio = document.querySelector('input[name="modal-1-2-apkg-mode"]:checked');
+            const apkgConversionMode = checkedRadio?.value === 'auto' ? 'auto' : 'anki';
+
+            if (modal12Status) {
+                modal12Status.textContent = t('apkg_importing_status');
+                modal12Status.classList.remove('hidden');
+            }
+
+            const result = await importApkgFile(file, {
+                conversionMode: apkgConversionMode,
+                translate: t,
+                onProgress: (msg) => {
+                    if (modal12Status && msg) {
+                        modal12Status.textContent = msg;
+                        modal12Status.classList.remove('hidden');
+                    }
+                }
+            });
+
+            const playableCards = (result.cards || []).filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
+            if (playableCards.length === 0) {
+                modal12Error.textContent = t('apkg_no_valid_cards_error');
+                return;
+            }
+
+            deckCards = result.cards;
+            deckTitleDisplay.value = result.deckTitle || file.name.replace(/\.[^/.]+$/, "");
+            modal12.classList.add('hidden');
+            openEditorView('creator');
+            return;
+        }
+
         const text = await extractTextFromFile(file);
         const cards = convertDocumentToCards(text, selectedMode);
 
@@ -2156,6 +2547,11 @@ submitModal12Btn.addEventListener('click', async () => {
         openEditorView('creator');
     } catch (err) {
         modal12Error.textContent = t('error_reading_doc', { error: err.message });
+    } finally {
+        submitModal12Btn.disabled = false;
+        if (modal12Status) {
+            modal12Status.classList.add('hidden');
+        }
     }
 });
 
@@ -2231,7 +2627,13 @@ async function executeAiGenerationFromMaterials(files, customInstructions = '', 
     modal21LoadingMsg.classList.remove('hidden');
 
     try {
-        let userTaskPrompt = `Com base nos arquivos enviados, o objetivo é processar todo o conteúdo e gerar uma lista extensa de termos técnicos para revisão, incluindo nomes de moléculas, estruturas, etapas de processos e quaisquer conceitos com nomes específicos. Em seguida, usar das informações que classificou na primeira etapa para gerar um arquivo .json baseado em todo o conteúdo que juntou na primeira etapa. A sua resposta vai ser apenas o JSON com os flashcards, a primeira etapa serve apenas para você planejar os flashcards.
+        let userTaskPrompt = `Com base nos arquivos enviados, o objetivo é processar todo o conteúdo e gerar uma lista extensa e didática de flashcards cobrindo termos técnicos, tabelas comparativas, fórmulas, casos aplicados, cascatas/fisiopatologias e conceitos essenciais.
+Utilize estrategicamente TODOS os tipos e recursos de cards do Spaiq conforme o conteúdo pedir:
+- "open" e "open_double" para conceitos diretos e pares comparativos;
+- "fill" para textos e TABELAS MARKDOWN comparativas com lacunas "_";
+- "multiple_choice" para cenários clínicos/aplicados e fórmulas (usando Markdown e LaTeX);
+- "anki" para explicações profundas, tabelas comparativas em Markdown e equações em LaTeX ($...$ / $$...$$);
+- "flowchart" OBRIGATORIAMENTE para cascatas, vias metabólicas/fisiológicas, fisiopatologias e processos em etapas (lineares ou com ramificações/convergências, com lacunas opcionais {termo} dentro das etapas).
 Gere aproximadamente 100 flashcards completos e aprofundados cobrindo todo o material enviado (se necessário para cobrir todo o conteúdo essencial, pode ultrapassar esse valor).
 Atribua obrigatoriamente a matéria de alto nível ('subject') e o assunto específico agrupador ('topic') em cada flashcard para indexação taxonômica.
 Ao final revise se os flashcards criados realmente abordam por extenso tudo que foi enviado.
@@ -2527,9 +2929,10 @@ As perguntas ('description') de todos os tipos de cartões podem usar formataç�
 Para 'open_double', preencha 'placeholder1' e 'placeholder2' com rótulos descritivos curtos para as respostas. Respostas digitadas devem ser texto puro sem Markdown e sem fórmulas.
 Para 'multiple_choice', complete o array 'options' com alternativas incorretas porém plausíveis (distratores), mantendo a resposta correta informada. Pode usar Markdown e LaTeX livremente.
 Para 'fill', se 'answers' contiver '[GEMINI]' ou estiver vazio, identifique as respostas corretas para cada lacuna '_' na frase de 'description' e preencha o array 'answers' com as respostas em ordem. As respostas das lacunas DEVEM SER ESTRITAMENTE TEXTO PURO (sem negrito **, sem itálico *, sem código \` e sem fórmulas LaTeX). Se 'answers' já estiver preenchido, mantenha-o intacto.
-Para 'anki', mantenha o type 'anki' intacto, preservando exatamente 'description' (frente/pergunta) e 'answer' (verso/resposta detalhada, que suporta Markdown e LaTeX livremente).
+Para 'anki', mantenha o type 'anki' intacto, preservando exatamente 'description' (frente/pergunta) e 'answer' (verso/resposta detalhada, que suporta Markdown rico, tabelas e LaTeX livremente).
+Para 'flowchart', mantenha o type 'flowchart', 'description' e suas etapas 'nodes' (suportando conexões lineares/ramificadas e lacunas opcionais '{termo}').
 Para 'open', mantenha o type 'open' intacto com 'description' (que pode usar Markdown e LaTeX livremente) e 'answer' (estritamente texto puro, sem Markdown e sem fórmulas).
-Mantenha quaisquer itens com type 'divisor', 'anki', 'fill' e 'open' intactos e em suas respectivas posições entre os cartões.
+Mantenha quaisquer itens com type 'divisor', 'anki', 'fill', 'flowchart' e 'open' intactos e em suas respectivas posições entre os cartões.
 Ao terminar, chame 'adicionar_varios_cards' para enviar o baralho finalizado.
 
 JSON:
@@ -2558,7 +2961,7 @@ ${JSON.stringify(localCards, null, 2)}`;
                 model: "gemini-flash-latest",
                 contents: [{ role: 'user', parts: [{ text: fillPrompt }] }],
                 tools: deckTools,
-                systemInstruction: { parts: [{ text: systemInstruction + "\nPreencha os placeholders '[GEMINI]' no JSON de flashcards e retorne-os usando a ferramenta 'adicionar_varios_cards'. Preserve cards com type 'anki' (frente e verso), 'fill' (lacunas), 'open' e 'divisor' exatamente como foram fornecidos. REGRA MANDATÓRIA: As perguntas ('description') de todos os cartões podem e devem usar Markdown e LaTeX livremente. Apenas respostas digitadas na gameplay ('open', 'open_double', 'fill') NUNCA devem usar Markdown nem fórmulas matemáticas." }] },
+                systemInstruction: { parts: [{ text: systemInstruction + "\nPreencha os placeholders '[GEMINI]' no JSON de flashcards e retorne-os usando a ferramenta 'adicionar_varios_cards'. Preserve cards com type 'anki' (frente e verso), 'fill' (lacunas), 'flowchart' (fluxogramas), 'open' e 'divisor' exatamente como foram fornecidos. REGRA MANDATÓRIA: As perguntas ('description') de todos os cartões podem e devem usar Markdown (inclusive tabelas) e LaTeX livremente. Apenas respostas digitadas na gameplay ('open', 'open_double', 'fill' e lacunas de 'flowchart') NUNCA devem usar Markdown nem fórmulas matemáticas." }] },
                 generationConfig: { temperature: 0.7, responseMimeType: "text/plain" },
                 stream: false,
                 isNewDeck: true
@@ -2981,6 +3384,193 @@ if (editAnkiModeVoice) {
     editAnkiModeVoice.addEventListener('click', () => setEditCardAnkiDefaultResponse('voice'));
 }
 
+// Shared Flowchart Steps & Connections Editor Controller (used by Creator & Inline Edit Modal)
+function createFlowchartStepsEditor({ listEl, badgeEl, addBtnEl }) {
+    let steps = [];
+
+    function nextId() {
+        let idx = steps.length + 1;
+        while (steps.some(s => s.id === `s${idx}`)) idx++;
+        return `s${idx}`;
+    }
+
+    function syncBadge() {
+        if (badgeEl) badgeEl.textContent = String(steps.length);
+    }
+
+    function render() {
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        syncBadge();
+
+        steps.forEach((step, idx) => {
+            const card = document.createElement('div');
+            card.className = 'p-3 bg-sky-50/50 border border-sky-200/80 rounded-xl space-y-2 transition';
+
+            // Header row: step number badge + move up/down + delete
+            const header = document.createElement('div');
+            header.className = 'flex items-center justify-between gap-2';
+
+            const numBadge = document.createElement('span');
+            numBadge.className = 'inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-[#3b82f7] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70';
+            numBadge.textContent = t('flowchart_step_prefix', { num: idx + 1 });
+            header.appendChild(numBadge);
+
+            const controls = document.createElement('div');
+            controls.className = 'flex items-center gap-1';
+
+            if (idx > 0) {
+                const upBtn = document.createElement('button');
+                upBtn.type = 'button';
+                upBtn.className = 'p-1 text-gray-500 hover:text-[#3b82f7] rounded hover:bg-white transition cursor-pointer';
+                upBtn.title = t('flowchart_move_up');
+                upBtn.innerHTML = '<span class="material-symbols-rounded text-base leading-none">arrow_upward</span>';
+                upBtn.addEventListener('click', () => {
+                    [steps[idx - 1], steps[idx]] = [steps[idx], steps[idx - 1]];
+                    render();
+                });
+                controls.appendChild(upBtn);
+            }
+            if (idx < steps.length - 1) {
+                const downBtn = document.createElement('button');
+                downBtn.type = 'button';
+                downBtn.className = 'p-1 text-gray-500 hover:text-[#3b82f7] rounded hover:bg-white transition cursor-pointer';
+                downBtn.title = t('flowchart_move_down');
+                downBtn.innerHTML = '<span class="material-symbols-rounded text-base leading-none">arrow_downward</span>';
+                downBtn.addEventListener('click', () => {
+                    [steps[idx + 1], steps[idx]] = [steps[idx], steps[idx + 1]];
+                    render();
+                });
+                controls.appendChild(downBtn);
+            }
+            if (steps.length > 2) {
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'p-1 text-gray-400 hover:text-red-500 rounded hover:bg-white transition cursor-pointer';
+                delBtn.title = t('flowchart_remove_step');
+                delBtn.innerHTML = '<span class="material-symbols-rounded text-base leading-none">delete</span>';
+                delBtn.addEventListener('click', () => {
+                    const removedId = step.id;
+                    steps.splice(idx, 1);
+                    steps.forEach(s => {
+                        s.next = (s.next || []).filter(tid => tid !== removedId);
+                    });
+                    render();
+                });
+                controls.appendChild(delBtn);
+            }
+            header.appendChild(controls);
+            card.appendChild(header);
+
+            // Step text input (supports optional `{answer}` blanks)
+            const textInput = document.createElement('textarea');
+            textInput.rows = 2;
+            textInput.className = 'w-full p-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs sm:text-sm text-gray-800 resize-y';
+            textInput.placeholder = t('flowchart_step_placeholder');
+            textInput.value = step.text || '';
+            textInput.addEventListener('input', (e) => {
+                step.text = e.target.value;
+            });
+            card.appendChild(textInput);
+
+            // Target connection chips ("Conecta para:")
+            if (steps.length > 1) {
+                const connRow = document.createElement('div');
+                connRow.className = 'flex items-center gap-1.5 flex-wrap pt-0.5';
+                const connLabel = document.createElement('span');
+                connLabel.className = 'text-[10px] font-bold uppercase tracking-wider text-gray-500 mr-0.5';
+                connLabel.textContent = t('flowchart_connects_to');
+                connRow.appendChild(connLabel);
+
+                steps.forEach((other, oIdx) => {
+                    if (other.id === step.id) return;
+                    const isLinked = (step.next || []).includes(other.id);
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = isLinked
+                        ? 'px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#3b82f7] text-white border border-[#3b82f7] transition cursor-pointer flex items-center gap-0.5 shadow-2xs'
+                        : 'px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white text-gray-600 border border-gray-300 hover:border-[#3b82f7] hover:text-[#3b82f7] transition cursor-pointer';
+                    chip.textContent = `${isLinked ? '→ ' : ''}${t('flowchart_step_prefix', { num: oIdx + 1 })}`;
+                    chip.addEventListener('click', () => {
+                        const list = Array.isArray(step.next) ? [...step.next] : [];
+                        const pos = list.indexOf(other.id);
+                        if (pos !== -1) list.splice(pos, 1);
+                        else list.push(other.id);
+                        step.next = list;
+                        render();
+                    });
+                    connRow.appendChild(chip);
+                });
+
+                if (!step.next || step.next.length === 0) {
+                    const endTag = document.createElement('span');
+                    endTag.className = 'text-[10px] text-gray-400 italic ml-auto';
+                    endTag.textContent = t('flowchart_end_step');
+                    connRow.appendChild(endTag);
+                }
+                card.appendChild(connRow);
+            }
+
+            listEl.appendChild(card);
+        });
+    }
+
+    function setNodes(rawNodes = []) {
+        if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
+            steps = [
+                { id: 's1', text: '', next: ['s2'] },
+                { id: 's2', text: '', next: ['s3'] },
+                { id: 's3', text: '', next: [] }
+            ];
+        } else {
+            steps = rawNodes.map((n, i) => ({
+                id: String(n.id || `s${i + 1}`),
+                text: formatFlowchartNodeForEditor(n),
+                next: Array.isArray(n.next) ? [...n.next] : []
+            }));
+        }
+        render();
+    }
+
+    function addStep() {
+        const newId = nextId();
+        const prev = steps[steps.length - 1];
+        if (prev && (!prev.next || prev.next.length === 0)) {
+            prev.next = [newId];
+        }
+        steps.push({ id: newId, text: '', next: [] });
+        render();
+    }
+
+    function getNormalizedResult() {
+        const cleaned = steps.map(s => ({
+            id: s.id,
+            text: (s.text || '').trim(),
+            next: Array.isArray(s.next) ? [...s.next] : []
+        })).filter(s => s.text.length > 0);
+        return normalizeFlowchartNodes(cleaned, null);
+    }
+
+    if (addBtnEl) {
+        addBtnEl.addEventListener('click', addStep);
+    }
+
+    setNodes([]);
+    return { setNodes, addStep, getNormalizedResult };
+}
+
+const creatorFlowchartEditor = createFlowchartStepsEditor({
+    listEl: creatorFlowchartStepsList,
+    badgeEl: creatorFlowchartCountBadge,
+    addBtnEl: creatorAddFlowchartStepBtn
+});
+
+const inlineEditFlowchartEditor = createFlowchartStepsEditor({
+    listEl: inlineEditFlowchartStepsList,
+    badgeEl: inlineEditFlowchartCountBadge,
+    addBtnEl: inlineEditAddFlowchartStepBtn
+});
+
 creatorCardType.addEventListener('change', () => {
     const tVal = creatorCardType.value;
     creatorTypeHint.textContent = getTypeHint(tVal);
@@ -2992,6 +3582,7 @@ creatorCardType.addEventListener('change', () => {
     creatorGroupAnki.classList.toggle('hidden', tVal !== 'anki');
     creatorGroupMc.classList.toggle('hidden', tVal !== 'multiple_choice');
     if (creatorGroupImageArrows) creatorGroupImageArrows.classList.toggle('hidden', tVal !== 'image_arrows');
+    if (creatorGroupFlowchart) creatorGroupFlowchart.classList.toggle('hidden', tVal !== 'flowchart');
     if (creatorGroupVoice) {
         creatorGroupVoice.classList.toggle('hidden', tVal !== 'voice');
     }
@@ -3013,6 +3604,9 @@ creatorCardType.addEventListener('change', () => {
     } else if (tVal === 'image_arrows') {
         creatorQuestionLabel.textContent = t('question_concept_label');
         creatorQuestion.placeholder = t('name_the_structures');
+    } else if (tVal === 'flowchart') {
+        creatorQuestionLabel.textContent = t('question_concept_label');
+        creatorQuestion.placeholder = t('question_placeholder');
     } else if (tVal === 'voice') {
         creatorQuestionLabel.textContent = t('question_concept_label');
         creatorQuestion.placeholder = 'Ex: Explique o conceito de...';
@@ -3435,6 +4029,20 @@ creatorSubmitCardBtn.addEventListener('click', () => {
             newCard.answers = answers;
             newCard.answer = answers.join('; ');
         }
+    } else if (type === 'flowchart') {
+        const { nodes, summary } = creatorFlowchartEditor.getNormalizedResult();
+        if (nodes.length < 2) {
+            alert(t('flowchart_alert_min_steps'));
+            return;
+        }
+        const hasAnyEdge = nodes.some(n => Array.isArray(n.next) && n.next.length > 0);
+        if (!hasAnyEdge) {
+            alert(t('flowchart_alert_need_connection'));
+            return;
+        }
+        newCard.description = desc || t('card_type_flowchart');
+        newCard.nodes = nodes;
+        newCard.answer = summary;
     } else if (type === 'voice') {
         if (!isUserPro()) {
             openProModal();
@@ -3465,6 +4073,8 @@ creatorSubmitCardBtn.addEventListener('click', () => {
 
     if (type === 'image_arrows') {
         renderCreatorArrowsInputs([]);
+    } else if (type === 'flowchart') {
+        creatorFlowchartEditor.setNodes([]);
     } else if (type === 'multiple_choice') {
         renderCreatorMcOptions(["", "", "", ""], 0);
     }
@@ -3956,6 +4566,10 @@ function createCardElement(card, index, withAnimation = true) {
         typeBadge.className += " bg-blue-100 text-blue-800";
         const count = Array.isArray(card.imageArrows) ? card.imageArrows.length : 0;
         typeBadge.textContent = `${t('card_type_image_arrows')} (${count})`;
+    } else if (card.type === 'flowchart') {
+        typeBadge.className += " bg-sky-100 text-sky-800 flex items-center gap-1";
+        const count = Array.isArray(card.nodes) ? card.nodes.length : 0;
+        typeBadge.innerHTML = `<span class="material-symbols-rounded text-xs text-[#3b82f7]">account_tree</span> <span>${t('card_type_flowchart')} (${count})</span>`;
     } else if (card.type === 'voice') {
         typeBadge.className += " bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1";
         typeBadge.innerHTML = `<span class="material-symbols-rounded text-xs text-[#3b82f7]">record_voice_over</span> <span>${t('card_type_voice')}</span>`;
@@ -4019,6 +4633,19 @@ function createCardElement(card, index, withAnimation = true) {
         } else {
             ansStr = `<strong>${t('image_arrows_labels_title')}:</strong> <span class="text-yellow-600 text-xs">${t('no_answer_defined')}</span>`;
         }
+    } else if (card.type === 'flowchart') {
+        const nodes = Array.isArray(card.nodes) ? card.nodes : [];
+        if (nodes.length > 0) {
+            const numById = new Map(nodes.map((n, i) => [n.id, i + 1]));
+            const flowBadges = nodes.map((n, i) => {
+                const targets = (n.next || []).map(tid => numById.get(tid)).filter(Boolean);
+                const targetSuffix = targets.length > 0 ? ` <span class="text-[#3b82f7] font-mono text-[10px]">→ ${targets.join(',')}</span>` : '';
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 border border-sky-200 text-sky-900 text-xs font-medium"><span class="text-[#3b82f7] font-bold font-mono text-[10px]">${i + 1}.</span> ${escapeHtml(formatFlowchartNodeForEditor(n))}${targetSuffix}</span>`;
+            }).join(' ');
+            ansStr = `<strong>${t('flowchart_steps_count', { count: nodes.length })}:</strong> <div class="inline-flex flex-wrap gap-1.5 mt-1">${flowBadges}</div>`;
+        } else {
+            ansStr = `<strong>${t('card_type_flowchart')}:</strong> <span class="text-yellow-600 text-xs">${t('no_answer_defined')}</span>`;
+        }
     }
 
     const textCont = document.createElement('div');
@@ -4065,7 +4692,7 @@ function createCardElement(card, index, withAnimation = true) {
     const editBtn = document.createElement('button');
     editBtn.type = "button";
     editBtn.className = "p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg";
-    editBtn.innerHTML = `<img src="../assets/img/edit.svg" class="w-4 h-4" alt="${t('edit')}">`;
+    editBtn.innerHTML = `<img src="../assets/img/edit_flat.svg" class="w-4 h-4" alt="${t('edit')}">`;
     editBtn.onclick = (e) => {
         if (e) {
             e.preventDefault();
@@ -4128,7 +4755,7 @@ function openInlineEditModal(index) {
 
     // Show/hide groups based on type
     const cardType = card.type || 'open';
-    editCardAns1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows' || cardType === 'voice');
+    editCardAns1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows' || cardType === 'voice' || cardType === 'flowchart');
     editCardAns2Group.classList.toggle('hidden', cardType !== 'open_double');
     if (editCardFillGroup) editCardFillGroup.classList.toggle('hidden', cardType !== 'fill');
     editCardAnkiGroup.classList.toggle('hidden', cardType !== 'anki');
@@ -4136,6 +4763,7 @@ function openInlineEditModal(index) {
     editCardMcGroup.classList.toggle('hidden', cardType !== 'multiple_choice');
     inlineEditAnsImageGroup.classList.toggle('hidden', cardType !== 'anki');
     if (inlineEditImageArrowsGroup) inlineEditImageArrowsGroup.classList.toggle('hidden', cardType !== 'image_arrows');
+    if (editCardFlowchartGroup) editCardFlowchartGroup.classList.toggle('hidden', cardType !== 'flowchart');
 
     if (cardType === 'open') {
         editCardAns1Label.textContent = t('main_answer_label');
@@ -4160,6 +4788,8 @@ function openInlineEditModal(index) {
         }
     } else if (cardType === 'image_arrows') {
         renderInlineEditArrowsInputs(card.imageArrows || []);
+    } else if (cardType === 'flowchart') {
+        inlineEditFlowchartEditor.setNodes(card.nodes || []);
     }
 
     pendingInlineEditQImage = sanitizeImageUrl(card.image || '');
@@ -4482,6 +5112,19 @@ saveInlineEditBtn.addEventListener('click', (e) => {
         });
         card.imageArrows = JSON.parse(JSON.stringify(pendingInlineEditQImageArrows));
         card.answer = pendingInlineEditQImageArrows.map(a => a.label || '').filter(Boolean).join('; ');
+    } else if (card.type === 'flowchart') {
+        const { nodes, summary } = inlineEditFlowchartEditor.getNormalizedResult();
+        if (nodes.length < 2) {
+            alert(t('flowchart_alert_min_steps'));
+            return;
+        }
+        const hasAnyEdge = nodes.some(n => Array.isArray(n.next) && n.next.length > 0);
+        if (!hasAnyEdge) {
+            alert(t('flowchart_alert_need_connection'));
+            return;
+        }
+        card.nodes = nodes;
+        card.answer = summary;
     }
 
     inlineEditModal.classList.add('hidden');

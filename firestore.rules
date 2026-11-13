@@ -54,7 +54,7 @@ service cloud.firestore {
         && resource.data.ownerUid == request.auth.uid;
     }
 
-    // User private data (slots, streaks, stats).
+    // User private data (slots, streaks, settings).
     // Clients cannot create or mutate billing, quota, API key, or webhook fields.
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
@@ -65,6 +65,30 @@ service cloud.firestore {
         && request.auth.uid == userId
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields());
       allow delete: if false;
+    }
+
+    // Separated user statistics document (keeps /users/{userId} well below the 1 MiB limit).
+    match /user_stats/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['ownerUid', 'stats', 'updatedAt', 'lastClientSyncId'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && (!('stats' in request.resource.data) || request.resource.data.stats is map)
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is number)
+        && (!('lastClientSyncId' in request.resource.data) || (request.resource.data.lastClientSyncId is string && request.resource.data.lastClientSyncId.size() <= 128));
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['ownerUid', 'stats', 'updatedAt', 'lastClientSyncId'])
+        && (!('stats' in request.resource.data) || request.resource.data.stats is map)
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is number)
+        && (!('lastClientSyncId' in request.resource.data) || (request.resource.data.lastClientSyncId is string && request.resource.data.lastClientSyncId.size() <= 128));
+      allow delete: if request.auth != null
+        && request.auth.uid == userId
+        && resource != null
+        && resource.data.ownerUid == request.auth.uid;
     }
 
     // API keys mapping (only accessible via backend Admin Service Account)

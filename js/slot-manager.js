@@ -4,7 +4,7 @@
  * Manages the 3 deck slots, the dedicated notebook slot, and cloud synchronization
  */
 
-import { auth, db, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, onAuthChange } from './firebase-client.js';
+import { auth, db, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, onAuthChange } from './firebase-client.js';
 import { getCloudSlots, saveCloudSlots } from './backend-api.js';
 import { isUserPro } from './explore-modal.js';
 import { syncSharedDeckToFirestore } from './share-manager.js';
@@ -723,6 +723,7 @@ export function getLocalSettings() {
     pinnedStatsNotebook,
     aiCategories,
     notebookDailyGoal: Number(localStorage.getItem('flashcards_notebook_daily_goal')) || 0,
+    notebookScheduler: localStorage.getItem('flashcards_notebook_scheduler') === 'sm2' ? 'sm2' : 'fsrs',
     freeAiDeckUsed: localStorage.getItem('spaiq_free_ai_deck_used') === 'true',
     updatedAt: Number(localStorage.getItem('flashcards_settings_updated_at')) || Date.now()
   };
@@ -808,6 +809,12 @@ export function applyCloudSettings(cloudSettings) {
     const val = String(cloudSettings.notebookDailyGoal);
     if (localStorage.getItem('flashcards_notebook_daily_goal') !== val) {
       localStorage.setItem('flashcards_notebook_daily_goal', val);
+      changed = true;
+    }
+  }
+  if (cloudSettings.notebookScheduler === 'fsrs' || cloudSettings.notebookScheduler === 'sm2') {
+    if (localStorage.getItem('flashcards_notebook_scheduler') !== cloudSettings.notebookScheduler) {
+      localStorage.setItem('flashcards_notebook_scheduler', cloudSettings.notebookScheduler);
       changed = true;
     }
   }
@@ -1132,6 +1139,9 @@ export async function syncSlotsToCloud() {
     // Settings
     const settings = getLocalSettings();
 
+    // Compact stats ONLY as an emergency safety net if stats alone ever approaches Firestore's 1 MiB cap
+    const statsForCloud = compactStatsForCloud(stats);
+
     // 1. Direct real-time Firestore WebSocket write (completes in ~60ms and notifies other devices immediately)
     let directWriteSucceeded = false;
     try {
@@ -1170,6 +1180,16 @@ export async function syncSlotsToCloud() {
         );
       }
 
+      // Separate document user_stats/{uid} prevents stats history from bloating users/{uid} past 1 MiB
+      deckWritePromises.push(
+        setDoc(doc(db, 'user_stats', user.uid), {
+          ownerUid: user.uid,
+          stats: statsForCloud,
+          updatedAt: now,
+          lastClientSyncId: DEVICE_INSTANCE_ID
+        })
+      );
+
       await Promise.all(deckWritePromises);
 
       const deckSlotsMeta = slots.map(s => {
@@ -1199,7 +1219,9 @@ export async function syncSlotsToCloud() {
           updatedAt: notebookPayload.updatedAt || now,
           deletedAt: notebookPayload.deckData ? null : (notebookPayload.deletedAt || now)
         },
-        stats: stats || {},
+        stats: deleteField(),
+        slots: deleteField(),
+        notebookData: deleteField(),
         settings: settings || {},
         dailyStreak: dailyStreak || null,
         activeMode: activeMode || null,
@@ -1212,12 +1234,12 @@ export async function syncSlotsToCloud() {
       console.warn('[CloudSync] Direct Firestore write fallback to backend:', directErr);
     }
 
-    // 2. If direct write failed, fall back to backend API (or let backend clean up orphaned deck docs in background)
+    // 2. If direct write failed, fall back to backend API (uses Admin credentials and bypasses un-deployed rules)
     if (!directWriteSucceeded) {
       await saveCloudSlots({
         slots,
         notebookData: notebookPayload,
-        stats,
+        stats: statsForCloud,
         settings,
         dailyStreak,
         activeMode,
@@ -1473,11 +1495,55 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
 }
 
 /**
- * Hydrate raw users/{uid} Firestore snapshot with full deckData from decks/{deckId} and decks/notebook_{uid}
+ * Ensures stats object fits cleanly within Firestore's 1 MiB document limit even on user_stats/{uid}
+ */
+export function compactStatsForCloud(rawStats) {
+  if (!rawStats || typeof rawStats !== 'object') return {};
+  try {
+    if (JSON.stringify(rawStats).length <= 850000) {
+      return rawStats;
+    }
+    const cloned = JSON.parse(JSON.stringify(rawStats));
+    // Strip bulky per-card answersLog from archived history sessions oldest-first
+    if (Array.isArray(cloned.history)) {
+      for (let i = cloned.history.length - 1; i >= 0; i--) {
+        if (cloned.history[i] && Array.isArray(cloned.history[i].answersLog)) {
+          delete cloned.history[i].answersLog;
+        }
+        if (JSON.stringify(cloned).length <= 850000) return cloned;
+      }
+      for (let i = cloned.history.length - 1; i >= 0; i--) {
+        if (cloned.history[i] && cloned.history[i].strugglingCards) {
+          delete cloned.history[i].strugglingCards;
+        }
+        if (JSON.stringify(cloned).length <= 850000) return cloned;
+      }
+    }
+    if (cloned.currentSession && Array.isArray(cloned.currentSession.answersLog) && cloned.currentSession.answersLog.length > 200) {
+      cloned.currentSession.answersLog = cloned.currentSession.answersLog.slice(-200);
+    }
+    return cloned;
+  } catch (e) {
+    return rawStats;
+  }
+}
+
+/**
+ * Hydrate raw users/{uid} Firestore snapshot with full deckData from decks/{deckId}, decks/notebook_{uid}, and user_stats/{uid}
  */
 async function hydrateCloudUserDoc(userDocData, uid) {
   const hydrated = { ...userDocData };
   const localSlots = getLocalSlots();
+
+  // Fetch separated user_stats/{uid} document (falls back cleanly to legacy userDocData.stats)
+  try {
+    const statsSnap = await getDoc(doc(db, 'user_stats', uid));
+    if (statsSnap.exists() && statsSnap.data()?.stats) {
+      hydrated.stats = statsSnap.data().stats;
+    }
+  } catch (err) {
+    // Keep hydrated.stats fallback if permission/network error
+  }
 
   if (Array.isArray(userDocData.deckSlots)) {
     hydrated.deckSlots = await Promise.all(

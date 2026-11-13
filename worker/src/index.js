@@ -378,8 +378,8 @@ export default {
         }
 
         const deckSlots = userDoc.deckSlots || [];
-        // Populate full deckData for each slot and notebook in parallel
-        const [, notebookDoc] = await Promise.all([
+        // Populate full deckData for each slot, notebook, and separated user_stats in parallel
+        const [, notebookDoc, userStatsDoc] = await Promise.all([
           Promise.all(
             deckSlots.map(async (slot) => {
               if (slot.deckId) {
@@ -390,10 +390,12 @@ export default {
               }
             })
           ),
-          getDocument(serviceAccount, 'decks', `notebook_${user.uid}`).catch(() => null)
+          getDocument(serviceAccount, 'decks', `notebook_${user.uid}`).catch(() => null),
+          getDocument(serviceAccount, 'user_stats', user.uid).catch(() => null)
         ]);
 
         const notebookData = notebookDoc ? notebookDoc.deckData : null;
+        const resolvedStats = userStatsDoc?.stats || userDoc.stats || null;
 
         return jsonResponse({
           isPro: true,
@@ -405,7 +407,7 @@ export default {
             updatedAt: userDoc.notebookSlot?.updatedAt || 0,
             deletedAt: userDoc.notebookSlot?.deletedAt || null
           },
-          stats: userDoc.stats || null,
+          stats: resolvedStats,
           settings: userDoc.settings || null,
           dailyStreak: userDoc.dailyStreak || null,
           activeMode: userDoc.activeMode || null,
@@ -494,6 +496,16 @@ export default {
           deckOps.push(deleteDeckDocument(serviceAccount, `notebook_${user.uid}`).catch(() => {}));
         }
 
+        // 3b. Save separated user_stats/{uid} document (keeps users/{uid} well below 1 MiB)
+        deckOps.push(
+          setDocument(serviceAccount, 'user_stats', user.uid, {
+            ownerUid: user.uid,
+            stats: stats || {},
+            updatedAt: now,
+            lastClientSyncId: clientSyncId || null
+          }).catch(err => console.warn('Erro ao salvar user_stats:', err))
+        );
+
         await Promise.all(deckOps);
 
         const notebookUpdatedAt = notebookSaveFailed
@@ -520,7 +532,7 @@ export default {
           };
         });
 
-        // 5. Update user document LAST so onSnapshot listeners see committed deck documents
+        // 5. Update user document LAST (clearing legacy stats field on users/{uid} to keep it tiny)
         await updateUserDocument(serviceAccount, user.uid, {
           deckSlots: deckSlotsMeta,
           notebookSlot: {
@@ -529,7 +541,7 @@ export default {
             updatedAt: notebookUpdatedAt,
             deletedAt: notebookData?.deckData ? null : (notebookData?.deletedAt || now)
           },
-          stats: stats || {},
+          stats: null,
           settings: settings || {},
           dailyStreak: dailyStreak || null,
           activeMode: activeMode || null,
@@ -726,12 +738,15 @@ export default {
         let sessionCorrectSum = 0;
         let sessionDurationSum = 0;
 
+        const userStatsDoc = await getDocument(serviceAccount, 'user_stats', userId).catch(() => null);
+        const statsSource = userStatsDoc?.stats || userDoc.stats || {};
+
         const sessions = [];
-        if (Array.isArray(userDoc.stats?.history)) {
-          sessions.push(...userDoc.stats.history);
+        if (Array.isArray(statsSource?.history)) {
+          sessions.push(...statsSource.history);
         }
-        if (userDoc.stats?.currentSession && typeof userDoc.stats.currentSession === 'object') {
-          sessions.push(userDoc.stats.currentSession);
+        if (statsSource?.currentSession && typeof statsSource.currentSession === 'object') {
+          sessions.push(statsSource.currentSession);
         }
 
         for (const sess of sessions) {
@@ -751,9 +766,9 @@ export default {
         let retentionRate = 0.0;
         if (sessionCardsSum > 0) {
           retentionRate = Math.round((sessionCorrectSum / sessionCardsSum) * 100) / 100;
-        } else if (cardsReviewed > 0 && userDoc.stats?.allTime?.totalCardsAnswered > 0) {
-          const allTimeCorrect = Number(userDoc.stats.allTime.totalCorrect) || 0;
-          const allTimeTotal = Number(userDoc.stats.allTime.totalCardsAnswered) || 0;
+        } else if (cardsReviewed > 0 && statsSource?.allTime?.totalCardsAnswered > 0) {
+          const allTimeCorrect = Number(statsSource.allTime.totalCorrect) || 0;
+          const allTimeTotal = Number(statsSource.allTime.totalCardsAnswered) || 0;
           retentionRate = allTimeTotal > 0 ? Math.round((allTimeCorrect / allTimeTotal) * 100) / 100 : 0.0;
         }
 

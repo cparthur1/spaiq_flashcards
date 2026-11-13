@@ -148,7 +148,8 @@ export async function deleteUserDocument(serviceAccountConfig, uid) {
   // First fetch user doc to find deck IDs and API keys
   const userDoc = await getUserDocument(serviceAccountConfig, uid);
   const cleanupTasks = [
-    deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {})
+    deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {}),
+    deleteDocument(serviceAccountConfig, 'user_stats', uid).catch(() => {})
   ];
 
   if (userDoc?.deckSlots && Array.isArray(userDoc.deckSlots)) {
@@ -182,7 +183,8 @@ export async function clearUserCloudData(serviceAccountConfig, uid) {
   try {
     const userDoc = await getUserDocument(serviceAccountConfig, uid);
     const cleanupTasks = [
-      deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {})
+      deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {}),
+      deleteDocument(serviceAccountConfig, 'user_stats', uid).catch(() => {})
     ];
 
     if (userDoc?.deckSlots && Array.isArray(userDoc.deckSlots)) {

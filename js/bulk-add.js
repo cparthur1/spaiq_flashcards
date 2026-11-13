@@ -354,6 +354,8 @@ function getTypeBadgeInfo(type) {
         return { label: t('open_double'), classes: "bg-amber-100 text-amber-800" };
     } else if (type === 'fill') {
         return { label: t('fill_in_the_blank'), classes: "bg-teal-100 text-teal-800" };
+    } else if (type === 'flowchart') {
+        return { label: t('card_type_flowchart') || "Fluxograma", classes: "bg-sky-100 text-sky-800" };
     } else {
         return { label: t('write_direct'), classes: "bg-gray-100 text-gray-700" };
     }

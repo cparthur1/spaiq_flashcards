@@ -95,9 +95,31 @@ export async function evaluateAnswerSemantic({ questionObj, actualAnswer, onSlow
     if (!isTutorEnabled() || !questionObj) return null;
 
     try {
+        const formatFlowchartSummary = (q) => {
+            if (!Array.isArray(q?.nodes) || q.nodes.length === 0) return q?.answer || '';
+            const idToLabel = new Map();
+            q.nodes.forEach((n, idx) => {
+                let bIdx = 0;
+                const filled = String(n.text || '').replace(/_/g, () => {
+                    const ans = Array.isArray(n.blanks) && n.blanks[bIdx] !== undefined ? n.blanks[bIdx] : '_';
+                    bIdx++;
+                    return `[${ans}]`;
+                });
+                idToLabel.set(n.id, `${idx + 1}. ${filled}`);
+            });
+            return q.nodes.map(n => {
+                const label = idToLabel.get(n.id);
+                const nexts = Array.isArray(n.next) && n.next.length > 0
+                    ? ` -> [${n.next.map(nid => idToLabel.get(nid) || nid).join(', ')}]`
+                    : '';
+                return `${label}${nexts}`;
+            }).join(' | ');
+        };
         const expected = (questionObj.type === 'fill' && questionObj.answers && questionObj.answers.length > 0)
             ? questionObj.answers.join(' ; ')
-            : [questionObj.answer, questionObj.answer2].filter(Boolean).join(' / ');
+            : questionObj.type === 'flowchart'
+                ? formatFlowchartSummary(questionObj)
+                : [questionObj.answer, questionObj.answer2].filter(Boolean).join(' / ');
 
         const prompt = `
             Você é um revisor de flashcards acadêmicos rigoroso. 
@@ -207,8 +229,19 @@ export async function sendTutorChatMessage({ msg, currentQuestion, chatInput, ch
     try {
         const correctAnswers = (currentQuestion.type === 'fill' && currentQuestion.answers && currentQuestion.answers.length > 0)
             ? [currentQuestion.answers.join(' ; ')]
-            : [currentQuestion.answer];
-        if (currentQuestion.type !== 'fill' && currentQuestion.answer2) correctAnswers.push(currentQuestion.answer2);
+            : currentQuestion.type === 'flowchart' && Array.isArray(currentQuestion.nodes) && currentQuestion.nodes.length > 0
+                ? [currentQuestion.nodes.map((n, idx) => {
+                    let bIdx = 0;
+                    const filled = String(n.text || '').replace(/_/g, () => {
+                        const ans = Array.isArray(n.blanks) && n.blanks[bIdx] !== undefined ? n.blanks[bIdx] : '_';
+                        bIdx++;
+                        return `[${ans}]`;
+                    });
+                    const nextStr = Array.isArray(n.next) && n.next.length > 0 ? ` -> ${n.next.join(', ')}` : '';
+                    return `(${n.id || idx + 1}) ${filled}${nextStr}`;
+                }).join(' | ')]
+                : [currentQuestion.answer];
+        if (currentQuestion.type !== 'fill' && currentQuestion.type !== 'flowchart' && currentQuestion.answer2) correctAnswers.push(currentQuestion.answer2);
 
         const systemPrompt = `
             Você é um professor tutor ajudando um estudante com um flashcard.
@@ -278,7 +311,12 @@ export async function getTermDefinition({ selectedText, currentQuestion }) {
         const cleanQuestion = currentQuestion?.description ? stripHtml(currentQuestion.description) : '';
         const cleanAnswer = (currentQuestion?.type === 'fill' && currentQuestion?.answers && currentQuestion.answers.length > 0)
             ? currentQuestion.answers.join(' ; ')
-            : [currentQuestion?.answer, currentQuestion?.answer2].filter(Boolean).map(a => stripHtml(String(a))).join(' / ');
+            : currentQuestion?.type === 'flowchart' && Array.isArray(currentQuestion?.nodes) && currentQuestion.nodes.length > 0
+                ? currentQuestion.nodes.map(n => {
+                    let bIdx = 0;
+                    return stripHtml(String(n.text || '')).replace(/_/g, () => (Array.isArray(n.blanks) && n.blanks[bIdx++] ? n.blanks[bIdx - 1] : '_'));
+                }).join(' -> ')
+                : [currentQuestion?.answer, currentQuestion?.answer2].filter(Boolean).map(a => stripHtml(String(a))).join(' / ');
 
         const systemPrompt = `Você é um tutor acadêmico de flashcards. Sua tarefa é fornecer uma definição EXTREMAMENTE resumida (no máximo 1 ou 2 frases curtas, direta ao ponto) do termo ou trecho selecionado pelo estudante, considerando estritamente o contexto da pergunta e resposta deste flashcard.
 Não inclua preâmbulos, saudações, nem repita "o termo significa...". Seja direto e conciso.`;

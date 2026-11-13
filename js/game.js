@@ -1,6 +1,6 @@
 import { normalizeString, calculateSimilarity, shuffleArray, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
-import { isPlayableCard, calculateThinkingGap, selectNextCard, isLeechCard, shouldGraduateCard, formatTimeDisplay, getCardTopic } from './engine/scheduler.js';
-import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString, recordNotebookGoalBeaten, getNotebookDailyGoal } from './engine/notebook-scheduler.js';
+import { isPlayableCard, calculateThinkingGap, calculateProportionalStepGap, recordNormalCardOutcome, revertNormalCardErrorOnAiCorrection, resetCardForNewSession, selectNextCard, isLeechCard, shouldGraduateCard, formatTimeDisplay, getCardTopic } from './engine/scheduler.js';
+import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString, recordNotebookGoalBeaten, getNotebookDailyGoal, getNotebookSchedulerMode, setNotebookSchedulerMode } from './engine/notebook-scheduler.js';
 import {
     initEffects, createBall, clearBalls, setBallColor, launchCelebrationParticles,
     playCompletionShockwave, cleanShockwaveContainer, resizeCanvas, animate,
@@ -176,6 +176,24 @@ const imageArrowsAnswerArea = document.getElementById('image-arrows-answer-area'
 const imageArrowsProgressBadge = document.getElementById('image-arrows-progress-badge');
 const imageArrowsInputsList = document.getElementById('image-arrows-inputs-list');
 
+// Flowchart DOM Elements
+const flowchartAnswerArea = document.getElementById('flowchart-answer-area');
+const flowchartProgressBadge = document.getElementById('flowchart-progress-badge');
+const flowchartNewBranchBtn = document.getElementById('flowchart-new-branch-btn');
+const flowchartClearBtn = document.getElementById('flowchart-clear-btn');
+const flowchartStatusBanner = document.getElementById('flowchart-status-banner');
+const flowchartStatusIcon = document.getElementById('flowchart-status-icon');
+const flowchartStatusText = document.getElementById('flowchart-status-text');
+const flowchartCancelModeBtn = document.getElementById('flowchart-cancel-mode-btn');
+const flowchartCanvas = document.getElementById('flowchart-canvas');
+const flowchartLevelsWrapper = document.getElementById('flowchart-levels-wrapper');
+const flowchartEdgesSvg = document.getElementById('flowchart-edges-svg');
+const flowchartLevelsContainer = document.getElementById('flowchart-levels-container');
+const flowchartTrayWrapper = document.getElementById('flowchart-tray-wrapper');
+const flowchartTrayList = document.getElementById('flowchart-tray-list');
+const flowchartTrayEmpty = document.getElementById('flowchart-tray-empty');
+const flowchartSolutionContainer = document.getElementById('flowchart-solution-container');
+
 // Anki DOM Elements
 const ankiAnswerContainer = document.getElementById('anki-answer-container');
 const ankiAnswerText = document.getElementById('anki-answer-text');
@@ -270,6 +288,10 @@ const editImageArrowsGroup = document.getElementById('edit-image-arrows-group');
 const editArrowsCountBadge = document.getElementById('edit-arrows-count-badge');
 const editArrowsEmptyMsg = document.getElementById('edit-arrows-empty-msg');
 const editArrowsInputsList = document.getElementById('edit-arrows-inputs-list');
+const editFlowchartGroup = document.getElementById('edit-flowchart-group');
+const editFlowchartCountBadge = document.getElementById('edit-flowchart-count-badge');
+const editFlowchartStepsList = document.getElementById('edit-flowchart-steps-list');
+const editAddFlowchartStepBtn = document.getElementById('edit-add-flowchart-step-btn');
 
 const submitBtn = document.getElementById('submit-btn');
 const nextQuestionBtn = document.getElementById('next-question-btn');
@@ -305,6 +327,30 @@ let currentStep = 0;
 let consecutiveDueCardsCount = 0;
 let consecutiveNewCardsCount = 0;
 let lastCardTopic = '';
+let recentTopics = [];
+
+function syncCardToAllQuestions(card, updates = null) {
+    if (!card || !Array.isArray(allQuestions)) return;
+    const cardInAll = allQuestions.find(q =>
+        q === card ||
+        (card.id && q.id && q.id === card.id) ||
+        (q.description && card.description && stripHtml(q.description) === stripHtml(card.description))
+    );
+    if (cardInAll && cardInAll !== card) {
+        Object.assign(cardInAll, updates || {
+            totalReviews: card.totalReviews,
+            totalCorrect: card.totalCorrect,
+            historicalWrongs: card.historicalWrongs,
+            difficultyScore: card.difficultyScore,
+            lastLatencySec: card.lastLatencySec,
+            lastReviewedAt: card.lastReviewedAt,
+            historicalSessions: card.historicalSessions,
+            dueStep: card.dueStep,
+            wrongCount: card.wrongCount,
+            correctStreak: card.correctStreak
+        });
+    }
+}
 let isAnkiFlipped = false;
 let questionStartTime = Date.now();
 
@@ -894,12 +940,17 @@ function animateCardsFromHeaderToDeck(callback) {
 // --- CANVAS ANIMATION & VISUAL EFFECTS delegado para ./engine/effects.js ---
 
 
-// --- HELPER: RENDER FILL-IN-THE-BLANKS QUESTION WITH INTERACTIVE INPUTS ---
-function renderFillBlanksQuestion(text) {
+// --- SHARED BLANK RENDERER (FILL & FLOWCHART) ---
+function renderTextWithBlanks(text, opts = {}) {
     if (!text) return '';
+    const {
+        mode = 'fill',
+        nodeId = ''
+    } = opts;
+
     // 1. Temporarily extract block and inline LaTeX math to protect math underscores
     const mathBlocks = [];
-    let placeholderText = text.replace(/\\\[([\s\S]*?)\\\]/g, (match) => {
+    let placeholderText = String(text).replace(/\\\[([\s\S]*?)\\\]/g, (match) => {
         mathBlocks.push(match);
         return `%%MATH_${mathBlocks.length - 1}%%`;
     });
@@ -931,17 +982,993 @@ function renderFillBlanksQuestion(text) {
     // 4. Render Markdown and KaTeX math
     let renderedHtml = renderMathAndMarkdown(placeholderText);
 
-    // 5. Replace each spot token with an interactive inline <input>
+    // 5. Replace each spot token according to rendering mode
     const totalSpots = spotIndex;
+    const escapedNodeId = escapeHtml(String(nodeId || ''));
     for (let i = 0; i < totalSpots; i++) {
-        const enterHint = i < totalSpots - 1 ? 'next' : 'done';
-        const inputHtml = `<input type="search" name="search" class="fill-blank-input game-answer-input" data-blank-index="${i}" enterkeyhint="${enterHint}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">`;
-        renderedHtml = renderedHtml.split(`%%FILL_SPOT_${i}%%`).join(inputHtml);
+        let replacementHtml = '';
+        if (mode === 'flowchart-tray') {
+            replacementHtml = `<span class="flowchart-tray-blank-chip" aria-label="${escapeHtml(t('flowchart_blank_badge'))}">___</span>`;
+        } else if (mode === 'flowchart-node') {
+            const enterHint = i < totalSpots - 1 ? 'next' : 'done';
+            replacementHtml = `<input type="search" name="search" class="flowchart-blank-input game-answer-input" data-node-id="${escapedNodeId}" data-blank-index="${i}" enterkeyhint="${enterHint}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">`;
+        } else {
+            const enterHint = i < totalSpots - 1 ? 'next' : 'done';
+            replacementHtml = `<input type="search" name="search" class="fill-blank-input game-answer-input" data-blank-index="${i}" enterkeyhint="${enterHint}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">`;
+        }
+        renderedHtml = renderedHtml.split(`%%FILL_SPOT_${i}%%`).join(replacementHtml);
     }
 
     return sanitizeHtml(renderedHtml, {
         ADD_TAGS: ['input'],
-        ADD_ATTR: ['type', 'name', 'class', 'data-blank-index', 'enterkeyhint', 'autocomplete', 'autocorrect', 'autocapitalize', 'spellcheck', 'aria-autocomplete', 'data-form-type', 'data-lpignore', 'data-1p-ignore', 'data-bwignore']
+        ADD_ATTR: ['type', 'name', 'class', 'data-blank-index', 'data-node-id', 'enterkeyhint', 'autocomplete', 'autocorrect', 'autocapitalize', 'spellcheck', 'aria-autocomplete', 'data-form-type', 'data-lpignore', 'data-1p-ignore', 'data-bwignore']
+    });
+}
+
+// --- HELPER: RENDER FILL-IN-THE-BLANKS QUESTION WITH INTERACTIVE INPUTS ---
+function renderFillBlanksQuestion(text) {
+    return renderTextWithBlanks(text, { mode: 'fill' });
+}
+
+// --- FLOWCHART (FLUXOGRAMA) GAMEPLAY & EDITOR ---
+const flowchartState = {
+    nodes: [],
+    trayOrder: [],
+    placedIds: new Set(),
+    edges: [],
+    userBlanks: {},
+    activeOriginId: null,
+    linkingFromId: null,
+    startParallelRoot: false,
+    draggedNodeId: null,
+    locked: false,
+    evaluation: null,
+    eventsWired: false,
+    resizeObserver: null,
+    redrawRaf: null
+};
+
+function parseGameFlowchartStepAndBlanks(rawText) {
+    const blanks = [];
+    const normalizedText = String(rawText || '').trim().replace(/\{([^{}]+)\}/g, (_, inner) => {
+        blanks.push(inner.trim());
+        return '_';
+    });
+    return { text: normalizedText, blanks };
+}
+
+function formatGameFlowchartNodeForEditor(node) {
+    const blanks = Array.isArray(node?.blanks) ? node.blanks : [];
+    let idx = 0;
+    return String(node?.text || '').replace(/_/g, () => {
+        if (idx < blanks.length && blanks[idx] !== '') {
+            return `{${blanks[idx++]}}`;
+        }
+        idx++;
+        return '_';
+    });
+}
+
+function normalizeGameFlowchartNodes(rawNodes) {
+    const list = Array.isArray(rawNodes) ? rawNodes : [];
+    const nodes = list.map((n, idx) => {
+        const id = String(n?.id || `s${idx + 1}`).trim() || `s${idx + 1}`;
+        let text = String(n?.text || '').trim();
+        let blanks = Array.isArray(n?.blanks) ? n.blanks.map(b => String(b || '').trim()).filter(Boolean) : [];
+        if (blanks.length === 0 && /\{[^{}]+\}/.test(text)) {
+            const parsed = parseGameFlowchartStepAndBlanks(text);
+            text = parsed.text;
+            blanks = parsed.blanks;
+        }
+        const next = Array.isArray(n?.next) ? n.next.map(x => String(x).trim()).filter(Boolean) : [];
+        return { id, text, blanks, next };
+    }).filter(n => n.text);
+
+    const validIds = new Set(nodes.map(n => n.id));
+    nodes.forEach(n => {
+        const seen = new Set();
+        n.next = n.next.filter(tid => tid !== n.id && validIds.has(tid) && !seen.has(tid) && seen.add(tid));
+    });
+
+    // Break cycles via DFS to keep expected graph strictly acyclic (DAG)
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const color = new Map();
+    const breakCycles = (id) => {
+        color.set(id, 1);
+        const node = nodeMap.get(id);
+        if (node) {
+            node.next = node.next.filter(tid => {
+                if (color.get(tid) === 1) return false;
+                if (!color.get(tid)) breakCycles(tid);
+                return true;
+            });
+        }
+        color.set(id, 2);
+    };
+    nodes.forEach(n => {
+        if (!color.get(n.id)) breakCycles(n.id);
+    });
+    return nodes;
+}
+
+function wouldFlowchartEdgeCreateCycle(fromId, toId) {
+    if (!fromId || !toId || fromId === toId) return true;
+    const adj = new Map();
+    flowchartState.edges.forEach(e => {
+        if (!adj.has(e.from)) adj.set(e.from, []);
+        adj.get(e.from).push(e.to);
+    });
+    const stack = [toId];
+    const visited = new Set();
+    while (stack.length > 0) {
+        const cur = stack.pop();
+        if (cur === fromId) return true;
+        if (visited.has(cur)) continue;
+        visited.add(cur);
+        const nexts = adj.get(cur) || [];
+        for (const nxt of nexts) stack.push(nxt);
+    }
+    return false;
+}
+
+function addFlowchartEdge(fromId, toId) {
+    if (flowchartState.locked || !fromId || !toId || fromId === toId) return false;
+    if (!flowchartState.placedIds.has(fromId) || !flowchartState.placedIds.has(toId)) return false;
+    if (flowchartState.edges.some(e => e.from === fromId && e.to === toId)) return false;
+    if (wouldFlowchartEdgeCreateCycle(fromId, toId)) return false;
+    flowchartState.edges.push({ from: fromId, to: toId });
+    return true;
+}
+
+function removeFlowchartEdge(fromId, toId) {
+    if (flowchartState.locked) return;
+    flowchartState.edges = flowchartState.edges.filter(e => !(e.from === fromId && e.to === toId));
+    renderFlowchartUI();
+}
+
+function placeFlowchartNode(nodeId, explicitParentId) {
+    if (flowchartState.locked || !nodeId) return;
+    const alreadyPlaced = flowchartState.placedIds.has(nodeId);
+    flowchartState.placedIds.add(nodeId);
+
+    const parentId = explicitParentId !== undefined
+        ? explicitParentId
+        : (flowchartState.startParallelRoot ? null : flowchartState.activeOriginId);
+
+    if (parentId && parentId !== nodeId && flowchartState.placedIds.has(parentId)) {
+        addFlowchartEdge(parentId, nodeId);
+    }
+
+    if (!alreadyPlaced || explicitParentId === undefined) {
+        flowchartState.activeOriginId = nodeId;
+    }
+    flowchartState.startParallelRoot = false;
+    flowchartState.linkingFromId = null;
+    renderFlowchartUI();
+}
+
+function unplaceFlowchartNode(nodeId) {
+    if (flowchartState.locked || !nodeId) return;
+    flowchartState.placedIds.delete(nodeId);
+    flowchartState.edges = flowchartState.edges.filter(e => e.from !== nodeId && e.to !== nodeId);
+    if (flowchartState.linkingFromId === nodeId) flowchartState.linkingFromId = null;
+    if (flowchartState.activeOriginId === nodeId) {
+        const remaining = Array.from(flowchartState.placedIds);
+        flowchartState.activeOriginId = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+    }
+    renderFlowchartUI();
+}
+
+function computeFlowchartLevels(nodesSubset, edgesList) {
+    const ids = nodesSubset.map(n => n.id);
+    const idSet = new Set(ids);
+    const orderIdx = new Map(ids.map((id, i) => [id, i]));
+    const inDeg = new Map(ids.map(id => [id, 0]));
+    const children = new Map(ids.map(id => [id, []]));
+    const parents = new Map(ids.map(id => [id, []]));
+    const levelMap = new Map(ids.map(id => [id, 0]));
+
+    edgesList.forEach(e => {
+        if (!idSet.has(e.from) || !idSet.has(e.to)) return;
+        children.get(e.from).push(e.to);
+        parents.get(e.to).push(e.from);
+        inDeg.set(e.to, (inDeg.get(e.to) || 0) + 1);
+    });
+
+    const queue = ids.filter(id => inDeg.get(id) === 0);
+    const processed = new Set();
+    while (queue.length > 0) {
+        const cur = queue.shift();
+        processed.add(cur);
+        const curLvl = levelMap.get(cur) || 0;
+        for (const nxt of (children.get(cur) || [])) {
+            if ((levelMap.get(nxt) || 0) < curLvl + 1) {
+                levelMap.set(nxt, curLvl + 1);
+            }
+            const rem = (inDeg.get(nxt) || 0) - 1;
+            inDeg.set(nxt, rem);
+            if (rem === 0) queue.push(nxt);
+        }
+    }
+
+    ids.forEach(id => {
+        if (!processed.has(id)) levelMap.set(id, 0);
+    });
+
+    let maxLvl = 0;
+    levelMap.forEach(lvl => {
+        if (lvl > maxLvl) maxLvl = lvl;
+    });
+
+    const levels = Array.from({ length: maxLvl + 1 }, () => []);
+    const nodeById = new Map(nodesSubset.map(n => [n.id, n]));
+    ids.forEach(id => {
+        levels[levelMap.get(id) || 0].push(nodeById.get(id));
+    });
+
+    // Barycenter sort within each level to minimize arrow crossings
+    const posInPrev = new Map();
+    levels.forEach((row, lvlIdx) => {
+        if (lvlIdx > 0) {
+            row.sort((a, b) => {
+                const pA = parents.get(a.id) || [];
+                const pB = parents.get(b.id) || [];
+                const baryA = pA.length > 0
+                    ? pA.reduce((s, pid) => s + (posInPrev.get(pid) ?? 0), 0) / pA.length
+                    : (orderIdx.get(a.id) ?? 0);
+                const baryB = pB.length > 0
+                    ? pB.reduce((s, pid) => s + (posInPrev.get(pid) ?? 0), 0) / pB.length
+                    : (orderIdx.get(b.id) ?? 0);
+                if (Math.abs(baryA - baryB) > 0.01) return baryA - baryB;
+                return (orderIdx.get(a.id) ?? 0) - (orderIdx.get(b.id) ?? 0);
+            });
+        }
+        row.forEach((n, i) => posInPrev.set(n.id, i));
+    });
+
+    return levels.filter(r => r.length > 0);
+}
+
+function redrawFlowchartEdgesSvg() {
+    if (!flowchartEdgesSvg || !flowchartLevelsWrapper || !flowchartLevelsContainer) return;
+    const svgNs = 'http://www.w3.org/2000/svg';
+    flowchartEdgesSvg.replaceChildren();
+
+    const width = Math.max(flowchartLevelsContainer.scrollWidth, flowchartLevelsWrapper.clientWidth);
+    const height = Math.max(flowchartLevelsContainer.scrollHeight, flowchartLevelsWrapper.clientHeight);
+    flowchartEdgesSvg.setAttribute('viewBox', `0 0 ${Math.max(1, width)} ${Math.max(1, height)}`);
+    flowchartEdgesSvg.style.width = `${width}px`;
+    flowchartEdgesSvg.style.height = `${height}px`;
+
+    if (flowchartState.edges.length === 0) return;
+
+    const defs = document.createElementNS(svgNs, 'defs');
+    const mkDefs = [
+        { id: 'fc-arrow-default', color: '#3b82f7' },
+        { id: 'fc-arrow-correct', color: '#16a34a' },
+        { id: 'fc-arrow-wrong', color: '#ef4444' }
+    ];
+    mkDefs.forEach(({ id, color }) => {
+        const marker = document.createElementNS(svgNs, 'marker');
+        marker.setAttribute('id', id);
+        marker.setAttribute('markerWidth', '9');
+        marker.setAttribute('markerHeight', '7');
+        marker.setAttribute('refX', '7.5');
+        marker.setAttribute('refY', '3.5');
+        marker.setAttribute('orient', 'auto');
+        const poly = document.createElementNS(svgNs, 'polygon');
+        poly.setAttribute('points', '0 0.7, 8 3.5, 0 6.3');
+        poly.setAttribute('fill', color);
+        marker.appendChild(poly);
+        defs.appendChild(marker);
+    });
+    flowchartEdgesSvg.appendChild(defs);
+
+    const wrapRect = flowchartLevelsWrapper.getBoundingClientRect();
+    const cardEls = new Map();
+    flowchartLevelsContainer.querySelectorAll('[data-fc-node-id]').forEach(el => {
+        cardEls.set(el.dataset.fcNodeId, el.getBoundingClientRect());
+    });
+
+    const statusMap = flowchartState.evaluation?.edgeStatusMap || null;
+
+    flowchartState.edges.forEach(edge => {
+        const fromRect = cardEls.get(edge.from);
+        const toRect = cardEls.get(edge.to);
+        if (!fromRect || !toRect) return;
+
+        const x1 = fromRect.left + fromRect.width / 2 - wrapRect.left;
+        const y1 = fromRect.bottom - wrapRect.top;
+        const x2 = toRect.left + toRect.width / 2 - wrapRect.left;
+        const y2 = toRect.top - wrapRect.top;
+
+        let d;
+        if (y2 >= y1 - 4) {
+            const dy = Math.max(22, Math.abs(y2 - y1) * 0.55);
+            d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${x1.toFixed(1)} ${(y1 + dy).toFixed(1)}, ${x2.toFixed(1)} ${(y2 - dy).toFixed(1)}, ${x2.toFixed(1)} ${(y2 - 2).toFixed(1)}`;
+        } else {
+            const curveX = Math.max(x1, x2) + 34;
+            d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${curveX.toFixed(1)} ${y1.toFixed(1)}, ${curveX.toFixed(1)} ${y2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+        }
+
+        const edgeKey = `${edge.from}->${edge.to}`;
+        const edgeStatus = statusMap ? statusMap.get(edgeKey) : null;
+        let lineClass = 'flowchart-edge-line';
+        let markerId = 'fc-arrow-default';
+        if (edgeStatus === 'correct') {
+            lineClass += ' is-correct';
+            markerId = 'fc-arrow-correct';
+        } else if (edgeStatus === 'wrong') {
+            lineClass += ' is-wrong';
+            markerId = 'fc-arrow-wrong';
+        }
+
+        const g = document.createElementNS(svgNs, 'g');
+        g.setAttribute('class', 'flowchart-edge-group');
+
+        const line = document.createElementNS(svgNs, 'path');
+        line.setAttribute('d', d);
+        line.setAttribute('class', lineClass);
+        line.setAttribute('marker-end', `url(#${markerId})`);
+
+        const hit = document.createElementNS(svgNs, 'path');
+        hit.setAttribute('d', d);
+        hit.setAttribute('class', 'flowchart-edge-hit');
+        const titleEl = document.createElementNS(svgNs, 'title');
+        titleEl.textContent = t('flowchart_disconnect_edge_title');
+        hit.appendChild(titleEl);
+        hit.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            if (!flowchartState.locked) removeFlowchartEdge(edge.from, edge.to);
+        });
+
+        g.appendChild(line);
+        g.appendChild(hit);
+        flowchartEdgesSvg.appendChild(g);
+    });
+}
+
+function scheduleFlowchartEdgesRedraw() {
+    if (flowchartState.redrawRaf) cancelAnimationFrame(flowchartState.redrawRaf);
+    flowchartState.redrawRaf = requestAnimationFrame(() => {
+        flowchartState.redrawRaf = null;
+        redrawFlowchartEdgesSvg();
+    });
+}
+
+function renderFlowchartUI() {
+    if (!flowchartAnswerArea || !flowchartLevelsContainer || !flowchartTrayList) return;
+
+    const total = flowchartState.nodes.length;
+    const placedCount = flowchartState.placedIds.size;
+    if (flowchartProgressBadge) {
+        flowchartProgressBadge.textContent = `${placedCount}/${total}`;
+    }
+
+    if (flowchartNewBranchBtn) {
+        flowchartNewBranchBtn.classList.toggle('is-active', flowchartState.startParallelRoot);
+        flowchartNewBranchBtn.disabled = flowchartState.locked;
+    }
+    if (flowchartClearBtn) {
+        flowchartClearBtn.disabled = flowchartState.locked || placedCount === 0;
+    }
+
+    // Update status banner
+    if (flowchartStatusBanner && flowchartStatusText && flowchartStatusIcon) {
+        if (flowchartState.locked) {
+            flowchartStatusBanner.classList.add('hidden');
+        } else if (flowchartState.linkingFromId) {
+            flowchartStatusBanner.classList.remove('hidden');
+            flowchartStatusIcon.textContent = 'link';
+            flowchartStatusText.textContent = t('flowchart_link_target_hint');
+            if (flowchartCancelModeBtn) flowchartCancelModeBtn.classList.remove('hidden');
+        } else if (flowchartState.startParallelRoot) {
+            flowchartStatusBanner.classList.remove('hidden');
+            flowchartStatusIcon.textContent = 'alt_route';
+            flowchartStatusText.textContent = t('flowchart_root_mode_label');
+            if (flowchartCancelModeBtn) flowchartCancelModeBtn.classList.remove('hidden');
+        } else if (flowchartState.activeOriginId && placedCount < total) {
+            const originNode = flowchartState.nodes.find(n => n.id === flowchartState.activeOriginId);
+            const originLabel = originNode ? stripHtml(originNode.text).slice(0, 42) : '';
+            flowchartStatusBanner.classList.remove('hidden');
+            flowchartStatusIcon.textContent = 'arrow_downward';
+            flowchartStatusText.textContent = `${t('flowchart_origin_label')} ${originLabel}${originNode && originNode.text.length > 42 ? '...' : ''}`;
+            if (flowchartCancelModeBtn) flowchartCancelModeBtn.classList.add('hidden');
+        } else {
+            flowchartStatusBanner.classList.add('hidden');
+        }
+    }
+
+    // Preserve any focused input identity before DOM rebuild
+    const activeEl = document.activeElement;
+    const activeNodeId = activeEl?.classList?.contains('flowchart-blank-input') ? activeEl.dataset.nodeId : null;
+    const activeBlankIdx = activeEl?.classList?.contains('flowchart-blank-input') ? activeEl.dataset.blankIndex : null;
+
+    // Render placed DAG levels
+    const placedNodes = flowchartState.nodes.filter(n => flowchartState.placedIds.has(n.id));
+    const levels = computeFlowchartLevels(placedNodes, flowchartState.edges);
+    flowchartLevelsContainer.replaceChildren();
+
+    if (levels.length === 0) {
+        const emptyHint = document.createElement('div');
+        emptyHint.className = 'py-6 text-center text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium';
+        emptyHint.textContent = t('flowchart_tray_title');
+        flowchartLevelsContainer.appendChild(emptyHint);
+    } else {
+        let visualNum = 0;
+        const evalData = flowchartState.evaluation;
+
+        levels.forEach(rowNodes => {
+            const rowEl = document.createElement('div');
+            rowEl.className = 'flowchart-level-row';
+
+            rowNodes.forEach(node => {
+                visualNum++;
+                const cardEl = document.createElement('div');
+                cardEl.className = 'flowchart-node-card';
+                cardEl.dataset.fcNodeId = node.id;
+                cardEl.draggable = !flowchartState.locked;
+
+                if (!flowchartState.locked) {
+                    if (flowchartState.linkingFromId === node.id) {
+                        cardEl.classList.add('is-linking-source');
+                    } else if (flowchartState.linkingFromId && !wouldFlowchartEdgeCreateCycle(flowchartState.linkingFromId, node.id)) {
+                        cardEl.classList.add('is-link-candidate');
+                    } else if (flowchartState.activeOriginId === node.id && !flowchartState.startParallelRoot) {
+                        cardEl.classList.add('is-origin');
+                    }
+                } else if (evalData?.nodeResults?.has(node.id)) {
+                    cardEl.classList.add(evalData.nodeResults.get(node.id).nodeCorrect ? 'is-correct' : 'is-wrong');
+                }
+
+                // Toolbar
+                const toolbar = document.createElement('div');
+                toolbar.className = 'flowchart-node-toolbar';
+
+                const pill = document.createElement('span');
+                pill.className = 'flowchart-node-step-pill';
+                pill.textContent = `#${visualNum}`;
+
+                const actions = document.createElement('div');
+                actions.className = 'flex items-center gap-1';
+
+                if (!flowchartState.locked) {
+                    const linkBtn = document.createElement('button');
+                    linkBtn.type = 'button';
+                    linkBtn.className = `flowchart-node-action-btn${flowchartState.linkingFromId === node.id ? ' is-active' : ''}`;
+                    linkBtn.title = t('flowchart_link_mode_btn');
+                    linkBtn.innerHTML = '<span class="material-symbols-rounded text-base">link</span>';
+                    linkBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        flowchartState.linkingFromId = (flowchartState.linkingFromId === node.id) ? null : node.id;
+                        flowchartState.startParallelRoot = false;
+                        renderFlowchartUI();
+                    });
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'flowchart-node-action-btn is-danger';
+                    removeBtn.title = t('flowchart_remove_from_canvas_title');
+                    removeBtn.innerHTML = '<span class="material-symbols-rounded text-base">close</span>';
+                    removeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        unplaceFlowchartNode(node.id);
+                    });
+                    actions.append(linkBtn, removeBtn);
+                }
+
+                toolbar.append(pill, actions);
+
+                // Body with markdown/math and inline fillable blanks
+                const body = document.createElement('div');
+                body.className = 'flowchart-node-body';
+                body.innerHTML = renderTextWithBlanks(node.text, { mode: 'flowchart-node', nodeId: node.id });
+
+                const nodeEval = evalData?.nodeResults?.get(node.id) || null;
+                const savedVals = flowchartState.userBlanks[node.id] || [];
+                const inputs = Array.from(body.querySelectorAll('.flowchart-blank-input'));
+                inputs.forEach((inp, bIdx) => {
+                    inp.value = savedVals[bIdx] || '';
+                    const resizeInput = () => {
+                        inp.style.width = Math.max(72, Math.min(220, (inp.value.length + 2) * 10)) + 'px';
+                    };
+                    resizeInput();
+
+                    if (flowchartState.locked) {
+                        inp.readOnly = true;
+                        const bRes = nodeEval?.blankResults?.[bIdx];
+                        if (bRes) {
+                            inp.classList.add(bRes.isCorrect ? 'is-correct' : 'is-wrong');
+                        }
+                    } else {
+                        inp.addEventListener('mousedown', (ev) => ev.stopPropagation());
+                        inp.addEventListener('click', (ev) => ev.stopPropagation());
+                        inp.addEventListener('input', () => {
+                            if (!flowchartState.userBlanks[node.id]) flowchartState.userBlanks[node.id] = [];
+                            flowchartState.userBlanks[node.id][bIdx] = inp.value;
+                            resizeInput();
+                        });
+                        inp.addEventListener('keydown', (ev) => {
+                            if (ev.key === 'Enter') {
+                                ev.preventDefault();
+                                const allInputs = Array.from(flowchartLevelsContainer.querySelectorAll('.flowchart-blank-input'));
+                                const curIdx = allInputs.indexOf(inp);
+                                if (curIdx >= 0 && curIdx < allInputs.length - 1) {
+                                    allInputs[curIdx + 1].focus();
+                                } else if (flowchartState.placedIds.size === flowchartState.nodes.length) {
+                                    handleFlowchartSubmit();
+                                }
+                            }
+                        });
+                    }
+                });
+
+                // Prevent card drag if starting drag inside text input
+                cardEl.addEventListener('dragstart', (e) => {
+                    if (flowchartState.locked || e.target?.classList?.contains('flowchart-blank-input')) {
+                        e.preventDefault();
+                        return;
+                    }
+                    flowchartState.draggedNodeId = node.id;
+                    e.dataTransfer?.setData('text/plain', node.id);
+                });
+                cardEl.addEventListener('dragover', (e) => {
+                    if (flowchartState.locked || !flowchartState.draggedNodeId || flowchartState.draggedNodeId === node.id) return;
+                    e.preventDefault();
+                    cardEl.classList.add('is-drag-over');
+                });
+                cardEl.addEventListener('dragleave', () => cardEl.classList.remove('is-drag-over'));
+                cardEl.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    cardEl.classList.remove('is-drag-over');
+                    const draggedId = flowchartState.draggedNodeId || e.dataTransfer?.getData('text/plain');
+                    flowchartState.draggedNodeId = null;
+                    if (!draggedId || draggedId === node.id || flowchartState.locked) return;
+                    if (flowchartState.placedIds.has(draggedId)) {
+                        if (addFlowchartEdge(node.id, draggedId)) renderFlowchartUI();
+                    } else {
+                        placeFlowchartNode(draggedId, node.id);
+                    }
+                });
+
+                cardEl.addEventListener('click', () => {
+                    if (flowchartState.locked) return;
+                    if (flowchartState.linkingFromId) {
+                        if (flowchartState.linkingFromId === node.id) {
+                            flowchartState.linkingFromId = null;
+                            renderFlowchartUI();
+                            return;
+                        }
+                        addFlowchartEdge(flowchartState.linkingFromId, node.id);
+                        flowchartState.linkingFromId = null;
+                        flowchartState.activeOriginId = node.id;
+                        renderFlowchartUI();
+                        return;
+                    }
+                    flowchartState.activeOriginId = node.id;
+                    flowchartState.startParallelRoot = false;
+                    renderFlowchartUI();
+                });
+
+                cardEl.append(toolbar, body);
+                rowEl.appendChild(cardEl);
+            });
+            flowchartLevelsContainer.appendChild(rowEl);
+        });
+    }
+
+    // Render Tray (unplaced nodes in shuffled order)
+    const unplacedIds = flowchartState.trayOrder.filter(id => !flowchartState.placedIds.has(id));
+    flowchartTrayList.replaceChildren();
+    if (flowchartTrayEmpty) {
+        flowchartTrayEmpty.classList.toggle('hidden', unplacedIds.length > 0 || total === 0);
+    }
+
+    unplacedIds.forEach(nodeId => {
+        const node = flowchartState.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'flowchart-tray-card';
+        btn.draggable = !flowchartState.locked;
+        btn.innerHTML = `<span class="material-symbols-rounded text-base text-[#3b82f7] flex-shrink-0">add_circle</span><span class="min-w-0">${renderTextWithBlanks(node.text, { mode: 'flowchart-tray', nodeId: node.id })}</span>`;
+
+        btn.addEventListener('click', () => {
+            if (!flowchartState.locked) placeFlowchartNode(node.id);
+        });
+        btn.addEventListener('dragstart', (e) => {
+            if (flowchartState.locked) {
+                e.preventDefault();
+                return;
+            }
+            flowchartState.draggedNodeId = node.id;
+            e.dataTransfer?.setData('text/plain', node.id);
+        });
+        flowchartTrayList.appendChild(btn);
+    });
+
+    if (activeNodeId && activeBlankIdx !== null) {
+        const restoreEl = flowchartLevelsContainer.querySelector(`.flowchart-blank-input[data-node-id="${CSS.escape(activeNodeId)}"][data-blank-index="${CSS.escape(activeBlankIdx)}"]`);
+        if (restoreEl) restoreEl.focus();
+    }
+
+    scheduleFlowchartEdgesRedraw();
+}
+
+function wireFlowchartEventsOnce() {
+    if (flowchartState.eventsWired) return;
+    flowchartState.eventsWired = true;
+
+    if (flowchartNewBranchBtn) {
+        flowchartNewBranchBtn.addEventListener('click', () => {
+            if (flowchartState.locked) return;
+            flowchartState.startParallelRoot = !flowchartState.startParallelRoot;
+            flowchartState.linkingFromId = null;
+            renderFlowchartUI();
+        });
+    }
+
+    if (flowchartClearBtn) {
+        flowchartClearBtn.addEventListener('click', () => {
+            if (flowchartState.locked) return;
+            flowchartState.placedIds.clear();
+            flowchartState.edges = [];
+            flowchartState.activeOriginId = null;
+            flowchartState.linkingFromId = null;
+            flowchartState.startParallelRoot = false;
+            renderFlowchartUI();
+        });
+    }
+
+    if (flowchartCancelModeBtn) {
+        flowchartCancelModeBtn.addEventListener('click', () => {
+            flowchartState.linkingFromId = null;
+            flowchartState.startParallelRoot = false;
+            renderFlowchartUI();
+        });
+    }
+
+    if (flowchartCanvas) {
+        flowchartCanvas.addEventListener('dragover', (e) => {
+            if (flowchartState.locked || !flowchartState.draggedNodeId) return;
+            e.preventDefault();
+            flowchartCanvas.classList.add('is-drop-target');
+        });
+        flowchartCanvas.addEventListener('dragleave', () => flowchartCanvas.classList.remove('is-drop-target'));
+        flowchartCanvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+            flowchartCanvas.classList.remove('is-drop-target');
+            const draggedId = flowchartState.draggedNodeId || e.dataTransfer?.getData('text/plain');
+            flowchartState.draggedNodeId = null;
+            if (!draggedId || flowchartState.locked) return;
+            if (!flowchartState.placedIds.has(draggedId)) {
+                placeFlowchartNode(draggedId);
+            }
+        });
+    }
+
+    if (typeof ResizeObserver !== 'undefined' && flowchartLevelsContainer) {
+        flowchartState.resizeObserver = new ResizeObserver(() => scheduleFlowchartEdgesRedraw());
+        flowchartState.resizeObserver.observe(flowchartLevelsContainer);
+    }
+    window.addEventListener('resize', () => {
+        if (currentQuestion?.type === 'flowchart') scheduleFlowchartEdgesRedraw();
+    });
+}
+
+function initFlowchartQuestion() {
+    wireFlowchartEventsOnce();
+    const nodes = normalizeGameFlowchartNodes(currentQuestion?.nodes);
+    flowchartState.nodes = nodes;
+    flowchartState.trayOrder = shuffleArray(nodes.map(n => n.id));
+    flowchartState.placedIds = new Set();
+    flowchartState.edges = [];
+    flowchartState.userBlanks = {};
+    flowchartState.activeOriginId = null;
+    flowchartState.linkingFromId = null;
+    flowchartState.startParallelRoot = false;
+    flowchartState.draggedNodeId = null;
+    flowchartState.locked = false;
+    flowchartState.evaluation = null;
+
+    if (flowchartSolutionContainer) {
+        flowchartSolutionContainer.classList.add('hidden');
+        flowchartSolutionContainer.innerHTML = '';
+    }
+
+    renderFlowchartUI();
+}
+
+function formatFlowchartUserSummary() {
+    if (!flowchartState.nodes.length) return '';
+    const nodeMap = new Map(flowchartState.nodes.map(n => [n.id, n]));
+    const formatNode = (id) => {
+        const node = nodeMap.get(id);
+        if (!node) return id;
+        const vals = flowchartState.userBlanks[id] || [];
+        let i = 0;
+        return String(node.text || '').replace(/_/g, () => `[${(vals[i++] || '').trim() || '_'}]`);
+    };
+    const parts = flowchartState.edges.map(e => `${formatNode(e.from)} -> ${formatNode(e.to)}`);
+    if (parts.length > 0) return parts.join(' | ');
+    return Array.from(flowchartState.placedIds).map(formatNode).join(' | ');
+}
+
+function renderFlowchartSolutionBlock() {
+    if (!flowchartSolutionContainer) return;
+    const nodes = flowchartState.nodes;
+    const expectedEdges = [];
+    nodes.forEach(n => (n.next || []).forEach(tid => expectedEdges.push({ from: n.id, to: tid })));
+    const levels = computeFlowchartLevels(nodes, expectedEdges);
+
+    const stepNumById = new Map();
+    let seq = 0;
+    levels.forEach(row => row.forEach(n => stepNumById.set(n.id, ++seq)));
+
+    let html = `<div class="flex items-center gap-2 mb-2.5 text-xs font-bold uppercase tracking-wider text-[#3b82f7]"><span class="material-symbols-rounded text-base">account_tree</span><span>${escapeHtml(t('flowchart_solution_title'))}</span></div>`;
+    html += '<div class="space-y-2">';
+    levels.forEach(row => {
+        row.forEach(node => {
+            const num = stepNumById.get(node.id);
+            let bIdx = 0;
+            const rawHtml = escapeHtml(node.text || '').replace(/_/g, () => {
+                const expectedVal = node.blanks && node.blanks[bIdx] !== undefined ? node.blanks[bIdx] : '_';
+                bIdx++;
+                return `<span class="inline-block px-1.5 py-0.5 mx-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-xs">${escapeHtml(expectedVal)}</span>`;
+            });
+            const nextPills = (node.next || []).map(tid => `#${stepNumById.get(tid) || tid}`).join(', ');
+            html += `<div class="p-2.5 rounded-xl bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)] text-xs leading-relaxed">`;
+            html += `<div class="flex flex-wrap items-center justify-between gap-2"><div><span class="font-bold text-[#3b82f7] mr-1.5">#${num}</span>${rawHtml}</div>`;
+            if (nextPills) {
+                html += `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">&rarr; ${escapeHtml(nextPills)}</span>`;
+            }
+            html += '</div></div>';
+        });
+    });
+    html += '</div>';
+
+    flowchartSolutionContainer.innerHTML = sanitizeHtml(html);
+    flowchartSolutionContainer.classList.remove('hidden');
+}
+
+function handleFlowchartSubmit() {
+    if (submitBtn && !submitBtn.disabled && !submitBtn.classList.contains('hidden')) {
+        isBeingCorrected = false;
+        if (currentQuestion) delete currentQuestion.isBeingCorrected;
+    }
+    if (isOpenSubmitting || submitBtn.disabled || isBeingCorrected || currentQuestion?.isBeingCorrected || isAnimating) {
+        return;
+    }
+
+    const total = flowchartState.nodes.length;
+    if (total === 0) return;
+
+    // Require all stage cards to be placed before grading
+    if (flowchartState.placedIds.size < total) {
+        if (flowchartTrayWrapper) {
+            flowchartTrayWrapper.classList.add('animate-pulse');
+            setTimeout(() => flowchartTrayWrapper.classList.remove('animate-pulse'), 850);
+        }
+        showNotificationPill(t('flowchart_alert_place_all'), 'flowchart.svg');
+        return;
+    }
+
+    // Require at least one blank filled if blanks exist
+    const allBlankInputs = Array.from(flowchartLevelsContainer?.querySelectorAll('.flowchart-blank-input') || []);
+    if (allBlankInputs.length > 0 && allBlankInputs.every(inp => !inp.value.trim())) {
+        allBlankInputs[0].classList.add('animate-pulse', 'border-red-500');
+        setTimeout(() => allBlankInputs[0].classList.remove('animate-pulse', 'border-red-500'), 850);
+        allBlankInputs[0].focus();
+        return;
+    }
+
+    isOpenSubmitting = true;
+    try {
+        const expectedEdgeKeys = new Set();
+        flowchartState.nodes.forEach(n => {
+            (n.next || []).forEach(tid => expectedEdgeKeys.add(`${n.id}->${tid}`));
+        });
+        const userEdgeKeys = new Set(flowchartState.edges.map(e => `${e.from}->${e.to}`));
+
+        const edgeStatusMap = new Map();
+        let allEdgesCorrect = expectedEdgeKeys.size === userEdgeKeys.size;
+        userEdgeKeys.forEach(k => {
+            if (expectedEdgeKeys.has(k)) {
+                edgeStatusMap.set(k, 'correct');
+            } else {
+                edgeStatusMap.set(k, 'wrong');
+                allEdgesCorrect = false;
+            }
+        });
+        expectedEdgeKeys.forEach(k => {
+            if (!userEdgeKeys.has(k)) allEdgesCorrect = false;
+        });
+
+        let allBlanksCorrect = true;
+        const nodeResults = new Map();
+
+        flowchartState.nodes.forEach(node => {
+            const blanks = Array.isArray(node.blanks) ? node.blanks : [];
+            const vals = flowchartState.userBlanks[node.id] || [];
+            const blankResults = blanks.map((expectedVal, bIdx) => {
+                const userVal = String(vals[bIdx] || '').trim();
+                const synonyms = String(expectedVal || '').split('/').map(s => s.trim()).filter(Boolean);
+                const maxSim = synonyms.length > 0
+                    ? Math.max(...synonyms.map(syn => calculateSimilarity(normalizeString(userVal), normalizeString(syn))))
+                    : 0;
+                const isCorrect = maxSim >= 0.8;
+                if (!isCorrect) allBlanksCorrect = false;
+                return { userVal, expectedVal, isCorrect };
+            });
+
+            // Check incident edges for this specific node
+            let incidentOk = true;
+            flowchartState.edges.forEach(e => {
+                if ((e.from === node.id || e.to === node.id) && edgeStatusMap.get(`${e.from}->${e.to}`) !== 'correct') {
+                    incidentOk = false;
+                }
+            });
+            expectedEdgeKeys.forEach(k => {
+                const [f, tId] = k.split('->');
+                if ((f === node.id || tId === node.id) && !userEdgeKeys.has(k)) {
+                    incidentOk = false;
+                }
+            });
+
+            const blanksOk = blankResults.every(r => r.isCorrect);
+            nodeResults.set(node.id, { blankResults, nodeCorrect: blanksOk && incidentOk });
+        });
+
+        const isCorrect = allEdgesCorrect && allBlanksCorrect;
+        flowchartState.locked = true;
+        flowchartState.evaluation = { isCorrect, edgeStatusMap, nodeResults };
+        currentQuestion._lastUserAnswer = formatFlowchartUserSummary();
+
+        renderFlowchartUI();
+
+        if (!isCorrect) {
+            renderFlowchartSolutionBlock();
+        }
+        showFeedback(isCorrect);
+    } catch (err) {
+        console.error("[Game] Erro em handleFlowchartSubmit:", err);
+        isOpenSubmitting = false;
+    }
+}
+
+// --- IN-GAME FLOWCHART EDIT MODAL HELPERS ---
+let gameEditFlowchartDraft = [];
+
+function renderGameEditFlowchartList() {
+    if (!editFlowchartStepsList) return;
+    editFlowchartStepsList.replaceChildren();
+    if (editFlowchartCountBadge) {
+        editFlowchartCountBadge.textContent = t('flowchart_steps_count').replace('{count}', gameEditFlowchartDraft.length);
+    }
+
+    gameEditFlowchartDraft.forEach((step, idx) => {
+        const card = document.createElement('div');
+        card.className = 'p-3 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] space-y-2';
+
+        const header = document.createElement('div');
+        header.className = 'flex items-center justify-between gap-2';
+
+        const label = document.createElement('span');
+        label.className = 'text-xs font-bold text-[#3b82f7]';
+        label.textContent = t('flowchart_step_prefix').replace('{num}', idx + 1);
+
+        const ctrls = document.createElement('div');
+        ctrls.className = 'flex items-center gap-1';
+
+        const mkBtn = (icon, titleText, disabled, onClick) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.disabled = disabled;
+            b.title = titleText;
+            b.className = 'p-1 rounded-lg hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] disabled:opacity-30 transition';
+            b.innerHTML = `<span class="material-symbols-rounded text-base">${icon}</span>`;
+            b.addEventListener('click', onClick);
+            return b;
+        };
+
+        ctrls.append(
+            mkBtn('arrow_upward', t('flowchart_move_up'), idx === 0, () => {
+                [gameEditFlowchartDraft[idx - 1], gameEditFlowchartDraft[idx]] = [gameEditFlowchartDraft[idx], gameEditFlowchartDraft[idx - 1]];
+                renderGameEditFlowchartList();
+            }),
+            mkBtn('arrow_downward', t('flowchart_move_down'), idx === gameEditFlowchartDraft.length - 1, () => {
+                [gameEditFlowchartDraft[idx + 1], gameEditFlowchartDraft[idx]] = [gameEditFlowchartDraft[idx], gameEditFlowchartDraft[idx + 1]];
+                renderGameEditFlowchartList();
+            }),
+            mkBtn('delete', t('flowchart_remove_step'), gameEditFlowchartDraft.length <= 2, () => {
+                const removedId = step.id;
+                gameEditFlowchartDraft.splice(idx, 1);
+                gameEditFlowchartDraft.forEach(s => { s.next = s.next.filter(nid => nid !== removedId); });
+                renderGameEditFlowchartList();
+            })
+        );
+        header.append(label, ctrls);
+
+        const textarea = document.createElement('textarea');
+        textarea.rows = 2;
+        textarea.value = step.editorText;
+        textarea.placeholder = t('flowchart_step_placeholder');
+        textarea.className = 'w-full p-2.5 text-sm rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] focus:border-blue-500 focus:outline-none resize-none';
+        textarea.addEventListener('input', () => {
+            step.editorText = textarea.value;
+        });
+
+        const targetsWrap = document.createElement('div');
+        targetsWrap.className = 'flex flex-wrap items-center gap-1.5 pt-1';
+        const targetsLabel = document.createElement('span');
+        targetsLabel.className = 'text-[11px] font-semibold text-[var(--md-sys-color-on-surface-variant)] mr-1';
+        targetsLabel.textContent = t('flowchart_connects_to');
+        targetsWrap.appendChild(targetsLabel);
+
+        const otherSteps = gameEditFlowchartDraft.map((s, i) => ({ s, i })).filter(item => item.s.id !== step.id);
+        otherSteps.forEach(({ s: targetStep, i: targetIdx }) => {
+            const isChecked = step.next.includes(targetStep.id);
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = isChecked
+                ? 'px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#3b82f7] text-white transition'
+                : 'px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline-variant)] transition';
+            chip.textContent = `#${targetIdx + 1}`;
+            chip.addEventListener('click', () => {
+                if (step.next.includes(targetStep.id)) {
+                    step.next = step.next.filter(id => id !== targetStep.id);
+                } else {
+                    step.next.push(targetStep.id);
+                }
+                renderGameEditFlowchartList();
+            });
+            targetsWrap.appendChild(chip);
+        });
+
+        card.append(header, textarea, targetsWrap);
+        editFlowchartStepsList.appendChild(card);
+    });
+}
+
+function loadGameEditFlowchartNodes(rawNodes) {
+    const normalized = normalizeGameFlowchartNodes(rawNodes);
+    gameEditFlowchartDraft = normalized.length >= 2
+        ? normalized.map(n => ({ id: n.id, editorText: formatGameFlowchartNodeForEditor(n), next: [...(n.next || [])] }))
+        : [
+            { id: 's1', editorText: '', next: ['s2'] },
+            { id: 's2', editorText: '', next: [] }
+        ];
+    renderGameEditFlowchartList();
+}
+
+function collectGameEditFlowchartNodes() {
+    const built = gameEditFlowchartDraft.map(step => {
+        const parsed = parseGameFlowchartStepAndBlanks(step.editorText);
+        return {
+            id: step.id,
+            text: parsed.text,
+            blanks: parsed.blanks,
+            next: [...step.next]
+        };
+    }).filter(n => n.text);
+
+    if (built.length < 2) {
+        alert(t('flowchart_alert_min_steps'));
+        return null;
+    }
+    const normalized = normalizeGameFlowchartNodes(built);
+    const summary = normalized.map(n => formatGameFlowchartNodeForEditor(n)).join(' -> ');
+    return { nodes: normalized, summary };
+}
+
+if (editAddFlowchartStepBtn) {
+    editAddFlowchartStepBtn.addEventListener('click', () => {
+        const usedIds = new Set(gameEditFlowchartDraft.map(s => s.id));
+        let num = gameEditFlowchartDraft.length + 1;
+        while (usedIds.has(`s${num}`)) num++;
+        gameEditFlowchartDraft.push({ id: `s${num}`, editorText: '', next: [] });
+        renderGameEditFlowchartList();
     });
 }
 
@@ -1377,7 +2404,15 @@ function precomputeNextCandidate() {
             currentQuestion
         });
     } else {
-        precomputedNextCard = selectNextCard(poolToUse, nextStep, consecutiveDueCardsCount, lastCardTopic, currentQuestion, consecutiveNewCardsCount);
+        precomputedNextCard = selectNextCard({
+            candidateList: poolToUse,
+            step: nextStep,
+            consecutiveDueCardsCount,
+            lastCardTopic,
+            recentTopics,
+            currentCard: currentQuestion,
+            consecutiveNewCardsCount
+        });
     }
 
     if (precomputedNextCard) {
@@ -1720,14 +2755,12 @@ function restartDeckSession() {
     consecutiveDueCardsCount = 0;
     consecutiveNewCardsCount = 0;
     lastCardTopic = '';
+    recentTopics = [];
     updateStreakUI(false);
     scoreDisplay.textContent = '0';
     if (allQuestions && allQuestions.length > 0) {
         allQuestions.forEach(q => {
-            delete q.dueStep;
-            delete q.correctStreak;
-            delete q.wrongCount;
-            delete q.isBeingCorrected;
+            resetCardForNewSession(q);
         });
     }
     if (activeMode === 'exam') {
@@ -1826,23 +2859,35 @@ function loadQuestion() {
             currentQuestion = precomputedNextCard;
             currentQuestionIndexInPool = questionsPool.indexOf(precomputedNextCard);
         } else {
-            // Fallback / Initial pick: use selectNextCard with interleaving
-            currentQuestion = selectNextCard(questionsPool, currentStep, consecutiveDueCardsCount, lastCardTopic, currentQuestion, consecutiveNewCardsCount);
+            // Fallback / Initial pick: use selectNextCard with interleaving & cross-session memory
+            currentQuestion = selectNextCard({
+                candidateList: questionsPool,
+                step: currentStep,
+                consecutiveDueCardsCount,
+                lastCardTopic,
+                recentTopics,
+                currentCard: currentQuestion,
+                consecutiveNewCardsCount
+            });
             currentQuestionIndexInPool = questionsPool.indexOf(currentQuestion);
         }
     }
 
     updateScoreDisplay();
 
-    // Update lastCardTopic for subsequent interleaved selections
+    // Update lastCardTopic and recentTopics for subsequent interleaved selections
     if (currentQuestion) {
         lastCardTopic = getCardTopic(currentQuestion);
+        if (lastCardTopic) {
+            recentTopics.push(lastCardTopic);
+            if (recentTopics.length > 4) recentTopics.shift();
+        }
         delete currentQuestion.isBeingCorrected;
     }
     isBeingCorrected = false;
 
-    // Update consecutive due & new counters
-    if (currentQuestion && currentQuestion.dueStep !== undefined && currentQuestion.dueStep <= currentStep) {
+    // Update consecutive due & new counters (guard against null after JSON serialization)
+    if (currentQuestion && typeof currentQuestion.dueStep === 'number' && Number.isFinite(currentQuestion.dueStep) && currentQuestion.dueStep <= currentStep) {
         consecutiveDueCardsCount++;
         consecutiveNewCardsCount = 0;
     } else {
@@ -1946,6 +2991,12 @@ function loadQuestion() {
     if (voiceAnswerContainer) voiceAnswerContainer.classList.add('hidden');
     if (voiceEvaluatedControls) voiceEvaluatedControls.classList.add('hidden');
     resetVoiceUIState();
+    if (flowchartAnswerArea) flowchartAnswerArea.classList.add('hidden');
+    if (flowchartSolutionContainer) {
+        flowchartSolutionContainer.classList.add('hidden');
+        flowchartSolutionContainer.innerHTML = '';
+    }
+    flowchartState.locked = false;
     if (imageArrowsAnswerArea) imageArrowsAnswerArea.classList.add('hidden');
 
     if (actionButtonsArea) actionButtonsArea.classList.remove('hidden');
@@ -1984,6 +3035,10 @@ function loadQuestion() {
     } else if (currentQuestion.type === 'fill') {
         submitBtn.classList.remove('hidden');
         initFillBlankInputs();
+    } else if (currentQuestion.type === 'flowchart') {
+        if (flowchartAnswerArea) flowchartAnswerArea.classList.remove('hidden');
+        submitBtn.classList.remove('hidden');
+        initFlowchartQuestion();
     } else {
         openAnswerArea.classList.remove('hidden');
         submitBtn.classList.remove('hidden');
@@ -2257,22 +3312,28 @@ function handleAnkiRating(rating) {
         return;
     }
 
-    if (rating === 'easy') {
-        const isLastCard = questionsPool.length === 1 && questionsPool.includes(currentQuestion);
-        if (!isLastCard) {
-            createBall(true);
-            questionCard.classList.add('glow-correct');
-        }
-        triggerHaptic('correct');
-        playFeedbackSound('correct');
+    recordNormalCardOutcome(currentQuestion, {
+        isCorrect: (rating === 'good' || rating === 'easy'),
+        rating,
+        latencySec: elapsedSeconds
+    });
 
+    if (rating === 'easy' || rating === 'good') {
+        const isEasy = rating === 'easy';
         currentQuestion.correctStreak = (currentQuestion.correctStreak || 0) + 1;
-        const elapsedSec = (Date.now() - questionStartTime) / 1000;
-        const totalWrongs = currentQuestion.wrongCount || 0;
-        const shouldRemove = shouldGraduateCard(currentQuestion, elapsedSec);
+        const shouldRemove = shouldGraduateCard(currentQuestion, elapsedSeconds, rating);
 
         if (shouldRemove) {
+            const isLastCard = questionsPool.length === 1 && questionsPool.includes(currentQuestion);
+            if (!isLastCard) {
+                createBall(true);
+                questionCard.classList.add('glow-correct');
+            }
+            triggerHaptic('correct');
+            playFeedbackSound('correct');
+
             score++;
+            syncCardToAllQuestions(currentQuestion);
             const idx = questionsPool.indexOf(currentQuestion);
             if (idx !== -1) {
                 questionsPool.splice(idx, 1);
@@ -2280,9 +3341,8 @@ function handleAnkiRating(rating) {
                 questionsPool.splice(currentQuestionIndexInPool, 1);
             }
             saveGameState();
-            console.log("[Anki] Card removido do deck (acerto fácil/graduado). Restam:", questionsPool.length);
+            console.log(`[Anki] Card graduado (${rating}). Restam:`, questionsPool.length);
 
-            // On the last card of deck, skip normal animations and play end game directly!
             if (questionsPool.length === 0) {
                 clearBalls();
                 questionCard.classList.remove('glow-correct', 'glow-incorrect', 'card-shake');
@@ -2298,36 +3358,44 @@ function handleAnkiRating(rating) {
                 });
             }, 300);
         } else {
-            // Card mantido para consolidação neural
-            const ankiReinforcGap = Math.max(7, Math.min(12, Math.round(questionsPool.length * 0.5)));
-            currentQuestion.dueStep = currentStep + ankiReinforcGap;
+            createBall(true);
+            triggerHaptic('correct');
+            playFeedbackSound('correct');
+            const gap = calculateProportionalStepGap({
+                rating: isEasy ? 'easy' : 'good',
+                thinkingTimeSec: elapsedSeconds,
+                card: currentQuestion,
+                poolSize: questionsPool.length
+            });
+            currentQuestion.dueStep = currentStep + gap;
+            syncCardToAllQuestions(currentQuestion);
             saveGameState();
-            console.log("[Anki] Card mantido para consolidação. dueStep:", currentQuestion.dueStep);
-            setTimeout(() => {
+            console.log(`[Anki] Card mantido para consolidação (${rating}). dueStep:`, currentQuestion.dueStep, "gap:", gap);
+            if (isEasy) {
+                setTimeout(() => {
+                    animateCardToBack(() => {
+                        loadQuestion();
+                    });
+                }, 300);
+            } else {
                 animateCardToBack(() => {
                     loadQuestion();
                 });
-            }, 300);
+            }
         }
-    } else if (rating === 'good') {
-        createBall(true);
-        triggerHaptic('correct');
-        playFeedbackSound('correct');
-        currentQuestion.correctStreak = (currentQuestion.correctStreak || 0) + 1;
-        currentQuestion.dueStep = currentStep + 10;
-        saveGameState();
-        console.log("[Anki] Card marcado como bom. Próximo dueStep:", currentQuestion.dueStep);
-        animateCardToBack(() => {
-            loadQuestion();
-        });
     } else if (rating === 'hard') {
         createBall(false);
         playFeedbackSound('wrong');
-        const elapsedSec = (Date.now() - questionStartTime) / 1000;
-        const gap = calculateThinkingGap(elapsedSec, currentQuestion, questionsPool.length);
+        const gap = calculateProportionalStepGap({
+            rating: 'hard',
+            thinkingTimeSec: elapsedSeconds,
+            card: currentQuestion,
+            poolSize: questionsPool.length
+        });
         currentQuestion.dueStep = currentStep + gap;
+        syncCardToAllQuestions(currentQuestion);
         saveGameState();
-        console.log("[Anki] Card marcado como difícil. Próximo dueStep:", currentQuestion.dueStep);
+        console.log("[Anki] Card marcado como difícil. Próximo dueStep:", currentQuestion.dueStep, "gap:", gap);
         animateCardToBack(() => {
             loadQuestion();
         });
@@ -2342,9 +3410,14 @@ function handleAnkiRating(rating) {
 
         currentQuestion.wrongCount = (currentQuestion.wrongCount || 0) + 1;
         currentQuestion.correctStreak = 0;
-        const elapsedSec = (Date.now() - questionStartTime) / 1000;
-        const gap = calculateThinkingGap(elapsedSec, currentQuestion, questionsPool.length);
+        const gap = calculateProportionalStepGap({
+            rating: 'again',
+            thinkingTimeSec: elapsedSeconds,
+            card: currentQuestion,
+            poolSize: questionsPool.length
+        });
         currentQuestion.dueStep = currentStep + gap;
+        syncCardToAllQuestions(currentQuestion);
         saveGameState();
         console.log("[Anki] Card marcado como erro (again). Próximo dueStep:", currentQuestion.dueStep, "gap:", gap);
         setTimeout(() => {
@@ -2940,38 +4013,59 @@ function applyVoiceCardSchedule(rating) {
         return;
     }
 
-    if (rating === 'easy') {
+    recordNormalCardOutcome(currentQuestion, {
+        isCorrect: (rating === 'good' || rating === 'easy'),
+        rating,
+        latencySec: elapsedSeconds
+    });
+
+    if (rating === 'easy' || rating === 'good') {
         currentQuestion.correctStreak = (currentQuestion.correctStreak || 0) + 1;
-        const shouldRemove = shouldGraduateCard(currentQuestion, elapsedSeconds);
+        const shouldRemove = shouldGraduateCard(currentQuestion, elapsedSeconds, rating);
 
         if (shouldRemove) {
             score++;
+            syncCardToAllQuestions(currentQuestion);
             const idx = questionsPool.indexOf(currentQuestion);
             if (idx !== -1) questionsPool.splice(idx, 1);
             else if (currentQuestionIndexInPool >= 0 && currentQuestionIndexInPool < questionsPool.length) {
                 questionsPool.splice(currentQuestionIndexInPool, 1);
             }
             saveGameState();
-            console.log("[Voice] Card graduado e removido do pool. Restam:", questionsPool.length);
+            console.log(`[Voice] Card graduado (${rating}) e removido do pool. Restam:`, questionsPool.length);
         } else {
-            const ankiReinforcGap = Math.max(7, Math.min(12, Math.round(questionsPool.length * 0.5)));
-            currentQuestion.dueStep = currentStep + ankiReinforcGap;
+            const gap = calculateProportionalStepGap({
+                rating,
+                thinkingTimeSec: elapsedSeconds,
+                card: currentQuestion,
+                poolSize: questionsPool.length
+            });
+            currentQuestion.dueStep = currentStep + gap;
+            syncCardToAllQuestions(currentQuestion);
             saveGameState();
-            console.log("[Voice] Card mantido para consolidação. dueStep:", currentQuestion.dueStep);
+            console.log(`[Voice] Card mantido para consolidação (${rating}). dueStep:`, currentQuestion.dueStep);
         }
-    } else if (rating === 'good') {
-        currentQuestion.correctStreak = (currentQuestion.correctStreak || 0) + 1;
-        currentQuestion.dueStep = currentStep + 10;
-        saveGameState();
     } else if (rating === 'hard') {
-        const gap = calculateThinkingGap(elapsedSeconds, currentQuestion, questionsPool.length);
+        const gap = calculateProportionalStepGap({
+            rating: 'hard',
+            thinkingTimeSec: elapsedSeconds,
+            card: currentQuestion,
+            poolSize: questionsPool.length
+        });
         currentQuestion.dueStep = currentStep + gap;
-        currentQuestion.wrongCount = (currentQuestion.wrongCount || 0) + 1;
+        syncCardToAllQuestions(currentQuestion);
         saveGameState();
     } else if (rating === 'again') {
-        const gap = Math.max(3, Math.min(6, Math.round(questionsPool.length * 0.35)));
-        currentQuestion.dueStep = currentStep + gap;
         currentQuestion.wrongCount = (currentQuestion.wrongCount || 0) + 1;
+        currentQuestion.correctStreak = 0;
+        const gap = calculateProportionalStepGap({
+            rating: 'again',
+            thinkingTimeSec: elapsedSeconds,
+            card: currentQuestion,
+            poolSize: questionsPool.length
+        });
+        currentQuestion.dueStep = currentStep + gap;
+        syncCardToAllQuestions(currentQuestion);
         saveGameState();
     }
 }
@@ -3070,6 +4164,12 @@ function resetUI() {
     if (voiceAnswerContainer) voiceAnswerContainer.classList.add('hidden');
     if (voiceEvaluatedControls) voiceEvaluatedControls.classList.add('hidden');
     resetVoiceUIState();
+    if (flowchartAnswerArea) flowchartAnswerArea.classList.add('hidden');
+    if (flowchartSolutionContainer) {
+        flowchartSolutionContainer.classList.add('hidden');
+        flowchartSolutionContainer.innerHTML = '';
+    }
+    flowchartState.locked = false;
 
     submitBtn.disabled = false;
     submitBtn.classList.remove('hidden');
@@ -3366,6 +4466,10 @@ function handleOpenSubmit() {
         handleImageArrowsSubmit();
         return;
     }
+    if (type === 'flowchart') {
+        handleFlowchartSubmit();
+        return;
+    }
 
     const ans1 = normalizeString(answerInput.value);
     const ans1_d = normalizeString(answerInput1.value);
@@ -3462,6 +4566,8 @@ function showFeedback(isCorrect, element) {
         } else if (currentQuestion.type === 'image_arrows') {
             const arrowInputs = Array.from(document.querySelectorAll('.game-arrow-input'));
             userAnswer = currentQuestion._lastUserAnswer || arrowInputs.map((inp, i) => `${i + 1}. ${inp.value.trim()}`).join(' ; ');
+        } else if (currentQuestion.type === 'flowchart') {
+            userAnswer = currentQuestion._lastUserAnswer || formatFlowchartUserSummary();
         } else {
             userAnswer = answerInput.value;
         }
@@ -3574,17 +4680,20 @@ function showFeedback(isCorrect, element) {
                 updateScoreDisplay();
                 precomputeNextCandidate();
             } else {
-                // Spaced repetition & leech tracking
+                // Spaced repetition, leech tracking & cross-session memory
                 currentQuestion.wrongCount = (currentQuestion.wrongCount || 0) + 1;
                 currentQuestion.correctStreak = 0;
+                recordNormalCardOutcome(currentQuestion, { isCorrect: false, latencySec: elapsedSeconds });
                 const gap = calculateThinkingGap(elapsedSeconds, currentQuestion, questionsPool.length);
                 currentQuestion.dueStep = currentStep + gap;
+                syncCardToAllQuestions(currentQuestion);
                 console.log("[Algorithm] Card incorreto reagendado:", {
                     tempoPensamento: Math.round(elapsedSeconds * 10) / 10 + 's',
                     gap,
                     currentStep,
                     dueStep: currentQuestion.dueStep,
-                    totalErros: currentQuestion.wrongCount
+                    totalErros: currentQuestion.wrongCount,
+                    difficultyScore: currentQuestion.difficultyScore
                 });
                 saveGameState();
                 precomputeNextCandidate();
@@ -3603,6 +4712,8 @@ function showFeedback(isCorrect, element) {
                 }
                 const arrowInputs = document.querySelectorAll('.game-arrow-input');
                 arrowInputs.forEach(inp => inp.disabled = true);
+                const fcInputs = document.querySelectorAll('.flowchart-blank-input');
+                fcInputs.forEach(inp => { inp.readOnly = true; });
             }
             nextQuestionBtn.classList.remove('hidden');
             correctionOptions.classList.add('flex');
@@ -3646,6 +4757,8 @@ function showFeedback(isCorrect, element) {
             }
 
             currentQuestion.correctStreak = (currentQuestion.correctStreak || 0) + 1;
+            recordNormalCardOutcome(currentQuestion, { isCorrect: true, latencySec: elapsedSeconds });
+            syncCardToAllQuestions(currentQuestion);
             const totalWrongs = currentQuestion.wrongCount || 0;
             const isLeech = isLeechCard(currentQuestion);
             const shouldRemove = shouldGraduateCard(currentQuestion, elapsedSeconds);
@@ -3653,6 +4766,7 @@ function showFeedback(isCorrect, element) {
             console.log("[Algorithm] Card correto avaliado:", {
                 totalWrongs,
                 correctStreak: currentQuestion.correctStreak,
+                difficultyScore: currentQuestion.difficultyScore,
                 isLeech,
                 shouldRemove,
                 latencia: Math.round(elapsedSeconds * 10) / 10 + 's'
@@ -3685,9 +4799,15 @@ function showFeedback(isCorrect, element) {
                     });
                 }, 400);
             } else {
-                // Card mantido para consolidação (leech ou esforço extremo de recuperação)
-                const reinforcGap = Math.max(8, Math.min(14, Math.round(questionsPool.length * 0.6)));
+                // Card mantido para consolidação proporcional ao tamanho do deck
+                const reinforcGap = calculateProportionalStepGap({
+                    rating: 'good',
+                    thinkingTimeSec: elapsedSeconds,
+                    card: currentQuestion,
+                    poolSize: questionsPool.length
+                });
                 currentQuestion.dueStep = currentStep + reinforcGap;
+                syncCardToAllQuestions(currentQuestion);
                 saveGameState();
                 console.log("[Game] Card mantido no jogo para consolidação neural. dueStep:", currentQuestion.dueStep);
                 setTimeout(() => {
@@ -3730,7 +4850,7 @@ function updateFeedbackText() {
 
                 feedbackElem.append(span1, span2);
                 feedbackElem.classList.remove('hidden');
-            } else if (currentQuestion.type === 'fill' || currentQuestion.type === 'image_arrows') {
+            } else if (currentQuestion.type === 'fill' || currentQuestion.type === 'image_arrows' || currentQuestion.type === 'flowchart') {
                 feedbackElem.classList.add('hidden');
             } else if (currentQuestion.type === 'anki') {
                 const span = document.createElement('span');
@@ -3763,7 +4883,7 @@ function sanitizeCardForStorage(card) {
     const sanitized = {};
     for (const [key, value] of Object.entries(card)) {
         if (value !== undefined && key !== 'isBeingCorrected' && key !== '_lastUserAnswer') {
-            sanitized[key] = value;
+            sanitized[key] = (key === 'dueStep' && value === Infinity) ? null : value;
         }
     }
     return sanitized;
@@ -4615,6 +5735,8 @@ async function checkAnswerWithAi(questionObj, actualAnswer, ballIdx) {
             // Reverte a penalização inicial e ajusta métricas do cartão
             questionObj.wrongCount = Math.max(0, (questionObj.wrongCount || 1) - 1);
             questionObj.correctStreak = (questionObj.correctStreak || 0) + 1;
+            revertNormalCardErrorOnAiCorrection(questionObj);
+            syncCardToAllQuestions(questionObj);
 
             const totalWrongs = questionObj.wrongCount || 0;
             const isLeech = isLeechCard(questionObj);
@@ -4637,8 +5759,14 @@ async function checkAnswerWithAi(questionObj, actualAnswer, ballIdx) {
                     saveGameState();
                 }
             } else {
-                // Se for leech card precisando de 2 acertos consecutivos, reagenda com gap
-                questionObj.dueStep = currentStep + 5;
+                // Se for leech card precisando de 2 acertos consecutivos, reagenda com gap proporcional
+                const gap = calculateProportionalStepGap({
+                    rating: 'good',
+                    card: questionObj,
+                    poolSize: questionsPool.length
+                });
+                questionObj.dueStep = currentStep + gap;
+                syncCardToAllQuestions(questionObj);
                 saveGameState();
                 console.log("[Algorithm] Card leech corrigido por IA mantido no deck para 2º acerto consecutivo.");
             }
@@ -6136,6 +7264,8 @@ const settingAiSwitch = document.getElementById('setting-ai-switch');
 // Notebook goal & clear controls in settings modal
 const settingNotebookGoalSelect = document.getElementById('setting-notebook-goal-select');
 const settingNotebookGoalInfo = document.getElementById('setting-notebook-goal-info');
+const settingNotebookSchedulerSelect = document.getElementById('setting-notebook-scheduler-select');
+const settingNotebookSchedulerInfo = document.getElementById('setting-notebook-scheduler-info');
 const settingClearNotebookBtn = document.getElementById('setting-clear-notebook-btn');
 
 // Pinned header stats controls in settings modal
@@ -6198,6 +7328,15 @@ async function updateSettingsModalState() {
         const dueInfo = getNotebookDueCounts(allQuestions || []);
         const reviewedToday = dueInfo.reviewedToday || 0;
         settingNotebookGoalInfo.textContent = t('goal_progress_today', { reviewed: reviewedToday, due: dueInfo.dueToday });
+    }
+    const schedulerMode = getNotebookSchedulerMode();
+    if (settingNotebookSchedulerSelect) {
+        settingNotebookSchedulerSelect.value = schedulerMode;
+    }
+    if (settingNotebookSchedulerInfo) {
+        settingNotebookSchedulerInfo.textContent = t(
+            schedulerMode === 'sm2' ? 'notebook_scheduler_desc_sm2' : 'notebook_scheduler_desc_fsrs'
+        );
     }
 
     // 5. Header pinned stats tab & list
@@ -6849,6 +7988,18 @@ settingNotebookGoalSelect?.addEventListener('change', () => {
         'collection.svg'
     );
     checkAndCelebrateNotebookDailyGoal(false);
+});
+
+// Notebook SRS Scheduler Select in Settings Modal
+settingNotebookSchedulerSelect?.addEventListener('change', () => {
+    const mode = settingNotebookSchedulerSelect.value === 'sm2' ? 'sm2' : 'fsrs';
+    setNotebookSchedulerMode(mode);
+    triggerHaptic('snap');
+    updateSettingsModalState();
+    showNotificationPill(
+        t(mode === 'sm2' ? 'scheduler_switched_sm2_toast' : 'scheduler_switched_fsrs_toast'),
+        'collection.svg'
+    );
 });
 
 // Clear Notebook Button in Settings Modal
@@ -7588,7 +8739,7 @@ editBtn.addEventListener('click', () => {
     editQuestionInput.value = currentQuestion.description || '';
 
     const cardType = currentQuestion.type || 'open';
-    if (editAnswer1Group) editAnswer1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows' || cardType === 'voice');
+    if (editAnswer1Group) editAnswer1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows' || cardType === 'voice' || cardType === 'flowchart');
     if (editAnswer2Group) editAnswer2Group.classList.toggle('hidden', cardType !== 'open_double');
     if (editAnkiAnswerGroup) editAnkiAnswerGroup.classList.toggle('hidden', cardType !== 'anki');
     if (editVoiceAnswerGroup) editVoiceAnswerGroup.classList.toggle('hidden', cardType !== 'voice');
@@ -7596,6 +8747,7 @@ editBtn.addEventListener('click', () => {
     if (editAnsImageGroup) editAnsImageGroup.classList.toggle('hidden', cardType !== 'anki');
     if (editFillAnswerGroup) editFillAnswerGroup.classList.toggle('hidden', cardType !== 'fill');
     if (editImageArrowsGroup) editImageArrowsGroup.classList.toggle('hidden', cardType !== 'image_arrows');
+    if (editFlowchartGroup) editFlowchartGroup.classList.toggle('hidden', cardType !== 'flowchart');
 
     if (cardType === 'open') {
         if (editAnswer1Label) editAnswer1Label.textContent = t('main_answer_label');
@@ -7617,6 +8769,8 @@ editBtn.addEventListener('click', () => {
         renderEditMcOptions(currentQuestion.options || ["", "", "", ""], currentQuestion.answer);
     } else if (cardType === 'image_arrows') {
         renderEditArrowsInputs(currentQuestion.imageArrows || []);
+    } else if (cardType === 'flowchart') {
+        loadGameEditFlowchartNodes(currentQuestion.nodes || []);
     }
 
     pendingEditImage = currentQuestion.image || '';
@@ -7682,6 +8836,12 @@ saveEditBtn.addEventListener('click', () => {
         });
         currentQuestion.imageArrows = JSON.parse(JSON.stringify(pendingEditImageArrows));
         currentQuestion.answer = pendingEditImageArrows.map(a => a.label || '').filter(Boolean).join('; ');
+    } else if (t === 'flowchart') {
+        const savedFlow = collectGameEditFlowchartNodes();
+        if (savedFlow) {
+            currentQuestion.nodes = savedFlow.nodes;
+            currentQuestion.answer = savedFlow.summary;
+        }
     }
 
     if (pendingEditImage) {
