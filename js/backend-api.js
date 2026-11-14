@@ -323,7 +323,8 @@ export async function testStatsApi(apiKey) {
   if (apiKey) {
     headers['X-API-Key'] = apiKey;
   }
-  const res = await fetch(`${BACKEND_URL}/api/v1/stats`, {
+  const tzOffset = new Date().getTimezoneOffset();
+  const res = await fetch(`${BACKEND_URL}/api/v1/stats?tz_offset=${encodeURIComponent(String(tzOffset))}`, {
     headers
   });
   const data = await res.json().catch(() => ({}));

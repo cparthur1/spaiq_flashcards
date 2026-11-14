@@ -5264,6 +5264,57 @@ async function analyzePromptCapability(userPrompt) {
     }
 }
 
+async function checkEditAgentLoopWithFlashLite(token, userPrompt, recentToolTrace, completedSteps) {
+    try {
+        const recentSlice = recentToolTrace.slice(-15);
+        const traceText = recentSlice.map(entry =>
+            `Passo ${entry.step}: ${entry.tool}(${entry.argsSummary}) => ${entry.resultSummary}`
+        ).join('\n');
+
+        const loopPrompt = `Analise se o agente de edição entrou acidentalmente em um LOOP improdutivo/repetitivo.\n` +
+            `Comando original do usuário: "${String(userPrompt || '').slice(0, 300)}"\n` +
+            `Total de passos já executados: ${completedSteps}\n` +
+            `Histórico recente de chamadas de ferramentas:\n${traceText}\n\n` +
+            `Responda APENAS JSON válido no formato {"in_loop": true|false, "reason": "motivo curto"}.\n` +
+            `- Marque "in_loop": true SOMENTE se o agente estiver repetindo as mesmas chamadas/erros/edições idênticas sem progredir na tarefa.\n` +
+            `- Se ele estiver avançando por cards diferentes, adicionando vários itens ou executando etapas distintas legítimas, marque "in_loop": false.`;
+
+        const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                model: "gemini-flash-lite-latest",
+                systemInstruction: { parts: [{ text: "Você é um detector objetivo de loops para um agente editor de flashcards. Responda somente JSON válido com as chaves boolean in_loop e string reason." }] },
+                contents: [{ role: 'user', parts: [{ text: loopPrompt }] }],
+                generationConfig: {
+                    temperature: 0.1,
+                    responseMimeType: "application/json"
+                },
+                stream: false,
+                isNewDeck: false
+            })
+        });
+
+        if (!res.ok) return { inLoop: false, reason: '' };
+        const data = await res.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.find(p => p.text)?.text || '';
+        const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+        const parsed = JSON.parse(cleaned);
+        const result = {
+            inLoop: Boolean(parsed?.in_loop),
+            reason: typeof parsed?.reason === 'string' ? parsed.reason.trim() : ''
+        };
+        console.log(`[AI Agent Loop Check @ passo ${completedSteps}]`, result);
+        return result;
+    } catch (err) {
+        console.warn(`[AI Agent Loop Check @ passo ${completedSteps}] Falha na verificação (seguindo execução):`, err?.message || err);
+        return { inLoop: false, reason: '' };
+    }
+}
+
 async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
     let history = [];
     if (geminiChatSession && geminiChatSession._history) {
@@ -5319,7 +5370,12 @@ async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
         let data = await res.json();
         let candidate = data.candidates?.[0];
 
-        for (let i = 0; i < 5; i++) {
+        const MAX_AGENT_TOOL_STEPS = 30;
+        const recentToolTrace = [];
+        let loopDetected = null;
+        let completedSteps = 0;
+
+        for (let i = 0; i < MAX_AGENT_TOOL_STEPS; i++) {
             const calls = candidate?.content?.parts?.filter(p => !!p.functionCall) || [];
             if (calls.length === 0) break;
 
@@ -5338,14 +5394,29 @@ async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
 
             const functionResponses = calls.map(call => {
                 const { name, args } = call.functionCall;
-                console.log(`[AI Agent] [Tool Call] Invocando ferramenta '${name}':`, args);
+                console.log(`[AI Agent] [Tool Call ${i + 1}/${MAX_AGENT_TOOL_STEPS}] Invocando ferramenta '${name}':`, args);
                 const output = toolFunctions[name] ? toolFunctions[name](args) : { error: "Função não encontrada" };
+                recentToolTrace.push({
+                    step: i + 1,
+                    tool: name,
+                    argsSummary: JSON.stringify(args || {}).slice(0, 140),
+                    resultSummary: JSON.stringify(output || {}).slice(0, 140)
+                });
                 return {
                     functionResponse: { name, response: output }
                 };
             });
 
             history.push({ role: 'user', parts: functionResponses });
+            completedSteps = i + 1;
+
+            if (completedSteps < MAX_AGENT_TOOL_STEPS && completedSteps % 5 === 0) {
+                const loopCheck = await checkEditAgentLoopWithFlashLite(token, userPrompt, recentToolTrace, completedSteps);
+                if (loopCheck.inLoop) {
+                    loopDetected = loopCheck;
+                    break;
+                }
+            }
 
             res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
                 method: 'POST',
@@ -5366,6 +5437,17 @@ async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
             if (!res.ok) break;
             data = await res.json();
             candidate = data.candidates?.[0];
+        }
+
+        if (loopDetected) {
+            const stopMsg = t('ai_agent_loop_stopped', {
+                steps: completedSteps,
+                reason: loopDetected.reason || t('ai_agent_loop_default_reason')
+            });
+            history.push({ role: 'model', parts: [{ text: stopMsg }] });
+            if (!geminiChatSession) geminiChatSession = {};
+            geminiChatSession._history = history;
+            return stopMsg;
         }
 
         if (candidate?.content) {

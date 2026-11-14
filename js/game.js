@@ -17,7 +17,7 @@ import {
     updateNotificationsUI, checkAndTriggerScheduledNotifications
 } from './engine/notifications.js';
 import { isDeckCategorized, callGeminiFlashLiteCategorization, getStoredAiCategories, getCardSignature } from './stats-ai.js';
-import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCurrentSession, completeCurrentSession, getCurrentSessionMetrics } from './stats-tracker.js';
+import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCurrentSession, completeCurrentSession, getCurrentSessionMetrics, getCardsAnsweredForDate } from './stats-tracker.js';
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
 import { getUserApiKey, generateUserApiKey, revokeUserApiKey, testStatsApi, getUserWebhook, saveUserWebhook, testUserWebhook, triggerDailyGoalWebhook, BACKEND_URL } from './backend-api.js';
@@ -5264,11 +5264,17 @@ function checkAndCelebrateNotebookDailyGoal(isFromAnsweringCard = false) {
     const todayStr = getTodayDateString();
     const goalRes = recordNotebookGoalBeaten(todayStr);
 
-    // Dispara webhook se configurado (exclusivo Pro)
+    // Dispara webhook se configurado (exclusivo Pro), somando todos os modos estudados hoje
     if (goalRes.newlyAchieved && isUserPro()) {
+        const streakInfo = getDailyStreak();
+        const allModesReviewedToday = Math.max(
+            Number(streakInfo?.history?.[todayStr]) || 0,
+            getCardsAnsweredForDate(todayStr),
+            reviewedToday
+        );
         triggerDailyGoalWebhook({
             date: todayStr,
-            cardsReviewed: reviewedToday,
+            cardsReviewed: allModesReviewedToday,
             dailyGoal
         });
     }
@@ -7591,7 +7597,7 @@ async function updateApiSettingsUI() {
         }
 
         try {
-            syncSlotsToCloud();
+            await syncSlotsToCloud();
             const res = await testStatsApi(currentLoadedApiKey);
             if (testBox && testJson) {
                 testBox.classList.remove('hidden');

@@ -725,44 +725,94 @@ export default {
           }).catch(() => {})
         );
 
-        // Determine target date (YYYY-MM-DD), default to today in UTC
+        // Resolve client timezone offset in minutes (getTimezoneOffset convention: UTC - local; e.g. BRT = 180)
+        const tzParam = url.searchParams.get('tz_offset');
+        const parsedTzParam = tzParam !== null ? Number(tzParam) : NaN;
+        const storedTzOffset = Number(userDoc?.settings?.timezoneOffsetMinutes);
+        const tzOffsetMinutes = (Number.isFinite(parsedTzParam) && parsedTzParam >= -840 && parsedTzParam <= 840)
+          ? Math.trunc(parsedTzParam)
+          : ((Number.isFinite(storedTzOffset) && storedTzOffset >= -840 && storedTzOffset <= 840) ? Math.trunc(storedTzOffset) : 0);
+
+        const formatDateInTz = (ms) => new Date(ms - tzOffsetMinutes * 60000).toISOString().slice(0, 10);
+
+        // Determine target date (YYYY-MM-DD), defaulting to current date in user's timezone
         let targetDate = url.searchParams.get('date');
         if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
-          targetDate = new Date().toISOString().slice(0, 10);
+          targetDate = formatDateInTz(Date.now());
         }
 
         const streakDays = Number(userDoc.dailyStreak?.streak) || 0;
         const streakHistoryCount = Number(userDoc.dailyStreak?.history?.[targetDate]) || 0;
 
-        let sessionCardsSum = 0;
-        let sessionCorrectSum = 0;
-        let sessionDurationSum = 0;
-
         const userStatsDoc = await getDocument(serviceAccount, 'user_stats', userId).catch(() => null);
-        const statsSource = userStatsDoc?.stats || userDoc.stats || {};
 
-        const sessions = [];
-        if (Array.isArray(statsSource?.history)) {
-          sessions.push(...statsSource.history);
-        }
-        if (statsSource?.currentSession && typeof statsSource.currentSession === 'object') {
-          sessions.push(statsSource.currentSession);
-        }
-
-        for (const sess of sessions) {
-          if (!sess) continue;
-          const sessTime = sess.startTime || sess.lastActiveTime || sess.endTime;
-          if (!sessTime) continue;
-          const sessDateStr = new Date(sessTime).toISOString().slice(0, 10);
-          if (sessDateStr === targetDate) {
-            sessionCardsSum += (Number(sess.cardsAnswered) || 0);
-            sessionCorrectSum += (Number(sess.correctCount) || 0);
-            sessionDurationSum += (Number(sess.durationSeconds || sess.activeDurationSeconds) || 0);
+        // Collect & deduplicate study sessions across user_stats and legacy userDoc.stats covering ALL modes (normal, notebook, exam)
+        const sessionMap = new Map();
+        const addSession = (sess) => {
+          if (!sess || typeof sess !== 'object') return;
+          const key = sess.id || ((sess.startTime || sess.lastActiveTime || sess.endTime)
+            ? `sess_${sess.startTime || sess.lastActiveTime || sess.endTime}_${sess.mode || 'normal'}`
+            : null);
+          if (!key) return;
+          const prev = sessionMap.get(key);
+          if (!prev || (Number(sess.cardsAnswered) || 0) > (Number(prev.cardsAnswered) || 0) || (Number(sess.lastActiveTime) || 0) > (Number(prev.lastActiveTime) || 0)) {
+            sessionMap.set(key, sess);
           }
+        };
+        for (const src of [userDoc?.stats, userStatsDoc?.stats]) {
+          if (!src || typeof src !== 'object') continue;
+          if (Array.isArray(src.history)) src.history.forEach(addSession);
+          if (src.currentSession && typeof src.currentSession === 'object') addSession(src.currentSession);
         }
 
+        const dayBuckets = new Map();
+        const getOrCreateBucket = (dStr) => {
+          let b = dayBuckets.get(dStr);
+          if (!b) {
+            b = {
+              cards: 0,
+              correct: 0,
+              duration: 0,
+              sessionsCount: 0,
+              byMode: { normal: 0, notebook: 0, exam: 0 }
+            };
+            dayBuckets.set(dStr, b);
+          }
+          return b;
+        };
+
+        for (const sess of sessionMap.values()) {
+          const sessTime = sess.lastActiveTime || sess.endTime || sess.startTime;
+          if (!sessTime) continue;
+          const ms = typeof sessTime === 'number' ? sessTime : Date.parse(sessTime);
+          if (!Number.isFinite(ms)) continue;
+          const sessDateStr = formatDateInTz(ms);
+          const cards = Number(sess.cardsAnswered) || 0;
+          const correct = Number(sess.correctCount) || 0;
+          const dur = Number(sess.durationSeconds || sess.activeDurationSeconds) || 0;
+          const modeKey = sess.mode === 'notebook' ? 'notebook' : (sess.mode === 'exam' ? 'exam' : 'normal');
+
+          const bucket = getOrCreateBucket(sessDateStr);
+          bucket.cards += cards;
+          bucket.correct += correct;
+          bucket.duration += dur;
+          bucket.sessionsCount += 1;
+          bucket.byMode[modeKey] += cards;
+        }
+
+        const targetBucket = dayBuckets.get(targetDate) || {
+          cards: 0,
+          correct: 0,
+          duration: 0,
+          sessionsCount: 0,
+          byMode: { normal: 0, notebook: 0, exam: 0 }
+        };
+        const sessionCardsSum = targetBucket.cards;
+        const sessionCorrectSum = targetBucket.correct;
+        const sessionDurationSum = targetBucket.duration;
         const cardsReviewed = Math.max(sessionCardsSum, streakHistoryCount);
 
+        const statsSource = userStatsDoc?.stats || userDoc?.stats || {};
         let retentionRate = 0.0;
         if (sessionCardsSum > 0) {
           retentionRate = Math.round((sessionCorrectSum / sessionCardsSum) * 100) / 100;
@@ -774,7 +824,7 @@ export default {
 
         const timeSpentSeconds = sessionDurationSum;
 
-        // Calculate past 14 days metrics (chronological from targetDate - 13 days to targetDate)
+        // Calculate past 14 days metrics (chronological from targetDate - 13 days to targetDate) summing all modes
         const past14DaysCards = [];
         const past14DaysTime = [];
         const [tY, tM, tD] = targetDate.split('-').map(Number);
@@ -784,26 +834,26 @@ export default {
           dt.setUTCDate(dt.getUTCDate() - i);
           const dayStr = dt.toISOString().slice(0, 10);
 
-          let daySessionCards = 0;
-          let daySessionTime = 0;
-
-          for (const s of sessions) {
-            if (!s) continue;
-            const sTime = s.startTime || s.lastActiveTime || s.endTime;
-            if (!sTime) continue;
-            const sDate = new Date(sTime).toISOString().slice(0, 10);
-            if (sDate === dayStr) {
-              daySessionCards += (Number(s.cardsAnswered) || 0);
-              daySessionTime += (Number(s.durationSeconds || s.activeDurationSeconds) || 0);
-            }
-          }
-
+          const b = dayBuckets.get(dayStr);
+          const daySessionCards = b ? b.cards : 0;
+          const daySessionTime = b ? b.duration : 0;
           const streakDayCount = Number(userDoc.dailyStreak?.history?.[dayStr]) || 0;
           const dayCards = Math.max(daySessionCards, streakDayCount);
 
           past14DaysCards.push(dayCards);
           past14DaysTime.push(daySessionTime);
         }
+
+        console.log('[API Stats] Cards studied summary (all modes):', {
+          userId,
+          date: targetDate,
+          tzOffsetMinutes,
+          cards_reviewed: cardsReviewed,
+          session_cards_sum: sessionCardsSum,
+          streak_history_count: streakHistoryCount,
+          by_mode: targetBucket.byMode,
+          sessions_count: targetBucket.sessionsCount
+        });
 
         // If sample query parameter is explicitly requested, inject sample fallback values
         const isSampleRequested = url.searchParams.get('sample') === 'true';
@@ -818,6 +868,7 @@ export default {
         const statsPayload = {
           date: targetDate,
           cards_reviewed: isSampleRequested ? (cardsReviewed || 142) : cardsReviewed,
+          cards_reviewed_by_mode: targetBucket.byMode,
           retention_rate: isSampleRequested ? (retentionRate || 0.88) : retentionRate,
           time_spent_seconds: isSampleRequested ? (timeSpentSeconds || 1840) : timeSpentSeconds,
           streak_days: isSampleRequested ? (streakDays || 18) : streakDays,
@@ -961,9 +1012,18 @@ export default {
 
         const body = await request.json().catch(() => ({}));
         const todayStr = body.date || new Date().toISOString().slice(0, 10);
-        const cardsReviewed = Number(body.cardsReviewed) || 0;
+        const streakTodayCount = Number(userDoc?.dailyStreak?.history?.[todayStr]) || 0;
+        const cardsReviewed = Math.max(Number(body.cardsReviewed) || 0, streakTodayCount);
         const dailyGoal = Number(body.dailyGoal) || 0;
         const streakDays = Number(userDoc?.dailyStreak?.streak) || 0;
+
+        console.log('[Webhook] daily_goal_reached logged (all modes):', {
+          userId: user.uid,
+          date: todayStr,
+          cards_reviewed: cardsReviewed,
+          daily_goal: dailyGoal,
+          streak_days: streakDays
+        });
 
         const payload = {
           event: 'daily_goal_reached',

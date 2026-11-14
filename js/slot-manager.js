@@ -725,6 +725,7 @@ export function getLocalSettings() {
     notebookDailyGoal: Number(localStorage.getItem('flashcards_notebook_daily_goal')) || 0,
     notebookScheduler: localStorage.getItem('flashcards_notebook_scheduler') === 'sm2' ? 'sm2' : 'fsrs',
     freeAiDeckUsed: localStorage.getItem('spaiq_free_ai_deck_used') === 'true',
+    timezoneOffsetMinutes: new Date().getTimezoneOffset(),
     updatedAt: Number(localStorage.getItem('flashcards_settings_updated_at')) || Date.now()
   };
 }

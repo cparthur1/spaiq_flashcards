@@ -624,6 +624,39 @@ export function injectSampleHistory(deckTitle = "Flashcards") {
  *   startTime: number
  * }}
  */
+export function getCardsAnsweredForDate(targetDateStr) {
+    try {
+        const data = getStatsStorage();
+        const deduped = new Map();
+        const addSess = (s) => {
+            if (!s || typeof s !== 'object') return;
+            const key = s.id || (s.startTime ? `sess_${s.startTime}` : null);
+            if (!key) return;
+            const prev = deduped.get(key);
+            if (!prev || (Number(s.cardsAnswered) || 0) >= (Number(prev.cardsAnswered) || 0)) {
+                deduped.set(key, s);
+            }
+        };
+        if (Array.isArray(data.history)) data.history.forEach(addSess);
+        if (data.currentSession) addSess(data.currentSession);
+
+        let sum = 0;
+        for (const s of deduped.values()) {
+            const ts = s.lastActiveTime || s.endTime || s.startTime;
+            if (!ts) continue;
+            const d = new Date(ts);
+            if (isNaN(d.getTime())) continue;
+            const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (dStr === targetDateStr) {
+                sum += Number(s.cardsAnswered) || 0;
+            }
+        }
+        return sum;
+    } catch (_) {
+        return 0;
+    }
+}
+
 export function getCurrentSessionMetrics() {
     try {
         const data = getStatsStorage();
