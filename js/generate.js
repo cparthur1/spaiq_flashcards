@@ -1,12 +1,12 @@
-import { callWithRetry, sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import { sanitizeChatHistory, renderMathAndMarkdown, stripHtml, escapeHtml, sanitizeImageUrl, generateSecureId, NOTEBOOK_STORAGE_KEY, encodeStoragePayload, openModalWithMotion, closeModalWithMotion } from './utils.js';
 import { initExploreModal, openProModal, openExtraDeckModal, isUserPro, getUserProStatus, refreshUserProStatus } from './explore-modal.js';
 import { onAuthChange, getCurrentUserToken } from './firebase-client.js';
 import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { syncSharedDeckToFirestore, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
-import { savePendingGeneration, getPendingGeneration, clearPendingGeneration, hasPendingGenerationFlag } from './pending-generation.js';
-import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated, getArrowColorTheme } from './image-editor-modal.js';
+import { savePendingGeneration, getPendingGeneration, clearPendingGeneration } from './pending-generation.js';
+import { openImageEditorModal, renderAnnotatedImage, getArrowColorTheme } from './image-editor-modal.js';
 import { importApkgFile } from './engine/apkg-importer.js';
 
 try {
@@ -32,7 +32,6 @@ function compressPDFWithWorker(file) {
 // --- DOM ELEMENTS ---
 const dashboardView = document.getElementById('dashboard-view');
 const editorView = document.getElementById('editor-view');
-const globalError = document.getElementById('global-error');
 
 // Mode Selection Cards (Netflix Style)
 const cardMode11 = document.getElementById('card-mode-1-1');
@@ -215,7 +214,6 @@ const chatHistory = document.getElementById('chat-history');
 const chatPromptQueue = document.getElementById('chat-prompt-queue');
 const chatInput = document.getElementById('chat-input');
 const chatSendBtn = document.getElementById('chat-send-btn');
-const chatSpinner = document.getElementById('chat-spinner');
 
 // Deck Preview (Right Column)
 const cardsList = document.getElementById('cards-list');
@@ -390,7 +388,7 @@ function closeInlineEditModal() {
         document.activeElement.blur();
     }
     if (inlineEditModal) {
-        inlineEditModal.classList.add('hidden');
+        closeModalWithMotion(inlineEditModal);
     }
     if (cardsList) {
         cardsList.scrollTop = inlineEditSavedScrollTop;
@@ -1570,12 +1568,12 @@ function convertDocumentToCards(text, mode = 'open') {
             continue;
         }
 
-        const flowchartMatch = line.match(/^[\(\[]\s*(?:flowchart|fluxograma|cascata)\s*[\)\]]:?\s*(.*)$/i);
-        const openDoubleMatch = line.match(/^[\(\[]\s*(?:open[_-]?double|duplo)\s*[\)\]]:?\s*(.*)$/i);
-        const fillMatch = line.match(/^[\(\[]\s*(?:fill|preencher|lacunas?|cloze)\s*[\)\]]:?\s*(.*)$/i);
-        const mcMatch = line.match(/^[\(\[]\s*(?:multiple[_-]?choice|multipla[_-]?escolha|mc)\s*[\)\]]:?\s*(.*)$/i);
-        const ankiMatch = line.match(/^[\(\[]\s*(?:anki[_-]?like|anki)\s*[\)\]]:?\s*(.*)$/i);
-        const openMatch = line.match(/^[\(\[]\s*(?:open|tradicional|aberta?)\s*[\)\]]:?\s*(.*)$/i);
+        const flowchartMatch = line.match(/^[([]\s*(?:flowchart|fluxograma|cascata)\s*[\])]:?\s*(.*)$/i);
+        const openDoubleMatch = line.match(/^[([]\s*(?:open[_-]?double|duplo)\s*[\])]:?\s*(.*)$/i);
+        const fillMatch = line.match(/^[([]\s*(?:fill|preencher|lacunas?|cloze)\s*[\])]:?\s*(.*)$/i);
+        const mcMatch = line.match(/^[([]\s*(?:multiple[_-]?choice|multipla[_-]?escolha|mc)\s*[\])]:?\s*(.*)$/i);
+        const ankiMatch = line.match(/^[([]\s*(?:anki[_-]?like|anki)\s*[\])]:?\s*(.*)$/i);
+        const openMatch = line.match(/^[([]\s*(?:open|tradicional|aberta?)\s*[\])]:?\s*(.*)$/i);
 
         if (flowchartMatch) {
             const parsedFlow = parseFlowchartFromTextBody(flowchartMatch[1].trim());
@@ -1765,11 +1763,11 @@ function parseTxtToJSONWithPlaceholders(text) {
             continue;
         }
 
-        const flowchartMatch = line.match(/^[\(\[]\s*(?:flowchart|fluxograma|cascata)\s*[\)\]]:?\s*(.*)$/i);
-        const openDoubleMatch = line.match(/^[\(\[]\s*(?:open[_-]?double|duplo)\s*[\)\]]:?\s*(.*)$/i);
-        const fillMatch = line.match(/^[\(\[]\s*(?:fill|preencher|lacunas?|cloze)\s*[\)\]]:?\s*(.*)$/i);
-        const mcMatch = line.match(/^[\(\[]\s*(?:multiple[_-]?choice|multipla[_-]?escolha|mc)\s*[\)\]]:?\s*(.*)$/i);
-        const ankiMatch = line.match(/^[\(\[]\s*(?:anki[_-]?like|anki)\s*[\)\]]:?\s*(.*)$/i);
+        const flowchartMatch = line.match(/^[([]\s*(?:flowchart|fluxograma|cascata)\s*[\])]:?\s*(.*)$/i);
+        const openDoubleMatch = line.match(/^[([]\s*(?:open[_-]?double|duplo)\s*[\])]:?\s*(.*)$/i);
+        const fillMatch = line.match(/^[([]\s*(?:fill|preencher|lacunas?|cloze)\s*[\])]:?\s*(.*)$/i);
+        const mcMatch = line.match(/^[([]\s*(?:multiple[_-]?choice|multipla[_-]?escolha|mc)\s*[\])]:?\s*(.*)$/i);
+        const ankiMatch = line.match(/^[([]\s*(?:anki[_-]?like|anki)\s*[\])]:?\s*(.*)$/i);
 
         if (flowchartMatch) {
             card = parseFlowchartFromTextBody(flowchartMatch[1].trim());
@@ -2431,11 +2429,11 @@ cardMode12.addEventListener('click', () => {
         modal12SandboxInput.value = getModal12DefaultText();
     }
     updateModal12SandboxLivePreview();
-    modal12.classList.remove('hidden');
+    openModalWithMotion(modal12);
 });
 
-closeModal12Btn.addEventListener('click', () => modal12.classList.add('hidden'));
-cancelModal12Btn.addEventListener('click', () => modal12.classList.add('hidden'));
+closeModal12Btn.addEventListener('click', () => closeModalWithMotion(modal12));
+cancelModal12Btn.addEventListener('click', () => closeModalWithMotion(modal12));
 
 modal12File.addEventListener('change', () => {
     modal12Error.textContent = '';
@@ -2478,7 +2476,7 @@ modal12UseSandboxBtn?.addEventListener('click', () => {
 
     deckCards = cards;
     deckTitleDisplay.value = t('sandbox_deck_title');
-    modal12.classList.add('hidden');
+    closeModalWithMotion(modal12);
     openEditorView('creator');
 });
 
@@ -2527,7 +2525,7 @@ submitModal12Btn.addEventListener('click', async () => {
 
             deckCards = result.cards;
             deckTitleDisplay.value = result.deckTitle || file.name.replace(/\.[^/.]+$/, "");
-            modal12.classList.add('hidden');
+            closeModalWithMotion(modal12);
             openEditorView('creator');
             return;
         }
@@ -2543,7 +2541,7 @@ submitModal12Btn.addEventListener('click', async () => {
 
         deckCards = cards;
         deckTitleDisplay.value = file.name.replace(/\.[^/.]+$/, "");
-        modal12.classList.add('hidden');
+        closeModalWithMotion(modal12);
         openEditorView('creator');
     } catch (err) {
         modal12Error.textContent = t('error_reading_doc', { error: err.message });
@@ -2564,11 +2562,11 @@ cardMode21.addEventListener('click', () => {
     renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
     updateModal21LanguageUI();
     resetModal21LanguageSelection();
-    modal21.classList.remove('hidden');
+    openModalWithMotion(modal21);
 });
 
-closeModal21Btn.addEventListener('click', () => modal21.classList.add('hidden'));
-cancelModal21Btn.addEventListener('click', () => modal21.classList.add('hidden'));
+closeModal21Btn.addEventListener('click', () => closeModalWithMotion(modal21));
+cancelModal21Btn.addEventListener('click', () => closeModalWithMotion(modal21));
 
 modal21Files.addEventListener('change', () => {
     modal21Error.textContent = '';
@@ -2612,7 +2610,7 @@ modal21Files.addEventListener('change', () => {
 async function executeAiGenerationFromMaterials(files, customInstructions = '', selectedLanguage = 'Inglês', customLanguage = '') {
     if (!files || files.length === 0) return;
 
-    modal21.classList.add('hidden');
+    closeModalWithMotion(modal21);
     openEditorView('ai');
     window.dispatchEvent(new CustomEvent('flashcardsDeckGenerationStarted', { detail: { filesCount: files.length } }));
 
@@ -2745,10 +2743,8 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
         const decoder = new TextDecoder('utf-8');
         let buffer = '';
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
+        for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+            const { value } = chunk;
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
             buffer = lines.pop() || '';
@@ -2871,11 +2867,11 @@ cardMode22.addEventListener('click', () => {
     modal22Error.textContent = '';
     modal22File.value = '';
     modal22FileName.textContent = t('click_or_drag_txt_word');
-    modal22.classList.remove('hidden');
+    openModalWithMotion(modal22);
 });
 
-closeModal22Btn.addEventListener('click', () => modal22.classList.add('hidden'));
-cancelModal22Btn.addEventListener('click', () => modal22.classList.add('hidden'));
+closeModal22Btn.addEventListener('click', () => closeModalWithMotion(modal22));
+cancelModal22Btn.addEventListener('click', () => closeModalWithMotion(modal22));
 
 modal22File.addEventListener('change', () => {
     if (modal22File.files.length > 0) {
@@ -2890,7 +2886,7 @@ modal22File.addEventListener('change', () => {
 async function executeAiEnhanceFromDoc(file) {
     if (!file) return;
 
-    modal22.classList.add('hidden');
+    closeModalWithMotion(modal22);
     submitModal22Btn.disabled = true;
     modal22Spinner.classList.remove('hidden');
     modal22LoadingMsg.classList.remove('hidden');
@@ -3125,10 +3121,10 @@ openProBtn?.addEventListener('click', openProModal);
 function showGeminiDownModal(errorMsg, sourceType, localCards = null) {
     lastFailedSourceType = sourceType;
     lastFailedLocalCards = localCards;
-    if (geminiDownModal) geminiDownModal.classList.remove('hidden');
+    if (geminiDownModal) openModalWithMotion(geminiDownModal);
 }
 function closeGeminiDownModal() {
-    if (geminiDownModal) geminiDownModal.classList.add('hidden');
+    if (geminiDownModal) closeModalWithMotion(geminiDownModal);
 }
 closeGeminiDownModalBtn.addEventListener('click', closeGeminiDownModal);
 if (useTraditionalTxtBtn) {
@@ -3156,9 +3152,9 @@ if (retryGeminiBtn) {
         closeGeminiDownModal();
         if (lastFailedSourceType === 'files') {
             updateModal21LanguageUI();
-            modal21.classList.remove('hidden');
+            openModalWithMotion(modal21);
         } else if (lastFailedSourceType === 'txt') {
-            modal22.classList.remove('hidden');
+            openModalWithMotion(modal22);
         }
     });
 }
@@ -3171,7 +3167,7 @@ if (retryGeminiBtn) {
                 if (modal === inlineEditModal) {
                     closeInlineEditModal();
                 } else {
-                    modal.classList.add('hidden');
+                    closeModalWithMotion(modal);
                 }
             }
         });
@@ -3187,7 +3183,7 @@ document.addEventListener('keydown', (e) => {
             if (openModal === inlineEditModal) {
                 closeInlineEditModal();
             } else {
-                openModal.classList.add('hidden');
+                closeModalWithMotion(openModal);
             }
         }
     }
@@ -4804,7 +4800,7 @@ function openInlineEditModal(index) {
     inlineEditAnsImageUrl.value = pendingInlineEditAnsImage;
     updateInlineEditAnsImagePreviewUI();
 
-    inlineEditModal.classList.remove('hidden');
+    openModalWithMotion(inlineEditModal);
 }
 
 function renderInlineEditMcOptions(options, correctAnswer) {

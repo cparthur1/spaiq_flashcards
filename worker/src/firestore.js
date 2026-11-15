@@ -82,8 +82,9 @@ function fromFirestoreFields(fields) {
  */
 export async function getUserDocument(serviceAccountConfig, uid) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
-  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${uid}`;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
+  const safeUid = encodeURIComponent(uid);
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${safeUid}`;
 
   const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` }
@@ -106,13 +107,14 @@ export async function getUserDocument(serviceAccountConfig, uid) {
  */
 export async function updateUserDocument(serviceAccountConfig, uid, fieldsToUpdate) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
+  const safeUid = encodeURIComponent(uid);
 
   const updateMask = Object.keys(fieldsToUpdate)
     .map(key => `updateMask.fieldPaths=${encodeURIComponent(key)}`)
     .join('&');
 
-  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${uid}?${updateMask}`;
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${safeUid}?${updateMask}`;
   const firestoreFields = toFirestoreFields(fieldsToUpdate);
 
   const res = await fetch(url, {
@@ -142,8 +144,9 @@ export async function updateUserDocument(serviceAccountConfig, uid, fieldsToUpda
  */
 export async function deleteUserDocument(serviceAccountConfig, uid) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
-  const userUrl = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${uid}`;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
+  const safeUid = encodeURIComponent(uid);
+  const userUrl = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${safeUid}`;
 
   // First fetch user doc to find deck IDs and API keys
   const userDoc = await getUserDocument(serviceAccountConfig, uid);
@@ -226,8 +229,10 @@ export async function clearUserCloudData(serviceAccountConfig, uid) {
  */
 export async function getDocument(serviceAccountConfig, collectionName, docId) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
-  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${collectionName}/${docId}`;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
+  const safeCollection = encodeURIComponent(collectionName);
+  const safeDocId = encodeURIComponent(docId);
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${safeCollection}/${safeDocId}`;
 
   const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` }
@@ -248,7 +253,9 @@ export async function getDocument(serviceAccountConfig, collectionName, docId) {
  */
 export async function setDocument(serviceAccountConfig, collectionName, docId, fieldsToSet) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
+  const safeCollection = encodeURIComponent(collectionName);
+  const safeDocId = encodeURIComponent(docId);
   
   // In Firestore REST API, updateMask is required for PATCH to create/upsert a document if it doesn't already exist.
   // Without updateMask, Firestore requires the document to already exist and returns 404 NOT_FOUND.
@@ -256,7 +263,7 @@ export async function setDocument(serviceAccountConfig, collectionName, docId, f
     .map(key => `updateMask.fieldPaths=${encodeURIComponent(key)}`)
     .join('&');
   const querySuffix = updateMask ? `?${updateMask}` : '';
-  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${collectionName}/${docId}${querySuffix}`;
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${safeCollection}/${safeDocId}${querySuffix}`;
   const firestoreFields = toFirestoreFields(fieldsToSet);
 
   const res = await fetch(url, {
@@ -281,7 +288,7 @@ export async function setDocument(serviceAccountConfig, collectionName, docId, f
  */
 export async function findUserByApiKey(serviceAccountConfig, apiKey) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
   const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents:runQuery`;
 
   const query = {
@@ -329,8 +336,10 @@ export async function findUserByApiKey(serviceAccountConfig, apiKey) {
  */
 export async function deleteDocument(serviceAccountConfig, collectionName, docId) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
-  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${collectionName}/${docId}`;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
+  const safeCollection = encodeURIComponent(collectionName);
+  const safeDocId = encodeURIComponent(docId);
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${safeCollection}/${safeDocId}`;
 
   return await fetch(url, {
     method: 'DELETE',
@@ -343,8 +352,9 @@ export async function deleteDocument(serviceAccountConfig, collectionName, docId
  */
 export async function deleteDeckDocument(serviceAccountConfig, deckId) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
-  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/decks/${deckId}`;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
+  const safeDeckId = encodeURIComponent(deckId);
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/decks/${safeDeckId}`;
 
   return await fetch(url, {
     method: 'DELETE',
@@ -357,8 +367,9 @@ export async function deleteDeckDocument(serviceAccountConfig, deckId) {
  */
 export async function markShareDeleted(serviceAccountConfig, shareSlug) {
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
-  const projectId = serviceAccountConfig.project_id;
-  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/shares/${shareSlug}`;
+  const projectId = encodeURIComponent(serviceAccountConfig.project_id);
+  const safeSlug = encodeURIComponent(shareSlug);
+  const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/shares/${safeSlug}`;
 
   // Mark as deleted: true so client can display "Este baralho foi apagado pelo proprietário"
   const firestoreFields = toFirestoreFields({

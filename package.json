@@ -1,0 +1,15 @@
+{
+  "name": "flashcards-ai",
+  "version": "1.0.0",
+  "private": true,
+  "license": "GPL-2.0-only",
+  "description": "Flashcards AI Web Application",
+  "scripts": {
+    "build:css": "tailwindcss -c ./tailwind.config.js -i ./css/tailwind-input.css -o ./css/tailwind.min.css --minify",
+    "watch:css": "tailwindcss -c ./tailwind.config.js -i ./css/tailwind-input.css -o ./css/tailwind.min.css --watch",
+    "lint": "/usr/bin/eslint --no-eslintrc --env browser,es2020,worker --parser-options=ecmaVersion:2022,sourceType:module --rule 'no-unused-vars: [\"warn\", {\"args\": \"none\", \"caughtErrors\": \"none\"}]' --rule 'no-dupe-keys: \"error\"' --rule 'no-unreachable: \"error\"' --rule 'no-useless-escape: \"warn\"' --rule 'no-constant-condition: \"warn\"' --rule 'no-useless-return: \"warn\"' js/ worker/src/ sw.js"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}

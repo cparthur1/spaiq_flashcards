@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.50'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.54'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -17,6 +17,7 @@ const RAW_ASSETS = [
   '/pages/stats.html',
   '/pages/bulk-add.html',
   '/pages/how-to-write-good-flashcards.html',
+  '/css/tailwind.min.css',
   '/css/style.css',
   '/assets/fonts/fonts.css',
   '/assets/fonts/material-symbols-rounded.woff2',
@@ -193,7 +194,6 @@ const ALLOWED_CDN_HOSTS = new Set([
   'cdnjs.cloudflare.com',
   'fonts.googleapis.com',
   'fonts.gstatic.com',
-  'cdn.tailwindcss.com',
   'cdn.jsdelivr.net',
   'esm.run'
 ]);
@@ -262,6 +262,5 @@ self.addEventListener('fetch', (event) => {
         });
       })
     );
-    return;
   }
 });

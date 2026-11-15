@@ -164,9 +164,6 @@ export const TRANSLATIONS = {
     // Card Types
     card_type_open: 'Pergunta Aberta',
     card_type_open_double: 'Dupla Pergunta',
-    card_type_mc: 'Múltipla Escolha',
-    card_type_fill: 'Preencha a Lacuna',
-    card_type_anki: 'Flashcard Anki',
     card_type_voice: 'Explicar em voz alta',
 
     // Deck Completion
@@ -175,7 +172,6 @@ export const TRANSLATIONS = {
     completed_cards: 'Cards Concluídos',
     best_streak: 'Maior Sequência',
     restart_deck: 'Reiniciar Baralho',
-    back_to_home: 'Voltar ao Início',
     rank_s_title: 'Rank S · Impecável',
     rank_s_perfect_title: 'Rank S · Perfeito!',
     rank_s_desc: 'Domínio absoluto do conteúdo!',
@@ -235,8 +231,6 @@ export const TRANSLATIONS = {
     pinned_tab_notebook: 'Caderno',
     pinned_min_warning: 'Pelo menos 1 estatística deve permanecer fixada',
     pinned_max_warning: 'Máximo de 3 estatísticas fixadas atingido',
-    stat_pinned_toast: '"{label}" fixada no cabeçalho',
-    stat_unpinned_toast: '"{label}" desafixada do cabeçalho',
 
     settings_pomodoro_heading: 'Pomodoro & Pausas',
     pomodoro_switch_title: 'Timer Pomodoro',
@@ -391,7 +385,6 @@ export const TRANSLATIONS = {
     delete_account: 'Excluir Conta',
 
     // Generator & Editor Page
-    generate_page_title: 'Criar Baralho',
     traditional_section: 'Tradicional',
     create_now_title: 'Crie agora',
     create_now_desc: 'Crie cartões manualmente do zero.',
@@ -610,7 +603,6 @@ export const TRANSLATIONS = {
     clear_stats_confirm: 'Deseja realmente limpar todo o histórico de estatísticas? Essa ação não pode ser desfeita.',
 
     // Bulk Add Page
-    bulk_add_title: 'Adicionar Vários ao Caderno',
     bulk_add_subtitle: 'Faça upload de baralhos para o Caderno',
     loaded_decks_col: 'Baralhos Carregados',
     added_to_notebook_col: 'Adicionados ao Caderno',
@@ -1112,10 +1104,7 @@ export const TRANSLATIONS = {
     "advice_exercise": "Hora de exercício físico! A atividade física oxigena o cérebro e consolida a memória ;)",
     "advice_afternoon": "Final de tarde! Uma leitura leve ou uma pausa para relaxar ajuda a fixar o conteúdo ;)",
     "advice_sleep": "Agora durma! Sono REM vai fazer você salvar tudo isso ;)",
-    "session_completed_toast": "Sessão concluída! Parabéns!",
     "all_cards_completed_subtitle": "Todos os cards de \"{title}\" foram concluídos com sucesso nesta rodada!",
-    "deck_restarted_toast": "Baralho reiniciado!",
-    "notebook_empty_title": "Seu Caderno está vazio",
     "notebook_empty_desc": "Favorite cartões durante o estudo clicando no ícone de marcador para salvá-los no Caderno e revisá-los a longo prazo com repetição espaçada.",
     "notebook_empty_btn": "Ir para o Baralho Principal",
     "tutor_welcome_msg": "Olá! Como posso ajudar você a entender melhor esta questão?",
@@ -1130,7 +1119,6 @@ export const TRANSLATIONS = {
     "confirm_exit_game": "Sair?",
     "no_definition_found": "Nenhuma definição encontrada.",
     "ai_connection_error": "Erro ao conectar à IA. Verifique sua chave de API ou tente novamente.",
-    "game_restarted_toast": "Jogo reiniciado!",
     "free_trial_no_export": "Baralhos do teste gratuito não podem ser exportados. Assine o Spaiq Pro!",
     "confirm_clear_entire_notebook": "Tem certeza de que deseja limpar todo o Caderno? Todos os cartões salvos para revisão de longo prazo serão apagados.",
     "notebook_cleared_toast": "Caderno limpo com sucesso!",
@@ -1139,7 +1127,6 @@ export const TRANSLATIONS = {
     "stat_unpinned_toast": "\"{label}\" desafixada do {target}",
     "stat_pinned_toast": "\"{label}\" fixada no cabeçalho do {target}",
     "browser_no_web_notif": "Seu navegador não suporta notificações web.",
-    "notif_permission_denied": "Permissão de notificação negada no navegador.",
     "test_notif_toast": "Notificação de teste ({type}) disparada!",
     "urgent_alert": "Alerta Urgente",
     "reminder": "Lembrete",
@@ -1929,9 +1916,6 @@ export const TRANSLATIONS = {
     // Card Types
     card_type_open: 'Open Question',
     card_type_open_double: 'Double Question',
-    card_type_mc: 'Multiple Choice',
-    card_type_fill: 'Fill in the Blank',
-    card_type_anki: 'Anki Flashcard',
     card_type_voice: 'Explain Out Loud',
 
     // Deck Completion
@@ -1940,7 +1924,6 @@ export const TRANSLATIONS = {
     completed_cards: 'Completed Cards',
     best_streak: 'Best Streak',
     restart_deck: 'Restart Deck',
-    back_to_home: 'Back to Home',
     rank_s_title: 'Rank S · Flawless',
     rank_s_perfect_title: 'Rank S · Perfect!',
     rank_s_desc: 'Absolute mastery of the material!',
@@ -2000,8 +1983,6 @@ export const TRANSLATIONS = {
     pinned_tab_notebook: 'Notebook',
     pinned_min_warning: 'At least 1 stat must remain pinned',
     pinned_max_warning: 'Maximum of 3 pinned stats reached',
-    stat_pinned_toast: '"{label}" pinned to header',
-    stat_unpinned_toast: '"{label}" unpinned from header',
 
     settings_pomodoro_heading: 'Pomodoro & Breaks',
     pomodoro_switch_title: 'Pomodoro Timer',
@@ -2156,7 +2137,6 @@ export const TRANSLATIONS = {
     delete_account: 'Delete Account',
 
     // Generator & Editor Page
-    generate_page_title: 'Create Deck',
     traditional_section: 'Traditional',
     create_now_title: 'Create now',
     create_now_desc: 'Build flashcards manually from scratch.',
@@ -2375,7 +2355,6 @@ export const TRANSLATIONS = {
     clear_stats_confirm: 'Are you sure you want to clear all statistics history? This action cannot be undone.',
 
     // Bulk Add Page
-    bulk_add_title: 'Bulk Add to Notebook',
     bulk_add_subtitle: 'Upload decks to your Notebook',
     loaded_decks_col: 'Loaded Decks',
     added_to_notebook_col: 'Added to Notebook',
@@ -2877,10 +2856,7 @@ export const TRANSLATIONS = {
     "advice_exercise": "Time to exercise! Physical activity oxygenates the brain and consolidates memory ;)",
     "advice_afternoon": "Late afternoon! Light reading or a relaxing break helps consolidate what you learned ;)",
     "advice_sleep": "Get some sleep! REM sleep will consolidate everything ;)",
-    "session_completed_toast": "Session completed! Congratulations!",
     "all_cards_completed_subtitle": "All cards in \"{title}\" were successfully completed in this round!",
-    "deck_restarted_toast": "Deck restarted!",
-    "notebook_empty_title": "Your Notebook is empty",
     "notebook_empty_desc": "Bookmark cards during study to save them to the Notebook and review them long-term with spaced repetition.",
     "notebook_empty_btn": "Go to Main Deck",
     "tutor_welcome_msg": "Hello! How can I help you understand this question better?",
@@ -2895,7 +2871,6 @@ export const TRANSLATIONS = {
     "confirm_exit_game": "Exit?",
     "no_definition_found": "No definition found.",
     "ai_connection_error": "Error connecting to AI. Check your API key or try again.",
-    "game_restarted_toast": "Game restarted!",
     "free_trial_no_export": "Free trial decks cannot be exported. Subscribe to Pro!",
     "confirm_clear_entire_notebook": "Are you sure you want to clear the entire Notebook? All cards saved for long-term review will be removed.",
     "notebook_cleared_toast": "Notebook cleared successfully!",
@@ -2904,7 +2879,6 @@ export const TRANSLATIONS = {
     "stat_unpinned_toast": "\"{label}\" unpinned from {target}",
     "stat_pinned_toast": "\"{label}\" pinned to header of {target}",
     "browser_no_web_notif": "Your browser does not support web notifications.",
-    "notif_permission_denied": "Notification permission denied in browser.",
     "test_notif_toast": "Test notification ({type}) triggered!",
     "urgent_alert": "Urgent Alert",
     "reminder": "Reminder",

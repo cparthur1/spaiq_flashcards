@@ -325,18 +325,67 @@ if (typeof window !== 'undefined') {
 // --- CANVAS ANIMATION & VISUAL EFFECTS ---
 let canvasElement = null;
 let canvasCtx = null;
+let staticCanvas = null;
+let staticCtx = null;
 let shockwaveContainerElem = null;
 let questionCardElem = null;
 
 let isCanvasLoopRunning = false;
 let canvasAnimationId = null;
+let lastFrameTime = 0;
 let balls = [];
 let celebrationParticles = [];
+
+const reducedMotionMediaQuery = (typeof window !== 'undefined' && typeof window.matchMedia === 'function')
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+
+function isReducedMotionPreferred() {
+    return Boolean(reducedMotionMediaQuery && reducedMotionMediaQuery.matches);
+}
+
+function ensureStaticCanvas() {
+    if (!canvasElement) return false;
+    if (!staticCanvas && typeof document !== 'undefined') {
+        staticCanvas = document.createElement('canvas');
+        staticCtx = staticCanvas.getContext('2d');
+    }
+    if (!staticCanvas || !staticCtx) return false;
+    if (staticCanvas.width !== canvasElement.width || staticCanvas.height !== canvasElement.height) {
+        staticCanvas.width = canvasElement.width;
+        staticCanvas.height = canvasElement.height;
+        rebuildStaticCanvas();
+    }
+    return true;
+}
+
+function drawBallOnStaticCanvas(ball) {
+    if (!ensureStaticCanvas() || !ball) return;
+    staticCtx.beginPath();
+    staticCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    staticCtx.fillStyle = ball.color;
+    staticCtx.fill();
+}
+
+function rebuildStaticCanvas() {
+    if (!staticCanvas || !staticCtx) return;
+    staticCtx.clearRect(0, 0, staticCanvas.width, staticCanvas.height);
+    for (let i = 0; i < balls.length; i++) {
+        const b = balls[i];
+        if (b.isStatic) {
+            staticCtx.beginPath();
+            staticCtx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            staticCtx.fillStyle = b.color;
+            staticCtx.fill();
+        }
+    }
+}
 
 export function initEffects(options = {}) {
     canvasElement = options.canvas || document.getElementById('background-canvas');
     if (canvasElement) {
         canvasCtx = canvasElement.getContext('2d');
+        ensureStaticCanvas();
     }
     shockwaveContainerElem = options.shockwaveContainer || document.getElementById('shockwave-container');
     questionCardElem = options.questionCard || document.getElementById('question-card');
@@ -352,12 +401,19 @@ export function getBalls() {
 export function setBallColor(index, color) {
     if (balls && balls[index]) {
         balls[index].color = color;
+        if (balls[index].isStatic) {
+            rebuildStaticCanvas();
+            if (!isCanvasLoopRunning) {
+                redrawCanvas();
+            }
+        }
     }
 }
 
 export function startCanvasLoop() {
     if (!isCanvasLoopRunning) {
         isCanvasLoopRunning = true;
+        lastFrameTime = 0;
         canvasAnimationId = requestAnimationFrame(animate);
     }
 }
@@ -368,6 +424,7 @@ export function pauseCanvasLoop() {
         canvasAnimationId = null;
     }
     isCanvasLoopRunning = false;
+    lastFrameTime = 0;
 }
 
 export function resumeCanvasLoop() {
@@ -382,13 +439,28 @@ export function resumeCanvasLoop() {
 export function redrawCanvas() {
     if (!canvasElement || !canvasCtx) return;
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    balls.forEach(ball => {
-        canvasCtx.beginPath();
-        canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-        canvasCtx.fillStyle = ball.color;
-        canvasCtx.fill();
-        canvasCtx.closePath();
-    });
+    if (ensureStaticCanvas()) {
+        rebuildStaticCanvas();
+        if (staticCanvas.width > 0 && staticCanvas.height > 0) {
+            canvasCtx.drawImage(staticCanvas, 0, 0);
+        }
+        for (let i = 0; i < balls.length; i++) {
+            const ball = balls[i];
+            if (!ball.isStatic) {
+                canvasCtx.beginPath();
+                canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                canvasCtx.fillStyle = ball.color;
+                canvasCtx.fill();
+            }
+        }
+    } else {
+        balls.forEach(ball => {
+            canvasCtx.beginPath();
+            canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            canvasCtx.fillStyle = ball.color;
+            canvasCtx.fill();
+        });
+    }
 }
 
 if (typeof document !== 'undefined') {
@@ -409,6 +481,10 @@ export function clearBalls() {
         canvasAnimationId = null;
     }
     isCanvasLoopRunning = false;
+    lastFrameTime = 0;
+    if (staticCtx && staticCanvas) {
+        staticCtx.clearRect(0, 0, staticCanvas.width, staticCanvas.height);
+    }
     if (canvasCtx && canvasElement) {
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     }
@@ -416,8 +492,7 @@ export function clearBalls() {
 
 export function launchCelebrationParticles(count = 140) {
     if (!isAnimationsEnabled()) return;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return;
+    if (isReducedMotionPreferred()) return;
     const colors = [
         '#10B981', '#34D399', '#F59E0B', '#FBBF24', 
         '#6366F1', '#818CF8', '#EC4899', '#F43F5E', 
@@ -452,7 +527,7 @@ export function cleanShockwaveContainer() {
 
 export function playCompletionShockwave() {
     if (!isAnimationsEnabled()) return;
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion = isReducedMotionPreferred();
     const container = shockwaveContainerElem || document.getElementById('shockwave-container');
     const card = questionCardElem || document.getElementById('question-card');
     if (prefersReducedMotion || !container || !card) return;
@@ -527,17 +602,15 @@ export function resizeCanvas() {
 
     canvasElement.width = window.innerWidth;
     canvasElement.height = window.innerHeight;
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-    balls.forEach(ball => {
+    for (let i = 0; i < balls.length; i++) {
+        const ball = balls[i];
         if (ball.y + ball.radius > canvasElement.height) {
             ball.y = canvasElement.height - ball.radius;
         }
-        canvasCtx.beginPath();
-        canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-        canvasCtx.fillStyle = ball.color;
-        canvasCtx.fill();
-        canvasCtx.closePath();
-    });
+    }
+    ensureStaticCanvas();
+    rebuildStaticCanvas();
+    redrawCanvas();
     if (balls.some(b => !b.isStatic) || celebrationParticles.length > 0) {
         startCanvasLoop();
     }
@@ -549,41 +622,65 @@ export function createBall(isCorrect) {
     if (!canvasCtx) canvasCtx = canvasElement.getContext('2d');
     if (!canvasCtx) return -1;
 
-    const noMotion = !isAnimationsEnabled() || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const noMotion = !isAnimationsEnabled() || isReducedMotionPreferred();
     const radius = Math.random() * 5 + 8;
     const x = Math.random() * (canvasElement.width - radius * 2) + radius;
     const y = noMotion ? (canvasElement.height - radius) : -radius;
     const color = isCorrect ? 'rgba(74, 222, 128, 0.8)' : 'rgba(239, 68, 68, 0.8)';
-    balls.push({ x, y, radius, color, dy: 0, isStatic: noMotion });
+    const newBall = { x, y, radius, color, dy: 0, isStatic: noMotion };
+    balls.push(newBall);
+
+    let shifted = false;
+    if (balls.length > 300) {
+        balls.shift();
+        shifted = true;
+    }
 
     if (noMotion) {
+        if (shifted) {
+            rebuildStaticCanvas();
+        } else {
+            drawBallOnStaticCanvas(newBall);
+        }
         canvasCtx.beginPath();
         canvasCtx.arc(x, y, radius, 0, Math.PI * 2);
         canvasCtx.fillStyle = color;
         canvasCtx.fill();
-        canvasCtx.closePath();
     } else {
+        if (shifted) {
+            rebuildStaticCanvas();
+        }
         startCanvasLoop();
     }
     return balls.length - 1;
 }
 
-export function animate() {
+export function animate(timestamp) {
     if (!canvasElement || !canvasCtx) return;
+    const nowTs = typeof timestamp === 'number' ? timestamp : performance.now();
+    const dt = lastFrameTime > 0 ? Math.min(2.2, Math.max(0.2, (nowTs - lastFrameTime) / 16.6667)) : 1;
+    lastFrameTime = nowTs;
+
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    const hasStaticCache = ensureStaticCanvas();
+    if (hasStaticCache && staticCanvas.width > 0 && staticCanvas.height > 0) {
+        canvasCtx.drawImage(staticCanvas, 0, 0);
+    }
+
     let anyMoving = false;
+    const nowWall = Date.now();
 
     // Renderiza e atualiza partículas de comemoração
     if (celebrationParticles.length > 0) {
         anyMoving = true;
         for (let i = celebrationParticles.length - 1; i >= 0; i--) {
             const p = celebrationParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.wobble += p.wobbleSpeed;
-            p.x += Math.sin(p.wobble) * 1.6;
-            p.rotation += p.rotationSpeed;
-            p.vy += 0.05; // gravidade
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.wobble += p.wobbleSpeed * dt;
+            p.x += Math.sin(p.wobble) * 1.6 * dt;
+            p.rotation += p.rotationSpeed * dt;
+            p.vy += 0.05 * dt; // gravidade
             if (p.y > canvasElement.height + 25) {
                 celebrationParticles.splice(i, 1);
                 continue;
@@ -607,59 +704,74 @@ export function animate() {
         const ball = balls[i];
         if (!ball.isStatic) {
             anyMoving = true;
-            ball.dy += 0.2;
-            ball.y += ball.dy;
+            ball.dy += 0.2 * dt;
+            ball.y += ball.dy * dt;
             if (ball.y + ball.radius >= canvasElement.height) {
                 ball.y = canvasElement.height - ball.radius;
                 ball.isStatic = true;
                 ball.dy = 0;
+                drawBallOnStaticCanvas(ball);
+                canvasCtx.beginPath();
+                canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                canvasCtx.fillStyle = ball.color;
+                canvasCtx.fill();
                 continue;
             }
             let isTouchingStatic = false;
             for (let j = 0; j < balls.length; j++) {
                 if (i === j || !balls[j].isStatic) continue;
                 const otherBall = balls[j];
-                const dx = ball.x - otherBall.x;
-                const dy = ball.y - otherBall.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (ball.y >= otherBall.y) continue;
                 const minDistance = ball.radius + otherBall.radius;
-                if (distance < minDistance && ball.y < otherBall.y) {
+                const dy = ball.y - otherBall.y;
+                if (dy < -minDistance) continue;
+                const dx = ball.x - otherBall.x;
+                if (dx > minDistance || dx < -minDistance) continue;
+
+                const distSq = dx * dx + dy * dy;
+                if (distSq < minDistance * minDistance) {
+                    const distance = Math.sqrt(distSq) || 0.001;
                     isTouchingStatic = true;
-                    if (!ball.firstContactTime) ball.firstContactTime = Date.now();
+                    if (!ball.firstContactTime) ball.firstContactTime = nowWall;
                     ball.dy *= -0.3;
                     const overlap = minDistance - distance;
-                    const angle = Math.atan2(dy, dx);
-                    ball.x += Math.cos(angle) * overlap;
-                    ball.y += Math.sin(angle) * overlap;
+                    const invDist = 1 / distance;
+                    ball.x += (dx * invDist) * overlap;
+                    ball.y += (dy * invDist) * overlap;
                     ball.x += dx * 0.08;
                     if (Math.abs(ball.dy) < 0.25) {
                         ball.isStatic = true;
                         ball.dy = 0;
+                        drawBallOnStaticCanvas(ball);
                     }
                     break;
                 }
             }
-            if (isTouchingStatic && ball.firstContactTime) {
-                if (Date.now() - ball.firstContactTime > 350) {
+            if (!ball.isStatic && isTouchingStatic && ball.firstContactTime) {
+                if (nowWall - ball.firstContactTime > 350) {
                     ball.isStatic = true;
                     ball.dy = 0;
+                    drawBallOnStaticCanvas(ball);
                 }
             }
+
+            canvasCtx.beginPath();
+            canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            canvasCtx.fillStyle = ball.color;
+            canvasCtx.fill();
+        } else if (!hasStaticCache) {
+            canvasCtx.beginPath();
+            canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            canvasCtx.fillStyle = ball.color;
+            canvasCtx.fill();
         }
     }
-    balls.forEach(ball => {
-        canvasCtx.beginPath();
-        canvasCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-        canvasCtx.fillStyle = ball.color;
-        canvasCtx.fill();
-        canvasCtx.closePath();
-    });
-    if (balls.length > 300) balls.shift();
 
     if (anyMoving) {
         canvasAnimationId = requestAnimationFrame(animate);
     } else {
         isCanvasLoopRunning = false;
         canvasAnimationId = null;
+        lastFrameTime = 0;
     }
 }

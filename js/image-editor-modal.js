@@ -7,7 +7,7 @@
  */
 
 import { t } from './i18n.js';
-import { sanitizeImageUrl } from './utils.js';
+import { sanitizeImageUrl, generateSecureId } from './utils.js';
 
 const activePreloaders = new Set();
 
@@ -148,7 +148,7 @@ export function buildArrowsSvgContent(arrows, naturalWidth, naturalHeight, { sho
         const parts = calculateArrowSvgParts(arrow, naturalWidth, naturalHeight);
         if (!parts) return '';
 
-        const filterId = `arrow-shadow-${Math.random().toString(36).slice(2, 8)}-${idx}`;
+        const filterId = `${generateSecureId('arrow-shadow')}-${idx}`;
         const isWhite = (parts.color || '').toLowerCase() === '#ffffff';
         const numColor = isWhite ? '#0f172a' : '#ffffff';
 

@@ -13,23 +13,64 @@ import { escapeHtml, generateSecureId, NOTEBOOK_STORAGE_KEY, encodeStoragePayloa
 
 const DEVICE_INSTANCE_ID = generateSecureId('dev');
 let syncTimeout = null;
+let syncIdleId = null;
 let isSyncInFlight = false;
 let hasPendingSync = false;
 
 /**
- * Debounced sync to coalesce rapid updates while feeling instantaneous
+ * Debounced sync to coalesce rapid card answers and run after animations & falling balls settle
  */
-export function debouncedSyncSlotsToCloud(delay = 300) {
-  if (syncTimeout) clearTimeout(syncTimeout);
+export function debouncedSyncSlotsToCloud(delay = 3500) {
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+    syncTimeout = null;
+  }
+  if (syncIdleId && typeof cancelIdleCallback === 'function') {
+    cancelIdleCallback(syncIdleId);
+    syncIdleId = null;
+  }
+  const effectiveDelay = Math.max(delay || 0, 2800);
   syncTimeout = setTimeout(() => {
-    syncSlotsToCloud();
-  }, delay);
+    syncTimeout = null;
+    if (typeof requestIdleCallback === 'function') {
+      syncIdleId = requestIdleCallback(() => {
+        syncIdleId = null;
+        syncSlotsToCloud();
+      }, { timeout: 2000 });
+    } else {
+      syncSlotsToCloud();
+    }
+  }, effectiveDelay);
 }
 
 const SLOTS_STORAGE_KEY = 'flashcards_deck_slots';
 const ACTIVE_MODE_KEY = 'flashcardsActiveMode';
 const SAVE_KEY = 'flashcardsSave';
 const NOTEBOOK_KEY = NOTEBOOK_STORAGE_KEY;
+
+let cachedLocalSlots = null;
+let lastSyncedSlotSignature = '';
+let lastNotebookRaw = null;
+let cachedNotebookSlotData = null;
+const lastCloudSyncedSlotState = {};
+let lastCloudSyncedNotebookState = '';
+let lastCloudSyncedStatsRaw = '';
+let cachedCompactedStatsForCloud = null;
+const directWriteForbiddenDocs = new Set();
+let backendSyncCooldownUntil = 0;
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (!e.key || e.key === SLOTS_STORAGE_KEY) {
+      cachedLocalSlots = null;
+      lastSyncedSlotSignature = '';
+    }
+    if (!e.key || e.key === NOTEBOOK_KEY) {
+      lastNotebookRaw = null;
+      cachedNotebookSlotData = null;
+    }
+  });
+}
 
 /**
  * Default empty 3 slots
@@ -46,6 +87,9 @@ function createDefaultSlots() {
  * Load local slots from localStorage
  */
 export function getLocalSlots() {
+  if (cachedLocalSlots) {
+    return cachedLocalSlots;
+  }
   try {
     const raw = localStorage.getItem(SLOTS_STORAGE_KEY);
     if (!raw) {
@@ -53,7 +97,8 @@ export function getLocalSlots() {
       saveLocalSlots(defaultSlots);
       return defaultSlots;
     }
-    return JSON.parse(raw);
+    cachedLocalSlots = JSON.parse(raw);
+    return cachedLocalSlots;
   } catch (e) {
     console.error('Erro ao ler slots locais:', e);
     return createDefaultSlots();
@@ -65,6 +110,7 @@ export function getLocalSlots() {
  */
 export function saveLocalSlots(slots) {
   try {
+    cachedLocalSlots = slots;
     localStorage.setItem(SLOTS_STORAGE_KEY, encodeStoragePayload(slots));
   } catch (e) {
     console.error('Erro ao salvar slots locais:', e);
@@ -77,13 +123,22 @@ export function saveLocalSlots(slots) {
 export function getNotebookSlotData() {
   try {
     const raw = localStorage.getItem(NOTEBOOK_KEY);
-    if (!raw) return { title: 'Caderno', cardCount: 0, deckData: null };
+    if (!raw) {
+      lastNotebookRaw = null;
+      cachedNotebookSlotData = { title: 'Caderno', cardCount: 0, deckData: null };
+      return cachedNotebookSlotData;
+    }
+    if (raw === lastNotebookRaw && cachedNotebookSlotData) {
+      return cachedNotebookSlotData;
+    }
     const data = JSON.parse(raw);
-    return {
+    lastNotebookRaw = raw;
+    cachedNotebookSlotData = {
       title: 'Caderno',
       cardCount: (data.allQuestions || []).length,
       deckData: data
     };
+    return cachedNotebookSlotData;
   } catch (e) {
     return { title: 'Caderno', cardCount: 0, deckData: null };
   }
@@ -896,7 +951,19 @@ export function mergeStatsData(local, cloud) {
     }
   }
 
-  const mergedHistory = Array.from(sessionMap.values()).sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
+  const mergedHistory = Array.from(sessionMap.values())
+    .sort((a, b) => (b.startTime || 0) - (a.startTime || 0))
+    .slice(0, 50)
+    .map((s, idx) => {
+      if (idx >= 5 && s && typeof s === 'object') {
+        const slim = { ...s };
+        delete slim.answersLog;
+        delete slim.cardAnswers;
+        delete slim.strugglingCards;
+        return slim;
+      }
+      return s;
+    });
 
   let totalCardsAnswered = 0;
   let totalCorrect = 0;
@@ -905,13 +972,16 @@ export function mergeStatsData(local, cloud) {
 
   for (const s of mergedHistory) {
     totalCardsAnswered += Number(s.cardsAnswered) || 0;
-    totalCorrect += Number(s.correctAnswers) || 0;
+    totalCorrect += Number(s.correctCount ?? s.correctAnswers) || 0;
     totalTimeSeconds += Number(s.durationSeconds) || 0;
     if ((Number(s.bestStreak) || 0) > bestStreakAllTime) {
       bestStreakAllTime = Number(s.bestStreak) || 0;
     }
   }
 
+  totalCardsAnswered = Math.max(totalCardsAnswered, Number(local.allTime?.totalCardsAnswered) || 0, Number(cloud.allTime?.totalCardsAnswered) || 0);
+  totalCorrect = Math.max(totalCorrect, Number(local.allTime?.totalCorrect) || 0, Number(cloud.allTime?.totalCorrect) || 0);
+  totalTimeSeconds = Math.max(totalTimeSeconds, Number(local.allTime?.totalTimeSeconds) || 0, Number(cloud.allTime?.totalTimeSeconds) || 0);
   bestStreakAllTime = Math.max(bestStreakAllTime, Number(local.allTime?.bestStreakAllTime) || 0, Number(cloud.allTime?.bestStreakAllTime) || 0);
 
   const localUpdated = Number(local.updatedAt) || Number(local.currentSession?.lastActiveTime) || 0;
@@ -924,9 +994,9 @@ export function mergeStatsData(local, cloud) {
 
   return {
     currentSession,
-    history: mergedHistory.slice(-200), // Cap at 200 sessions to keep payload nimble
+    history: mergedHistory,
     allTime: {
-      totalSessions: mergedHistory.length,
+      totalSessions: Math.max(mergedHistory.length, Number(local.allTime?.totalSessions) || 0, Number(cloud.allTime?.totalSessions) || 0),
       totalCardsAnswered,
       totalCorrect,
       totalTimeSeconds,
@@ -940,85 +1010,99 @@ export function mergeStatsData(local, cloud) {
  * Synchronize active game session into local slot and auto-sync to Firestore if deck is shared.
  * Runs for all users (Pro and non-Pro) so card edits/deletions immediately update the slot and share link.
  */
-export function syncActiveSlotState() {
+export function syncActiveSlotState(passedPayload = null) {
   const slots = getLocalSlots();
   const allThreeShared = slots.length === 3 && slots.every(s => s && s.deckData && s.cardCount > 0 && (s.shareSlug || s.isFixed));
   const activeMode = localStorage.getItem(ACTIVE_MODE_KEY) || 'normal';
-  const activeSave = localStorage.getItem(SAVE_KEY);
-  const activeExam = localStorage.getItem('flashcardsExam');
   let updatedSlotIndex = -1;
 
-  if (activeMode === 'normal' && activeSave) {
-    try {
-      const parsedSave = JSON.parse(activeSave);
-      let currentSlotIndex = -1;
-      if (parsedSave && parsedSave.deckId) {
-        currentSlotIndex = slots.findIndex(s => s && s.deckId === parsedSave.deckId);
-      }
-      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent && !s.isExam);
-      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
-
-      // When all 3 slots are shared, sharing locks overwriting/auto-deleting
-      if (allThreeShared && currentSlotIndex !== -1) {
-        const matchesCurrent = slots[currentSlotIndex].deckId === parsedSave.deckId || slots[currentSlotIndex].title === parsedSave.deckTitle;
-        if (!matchesCurrent) {
-          return;
+  if (activeMode === 'normal') {
+    const activeSave = passedPayload || localStorage.getItem(SAVE_KEY);
+    if (activeSave) {
+      try {
+        const parsedSave = typeof activeSave === 'object' ? activeSave : JSON.parse(activeSave);
+        const sig = `normal:${parsedSave?.deckTitle || ''}:${parsedSave?.updatedAt || 0}:${(parsedSave?.questionsPool || []).length}:${parsedSave?.score || 0}`;
+        if (!passedPayload && sig === lastSyncedSlotSignature && parsedSave?.updatedAt) {
+          return -1;
         }
-      }
-
-      if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
-        const now = Date.now();
-        const deckId = slots[currentSlotIndex].deckId || parsedSave.deckId || `deck_${now}`;
-        parsedSave.deckId = deckId;
-        parsedSave.updatedAt = parsedSave.updatedAt || now;
-        slots[currentSlotIndex].deckId = deckId;
-        slots[currentSlotIndex].deckData = parsedSave;
-        slots[currentSlotIndex].cardCount = (parsedSave.allQuestions || []).length;
-        slots[currentSlotIndex].title = parsedSave.deckTitle || slots[currentSlotIndex].title;
-        slots[currentSlotIndex].isExam = false;
-        slots[currentSlotIndex].mode = 'normal';
-        slots[currentSlotIndex].updatedAt = now;
-        saveLocalSlots(slots);
-        updatedSlotIndex = currentSlotIndex;
-      }
-    } catch (e) {}
-  } else if (activeMode === 'exam' && activeExam) {
-    try {
-      const parsedExam = JSON.parse(activeExam);
-      let currentSlotIndex = -1;
-      if (parsedExam && parsedExam.deckId) {
-        currentSlotIndex = slots.findIndex(s => s && s.deckId === parsedExam.deckId);
-      }
-      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
-      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isExam || s.mode === 'exam');
-      if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
-
-      // When all 3 slots are shared, sharing locks overwriting/auto-deleting
-      if (allThreeShared && currentSlotIndex !== -1) {
-        const matchesCurrent = slots[currentSlotIndex].deckId === parsedExam.deckId || slots[currentSlotIndex].title === (parsedExam.deckTitle || 'Semana de Provas');
-        if (!matchesCurrent) {
-          return;
+        let currentSlotIndex = -1;
+        if (parsedSave && parsedSave.deckId) {
+          currentSlotIndex = slots.findIndex(s => s && s.deckId === parsedSave.deckId);
         }
-      }
+        if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent && !s.isExam);
+        if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
 
-      if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
-        const now = Date.now();
-        const deckId = slots[currentSlotIndex].deckId || parsedExam.deckId || `exam_${now}`;
-        parsedExam.deckId = deckId;
-        parsedExam.updatedAt = parsedExam.updatedAt || now;
-        slots[currentSlotIndex].deckId = deckId;
-        slots[currentSlotIndex].deckData = parsedExam;
-        slots[currentSlotIndex].cardCount = (parsedExam.allQuestions || []).length;
-        slots[currentSlotIndex].title = parsedExam.deckTitle || slots[currentSlotIndex].title || 'Semana de Provas';
-        slots[currentSlotIndex].isExam = true;
-        slots[currentSlotIndex].mode = 'exam';
-        slots[currentSlotIndex].updatedAt = now;
-        saveLocalSlots(slots);
-        updatedSlotIndex = currentSlotIndex;
-      } else if (!allThreeShared) {
-        openDeckInSlots(parsedExam, parsedExam.deckTitle || 'Semana de Provas', 'exam', null, { suppressPrompt: true });
-      }
-    } catch (e) {}
+        // When all 3 slots are shared, sharing locks overwriting/auto-deleting
+        if (allThreeShared && currentSlotIndex !== -1) {
+          const matchesCurrent = slots[currentSlotIndex].deckId === parsedSave.deckId || slots[currentSlotIndex].title === parsedSave.deckTitle;
+          if (!matchesCurrent) {
+            return;
+          }
+        }
+
+        if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
+          const now = Date.now();
+          const deckId = slots[currentSlotIndex].deckId || parsedSave.deckId || `deck_${now}`;
+          parsedSave.deckId = deckId;
+          parsedSave.updatedAt = parsedSave.updatedAt || now;
+          slots[currentSlotIndex].deckId = deckId;
+          slots[currentSlotIndex].deckData = parsedSave;
+          slots[currentSlotIndex].cardCount = (parsedSave.allQuestions || []).length;
+          slots[currentSlotIndex].title = parsedSave.deckTitle || slots[currentSlotIndex].title;
+          slots[currentSlotIndex].isExam = false;
+          slots[currentSlotIndex].mode = 'normal';
+          slots[currentSlotIndex].updatedAt = now;
+          saveLocalSlots(slots);
+          lastSyncedSlotSignature = `normal:${parsedSave?.deckTitle || ''}:${parsedSave?.updatedAt || 0}:${(parsedSave?.questionsPool || []).length}:${parsedSave?.score || 0}`;
+          updatedSlotIndex = currentSlotIndex;
+        }
+      } catch (e) {}
+    }
+  } else if (activeMode === 'exam') {
+    const activeExam = passedPayload || localStorage.getItem('flashcardsExam');
+    if (activeExam) {
+      try {
+        const parsedExam = typeof activeExam === 'object' ? activeExam : JSON.parse(activeExam);
+        const sig = `exam:${parsedExam?.updatedAt || 0}:${(parsedExam?.questionsPool || []).length}:${parsedExam?.score || 0}`;
+        if (!passedPayload && sig === lastSyncedSlotSignature && parsedExam?.updatedAt) {
+          return -1;
+        }
+        let currentSlotIndex = -1;
+        if (parsedExam && parsedExam.deckId) {
+          currentSlotIndex = slots.findIndex(s => s && s.deckId === parsedExam.deckId);
+        }
+        if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent && (s.isExam || s.mode === 'exam'));
+        if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isExam || s.mode === 'exam');
+        if (currentSlotIndex === -1) currentSlotIndex = slots.findIndex(s => s.isCurrent);
+
+        // When all 3 slots are shared, sharing locks overwriting/auto-deleting
+        if (allThreeShared && currentSlotIndex !== -1) {
+          const matchesCurrent = slots[currentSlotIndex].deckId === parsedExam.deckId || slots[currentSlotIndex].title === (parsedExam.deckTitle || 'Semana de Provas');
+          if (!matchesCurrent) {
+            return;
+          }
+        }
+
+        if (currentSlotIndex !== -1 && slots[currentSlotIndex]) {
+          const now = Date.now();
+          const deckId = slots[currentSlotIndex].deckId || parsedExam.deckId || `exam_${now}`;
+          parsedExam.deckId = deckId;
+          parsedExam.updatedAt = parsedExam.updatedAt || now;
+          slots[currentSlotIndex].deckId = deckId;
+          slots[currentSlotIndex].deckData = parsedExam;
+          slots[currentSlotIndex].cardCount = (parsedExam.allQuestions || []).length;
+          slots[currentSlotIndex].title = parsedExam.deckTitle || slots[currentSlotIndex].title || 'Semana de Provas';
+          slots[currentSlotIndex].isExam = true;
+          slots[currentSlotIndex].mode = 'exam';
+          slots[currentSlotIndex].updatedAt = now;
+          saveLocalSlots(slots);
+          lastSyncedSlotSignature = `exam:${parsedExam?.updatedAt || 0}:${(parsedExam?.questionsPool || []).length}:${parsedExam?.score || 0}`;
+          updatedSlotIndex = currentSlotIndex;
+        } else if (!allThreeShared) {
+          openDeckInSlots(parsedExam, parsedExam.deckTitle || 'Semana de Provas', 'exam', null, { suppressPrompt: true });
+        }
+      } catch (e) {}
+    }
   }
 
   // If the updated slot is being shared, sync changes to Firestore share doc so anyone with the link gets the update!
@@ -1125,9 +1209,16 @@ export async function syncSlotsToCloud() {
 
     // Stats (supports both flashcards_stats and legacy flashcardsStats)
     let stats = {};
+    let statsRaw = '';
     try {
-      const statsRaw = localStorage.getItem('flashcards_stats') || localStorage.getItem('flashcardsStats');
-      if (statsRaw) stats = JSON.parse(statsRaw);
+      statsRaw = localStorage.getItem('flashcards_stats') || localStorage.getItem('flashcardsStats') || '';
+      if (statsRaw) {
+        if (statsRaw === lastCloudSyncedStatsRaw && cachedCompactedStatsForCloud) {
+          stats = cachedCompactedStatsForCloud;
+        } else {
+          stats = JSON.parse(statsRaw);
+        }
+      }
     } catch (e) {}
 
     // Daily streak
@@ -1141,57 +1232,106 @@ export async function syncSlotsToCloud() {
     const settings = getLocalSettings();
 
     // Compact stats ONLY as an emergency safety net if stats alone ever approaches Firestore's 1 MiB cap
-    const statsForCloud = compactStatsForCloud(stats);
+    const statsForCloud = (statsRaw && statsRaw === lastCloudSyncedStatsRaw && cachedCompactedStatsForCloud)
+      ? cachedCompactedStatsForCloud
+      : compactStatsForCloud(stats, statsRaw ? statsRaw.length : 0);
 
     // 1. Direct real-time Firestore WebSocket write (completes in ~60ms and notifies other devices immediately)
     let directWriteSucceeded = false;
     try {
       const deckWritePromises = [];
+      let anyRequiredDirectWriteFailed = false;
       for (const slot of slots) {
         if (slot.deckId && slot.deckData) {
           const isExam = Boolean(slot.isExam || slot.mode === 'exam' || (slot.deckData && slot.deckData.decks));
+          const slotSig = `${slot.deckId}:${slot.updatedAt || 0}:${slot.cardCount || 0}:${slot.title || ''}:${slot.isFixed ? 1 : 0}`;
+          const docKey = `decks/${slot.deckId}`;
+          if (lastCloudSyncedSlotState[slot.slotIndex] !== slotSig) {
+            if (directWriteForbiddenDocs.has(docKey)) {
+              anyRequiredDirectWriteFailed = true;
+            } else {
+              deckWritePromises.push(
+                setDoc(doc(db, 'decks', slot.deckId), {
+                  ownerUid: user.uid,
+                  title: slot.title,
+                  cardCount: slot.cardCount || 0,
+                  isFixed: Boolean(slot.isFixed),
+                  isExam,
+                  mode: isExam ? 'exam' : 'normal',
+                  deckData: slot.deckData,
+                  updatedAt: slot.updatedAt || now
+                }).then(() => {
+                  lastCloudSyncedSlotState[slot.slotIndex] = slotSig;
+                }).catch((err) => {
+                  if (err?.code === 'permission-denied') directWriteForbiddenDocs.add(docKey);
+                  anyRequiredDirectWriteFailed = true;
+                })
+              );
+            }
+          }
+        }
+      }
+
+      const notebookSig = notebookPayload.deckData
+        ? `nb:${notebookPayload.updatedAt || 0}:${notebookPayload.cardCount || 0}`
+        : `nb_del:${notebookPayload.deletedAt || 0}`;
+      const notebookDocKey = `decks/notebook_${user.uid}`;
+
+      if (lastCloudSyncedNotebookState !== notebookSig) {
+        if (notebookPayload.deckData) {
+          if (directWriteForbiddenDocs.has(notebookDocKey)) {
+            anyRequiredDirectWriteFailed = true;
+          } else {
+            deckWritePromises.push(
+              setDoc(doc(db, 'decks', `notebook_${user.uid}`), {
+                ownerUid: user.uid,
+                title: 'Caderno',
+                cardCount: notebookPayload.cardCount || 0,
+                deckData: notebookPayload.deckData,
+                updatedAt: notebookPayload.updatedAt || now
+              }).then(() => {
+                lastCloudSyncedNotebookState = notebookSig;
+              }).catch((err) => {
+                if (err?.code === 'permission-denied') directWriteForbiddenDocs.add(notebookDocKey);
+                anyRequiredDirectWriteFailed = true;
+              })
+            );
+          }
+        } else {
           deckWritePromises.push(
-            setDoc(doc(db, 'decks', slot.deckId), {
-              ownerUid: user.uid,
-              title: slot.title,
-              cardCount: slot.cardCount || 0,
-              isFixed: Boolean(slot.isFixed),
-              isExam,
-              mode: isExam ? 'exam' : 'normal',
-              deckData: slot.deckData,
-              updatedAt: slot.updatedAt || now
-            })
+            deleteDoc(doc(db, 'decks', `notebook_${user.uid}`))
+              .then(() => { lastCloudSyncedNotebookState = notebookSig; })
+              .catch(() => { lastCloudSyncedNotebookState = notebookSig; })
           );
         }
       }
 
-      if (notebookPayload.deckData) {
+      // Separate document user_stats/{uid} prevents stats history from bloating users/{uid} past 1 MiB.
+      // Isolated so undeployed user_stats rules do not abort real-time deck/slot sync.
+      const statsDocKey = `user_stats/${user.uid}`;
+      if ((!statsRaw || statsRaw !== lastCloudSyncedStatsRaw) && !directWriteForbiddenDocs.has(statsDocKey)) {
         deckWritePromises.push(
-          setDoc(doc(db, 'decks', `notebook_${user.uid}`), {
+          setDoc(doc(db, 'user_stats', user.uid), {
             ownerUid: user.uid,
-            title: 'Caderno',
-            cardCount: notebookPayload.cardCount || 0,
-            deckData: notebookPayload.deckData,
-            updatedAt: notebookPayload.updatedAt || now
+            stats: statsForCloud,
+            updatedAt: now,
+            lastClientSyncId: DEVICE_INSTANCE_ID
+          }).then(() => {
+            if (statsRaw) {
+              lastCloudSyncedStatsRaw = statsRaw;
+              cachedCompactedStatsForCloud = statsForCloud;
+            }
+          }).catch((err) => {
+            if (err?.code === 'permission-denied') {
+              directWriteForbiddenDocs.add(statsDocKey);
+            }
           })
-        );
-      } else {
-        deckWritePromises.push(
-          deleteDoc(doc(db, 'decks', `notebook_${user.uid}`)).catch(() => {})
         );
       }
 
-      // Separate document user_stats/{uid} prevents stats history from bloating users/{uid} past 1 MiB
-      deckWritePromises.push(
-        setDoc(doc(db, 'user_stats', user.uid), {
-          ownerUid: user.uid,
-          stats: statsForCloud,
-          updatedAt: now,
-          lastClientSyncId: DEVICE_INSTANCE_ID
-        })
-      );
-
-      await Promise.all(deckWritePromises);
+      if (deckWritePromises.length > 0) {
+        await Promise.all(deckWritePromises);
+      }
 
       const deckSlotsMeta = slots.map(s => {
         const isExam = Boolean(s.isExam || s.mode === 'exam' || (s.deckData && s.deckData.decks));
@@ -1212,40 +1352,58 @@ export async function syncSlotsToCloud() {
         };
       });
 
-      await setDoc(doc(db, 'users', user.uid), {
-        deckSlots: deckSlotsMeta,
-        notebookSlot: {
-          cardCount: notebookPayload.deckData ? (notebookPayload.cardCount || 0) : 0,
-          title: notebookPayload.title || 'Caderno',
-          updatedAt: notebookPayload.updatedAt || now,
-          deletedAt: notebookPayload.deckData ? null : (notebookPayload.deletedAt || now)
-        },
-        stats: deleteField(),
-        slots: deleteField(),
-        notebookData: deleteField(),
-        settings: settings || {},
-        dailyStreak: dailyStreak || null,
-        activeMode: activeMode || null,
-        lastSyncedAt: now,
-        lastClientSyncId: DEVICE_INSTANCE_ID
-      }, { merge: true });
+      const userDocKey = `users/${user.uid}`;
+      if (!directWriteForbiddenDocs.has(userDocKey)) {
+        await setDoc(doc(db, 'users', user.uid), {
+          deckSlots: deckSlotsMeta,
+          notebookSlot: {
+            cardCount: notebookPayload.deckData ? (notebookPayload.cardCount || 0) : 0,
+            title: notebookPayload.title || 'Caderno',
+            updatedAt: notebookPayload.updatedAt || now,
+            deletedAt: notebookPayload.deckData ? null : (notebookPayload.deletedAt || now)
+          },
+          stats: deleteField(),
+          slots: deleteField(),
+          notebookData: deleteField(),
+          settings: settings || {},
+          dailyStreak: dailyStreak || null,
+          activeMode: activeMode || null,
+          lastSyncedAt: now,
+          lastClientSyncId: DEVICE_INSTANCE_ID
+        }, { merge: true }).catch((err) => {
+          if (err?.code === 'permission-denied') directWriteForbiddenDocs.add(userDocKey);
+          anyRequiredDirectWriteFailed = true;
+        });
+      } else {
+        anyRequiredDirectWriteFailed = true;
+      }
 
-      directWriteSucceeded = true;
+      directWriteSucceeded = !anyRequiredDirectWriteFailed;
     } catch (directErr) {
       console.warn('[CloudSync] Direct Firestore write fallback to backend:', directErr);
     }
 
     // 2. If direct write failed, fall back to backend API (uses Admin credentials and bypasses un-deployed rules)
-    if (!directWriteSucceeded) {
-      await saveCloudSlots({
-        slots,
-        notebookData: notebookPayload,
-        stats: statsForCloud,
-        settings,
-        dailyStreak,
-        activeMode,
-        clientSyncId: DEVICE_INSTANCE_ID
-      });
+    if (!directWriteSucceeded && Date.now() >= backendSyncCooldownUntil) {
+      try {
+        await saveCloudSlots({
+          slots,
+          notebookData: notebookPayload,
+          stats: statsForCloud,
+          settings,
+          dailyStreak,
+          activeMode,
+          clientSyncId: DEVICE_INSTANCE_ID
+        });
+        if (statsRaw) {
+          lastCloudSyncedStatsRaw = statsRaw;
+          cachedCompactedStatsForCloud = statsForCloud;
+        }
+      } catch (backendErr) {
+        // Back off for 60s when backend is unreachable or blocked by CORS (e.g. on localhost)
+        backendSyncCooldownUntil = Date.now() + 60000;
+        console.warn('[CloudSync] Backend sync unavailable, backing off for 60s:', backendErr?.message || backendErr);
+      }
     }
   } catch (err) {
     console.warn('Erro ao sincronizar com nuvem:', err);
@@ -1253,7 +1411,7 @@ export async function syncSlotsToCloud() {
     isSyncInFlight = false;
     if (hasPendingSync) {
       hasPendingSync = false;
-      syncSlotsToCloud();
+      debouncedSyncSlotsToCloud(2800);
     }
   }
 }
@@ -1498,32 +1656,53 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
 /**
  * Ensures stats object fits cleanly within Firestore's 1 MiB document limit even on user_stats/{uid}
  */
-export function compactStatsForCloud(rawStats) {
+export function compactStatsForCloud(rawStats, rawLengthHint = 0) {
   if (!rawStats || typeof rawStats !== 'object') return {};
   try {
-    if (JSON.stringify(rawStats).length <= 850000) {
+    // Fast-path: if caller already knows serialized length is well under 750KB and history is bounded, skip JSON.stringify!
+    if (rawLengthHint > 0 && rawLengthHint <= 750000 && (!Array.isArray(rawStats.history) || rawStats.history.length <= 50)) {
       return rawStats;
     }
-    const cloned = JSON.parse(JSON.stringify(rawStats));
-    // Strip bulky per-card answersLog from archived history sessions oldest-first
-    if (Array.isArray(cloned.history)) {
-      for (let i = cloned.history.length - 1; i >= 0; i--) {
-        if (cloned.history[i] && Array.isArray(cloned.history[i].answersLog)) {
-          delete cloned.history[i].answersLog;
-        }
-        if (JSON.stringify(cloned).length <= 850000) return cloned;
+
+    const initialSerialized = rawLengthHint > 0 ? null : JSON.stringify(rawStats);
+    const initialLen = rawLengthHint > 0 ? rawLengthHint : initialSerialized.length;
+    if (initialLen <= 750000 && (!Array.isArray(rawStats.history) || rawStats.history.length <= 50)) {
+      return rawStats;
+    }
+
+    // Single-pass O(N) compaction (never call JSON.stringify inside a loop!)
+    if (Array.isArray(rawStats.history)) {
+      if (rawStats.history.length > 50) {
+        rawStats.history = rawStats.history
+          .slice()
+          .sort((a, b) => (b?.startTime || 0) - (a?.startTime || 0))
+          .slice(0, 50);
       }
-      for (let i = cloned.history.length - 1; i >= 0; i--) {
-        if (cloned.history[i] && cloned.history[i].strugglingCards) {
-          delete cloned.history[i].strugglingCards;
+      for (let i = 0; i < rawStats.history.length; i++) {
+        const sess = rawStats.history[i];
+        if (!sess || typeof sess !== 'object') continue;
+        if (i >= 5) {
+          delete sess.answersLog;
+          delete sess.cardAnswers;
+          delete sess.strugglingCards;
         }
-        if (JSON.stringify(cloned).length <= 850000) return cloned;
       }
     }
-    if (cloned.currentSession && Array.isArray(cloned.currentSession.answersLog) && cloned.currentSession.answersLog.length > 200) {
-      cloned.currentSession.answersLog = cloned.currentSession.answersLog.slice(-200);
+
+    if (rawStats.currentSession && Array.isArray(rawStats.currentSession.answersLog) && rawStats.currentSession.answersLog.length > 150) {
+      rawStats.currentSession.answersLog = rawStats.currentSession.answersLog.slice(-150);
     }
-    return cloned;
+
+    const compactedJson = encodeStoragePayload(rawStats);
+    // Persist the compacted stats back to localStorage so future calls are immediately fast!
+    try {
+      localStorage.setItem('flashcards_stats', compactedJson);
+      localStorage.setItem('flashcardsStats', compactedJson);
+      lastCloudSyncedStatsRaw = compactedJson;
+      cachedCompactedStatsForCloud = rawStats;
+    } catch (_) {}
+
+    return rawStats;
   } catch (e) {
     return rawStats;
   }

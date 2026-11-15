@@ -1,10 +1,10 @@
 // Handles landing page functionality: redirects, single deck and Semana de Provas multi-deck uploads.
-import { ROUTES, shuffleArray, generateSecureId, escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import { ROUTES, shuffleArray, generateSecureId, escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload, openWithMotion, closeWithMotion, openModalWithMotion, closeModalWithMotion } from './utils.js';
 import { getDailyStreak } from './engine/notebook-scheduler.js';
 import { initExploreModal, openExploreModal } from './explore-modal.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots } from './share-manager.js';
-import { openDeckInSlots, syncSlotsToCloud, initRealtimeCloudSync, getLocalSlots } from './slot-manager.js';
-import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference } from './i18n.js';
+import { openDeckInSlots, syncSlotsToCloud, initRealtimeCloudSync } from './slot-manager.js';
+import { t, getCurrentLanguage, setLanguage, getLanguagePreference } from './i18n.js';
 
 async function init() {
     // 0. Initialize language menu
@@ -260,14 +260,12 @@ async function init() {
                 let questions = [];
                 let deckTitle = currentFile.name.replace(/\.json$/i, '');
                 let isNotebook = false;
-                let isExamBackup = false;
 
                 if (parsed && parsed.__flashcards_watermark__ === "notebook_backup_v1") {
                     questions = parsed.cards || [];
                     deckTitle = parsed.deckTitle || "Caderno";
                     isNotebook = true;
                 } else if (parsed && parsed.__flashcards_watermark__ === "exam_week_backup_v1") {
-                    isExamBackup = true;
                     const playable = (parsed.cards || []).filter(q => q && q.type !== 'divisor' && q.type !== 'divider' && q.type !== 'note');
                     const examState = {
                         deckTitle: parsed.deckTitle || "Semana de Provas",
@@ -359,7 +357,7 @@ async function init() {
 
     function openExamModal() {
         if (examModal) {
-            examModal.classList.remove('hidden');
+            openModalWithMotion(examModal);
         }
     }
 
@@ -372,13 +370,18 @@ async function init() {
 
     function closeExamModal() {
         if (examModal) {
-            examModal.classList.add('hidden');
+            closeModalWithMotion(examModal);
         }
     }
 
     if (openExamBtn) openExamBtn.addEventListener('click', openExamModal);
     if (closeExamModalBtn) closeExamModalBtn.addEventListener('click', closeExamModal);
     if (cancelExamModalBtn) cancelExamModalBtn.addEventListener('click', closeExamModal);
+    if (examModal) {
+        examModal.addEventListener('click', (e) => {
+            if (e.target === examModal) closeExamModal();
+        });
+    }
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && examModal && !examModal.classList.contains('hidden')) {
@@ -592,12 +595,16 @@ function setupLanguageMenu() {
     if (langBtn && langDropdown) {
         langBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            langDropdown.classList.toggle('hidden');
+            if (langDropdown.classList.contains('hidden') || langDropdown.hasAttribute('data-m3-closing')) {
+                openWithMotion(langDropdown);
+            } else {
+                closeWithMotion(langDropdown);
+            }
         });
 
         document.addEventListener('click', (e) => {
             if (!langDropdown.contains(e.target) && !langBtn.contains(e.target)) {
-                langDropdown.classList.add('hidden');
+                closeWithMotion(langDropdown);
             }
         });
 
@@ -607,7 +614,7 @@ function setupLanguageMenu() {
                 setLanguage(selected);
                 updateLanguageUI();
                 updateHomeDailyStreak();
-                langDropdown.classList.add('hidden');
+                closeWithMotion(langDropdown);
             });
         });
     }

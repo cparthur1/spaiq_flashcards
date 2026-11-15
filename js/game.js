@@ -1,16 +1,16 @@
-import { normalizeString, calculateSimilarity, shuffleArray, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import { normalizeString, calculateSimilarity, shuffleArray, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload, openWithMotion, closeWithMotion, openModalWithMotion, closeModalWithMotion, triggerSpringPop } from './utils.js';
 import { isPlayableCard, calculateThinkingGap, calculateProportionalStepGap, recordNormalCardOutcome, revertNormalCardErrorOnAiCorrection, resetCardForNewSession, selectNextCard, isLeechCard, shouldGraduateCard, formatTimeDisplay, getCardTopic } from './engine/scheduler.js';
 import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString, recordNotebookGoalBeaten, getNotebookDailyGoal, getNotebookSchedulerMode, setNotebookSchedulerMode } from './engine/notebook-scheduler.js';
 import {
     initEffects, createBall, clearBalls, setBallColor, launchCelebrationParticles,
     playCompletionShockwave, cleanShockwaveContainer, resizeCanvas, animate,
     triggerHaptic, isHapticEnabled, setHapticEnabled, updateHapticUI,
-    isSoundEnabled, setSoundEnabled, playFeedbackSound, updateSoundUI,
-    isAnimationsEnabled, setAnimationsEnabled, applyAnimationsPreference, updateAnimationsUI, updateAccessibilityUI
+    isSoundEnabled, setSoundEnabled, playFeedbackSound,
+    isAnimationsEnabled, setAnimationsEnabled, updateAccessibilityUI
 } from './engine/effects.js';
-import { initInputController, startGamepadLoop, stopGamepadLoop } from './engine/input-controller.js';
-import { isTutorEnabled, disableTutor, initTutor, updateTutorUI, setLastUserAnswerForChat, getLastUserAnswerForChat, resetTutorChatSession, getHasChatInteraction, setHasChatInteraction, evaluateAnswerSemantic, addMsg, showTyping, hideTyping, sendTutorChatMessage, getTermDefinition, logDefinitionToChat } from './engine/tutor.js';
-import { initPomodoro, isPomodoroEnabled, setPomodoroEnabled, updatePomodoroUI, getPomodoroStatus } from './engine/pomodoro.js';
+import { initInputController, startGamepadLoop } from './engine/input-controller.js';
+import { isTutorEnabled, disableTutor, updateTutorUI, setLastUserAnswerForChat, resetTutorChatSession, getHasChatInteraction, setHasChatInteraction, evaluateAnswerSemantic, addMsg, sendTutorChatMessage, getTermDefinition, logDefinitionToChat } from './engine/tutor.js';
+import { initPomodoro, updatePomodoroUI, getPomodoroStatus } from './engine/pomodoro.js';
 import {
     getNotificationSettings, saveNotificationSettings, requestNotificationPermission,
     hasNotificationSupport, sendDailyNotification, startNotificationScheduler,
@@ -25,8 +25,8 @@ import { onAuthChange, auth, getCurrentUserToken } from './firebase-client.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { initPwaInstallBanner } from './engine/pwa-install.js';
-import { t, initI18n, getCurrentLanguage, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
-import { openImageEditorModal, renderAnnotatedImage, isImageAnnotated, getArrowColorTheme } from './image-editor-modal.js';
+import { t, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
+import { openImageEditorModal, renderAnnotatedImage, getArrowColorTheme } from './image-editor-modal.js';
 
 // --- DOM ELEMENTS ---
 const deckTitle = document.getElementById('deck-title');
@@ -42,8 +42,6 @@ const notebookStreakBadge = document.getElementById('notebook-streak-badge');
 const notebookStreakFire = document.getElementById('notebook-streak-fire');
 const notebookStreakCount = document.getElementById('notebook-streak-count');
 const counterLeftWrapper = document.getElementById('counter-left-wrapper');
-const counterLeftLabel = document.getElementById('counter-left-label');
-const scoreLabel = document.getElementById('score-label');
 const clearNotebookBtn = document.getElementById('clear-notebook-btn');
 const cardDifficultTag = document.getElementById('card-difficult-tag');
 const notebookStageTag = cardDifficultTag;
@@ -74,7 +72,6 @@ const receiveSessionBtn = document.getElementById('receive-session-btn');
 const transferSessionBtn = document.getElementById('transfer-session-btn');
 const menuAiIcon = document.getElementById('menu-ai-icon');
 const menuAiStatusBadge = document.getElementById('menu-ai-status-badge');
-const menuAiTitle = document.getElementById('menu-ai-title');
 const menuAiSubtitle = document.getElementById('menu-ai-subtitle');
 const aiSettingRow = document.getElementById('ai-setting-row');
 const aiSwitch = document.getElementById('ai-switch');
@@ -87,9 +84,6 @@ const gameContainer = document.getElementById('game-container');
 const goToEditorBtn = document.getElementById('go-to-editor-btn');
 
 const questionText = document.getElementById('question-text');
-const questionSourceTag = document.getElementById('question-source-tag');
-const questionBodyText = document.getElementById('question-body-text');
-const questionFeedbackText = document.getElementById('question-feedback-text');
 
 function ensureQuestionStructure() {
     if (!questionText) return;
@@ -127,7 +121,6 @@ const completionStatCards = document.getElementById('completion-stat-cards');
 const completionStatAcc = document.getElementById('completion-stat-acc');
 const completionStatTime = document.getElementById('completion-stat-time');
 const completionStatStreak = document.getElementById('completion-stat-streak');
-const completionStatsBtn = document.getElementById('completion-stats-btn');
 const completionRestartBtn = document.getElementById('completion-restart-btn');
 const shockwaveContainer = document.getElementById('shockwave-container');
 const actionButtonsArea = document.getElementById('action-buttons-area');
@@ -170,7 +163,6 @@ const openDoubleAnswerArea = document.getElementById('open-double-answer-area');
 const answerInput1 = document.getElementById('answer-input-1');
 const answerInput2 = document.getElementById('answer-input-2');
 const mcAnswerArea = document.getElementById('mc-answer-area');
-let mcOptionBtns = document.querySelectorAll('.mc-option-btn');
 
 const imageArrowsAnswerArea = document.getElementById('image-arrows-answer-area');
 const imageArrowsProgressBadge = document.getElementById('image-arrows-progress-badge');
@@ -308,7 +300,6 @@ const chatInput = document.getElementById('chat-input');
 const sendChatBtn = document.getElementById('send-chat-btn');
 
 const canvas = document.getElementById('background-canvas');
-const ctx = canvas ? canvas.getContext('2d') : null;
 
 // Inicializa subsistema de efeitos
 initEffects({ canvas, shockwaveContainer, questionCard });
@@ -439,7 +430,7 @@ function openZoomForCard(url, crop = null, arrows = [], { showNumbers = false } 
     } else if (zoomedImage) {
         zoomedImage.src = safeUrl;
     }
-    imageZoomModal.classList.remove('hidden');
+    openModalWithMotion(imageZoomModal);
 }
 function showNotificationPill(message, iconName, isWarning = false) {
     const existing = document.getElementById('notification-pill');
@@ -594,7 +585,7 @@ function checkDeckTrophiesInMix(card, isCorrect, isCorrection = false) {
         stats.totalAnswered += 1;
         if (isCorrect) stats.correctCount += 1;
     }
-    const cardId = card.id || card.description || Math.random();
+    const cardId = card.id || card.description || generateSecureId('card');
     stats.uniqueCardsAnswered.add(cardId);
 
     // Começa a mandar notificações apenas quando pelo menos 10 cards do baralho forem respondidos!
@@ -637,7 +628,6 @@ function checkDeckTrophiesInMix(card, isCorrect, isCorrection = false) {
     if (accuracy >= 70 && !stats.unlockedTrophies.bronze && !stats.unlockedTrophies.prata && !stats.unlockedTrophies.ouro) {
         stats.unlockedTrophies.bronze = true;
         showTrophyNotification('bronze', deckName, accuracy);
-        return;
     }
 }
 
@@ -673,7 +663,22 @@ function getHeaderScoreTarget() {
     return headerContainer || scoreWrapper || scoreContainer || scoreVal || document.body;
 }
 
+function createLightweightCardClone(sourceEl, cloneId) {
+    const clone = sourceEl.cloneNode(true);
+    clone.id = cloneId;
+    clone.querySelectorAll('.hidden').forEach(el => el.remove());
+    clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    clone.style.margin = '0';
+    clone.style.pointerEvents = 'none';
+    clone.style.willChange = 'transform, opacity';
+    clone.style.backfaceVisibility = 'hidden';
+    clone.style.contain = 'layout style paint';
+    clone.style.transition = 'none';
+    return clone;
+}
+
 function animateCardToBack(callback) {
+    cancelActiveAnkiFlipAnimation();
     if (questionsPool.length === 0) {
         if (callback) callback();
         return;
@@ -689,26 +694,34 @@ function animateCardToBack(callback) {
     isAnimating = true;
 
     const rect = questionCard.getBoundingClientRect();
-    const clone = questionCard.cloneNode(true);
-    clone.id = 'anim-card-back-clone';
+    const clone = createLightweightCardClone(questionCard, 'anim-card-back-clone');
     clone.style.position = 'absolute';
     clone.style.top = `${questionCard.offsetTop}px`;
     clone.style.left = `${questionCard.offsetLeft}px`;
     clone.style.width = `${rect.width}px`;
     clone.style.height = `${rect.height}px`;
-    clone.style.margin = '0';
-    clone.style.pointerEvents = 'none';
     clone.style.zIndex = '25';
 
     gameContainer.appendChild(clone);
 
     if (callback) callback();
+    // Preserve isAnimating flag across resetUI() inside loadQuestion()
+    isAnimating = true;
 
-    questionCard.style.opacity = '0.85';
-    questionCard.style.transform = 'scale(0.96)';
-    questionCard.style.transition = 'transform 0.4s ease-out, opacity 0.4s ease-out';
-
+    questionCard.style.transition = 'none';
     clone.classList.add('anim-card-to-back');
+
+    const cardEntranceAnim = typeof questionCard.animate === 'function'
+        ? questionCard.animate([
+            { opacity: 0.85, transform: 'translate3d(0, 0, 0) scale(0.96)' },
+            { opacity: 0.88, transform: 'translate3d(0, 0, 0) scale(0.97)', offset: 0.3 },
+            { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' }
+        ], {
+            duration: 420,
+            easing: 'cubic-bezier(0.2, 0, 0, 1)',
+            fill: 'both'
+        })
+        : null;
 
     const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!prefersReducedMotion) {
@@ -721,19 +734,15 @@ function animateCardToBack(callback) {
         }
     }, 200);
 
-    requestAnimationFrame(() => {
-        setTimeout(() => {
-            questionCard.style.opacity = '1';
-            questionCard.style.transform = 'scale(1)';
-        }, 150);
-    });
-
     let cleaned = false;
     const cleanup = () => {
         if (cleaned) return;
         cleaned = true;
         triggerHaptic('stop');
         clone.remove();
+        if (cardEntranceAnim) {
+            try { cardEntranceAnim.cancel(); } catch (_) {}
+        }
         questionCard.style.transition = '';
         questionCard.style.transform = '';
         questionCard.style.opacity = '';
@@ -741,10 +750,11 @@ function animateCardToBack(callback) {
     };
 
     clone.addEventListener('animationend', cleanup, { once: true });
-    setTimeout(cleanup, 700);
+    setTimeout(cleanup, 650);
 }
 
 function animateCardToHeader(callback) {
+    cancelActiveAnkiFlipAnimation();
     if (questionsPool.length === 0) {
         if (callback) callback();
         return;
@@ -763,20 +773,19 @@ function animateCardToHeader(callback) {
     const targetEl = getHeaderScoreTarget();
     const targetRect = targetEl.getBoundingClientRect();
 
-    const clone = questionCard.cloneNode(true);
-    clone.id = 'flying-card-to-header';
+    const clone = createLightweightCardClone(questionCard, 'flying-card-to-header');
     clone.style.position = 'fixed';
     clone.style.top = `${cardRect.top}px`;
     clone.style.left = `${cardRect.left}px`;
     clone.style.width = `${cardRect.width}px`;
     clone.style.height = `${cardRect.height}px`;
-    clone.style.margin = '0';
-    clone.style.pointerEvents = 'none';
     clone.style.zIndex = '9999';
     clone.style.transformOrigin = 'center center';
     clone.classList.add('glow-correct');
+    clone.style.boxShadow = 'none';
     document.body.appendChild(clone);
 
+    questionCard.style.transition = 'none';
     questionCard.style.opacity = '0';
 
     const deltaX = (targetRect.left + targetRect.width / 2) - (cardRect.left + cardRect.width / 2);
@@ -784,30 +793,26 @@ function animateCardToHeader(callback) {
 
     const anim = clone.animate([
         {
-            transform: 'translate(0px, 0px) scale(1) rotate(0deg)',
-            opacity: 1,
-            filter: 'brightness(1)'
+            transform: 'translate3d(0px, 0px, 0px) scale(1) rotate(0deg)',
+            opacity: 1
         },
         {
-            transform: `translate(${deltaX * 0.35}px, ${deltaY * 0.45 - 25}px) scale(0.65) rotate(-6deg)`,
+            transform: `translate3d(${deltaX * 0.35}px, ${deltaY * 0.45 - 25}px, 0px) scale(0.65) rotate(-6deg)`,
             opacity: 0.95,
-            filter: 'brightness(1.1)',
             offset: 0.45
         },
         {
-            transform: `translate(${deltaX * 0.85}px, ${deltaY * 0.9}px) scale(0.2) rotate(-10deg)`,
+            transform: `translate3d(${deltaX * 0.85}px, ${deltaY * 0.9}px, 0px) scale(0.2) rotate(-10deg)`,
             opacity: 0.7,
-            filter: 'brightness(1.2)',
             offset: 0.85
         },
         {
-            transform: `translate(${deltaX}px, ${deltaY}px) scale(0.04) rotate(-12deg)`,
+            transform: `translate3d(${deltaX}px, ${deltaY}px, 0px) scale(0.04) rotate(-12deg)`,
             opacity: 0,
-            filter: 'brightness(1.4)',
             offset: 1
         }
     ], {
-        duration: 650,
+        duration: 620,
         easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
         fill: 'forwards'
     });
@@ -821,29 +826,30 @@ function animateCardToHeader(callback) {
 
         const pulseTarget = document.getElementById('score') || targetEl;
         pulseTarget.animate([
-            { transform: 'scale(1)' },
-            { transform: 'scale(1.4)', filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.9))' },
-            { transform: 'scale(0.95)' },
-            { transform: 'scale(1)' }
+            { transform: 'translate3d(0, 0, 0) scale(1)' },
+            { transform: 'translate3d(0, 0, 0) scale(1.35)' },
+            { transform: 'translate3d(0, 0, 0) scale(0.95)' },
+            { transform: 'translate3d(0, 0, 0) scale(1)' }
         ], {
-            duration: 350,
-            easing: 'ease-out'
+            duration: 320,
+            easing: 'cubic-bezier(0.2, 0, 0, 1)'
         });
 
         if (callback) callback();
         questionCard.style.opacity = '1';
+        questionCard.style.transition = '';
         questionCard.animate([
-            { opacity: 0, transform: 'scale(0.96)' },
-            { opacity: 1, transform: 'scale(1)' }
+            { opacity: 0, transform: 'translate3d(0, 0, 0) scale(0.96)' },
+            { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' }
         ], {
-            duration: 250,
-            easing: 'ease-out'
+            duration: 240,
+            easing: 'cubic-bezier(0.2, 0, 0, 1)'
         });
         isAnimating = false;
     };
 
     anim.onfinish = finishFlight;
-    setTimeout(finishFlight, 800);
+    setTimeout(finishFlight, 750);
 }
 
 function animateCardsFromHeaderToDeck(callback) {
@@ -962,7 +968,7 @@ function renderTextWithBlanks(text, opts = {}) {
         mathBlocks.push(match);
         return `%%MATH_${mathBlocks.length - 1}%%`;
     });
-    placeholderText = placeholderText.replace(/\$(?!\s)((?:\\\$|[^\$])+?)(?<!\s)\$/g, (match) => {
+    placeholderText = placeholderText.replace(/\$(?!\s)((?:\\\$|[^$])+?)(?<!\s)\$/g, (match) => {
         mathBlocks.push(match);
         return `%%MATH_${mathBlocks.length - 1}%%`;
     });
@@ -2193,7 +2199,10 @@ function updateStreakUI(animate = false) {
     if (!streakPill || !streakCount) return;
     const config = getStreakColorConfig(currentStreak);
 
-    streakCount.textContent = currentStreak;
+    const nextText = String(currentStreak);
+    if (streakCount.textContent !== nextText) {
+        streakCount.textContent = nextText;
+    }
 
     if (config.active) {
         if (streakBgColor) {
@@ -2210,7 +2219,8 @@ function updateStreakUI(animate = false) {
             streakFireIcon.style.transform = currentStreak >= 8 ? 'scale(1.25)' : 'scale(1.1)';
         }
 
-        streakCount.className = 'relative z-10 font-black tracking-tight text-xs text-white drop-shadow-sm';
+        streakCount.style.color = '#ffffff';
+        streakCount.style.textShadow = '0 1px 1px rgba(0, 0, 0, 0.12)';
 
         if (animate && streakShimmerSweep) {
             streakShimmerSweep.style.background = config.shimmerGradient;
@@ -2236,7 +2246,8 @@ function updateStreakUI(animate = false) {
             streakFireIcon.style.transform = 'scale(0.95)';
         }
 
-        streakCount.className = 'relative z-10 font-black tracking-tight text-xs text-gray-600';
+        streakCount.style.color = '#4b5563';
+        streakCount.style.textShadow = 'none';
     }
 }
 
@@ -2388,6 +2399,9 @@ function precomputeNextCandidate() {
         precomputedNextCard = questionsPool[0];
         console.log("[Algorithm] Apenas 1 card no pool. Próximo selecionado:", (precomputedNextCard.description || '').slice(0, 30));
         prefetchNextCardImages(precomputedNextCard);
+        if (precomputedNextCard.description && precomputedNextCard.type !== 'fill') {
+            renderMathAndMarkdown(precomputedNextCard.description);
+        }
         return;
     }
 
@@ -2417,15 +2431,39 @@ function precomputeNextCandidate() {
 
     if (precomputedNextCard) {
         prefetchNextCardImages(precomputedNextCard);
+        if (precomputedNextCard.description && precomputedNextCard.type !== 'fill') {
+            renderMathAndMarkdown(precomputedNextCard.description);
+        }
+        if (precomputedNextCard.answer && (precomputedNextCard.type === 'anki' || precomputedNextCard.type === 'voice')) {
+            renderMathAndMarkdown(precomputedNextCard.answer);
+        }
     }
 }
 
+let precomputeTimerId = null;
+let precomputeIdleId = null;
+
 function schedulePrecomputeNextCard() {
-    if (typeof requestIdleCallback === 'function') {
-        requestIdleCallback(() => precomputeNextCandidate(), { timeout: 100 });
-    } else {
-        setTimeout(precomputeNextCandidate, 0);
+    if (precomputeTimerId) {
+        clearTimeout(precomputeTimerId);
+        precomputeTimerId = null;
     }
+    if (precomputeIdleId && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(precomputeIdleId);
+        precomputeIdleId = null;
+    }
+    const delay = isAnimating ? 680 : 120;
+    precomputeTimerId = setTimeout(() => {
+        precomputeTimerId = null;
+        if (typeof requestIdleCallback === 'function') {
+            precomputeIdleId = requestIdleCallback(() => {
+                precomputeIdleId = null;
+                precomputeNextCandidate();
+            }, { timeout: 1500 });
+        } else {
+            precomputeNextCandidate();
+        }
+    }, delay);
 }
 
 export function getDeckCompletionAdviceForHour(hour = new Date().getHours()) {
@@ -2655,6 +2693,7 @@ function animateCompletionStats({ targetCards, targetAcc, targetSeconds, targetS
 function showDeckCompletionScreen() {
     try {
         clearBalls();
+        cancelActiveAnkiFlipAnimation();
         isAnimating = false;
         document.getElementById('flying-card-to-header')?.remove();
         document.getElementById('anim-card-back-clone')?.remove();
@@ -3031,7 +3070,7 @@ function loadQuestion() {
         submitBtn.classList.remove('hidden');
         answerInput1.placeholder = currentQuestion.placeholder1 || 'Resposta 1';
         answerInput2.placeholder = currentQuestion.placeholder2 || 'Resposta 2';
-        answerInput1.focus();
+        answerInput1.focus({ preventScroll: true });
     } else if (currentQuestion.type === 'fill') {
         submitBtn.classList.remove('hidden');
         initFillBlankInputs();
@@ -3042,7 +3081,7 @@ function loadQuestion() {
     } else {
         openAnswerArea.classList.remove('hidden');
         submitBtn.classList.remove('hidden');
-        answerInput.focus();
+        answerInput.focus({ preventScroll: true });
     }
     resetTutorChatSession();
 
@@ -3113,18 +3152,6 @@ function renderDynamicMcOptions(rawOptions) {
         btn.onclick = () => handleMCSubmit(btn);
         mcAnswerArea.appendChild(btn);
     });
-}
-
-function formatMultiParagraphText(text) {
-    if (!text) return '';
-    if (/<(p|br|div|mark)[\s>]/i.test(text)) {
-        return text;
-    }
-    const paragraphs = text.split(/\r?\n\r?\n/);
-    if (paragraphs.length > 1) {
-        return paragraphs.map(p => `<p class="mb-2 last:mb-0">${p.trim()}</p>`).join('');
-    }
-    return text;
 }
 
 // --- ANKI & VOICE RESPONSE MODE CONTROLLER (M3 SPLIT BUTTON) ---
@@ -3205,14 +3232,30 @@ function handleAnkiSplitSecondaryAction() {
     }
 }
 
-function flipAnkiCard() {
-    const isAnkiLike = currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice');
-    if (!isAnkiLike || isAnkiFlipped) return;
-    isAnkiFlipped = true;
+let activeAnkiFlipToken = 0;
+let activeAnkiFlipAnimations = [];
 
-    triggerHaptic('cardFlip');
-    playFeedbackSound('flip');
+function cancelActiveAnkiFlipAnimation() {
+    activeAnkiFlipToken++;
+    if (activeAnkiFlipAnimations.length > 0) {
+        activeAnkiFlipAnimations.forEach(anim => {
+            try { anim.cancel(); } catch (_) {}
+        });
+        activeAnkiFlipAnimations = [];
+    }
+    if (questionCard) {
+        questionCard.style.transition = '';
+        questionCard.style.transform = '';
+        questionCard.style.opacity = '';
+        questionCard.style.willChange = '';
+    }
+    if (ankiAnswerContainer) {
+        ankiAnswerContainer.style.opacity = '';
+        ankiAnswerContainer.style.transform = '';
+    }
+}
 
+function revealAnkiAnswerContent() {
     if (ankiAnswerContainer) {
         ankiAnswerText.innerHTML = renderMathAndMarkdown(currentQuestion.answer || '');
         const ansImg = currentQuestion?.answerImage || currentQuestion?.answerImageUrl || currentQuestion?.ansImage || '';
@@ -3234,12 +3277,84 @@ function flipAnkiCard() {
     if (ankiFlippedControls) ankiFlippedControls.classList.remove('hidden');
 }
 
+function flipAnkiCard() {
+    const isAnkiLike = currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice');
+    if (!isAnkiLike || isAnkiFlipped) return;
+    isAnkiFlipped = true;
+
+    triggerHaptic('cardFlip');
+    playFeedbackSound('flip');
+
+    cancelActiveAnkiFlipAnimation();
+    const flipToken = activeAnkiFlipToken;
+
+    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!isAnimationsEnabled() || prefersReducedMotion || !questionCard || typeof questionCard.animate !== 'function') {
+        revealAnkiAnswerContent();
+        return;
+    }
+
+    questionCard.style.transition = 'none';
+    questionCard.style.willChange = 'transform, opacity';
+
+    const phase1 = questionCard.animate([
+        { transform: 'perspective(1200px) rotateY(0deg) scale(1)', opacity: 1 },
+        { transform: 'perspective(1200px) rotateY(90deg) scale(0.96)', opacity: 0.9 }
+    ], {
+        duration: 150,
+        easing: 'cubic-bezier(0.3, 0, 0.8, 0.15)',
+        fill: 'forwards'
+    });
+    activeAnkiFlipAnimations.push(phase1);
+
+    phase1.finished.then(() => {
+        if (flipToken !== activeAnkiFlipToken || !isAnkiFlipped) return;
+
+        revealAnkiAnswerContent();
+
+        if (ankiAnswerContainer) {
+            const ansAnim = ankiAnswerContainer.animate([
+                { opacity: 0, transform: 'translate3d(0, 6px, 0)' },
+                { opacity: 1, transform: 'translate3d(0, 0, 0)' }
+            ], {
+                duration: 200,
+                easing: 'cubic-bezier(0.05, 0.7, 0.1, 1)',
+                fill: 'both'
+            });
+            activeAnkiFlipAnimations.push(ansAnim);
+        }
+
+        const phase2 = questionCard.animate([
+            { transform: 'perspective(1200px) rotateY(-90deg) scale(0.96)', opacity: 0.9 },
+            { transform: 'perspective(1200px) rotateY(0deg) scale(1)', opacity: 1 }
+        ], {
+            duration: 220,
+            easing: 'cubic-bezier(0.05, 0.7, 0.1, 1)',
+            fill: 'forwards'
+        });
+        activeAnkiFlipAnimations.push(phase2);
+
+        return phase2.finished;
+    }).then(() => {
+        if (flipToken !== activeAnkiFlipToken) return;
+        cancelActiveAnkiFlipAnimation();
+    }).catch(() => {
+        // Ignore cancelled animations
+    });
+}
+
 function handleAnkiRating(rating) {
     const isAnkiLike = currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice');
     if (!isAnkiLike || !isAnkiFlipped) return;
     if (isAnimating) {
         console.warn("[Anki] Avaliação ignorada: animação em andamento.");
         return;
+    }
+    if (activeAnkiFlipAnimations.length > 0) {
+        cancelActiveAnkiFlipAnimation();
+        if (ankiAnswerContainer && ankiAnswerContainer.classList.contains('hidden')) {
+            revealAnkiAnswerContent();
+        }
     }
 
     handleDailyStreakOnCardAnswered();
@@ -3608,21 +3723,6 @@ async function startVoiceRecording() {
     } catch (err) {
         console.error('[Voice] Falha ao acessar microfone:', err);
         alert(t('voice_mic_permission_denied') || 'Permissão do microfone negada.');
-        resetVoiceUIState();
-    }
-}
-
-function stopVoiceRecording(cleanup = true) {
-    isVoiceRecording = false;
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        try { mediaRecorder.stop(); } catch {}
-    }
-    mediaRecorder = null;
-    if (mediaStream) {
-        try { mediaStream.getTracks().forEach(t => t.stop()); } catch {}
-        mediaStream = null;
-    }
-    if (cleanup) {
         resetVoiceUIState();
     }
 }
@@ -4147,6 +4247,7 @@ function resetUI() {
     if (currentQuestion) {
         delete currentQuestion.isBeingCorrected;
     }
+    cancelActiveAnkiFlipAnimation();
     isAnkiFlipped = false;
     if (ankiAnswerContainer) ankiAnswerContainer.classList.add('hidden');
     if (ankiAnswerImageContainer) ankiAnswerImageContainer.classList.add('hidden');
@@ -4890,16 +4991,28 @@ function sanitizeCardForStorage(card) {
 }
 
 let saveStateTimeout = null;
+let saveStateIdleId = null;
+let hasPendingGameStateSave = false;
 
 function executeSaveGameState() {
-    saveStateTimeout = null;
+    if (saveStateTimeout) {
+        clearTimeout(saveStateTimeout);
+        saveStateTimeout = null;
+    }
+    if (saveStateIdleId && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(saveStateIdleId);
+        saveStateIdleId = null;
+    }
+    hasPendingGameStateSave = false;
+
     try {
         const cleanPool = (questionsPool || []).map(sanitizeCardForStorage);
         const cleanAll = (allQuestions || []).map(sanitizeCardForStorage);
         const now = Date.now();
+        let activePayload = null;
 
         if (activeMode === 'notebook') {
-            localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload({
+            activePayload = {
                 questionsPool: cleanPool,
                 allQuestions: cleanAll,
                 score,
@@ -4910,13 +5023,14 @@ function executeSaveGameState() {
                 consecutiveNewCardsCount,
                 deckTitle: "Caderno",
                 updatedAt: now
-            }));
+            };
+            localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(activePayload));
         } else if (activeMode === 'exam') {
             let examData = {};
             try {
                 examData = JSON.parse(localStorage.getItem('flashcardsExam')) || {};
             } catch (err) {}
-            localStorage.setItem('flashcardsExam', encodeStoragePayload({
+            activePayload = {
                 ...examData,
                 questionsPool: cleanPool,
                 allQuestions: cleanAll,
@@ -4927,9 +5041,10 @@ function executeSaveGameState() {
                 consecutiveNewCardsCount,
                 deckTitle: "Semana de Provas",
                 updatedAt: now
-            }));
+            };
+            localStorage.setItem('flashcardsExam', encodeStoragePayload(activePayload));
         } else {
-            localStorage.setItem('flashcardsSave', encodeStoragePayload({
+            activePayload = {
                 questionsPool: cleanPool,
                 allQuestions: cleanAll,
                 score,
@@ -4939,12 +5054,13 @@ function executeSaveGameState() {
                 consecutiveNewCardsCount,
                 deckTitle: deckTitle.textContent,
                 updatedAt: now
-            }));
+            };
+            localStorage.setItem('flashcardsSave', encodeStoragePayload(activePayload));
         }
 
-        // Auto-update active slot and sync shared link if deck is shared
-        syncActiveSlotState();
-        debouncedSyncSlotsToCloud(300);
+        // Auto-update active slot using the already-built payload and debounce cloud sync
+        syncActiveSlotState(activePayload);
+        debouncedSyncSlotsToCloud(3500);
     } catch (e) {
         console.error("Erro ao salvar estado do jogo no localStorage:", e);
     }
@@ -4952,34 +5068,56 @@ function executeSaveGameState() {
 
 function saveGameState(immediate = false) {
     if (immediate) {
-        if (saveStateTimeout) {
-            clearTimeout(saveStateTimeout);
-            saveStateTimeout = null;
-        }
+        cachedBookmarkedSet = null;
         executeSaveGameState();
         return;
     }
 
-    if (!saveStateTimeout) {
-        saveStateTimeout = setTimeout(() => {
-            executeSaveGameState();
-        }, 80);
+    hasPendingGameStateSave = true;
+    if (saveStateTimeout) {
+        clearTimeout(saveStateTimeout);
+        saveStateTimeout = null;
     }
+    if (saveStateIdleId && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(saveStateIdleId);
+        saveStateIdleId = null;
+    }
+
+    const scheduleIdleSave = () => {
+        saveStateTimeout = null;
+        if (isAnimating) {
+            saveStateTimeout = setTimeout(scheduleIdleSave, 250);
+            return;
+        }
+        if (typeof requestIdleCallback === 'function') {
+            saveStateIdleId = requestIdleCallback(() => {
+                saveStateIdleId = null;
+                if (hasPendingGameStateSave) executeSaveGameState();
+            }, { timeout: 1500 });
+        } else {
+            if (hasPendingGameStateSave) executeSaveGameState();
+        }
+    };
+
+    saveStateTimeout = setTimeout(scheduleIdleSave, 700);
 }
 
 window.addEventListener('beforeunload', () => {
-    if (saveStateTimeout) {
-        clearTimeout(saveStateTimeout);
+    if (hasPendingGameStateSave || saveStateTimeout || saveStateIdleId) {
         executeSaveGameState();
     }
     syncSlotsToCloud();
 });
 window.addEventListener('pagehide', () => {
-    if (saveStateTimeout) {
-        clearTimeout(saveStateTimeout);
+    if (hasPendingGameStateSave || saveStateTimeout || saveStateIdleId) {
         executeSaveGameState();
     }
     syncSlotsToCloud();
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && (hasPendingGameStateSave || saveStateTimeout || saveStateIdleId)) {
+        executeSaveGameState();
+    }
 });
 
 // getNotebookDailyGoal is imported from ./engine/notebook-scheduler.js
@@ -5194,8 +5332,17 @@ function normalizeStatsMode(mode = activeMode) {
     return mode === 'notebook' ? 'notebook' : 'deck';
 }
 
+const cachedPinnedHeaderStats = {
+    deck: null,
+    notebook: null
+};
+
 function getPinnedHeaderStats(mode = activeMode) {
     const targetMode = normalizeStatsMode(mode);
+    if (Array.isArray(cachedPinnedHeaderStats[targetMode])) {
+        return cachedPinnedHeaderStats[targetMode];
+    }
+
     const key = targetMode === 'notebook'
         ? HEADER_PINNED_NOTEBOOK_STORAGE_KEY
         : HEADER_PINNED_DECK_STORAGE_KEY;
@@ -5211,6 +5358,7 @@ function getPinnedHeaderStats(mode = activeMode) {
                 const validIds = AVAILABLE_HEADER_STATS.map(s => s.id);
                 const filtered = parsed.filter(id => validIds.includes(id));
                 if (filtered.length >= MIN_PINNED_STATS) {
+                    cachedPinnedHeaderStats[targetMode] = filtered;
                     return filtered;
                 }
             }
@@ -5218,7 +5366,9 @@ function getPinnedHeaderStats(mode = activeMode) {
     } catch (e) {
         console.warn("[HeaderStats] Erro ao ler estatísticas fixadas:", e);
     }
-    return [...DEFAULT_PINNED_STATS];
+    const defaults = [...DEFAULT_PINNED_STATS];
+    cachedPinnedHeaderStats[targetMode] = defaults;
+    return defaults;
 }
 
 function savePinnedHeaderStats(pinnedList, mode = activeMode) {
@@ -5227,6 +5377,7 @@ function savePinnedHeaderStats(pinnedList, mode = activeMode) {
         ? HEADER_PINNED_NOTEBOOK_STORAGE_KEY
         : HEADER_PINNED_DECK_STORAGE_KEY;
 
+    cachedPinnedHeaderStats[targetMode] = Array.isArray(pinnedList) ? [...pinnedList] : null;
     try {
         localStorage.setItem(key, encodeStoragePayload(pinnedList));
         if (targetMode === 'deck') {
@@ -5391,6 +5542,22 @@ function renderHeaderPinnedStats(forceRerender = false) {
     updateHeaderPinnedStatsValues();
 }
 
+function setTextIfChanged(el, nextVal) {
+    if (!el) return;
+    const str = String(nextVal ?? '');
+    if (el.textContent !== str) {
+        el.textContent = str;
+    }
+}
+
+function setTitleIfChanged(el, nextTitle) {
+    if (!el) return;
+    const str = String(nextTitle ?? '');
+    if (el.getAttribute('title') !== str) {
+        el.title = str;
+    }
+}
+
 function updateHeaderPinnedStatsValues() {
     const pinnedIds = getPinnedHeaderStats();
 
@@ -5407,43 +5574,47 @@ function updateHeaderPinnedStatsValues() {
         const remI18n = getStatI18n('remaining');
         const scI18n = getStatI18n('score');
 
-        if (cntLabel) cntLabel.textContent = remI18n.notebookLabel || "Para Hoje";
-        if (scLabel) scLabel.textContent = scI18n.notebookLabel || t('revisions_count_label');
+        setTextIfChanged(cntLabel, remI18n.notebookLabel || "Para Hoje");
+        setTextIfChanged(scLabel, scI18n.notebookLabel || t('revisions_count_label'));
 
         if (dailyGoal > 0) {
             const rem = Math.max(0, dailyGoal - reviewedToday);
             if (qLeft) {
-                qLeft.textContent = rem;
-                qLeft.title = t('notebook_goal_progress_tooltip', {
+                setTextIfChanged(qLeft, rem);
+                setTitleIfChanged(qLeft, t('notebook_goal_progress_tooltip', {
                     reviewed: reviewedToday,
                     goal: dailyGoal,
                     due: dueInfo.dueToday || 0
-                });
+                }));
             }
             if (cntWrapper) {
-                cntWrapper.title = t('notebook_goal_wrapper_tooltip', {
+                setTitleIfChanged(cntWrapper, t('notebook_goal_wrapper_tooltip', {
                     goal: dailyGoal,
                     reviewed: reviewedToday
-                });
-                cntWrapper.classList.add('cursor-pointer', 'hover:opacity-80', 'transition');
+                }));
+                if (!cntWrapper.classList.contains('cursor-pointer')) {
+                    cntWrapper.classList.add('cursor-pointer', 'hover:opacity-80', 'transition');
+                }
             }
         } else {
             if (qLeft) {
-                qLeft.textContent = dueInfo.dueToday || 0;
-                qLeft.title = t('notebook_no_goal_due_tooltip', {
+                setTextIfChanged(qLeft, dueInfo.dueToday || 0);
+                setTitleIfChanged(qLeft, t('notebook_no_goal_due_tooltip', {
                     count: dueInfo.dueToday || 0
-                });
+                }));
             }
             if (cntWrapper) {
-                cntWrapper.title = t('notebook_set_goal_tooltip');
-                cntWrapper.classList.add('cursor-pointer', 'hover:opacity-80', 'transition');
+                setTitleIfChanged(cntWrapper, t('notebook_set_goal_tooltip'));
+                if (!cntWrapper.classList.contains('cursor-pointer')) {
+                    cntWrapper.classList.add('cursor-pointer', 'hover:opacity-80', 'transition');
+                }
             }
         }
         if (scWrapper) {
-            scWrapper.title = scI18n.title || "";
+            setTitleIfChanged(scWrapper, scI18n.title || "");
         }
         const scVal = document.getElementById('score');
-        if (scVal) scVal.textContent = notebookReviewsCount;
+        setTextIfChanged(scVal, notebookReviewsCount);
     } else {
         const cntLabel = document.getElementById('counter-left-label');
         const scLabel = document.getElementById('score-label');
@@ -5455,19 +5626,21 @@ function updateHeaderPinnedStatsValues() {
         const remI18n = getStatI18n('remaining');
         const scI18n = getStatI18n('score');
 
-        if (cntLabel) cntLabel.textContent = remI18n.label || "Restantes";
-        if (scLabel) scLabel.textContent = scI18n.label || "Score";
+        setTextIfChanged(cntLabel, remI18n.label || "Restantes");
+        setTextIfChanged(scLabel, scI18n.label || "Score");
         if (qLeft) {
-            qLeft.textContent = questionsPool.length;
-            qLeft.title = "";
+            setTextIfChanged(qLeft, questionsPool.length);
+            setTitleIfChanged(qLeft, "");
         }
-        if (scVal) scVal.textContent = score;
+        setTextIfChanged(scVal, score);
         if (cntWrapper) {
-            cntWrapper.title = remI18n.title || "";
-            cntWrapper.classList.remove('cursor-pointer', 'hover:opacity-80');
+            setTitleIfChanged(cntWrapper, remI18n.title || "");
+            if (cntWrapper.classList.contains('cursor-pointer')) {
+                cntWrapper.classList.remove('cursor-pointer', 'hover:opacity-80');
+            }
         }
         if (scWrapper) {
-            scWrapper.title = scI18n.title || "";
+            setTitleIfChanged(scWrapper, scI18n.title || "");
         }
     }
 
@@ -5481,20 +5654,25 @@ function updateHeaderPinnedStatsValues() {
         const lblEl = document.getElementById(`stat-label-${statId}`);
         const wrapEl = headerPinnedStatsContainer.querySelector(`[data-stat-id="${statId}"]`);
         if (lblEl) {
-            lblEl.textContent = activeMode === 'notebook'
-                ? (statI18n.notebookLabel || statDef.notebookLabel)
-                : (statI18n.label || statDef.label);
+            setTextIfChanged(
+                lblEl,
+                activeMode === 'notebook'
+                    ? (statI18n.notebookLabel || statDef.notebookLabel)
+                    : (statI18n.label || statDef.label)
+            );
         }
         if (valEl) {
-            valEl.textContent = statDef.getValue();
+            setTextIfChanged(valEl, statDef.getValue());
         }
         if (wrapEl) {
-            wrapEl.title = statI18n.title || statDef.title;
+            setTitleIfChanged(wrapEl, statI18n.title || statDef.title);
         }
     });
 
     const scoreContainer = document.getElementById('score-container');
-    if (scoreContainer) scoreContainer.classList.remove('hidden');
+    if (scoreContainer && scoreContainer.classList.contains('hidden')) {
+        scoreContainer.classList.remove('hidden');
+    }
 
     if (headerStatsDropdown && !headerStatsDropdown.classList.contains('hidden')) {
         renderHeaderStatsDropdown();
@@ -5546,11 +5724,11 @@ function renderHeaderStatsDropdown() {
                 </div>
                 <div class="min-w-0 flex-1 text-left">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-xs font-semibold text-gray-800 truncate">${statTitle}</span>
-                        <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono flex-shrink-0">${displayLabel}</span>
+                        <span class="text-xs font-semibold text-gray-800 truncate">${escapeHtml(statTitle)}</span>
+                        <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono flex-shrink-0">${escapeHtml(displayLabel)}</span>
                     </div>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <span class="text-[11px] font-bold ${stat.colorClass} truncate">${liveVal}</span>
+                        <span class="text-[11px] font-bold ${stat.colorClass} truncate">${escapeHtml(String(liveVal ?? ''))}</span>
                         <span class="text-gray-300">•</span>
                         <span class="text-[10px] text-gray-500 truncate" title="${safeSubtitle}">${safeSubtitle}</span>
                     </div>
@@ -5633,16 +5811,16 @@ function openHeaderStatsDropdown() {
     closeHamburgerMenu();
     closeDeckDropdown();
     renderHeaderStatsDropdown();
-    headerStatsDropdown.classList.remove('hidden');
+    openWithMotion(headerStatsDropdown);
     headerStatsChevron?.classList.add('rotate-180');
     headerStatsTrigger?.setAttribute('aria-expanded', 'true');
 }
 
 function closeHeaderStatsDropdown() {
-    if (!headerStatsDropdown) return;
-    headerStatsDropdown.classList.add('hidden');
+    if (!headerStatsDropdown || headerStatsDropdown.classList.contains('hidden')) return;
     headerStatsChevron?.classList.remove('rotate-180');
     headerStatsTrigger?.setAttribute('aria-expanded', 'false');
+    closeWithMotion(headerStatsDropdown);
 }
 
 function toggleHeaderStatsDropdown(e) {
@@ -5651,7 +5829,7 @@ function toggleHeaderStatsDropdown(e) {
         e.stopPropagation();
     }
     if (!headerStatsDropdown) return;
-    if (headerStatsDropdown.classList.contains('hidden')) {
+    if (headerStatsDropdown.classList.contains('hidden') || headerStatsDropdown.hasAttribute('data-m3-closing')) {
         openHeaderStatsDropdown();
     } else {
         closeHeaderStatsDropdown();
@@ -5744,8 +5922,6 @@ async function checkAnswerWithAi(questionObj, actualAnswer, ballIdx) {
             revertNormalCardErrorOnAiCorrection(questionObj);
             syncCardToAllQuestions(questionObj);
 
-            const totalWrongs = questionObj.wrongCount || 0;
-            const isLeech = isLeechCard(questionObj);
             const shouldRemove = shouldGraduateCard(questionObj);
 
             // Registra correção da IA no subsistema de estatísticas
@@ -5853,15 +6029,15 @@ function openHamburgerMenu() {
     updateHapticUI();
     updateHamburgerUserUI(auth.currentUser);
     hamburgerBackdrop?.classList.remove('hidden');
-    hamburgerMenu.classList.remove('hidden');
+    openWithMotion(hamburgerMenu);
     hamburgerBtn?.setAttribute('aria-expanded', 'true');
 }
 
 function closeHamburgerMenu() {
-    if (!hamburgerMenu) return;
-    hamburgerMenu.classList.add('hidden');
+    if (!hamburgerMenu || hamburgerMenu.classList.contains('hidden')) return;
     hamburgerBackdrop?.classList.add('hidden');
     hamburgerBtn?.setAttribute('aria-expanded', 'false');
+    closeWithMotion(hamburgerMenu);
 }
 
 function toggleHamburgerMenu(e) {
@@ -5870,7 +6046,7 @@ function toggleHamburgerMenu(e) {
         e.stopPropagation();
     }
     if (!hamburgerMenu) return;
-    if (hamburgerMenu.classList.contains('hidden')) {
+    if (hamburgerMenu.classList.contains('hidden') || hamburgerMenu.hasAttribute('data-m3-closing')) {
         openHamburgerMenu();
     } else {
         closeHamburgerMenu();
@@ -5901,7 +6077,7 @@ document.addEventListener('keydown', (e) => {
             const closeScannerBtn = document.getElementById('close-scanner-modal');
             if (scanner && !scanner.classList.contains('hidden')) {
                 if (closeScannerBtn) closeScannerBtn.click();
-                else scanner.classList.add('hidden');
+                else closeModalWithMotion(scanner);
                 return;
             }
 
@@ -5909,26 +6085,50 @@ document.addEventListener('keydown', (e) => {
             const closeTransferBtn = document.getElementById('close-transfer-modal');
             if (transfer && !transfer.classList.contains('hidden')) {
                 if (closeTransferBtn) closeTransferBtn.click();
-                else transfer.classList.add('hidden');
+                else closeModalWithMotion(transfer);
                 return;
             }
 
             if (editModal && !editModal.classList.contains('hidden')) {
-                editModal.classList.add('hidden');
+                closeModalWithMotion(editModal);
                 return;
             }
 
-            if (instructionsModal && !instructionsModal.classList.contains('hidden')) {
-                instructionsModal.classList.add('hidden');
+            if (dailyGoalModal && !dailyGoalModal.classList.contains('hidden')) {
+                closeDailyGoalModal();
                 return;
             }
 
-            if (apiModal && !apiModal.classList.contains('hidden')) {
-                apiModal.classList.add('hidden');
+            if (appSettingsModal && !appSettingsModal.classList.contains('hidden')) {
+                closeAppSettingsModal();
                 return;
             }
 
-            openModals.forEach(m => m.classList.add('hidden'));
+            const accountModal = document.getElementById('account-subscription-modal');
+            if (accountModal && !accountModal.classList.contains('hidden')) {
+                closeModalWithMotion(accountModal, { removeDisplayClass: 'flex' });
+                return;
+            }
+
+            const extraDeckModal = document.getElementById('extra-deck-modal');
+            if (extraDeckModal && !extraDeckModal.classList.contains('hidden')) {
+                closeModalWithMotion(extraDeckModal, { removeDisplayClass: 'flex' });
+                return;
+            }
+
+            const proModal = document.getElementById('pro-subscription-modal');
+            if (proModal && !proModal.classList.contains('hidden')) {
+                closeModalWithMotion(proModal, { removeDisplayClass: 'flex' });
+                return;
+            }
+
+            const exploreModal = document.getElementById('explore-modal');
+            if (exploreModal && !exploreModal.classList.contains('hidden')) {
+                closeModalWithMotion(exploreModal, { removeDisplayClass: 'flex' });
+                return;
+            }
+
+            openModals.forEach(m => closeModalWithMotion(m));
             return;
         }
 
@@ -6042,7 +6242,7 @@ function hideHighlightPopup() {
     activeHighlightField = null;
     lastAiDefinitionTerm = '';
     lastAiDefinitionText = '';
-    if (!textHighlightPopup) return;
+    if (!textHighlightPopup || textHighlightPopup.classList.contains('hidden')) return;
 
     delete textHighlightPopup.dataset.origLeft;
     delete textHighlightPopup.dataset.origTop;
@@ -6826,6 +7026,10 @@ document.querySelectorAll('.hl-color-btn').forEach(btn => {
 
 function onSelectionChange() {
     if (isInteractingWithPopup) return;
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return;
+    }
     clearTimeout(selectionDebounceTimer);
     selectionDebounceTimer = setTimeout(() => {
         handleTextSelection();
@@ -6875,7 +7079,6 @@ document.addEventListener('click', (e) => {
             chatInput.blur();
         }
 
-        const questionBody = document.getElementById('question-body-text') || questionText;
         const ankiAnswer = ankiAnswerText;
         const field = (ankiAnswer && ankiAnswer.contains(mark)) ? 'answer' : 'description';
 
@@ -6889,7 +7092,7 @@ document.addEventListener('click', (e) => {
         return;
     }
 
-    if (e.target && typeof e.target.closest === 'function' && !e.target.closest('#text-highlight-popup')) {
+    if (textHighlightPopup && !textHighlightPopup.classList.contains('hidden') && e.target && typeof e.target.closest === 'function' && !e.target.closest('#text-highlight-popup')) {
         const sel = window.getSelection();
         const hasSelection = sel && !sel.isCollapsed && sel.toString().trim().length > 0;
         if (!hasSelection) {
@@ -7097,6 +7300,7 @@ clearNotebookBtn?.addEventListener('click', () => {
     const confirmed = confirm(t('confirm_clear_entire_notebook'));
     if (confirmed) {
         localStorage.removeItem(NOTEBOOK_STORAGE_KEY);
+        cachedBookmarkedSet = null;
         allQuestions = [];
         questionsPool = [];
         notebookReviewsCount = 0;
@@ -7139,12 +7343,12 @@ function openDailyGoalModal() {
         dailyGoalDueText.textContent = t('due_count', { count: dueInfo.dueToday });
     }
 
-    dailyGoalModal.classList.remove('hidden');
+    openModalWithMotion(dailyGoalModal);
     setTimeout(() => dailyGoalInput?.focus(), 50);
 }
 
 function closeDailyGoalModal() {
-    dailyGoalModal?.classList.add('hidden');
+    closeModalWithMotion(dailyGoalModal);
 }
 
 closeDailyGoalModalBtn?.addEventListener('click', closeDailyGoalModal);
@@ -7283,7 +7487,6 @@ const settingStatsListContainer = document.getElementById('setting-stats-list-co
 
 // Daily notifications controls in settings modal
 const settingNotifMasterSwitch = document.getElementById('setting-notif-master-switch');
-const settingNotifPeriodsContainer = document.getElementById('setting-notif-periods-container');
 const settingNotifMorningSwitch = document.getElementById('setting-notif-morning-switch');
 const settingNotifMorningTime = document.getElementById('setting-notif-morning-time');
 const settingNotifNoonSwitch = document.getElementById('setting-notif-noon-switch');
@@ -7513,7 +7716,7 @@ async function updateApiSettingsUI() {
                     <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">JSON</span>
                 </div>
                 <code class="block text-[11px] text-gray-900 font-mono break-all bg-white p-2 rounded-lg border border-gray-200 select-all font-semibold">
-                    ${endpointUrl}
+                    ${escapeHtml(endpointUrl)}
                 </code>
                 <p class="text-[10px] text-gray-600 leading-normal" data-i18n="settings_api_guide_desc">
                     ${escapeHtml(t('settings_api_guide_desc'))}
@@ -7763,10 +7966,10 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
                 </div>
                 <div class="min-w-0 flex-1 text-left">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-xs font-bold text-[var(--md-sys-color-on-surface)] truncate">${statTitle}</span>
-                        <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono flex-shrink-0">${displayLabel}</span>
+                        <span class="text-xs font-bold text-[var(--md-sys-color-on-surface)] truncate">${escapeHtml(statTitle)}</span>
+                        <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono flex-shrink-0">${escapeHtml(displayLabel)}</span>
                     </div>
-                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">${statDesc}</p>
+                    <p class="text-[10px] text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">${escapeHtml(statDesc)}</p>
                 </div>
             </div>
             <button type="button" class="pin-stat-btn p-1.5 rounded-xl transition-all cursor-pointer ${
@@ -7827,12 +8030,12 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
 function openAppSettingsModal() {
     if (!appSettingsModal) return;
     updateSettingsModalState();
-    appSettingsModal.classList.remove('hidden');
+    openModalWithMotion(appSettingsModal);
 }
 
 function closeAppSettingsModal() {
     if (!appSettingsModal) return;
-    appSettingsModal.classList.add('hidden');
+    closeModalWithMotion(appSettingsModal);
 }
 
 // Open / Close modal events
@@ -8428,13 +8631,16 @@ if (ankiAnswerImage && imageZoomModal && zoomedImage) {
 }
 function closeImageZoom() {
     if (imageZoomModal && !imageZoomModal.classList.contains('hidden')) {
-        imageZoomModal.classList.add('hidden');
-        if (zoomedImage) zoomedImage.src = '';
-        const zoomWrapper = document.getElementById('zoomed-image-wrapper');
-        if (zoomWrapper) {
-            const oldWrap = zoomWrapper.querySelector('.annotated-image-wrapper');
-            if (oldWrap) oldWrap.remove();
-        }
+        closeModalWithMotion(imageZoomModal, {
+            onClosed: () => {
+                if (zoomedImage) zoomedImage.src = '';
+                const zoomWrapper = document.getElementById('zoomed-image-wrapper');
+                if (zoomWrapper) {
+                    const oldWrap = zoomWrapper.querySelector('.annotated-image-wrapper');
+                    if (oldWrap) oldWrap.remove();
+                }
+            }
+        });
     }
 }
 
@@ -8791,7 +8997,7 @@ editBtn.addEventListener('click', () => {
     if (editAnsImageUrlInput) editAnsImageUrlInput.value = pendingEditAnsImage;
     updateEditAnsImagePreviewUI(pendingEditAnsImage);
 
-    editModal.classList.remove('hidden');
+    openModalWithMotion(editModal);
 });
 
 saveEditBtn.addEventListener('click', () => {
@@ -8864,15 +9070,66 @@ saveEditBtn.addEventListener('click', () => {
 
     saveGameState(true);
     syncSlotsToCloud();
-    editModal.classList.add('hidden');
+    closeModalWithMotion(editModal);
     updateFeedbackText();
     animateCardToBack(() => {
         loadQuestion();
     });
 });
-[closeModalBtn, cancelEditBtn].forEach(b => b.addEventListener('click', () => editModal.classList.add('hidden')));
+[closeModalBtn, cancelEditBtn].forEach(b => b.addEventListener('click', () => closeModalWithMotion(editModal)));
+editModal?.addEventListener('click', (e) => {
+    if (e.target === editModal) closeModalWithMotion(editModal);
+});
 
 // --- BOOKMARK & DROPDOWN SELECTOR LOGIC ---
+let cachedBookmarkedSet = null;
+
+function getBookmarkedCardsSet() {
+    if (cachedBookmarkedSet instanceof Set) {
+        return cachedBookmarkedSet;
+    }
+    const set = new Set();
+    try {
+        const raw = localStorage.getItem(NOTEBOOK_STORAGE_KEY);
+        if (raw) {
+            const notebookState = JSON.parse(raw);
+            if (notebookState && Array.isArray(notebookState.allQuestions)) {
+                for (let i = 0; i < notebookState.allQuestions.length; i++) {
+                    const desc = notebookState.allQuestions[i]?.description;
+                    if (desc) {
+                        set.add(desc);
+                        set.add(stripHtml(desc));
+                    }
+                }
+            }
+        }
+    } catch (_) {}
+    cachedBookmarkedSet = set;
+    return set;
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === NOTEBOOK_STORAGE_KEY) {
+            cachedBookmarkedSet = null;
+        }
+        if (
+            !e.key ||
+            e.key === HEADER_PINNED_DECK_STORAGE_KEY ||
+            e.key === HEADER_PINNED_NOTEBOOK_STORAGE_KEY ||
+            e.key === LEGACY_HEADER_PINNED_STORAGE_KEY
+        ) {
+            cachedPinnedHeaderStats.deck = null;
+            cachedPinnedHeaderStats.notebook = null;
+        }
+    });
+    window.addEventListener('flashcards:sync-updated', () => {
+        cachedBookmarkedSet = null;
+        cachedPinnedHeaderStats.deck = null;
+        cachedPinnedHeaderStats.notebook = null;
+    });
+}
+
 function toggleBookmark() {
     const isMatchingDesc = (d1, d2) => d1 === d2 || (d1 && d2 && stripHtml(d1) === stripHtml(d2));
     const isBookmarked = isCardBookmarked(currentQuestion);
@@ -8911,6 +9168,7 @@ function toggleBookmark() {
         notebookState.questionsPool = (notebookState.questionsPool || []).map(sanitizeCardForStorage);
         notebookState.updatedAt = Date.now();
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
+        cachedBookmarkedSet = null;
         showNotificationPill(t('card_removed_from_notebook_toast'), "add_bookmark.svg");
 
         // If we are currently in notebook mode, remove from in-memory and go to next question
@@ -8959,18 +9217,20 @@ function toggleBookmark() {
         notebookState.updatedAt = Date.now();
 
         localStorage.setItem(NOTEBOOK_STORAGE_KEY, encodeStoragePayload(notebookState));
+        cachedBookmarkedSet = null;
         showNotificationPill(t('card_added_to_notebook_toast'), "bookmark_check.svg");
     }
 
     renderBookmarkIcon();
+    triggerSpringPop(bookmarkCardIcon, 'm3-bookmark-pop');
     syncSlotsToCloud();
 }
 
 function isCardBookmarked(question) {
     if (!question || !question.description) return false;
-    let notebookState = JSON.parse(localStorage.getItem(NOTEBOOK_STORAGE_KEY));
-    if (!notebookState || !notebookState.allQuestions) return false;
-    return notebookState.allQuestions.some(q => q.description === question.description || (q.description && stripHtml(q.description) === stripHtml(question.description)));
+    const set = getBookmarkedCardsSet();
+    if (set.size === 0) return false;
+    return set.has(question.description) || set.has(stripHtml(question.description));
 }
 
 function renderBookmarkIcon() {
@@ -8984,7 +9244,7 @@ function renderBookmarkIcon() {
 function openDeckDropdown() {
     closeHamburgerMenu();
     closeHeaderStatsDropdown();
-    deckSelectDropdown.classList.remove('hidden');
+    openWithMotion(deckSelectDropdown);
     deckSelectArrow.classList.add('rotate-180');
     updateDailyStreakUI();
 
@@ -9212,14 +9472,14 @@ if (dropdownAddDeckBtn && dropdownAddDeckInput) {
 }
 
 function closeDeckDropdown() {
-    deckSelectDropdown?.classList.add('hidden');
+    if (!deckSelectDropdown || deckSelectDropdown.classList.contains('hidden')) return;
     deckSelectArrow?.classList.remove('rotate-180');
+    closeWithMotion(deckSelectDropdown);
 }
 
 function updateMenuButtonsForActiveMode() {
     const exportTitle = document.getElementById('export-btn-title');
     const exportDesc = document.getElementById('export-btn-desc');
-    const exportIcon = document.getElementById('export-btn-icon');
     const editorTitle = document.getElementById('go-to-editor-btn-title');
     const editorDesc = document.getElementById('go-to-editor-btn-desc');
     const editorIcon = document.getElementById('go-to-editor-btn-icon');
@@ -9331,7 +9591,7 @@ function switchActiveMode(newMode) {
 bookmarkCardBtn.addEventListener('click', toggleBookmark);
 
 deckSelectTrigger.addEventListener('click', (e) => {
-    const isOpen = !deckSelectDropdown.classList.contains('hidden');
+    const isOpen = !deckSelectDropdown.classList.contains('hidden') && !deckSelectDropdown.hasAttribute('data-m3-closing');
     if (isOpen) {
         closeDeckDropdown();
     } else {
@@ -9405,21 +9665,38 @@ function keepCardInFocus() {
 
 function initMobileFocusHelpers() {
     const inputs = [answerInput, answerInput1, answerInput2].filter(Boolean);
+    let blurTimer = null;
+
+    const isMobileViewport = () => window.innerWidth < 768;
 
     inputs.forEach(input => {
         input.addEventListener('focus', () => {
-            document.body.classList.add('keyboard-open');
-            setTimeout(keepCardInFocus, 100);
-            setTimeout(keepCardInFocus, 300);
+            if (blurTimer) {
+                clearTimeout(blurTimer);
+                blurTimer = null;
+            }
+            if (!isMobileViewport()) return;
+            if (!document.body.classList.contains('keyboard-open')) {
+                document.body.classList.add('keyboard-open');
+            }
+            setTimeout(keepCardInFocus, 150);
         });
 
         input.addEventListener('blur', () => {
-            document.body.classList.remove('keyboard-open');
+            if (!isMobileViewport()) return;
+            if (blurTimer) clearTimeout(blurTimer);
+            blurTimer = setTimeout(() => {
+                blurTimer = null;
+                if (!inputs.includes(document.activeElement)) {
+                    document.body.classList.remove('keyboard-open');
+                }
+            }, 80);
         });
     });
 
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
+            if (!isMobileViewport()) return;
             if (document.activeElement && (inputs.includes(document.activeElement) || document.activeElement.classList?.contains('fill-blank-input'))) {
                 setTimeout(keepCardInFocus, 50);
             }

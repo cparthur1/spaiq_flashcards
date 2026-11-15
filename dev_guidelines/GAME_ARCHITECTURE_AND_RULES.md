@@ -177,16 +177,20 @@ A validação de respostas abertas e preenchimento de lacunas aceita variações
 
 ## 3. Otimizações de Desempenho e Eficiência
 
-O projeto conta com 4 otimizações críticas implementadas para garantir velocidade instantânea e preservar bateria:
+O projeto conta com otimizações críticas implementadas para garantir velocidade instantânea (60/120 FPS constantes durante animações de resposta) e preservar bateria:
 
 1. **Gamepad API Orientada a Eventos**:  
    O loop `pollGamepad()` **não** roda incondicionalmente a 60/120 FPS. Ele permanece dormente (consumo de CPU 0%) e só é ativado quando o evento nativo `gamepadconnected` detecta um controle físico conectado.
 2. **Levenshtein de Memória Linear $O(N)$**:  
    Substituição da alocação de matriz $O(N \cdot M)$ por vetores reutilizáveis `Int32Array`, evitando engasgos de Garbage Collection em dispositivos móveis.
-3. **Pré-indexação $O(1)$ em Estatísticas de IA ([`js/stats-ai.js`](file:///home/chief_arthur/Apps/Flashcards/js/stats-ai.js))**:  
+3. **Pré-indexação $O(1)$ em Estatísticas de IA ([`js/stats-ai.js`](file:///home/chief_arthur/apps/Flashcards/js/stats-ai.js))**:  
    `answersLog` e `strugglingCards` são normalizados em mapas hash uma única vez antes de iterar os cartões, eliminando dezenas de milhares de execuções redundantes de expressões regulares.
-4. **Persistência Debounced do Estado de Jogo**:  
-   `saveGameState()` agrupa gravações rápidas no `localStorage` com debounce leve (80ms) e executa *flush* síncrono nos eventos `beforeunload` e `pagehide`.
+4. **Persistência Debounced e Idle Callbacks no Jogo e Nuvem**:  
+   `saveGameState()` e `debouncedSyncSlotsToCloud()` utilizam cache em memória e `requestIdleCallback` (aguardando o término de `isAnimating`) para nunca bloquear a thread principal durante o voo do cartão ou queda das bolinhas, com *flush* síncrono garantido em `beforeunload` e `pagehide`.
+5. **Canvas Offscreen Estático (`staticCanvas` em [`js/engine/effects.js`](file:///home/chief_arthur/apps/Flashcards/js/engine/effects.js))**:  
+   Bolinhas que já repousaram no fundo (`isStatic = true`) são pré-renderizadas uma única vez em um canvas offscreen e copiadas com um único `ctx.drawImage(staticCanvas, 0, 0)` por frame, mantendo custo $O(1)$ mesmo após centenas de cartões respondidos.
+6. **Tailwind CSS Pré-compilado (`css/tailwind.min.css`)**:  
+   Substituição do script de runtime `cdn.tailwindcss.com` (cujo `MutationObserver` causava `28–50ms` de `RunMicrotasks` e `15–21ms` de `UpdateLayoutTree` a cada troca de cartão) por CSS estático pré-compilado via CLI (`npm run build:css`).
 
 ---
 
@@ -222,19 +226,33 @@ Para permitir diagnósticos rápidos de problemas relatados por usuários ou tes
 ### Regra 5: Arquitetura Orientada a Eventos
 - Evite criar loops contínuos baseados em `setInterval` ou `requestAnimationFrame` que rodem em segundo plano sem necessidade. Prefira disparadores orientados a eventos (`addEventListener`, `MutationObserver`, `IntersectionObserver`).
 
-### Regra 6: 
-- Evite usar emojis. Use os icones do https://fonts.google.com/icons ou crie o vector.
+### Regra 6: Iconografia Oficial (Sem Emojis)
+- Evite usar emojis. Use os ícones do https://fonts.google.com/icons ou crie o vetor SVG inline.
 
-### Regra 7: 
-- Deixe dicas e regras nesse md para auxiliar os próximos agentes/devs a seguir coerencia
+### Regra 7: Documentação Contínua
+- Deixe dicas e regras neste documento para auxiliar os próximos agentes e desenvolvedores a manterem a coerência arquitetural.
+
+### Regra 8: Pré-compilação Obrigatória do Tailwind CSS (`npm run build:css`)
+- **Proibido usar `cdn.tailwindcss.com`**: Nunca adicione `<script src="https://cdn.tailwindcss.com"></script>` nas páginas HTML. Todas as páginas devem carregar o arquivo estático `<link rel="stylesheet" href="../css/tailwind.min.css?v=1.0">` (ou `css/tailwind.min.css?v=1.0` na raiz) **antes** de `css/style.css`.
+- **Sempre recompilar ao adicionar classes novas**: Sempre que uma atualização adicionar ou alterar classes utilitárias do Tailwind em qualquer arquivo `.html` ou `.js`, execute obrigatoriamente antes de finalizar/commitar:
+  ```bash
+  npm run build:css
+  ```
+  *(Para compilar automaticamente em tempo real durante o desenvolvimento, use `npm run watch:css`).*
+- **Classes completas no código-fonte**: Escreva sempre os nomes completos das classes utilitárias (ex.: `isActive ? 'bg-blue-600' : 'bg-gray-200'`) em vez de interpolar pedaços de strings (`` `bg-${color}-600` ``), garantindo que o scanner do [`tailwind.config.js`](file:///home/chief_arthur/apps/Flashcards/tailwind.config.js) inclua a classe no build final.
+- **Atualização de Cache PWA**: Após regerar `css/tailwind.min.css`, incremente `CACHE_NAME` em [`sw.js`](file:///home/chief_arthur/apps/Flashcards/sw.js) (e, se necessário, o parâmetro `?v=` nos arquivos HTML).
   
 ---
 
 ## 5. Estrutura de Arquivos Principais
 
 ```
+├── css/
+│   ├── tailwind-input.css              # Entrada @tailwind para o compilador CLI
+│   ├── tailwind.min.css                # CSS do Tailwind pré-compilado e minificado
+│   └── style.css                       # Tokens Material 3, componentes e animações
 ├── dev_guidelines/
-│   ├── DESIGN_LANGUAGE.md              # Diretrizes de UI/UX Material 3
+│   ├── DESIGN_LANGUAGE.md              # Diretrizes de UI/UX Material 3 e build do Tailwind
 │   └── GAME_ARCHITECTURE_AND_RULES.md  # Este documento (Regras do Jogo e Algoritmos)
 ├── js/
 │   ├── game.js                         # Loop principal, UI do jogo e orquestrador
@@ -254,5 +272,7 @@ Para permitir diagnósticos rápidos de problemas relatados por usuários ou tes
 │   ├── game.html                       # Página da partida
 │   ├── generate.html                   # Editor e gerador de decks
 │   └── stats.html                      # Painel analítico de desempenho
+├── package.json                        # Scripts de build do Tailwind CSS (build:css / watch:css)
+├── tailwind.config.js                  # Configuração do Tailwind CSS (Light Mode Only)
 └── sw.js                               # Service Worker e cache PWA offline
 ```

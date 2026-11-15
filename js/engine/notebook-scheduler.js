@@ -7,13 +7,81 @@
  * Especializado para o Caderno (baralho único e massivo para revisão de longo prazo).
  */
 
-import { secureRandom, stripHtml } from '../utils.js';
+import { secureRandom, encodeStoragePayload } from '../utils.js';
 import { isLeechCard } from './scheduler.js';
 import { debouncedSyncSlotsToCloud } from '../slot-manager.js';
 import { t } from '../i18n.js';
 
 const DAILY_STREAK_KEY = 'flashcards_daily_streak';
 const MAX_FREEZES = 2;
+
+let cachedDailyStreakData = undefined;
+let dailyStreakFlushTimer = null;
+let hasPendingDailyStreakFlush = false;
+
+function flushDailyStreakStorage() {
+    if (dailyStreakFlushTimer) {
+        clearTimeout(dailyStreakFlushTimer);
+        dailyStreakFlushTimer = null;
+    }
+    if (!hasPendingDailyStreakFlush || !cachedDailyStreakData) return;
+    hasPendingDailyStreakFlush = false;
+    try {
+        localStorage.setItem(DAILY_STREAK_KEY, encodeStoragePayload(cachedDailyStreakData));
+        debouncedSyncSlotsToCloud();
+    } catch (e) {
+        console.error("[Notebook SRS] Erro ao salvar streak diário:", e);
+    }
+}
+
+function readDailyStreakStorage() {
+    if (cachedDailyStreakData !== undefined) {
+        return cachedDailyStreakData;
+    }
+    try {
+        const raw = localStorage.getItem(DAILY_STREAK_KEY);
+        if (!raw) {
+            cachedDailyStreakData = null;
+            return null;
+        }
+        cachedDailyStreakData = JSON.parse(raw);
+        return cachedDailyStreakData;
+    } catch (e) {
+        cachedDailyStreakData = null;
+        return null;
+    }
+}
+
+function writeDailyStreakStorage(data, { defer = false } = {}) {
+    cachedDailyStreakData = data;
+    hasPendingDailyStreakFlush = true;
+    if (defer) {
+        if (dailyStreakFlushTimer) clearTimeout(dailyStreakFlushTimer);
+        dailyStreakFlushTimer = setTimeout(flushDailyStreakStorage, 750);
+    } else {
+        flushDailyStreakStorage();
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', flushDailyStreakStorage);
+    window.addEventListener('pagehide', flushDailyStreakStorage);
+    window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === DAILY_STREAK_KEY) {
+            cachedDailyStreakData = undefined;
+            hasPendingDailyStreakFlush = false;
+        }
+    });
+    window.addEventListener('flashcards:sync-updated', () => {
+        flushDailyStreakStorage();
+        cachedDailyStreakData = undefined;
+    });
+}
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) flushDailyStreakStorage();
+    });
+}
 
 /**
  * Converte data 'YYYY-MM-DD' para número absoluto de dias (UTC).
@@ -96,10 +164,10 @@ export function addDaysToDateString(dateStr, days) {
  */
 export function getDailyStreak() {
     try {
-        const raw = localStorage.getItem(DAILY_STREAK_KEY);
+        const data = readDailyStreakStorage();
         const today = getTodayDateString();
 
-        if (!raw) {
+        if (!data) {
             return {
                 streak: 0,
                 isTodayStudied: false,
@@ -113,7 +181,6 @@ export function getDailyStreak() {
             };
         }
 
-        let data = JSON.parse(raw);
         let streak = Number(data.streak) || 0;
         let bestStreak = Number(data.bestStreak) || streak;
         let lastDate = String(data.lastStudiedDate || '');
@@ -121,7 +188,6 @@ export function getDailyStreak() {
         let frozenDates = Array.isArray(data.frozenDates) ? [...data.frozenDates] : [];
         let goalMetDates = Array.isArray(data.goalMetDates) ? [...data.goalMetDates] : [];
         let history = (data.history && typeof data.history === 'object') ? data.history : {};
-        let streakProtectedByFreeze = false;
 
         if (lastDate === today) {
             return {
@@ -174,8 +240,7 @@ export function getDailyStreak() {
                 data.frozenDates = frozenDates;
                 data.lastStudiedDate = lastDate;
                 data.updatedAt = Date.now();
-                localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify(data));
-                debouncedSyncSlotsToCloud();
+                writeDailyStreakStorage(data, { defer: false });
 
                 return {
                     streak,
@@ -240,21 +305,16 @@ export function recordDailyCardAnswered() {
         const current = getDailyStreak();
 
         // Incrementa contagem diária no histórico para o Heatmap
-        const raw = localStorage.getItem(DAILY_STREAK_KEY);
-        let data = {};
-        if (raw) {
-            try { data = JSON.parse(raw); } catch (e) {}
-        }
+        const data = readDailyStreakStorage() || {};
 
         let history = (data.history && typeof data.history === 'object') ? data.history : (current.history || {});
         history[today] = (history[today] || 0) + 1;
 
         if (current.isTodayStudied) {
-            // Já havia estudado hoje: apenas atualiza o card count
+            // Já havia estudado hoje: atualiza em memória e agenda escrita em background
             data.history = history;
             data.updatedAt = Date.now();
-            localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify(data));
-            debouncedSyncSlotsToCloud();
+            writeDailyStreakStorage(data, { defer: true });
 
             return {
                 isFirstCardToday: false,
@@ -307,6 +367,7 @@ export function recordDailyCardAnswered() {
         const newBestStreak = Math.max(newStreak, current.bestStreak || 0);
 
         const payload = {
+            ...data,
             streak: newStreak,
             lastStudiedDate: today,
             bestStreak: newBestStreak,
@@ -317,8 +378,7 @@ export function recordDailyCardAnswered() {
             updatedAt: Date.now()
         };
 
-        localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify(payload));
-        debouncedSyncSlotsToCloud();
+        writeDailyStreakStorage(payload, { defer: false });
 
         return {
             isFirstCardToday: true,
@@ -1233,11 +1293,7 @@ export function getNotebookDailyGoal() {
  */
 export function recordNotebookGoalBeaten(dateStr = getTodayDateString()) {
     try {
-        const raw = localStorage.getItem(DAILY_STREAK_KEY);
-        let data = {};
-        if (raw) {
-            try { data = JSON.parse(raw); } catch (e) {}
-        }
+        const data = readDailyStreakStorage() || {};
 
         let goalMetDates = Array.isArray(data.goalMetDates) ? [...data.goalMetDates] : [];
         let freezesAvailable = typeof data.freezesAvailable === 'number' ? data.freezesAvailable : 1;
@@ -1264,8 +1320,7 @@ export function recordNotebookGoalBeaten(dateStr = getTodayDateString()) {
         data.lastGoalFreezeAwardedCount = lastGoalFreezeAwardedCount;
         data.updatedAt = Date.now();
 
-        localStorage.setItem(DAILY_STREAK_KEY, JSON.stringify(data));
-        debouncedSyncSlotsToCloud();
+        writeDailyStreakStorage(data, { defer: false });
 
         return {
             newlyAchieved,

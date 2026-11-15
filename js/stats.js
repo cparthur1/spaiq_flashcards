@@ -2,12 +2,11 @@ import { getStatsStorage, saveStatsStorage, resetAllStats } from './stats-tracke
 import { 
     callGeminiFlashLiteCategorization, 
     getStoredAiCategories, 
-    saveStoredAiCategories, 
     computeAiStats,
     isDeckCategorized,
     getCardSignature
 } from './stats-ai.js';
-import { ROUTES, escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import { escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
 import { getDailyStreak, getHeatmapActivityMap, getTodayDateString } from './engine/notebook-scheduler.js';
 import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { syncSlotsToCloud } from './slot-manager.js';
@@ -15,9 +14,7 @@ import { onAuthChange } from './firebase-client.js';
 import { t, getCurrentLanguage } from './i18n.js';
 
 // DOM Elements
-const backToGameBtn = document.getElementById('back-to-game-btn');
 const deckBadge = document.getElementById('deck-badge');
-const liveSyncIndicator = document.getElementById('live-sync-indicator');
 const exportStatsBtn = document.getElementById('export-stats-btn');
 const clearStatsBtn = document.getElementById('clear-stats-btn');
 

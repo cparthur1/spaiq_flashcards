@@ -54,19 +54,39 @@ export const categorizeTool = {
     ]
 };
 
+let cachedAiCategories = undefined;
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === AI_CATEGORIES_KEY) {
+            cachedAiCategories = undefined;
+        }
+    });
+    window.addEventListener('flashcards:sync-updated', () => {
+        cachedAiCategories = undefined;
+    });
+}
+
 export function getStoredAiCategories() {
+    if (cachedAiCategories !== undefined) return cachedAiCategories;
     try {
         const raw = localStorage.getItem(AI_CATEGORIES_KEY);
-        if (!raw) return null;
-        return JSON.parse(raw);
+        if (!raw) {
+            cachedAiCategories = null;
+            return null;
+        }
+        cachedAiCategories = JSON.parse(raw);
+        return cachedAiCategories;
     } catch (e) {
         console.error("Erro ao ler categorias de IA do localStorage:", e);
+        cachedAiCategories = null;
         return null;
     }
 }
 
 export function saveStoredAiCategories(data) {
     try {
+        cachedAiCategories = data || null;
         localStorage.setItem(AI_CATEGORIES_KEY, encodeStoragePayload(data));
         debouncedSyncSlotsToCloud();
     } catch (e) {

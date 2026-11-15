@@ -26,9 +26,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght,XOPQ,XTRA,YOPQ,YTDE,YTFI,YTLC,YTUC@8..144,135,1000,154,518,53,-203,738,514,712&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/fonts/fonts.css">
+    <link rel="stylesheet" href="../css/tailwind.min.css?v=1.0">
     <link rel="stylesheet" href="../css/style.css?v=6.7">
     <script src="../js/config.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Material Web Components (Includes md-checkbox) -->
     <script type="module" src="../assets/vendor/material-web.bundle.js"></script>
@@ -261,8 +261,8 @@
     </main>
 
     <!-- NOTEBOOK OVERVIEW MODAL (DECKS & CARDS SAVED IN NOTEBOOK) -->
-    <div id="notebook-overview-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="notebook-modal-title">
-        <div class="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden modal-animate-in">
+    <div id="notebook-overview-modal" class="fixed inset-0 modal-overlay z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="notebook-modal-title">
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
             <!-- Modal Header -->
             <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/80 flex items-center justify-between gap-3 flex-shrink-0">
                 <div class="flex items-center gap-3 min-w-0">
@@ -316,8 +316,8 @@
     </div>
 
     <!-- QUICK EDIT CARD MODAL -->
-    <div id="edit-card-modal" class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl border border-gray-200 shadow-xl max-w-lg w-full p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+    <div id="edit-card-modal" class="fixed inset-0 modal-overlay z-[60] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-xl max-w-lg w-full p-6 flex flex-col gap-4">
             <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                 <h3 class="font-bold text-base text-gray-900 flex items-center gap-2">
                     <img src="../assets/img/edit.svg" class="w-4 h-4" alt="Editar" data-i18n-alt="edit">

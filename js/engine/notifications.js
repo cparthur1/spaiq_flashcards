@@ -11,6 +11,7 @@
 
 import { getTodayDateString, getDailyStreak } from './notebook-scheduler.js';
 import { debouncedSyncSlotsToCloud } from '../slot-manager.js';
+import { encodeStoragePayload } from '../utils.js';
 import { t } from '../i18n.js';
 
 export const NOTIFICATIONS_STORAGE_KEY = 'flashcards_notifications_settings';
@@ -66,7 +67,7 @@ export function getNotificationSettings() {
  */
 export function saveNotificationSettings(settings) {
     try {
-        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(settings));
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, encodeStoragePayload(settings));
         updateNotificationsUI();
         debouncedSyncSlotsToCloud();
     } catch (e) {

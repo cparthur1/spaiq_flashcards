@@ -6,6 +6,7 @@
 
 import { triggerHaptic, isSoundEnabled } from './effects.js';
 import { debouncedSyncSlotsToCloud } from '../slot-manager.js';
+import { encodeStoragePayload, openModalWithMotion, closeModalWithMotion } from '../utils.js';
 import { t } from '../i18n.js';
 
 const POMODORO_STORAGE_KEY = 'flashcards_pomodoro_enabled';
@@ -61,7 +62,7 @@ export function savePomodoroSettings(settings) {
         const focus = Math.max(5, Math.min(90, Number(settings.focusMinutes) || DEFAULT_SETTINGS.focusMinutes));
         const rest = Math.max(1, Math.min(30, Number(settings.breakMinutes) || DEFAULT_SETTINGS.breakMinutes));
         const payload = { focusMinutes: focus, breakMinutes: rest };
-        localStorage.setItem(POMODORO_SETTINGS_KEY, JSON.stringify(payload));
+        localStorage.setItem(POMODORO_SETTINGS_KEY, encodeStoragePayload(payload));
         console.log("[Pomodoro] Novas configurações salvas:", payload);
         debouncedSyncSlotsToCloud();
         return payload;
@@ -309,15 +310,18 @@ function showBreakOverlay() {
         const resumeTextEl = document.getElementById('pomodoro-resume-text');
         if (resumeTextEl) resumeTextEl.textContent = t('pomodoro_skip_break');
 
-        pomodoroBreakOverlayEl.classList.remove('hidden');
+        openModalWithMotion(pomodoroBreakOverlayEl);
     }
 }
 
 function hideBreakOverlay() {
     if (!pomodoroBreakOverlayEl) pomodoroBreakOverlayEl = document.getElementById('pomodoro-break-overlay');
     if (pomodoroBreakOverlayEl) {
-        pomodoroBreakOverlayEl.classList.add('hidden');
-        pomodoroBreakOverlayEl.classList.remove('pomodoro-state-done', 'pomodoro-state-running');
+        closeModalWithMotion(pomodoroBreakOverlayEl, {
+            onClosed: () => {
+                pomodoroBreakOverlayEl?.classList.remove('pomodoro-state-done', 'pomodoro-state-running');
+            }
+        });
     }
 }
 
@@ -347,13 +351,13 @@ export function openPomodoroSettingsModal() {
     if (pomodoroFocusSelectEl) pomodoroFocusSelectEl.value = String(settings.focusMinutes);
     if (pomodoroBreakSelectEl) pomodoroBreakSelectEl.value = String(settings.breakMinutes);
 
-    pomodoroModalEl.classList.remove('hidden');
+    openModalWithMotion(pomodoroModalEl);
 }
 
 export function closePomodoroSettingsModal() {
     if (!pomodoroModalEl) pomodoroModalEl = document.getElementById('pomodoro-modal');
     if (pomodoroModalEl) {
-        pomodoroModalEl.classList.add('hidden');
+        closeModalWithMotion(pomodoroModalEl);
     }
 }
 

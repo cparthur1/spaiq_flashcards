@@ -47,7 +47,7 @@ service cloud.firestore {
         && request.resource.data.ownerUid == request.auth.uid
         && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 500));
       allow update: if request.auth != null
-        && resource.data.ownerUid == request.auth.uid
+        && (!('ownerUid' in resource.data) || resource.data.ownerUid == request.auth.uid)
         && request.resource.data.ownerUid == request.auth.uid
         && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 500));
       allow delete: if request.auth != null
@@ -79,7 +79,7 @@ service cloud.firestore {
         && (!('lastClientSyncId' in request.resource.data) || (request.resource.data.lastClientSyncId is string && request.resource.data.lastClientSyncId.size() <= 128));
       allow update: if request.auth != null
         && request.auth.uid == userId
-        && resource.data.ownerUid == request.auth.uid
+        && (!('ownerUid' in resource.data) || resource.data.ownerUid == request.auth.uid)
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.keys().hasOnly(['ownerUid', 'stats', 'updatedAt', 'lastClientSyncId'])
         && (!('stats' in request.resource.data) || request.resource.data.stats is map)

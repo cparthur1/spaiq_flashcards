@@ -95,6 +95,9 @@ export function shuffleArray(array) {
     return array;
 }
 
+const stripHtmlCache = new Map();
+const MAX_STRIP_HTML_CACHE = 1000;
+
 /**
  * Remove recursivamente todas as tags HTML prevenindo bypass por aninhamento.
  * @param {string} input - Texto contendo tags HTML
@@ -102,13 +105,25 @@ export function shuffleArray(array) {
  */
 export function stripHtml(input) {
     if (!input || typeof input !== 'string') return '';
+    if (!input.includes('<')) return input.trim();
+
+    const cached = stripHtmlCache.get(input);
+    if (cached !== undefined) return cached;
+
     let sanitized = input;
     let prev;
     do {
         prev = sanitized;
         sanitized = sanitized.replace(/<[^<>]*>/g, '');
     } while (sanitized !== prev);
-    return sanitized.trim();
+    const result = sanitized.trim();
+
+    if (stripHtmlCache.size >= MAX_STRIP_HTML_CACHE) {
+        const firstKey = stripHtmlCache.keys().next().value;
+        stripHtmlCache.delete(firstKey);
+    }
+    stripHtmlCache.set(input, result);
+    return result;
 }
 
 /**
@@ -303,6 +318,10 @@ export function compressImageFile(imageInput, maxDimension = 800, quality = 0.85
     });
 }
 
+let markedOptionsInitialized = false;
+const mathMarkdownCache = new Map();
+const MAX_MATH_MARKDOWN_CACHE = 300;
+
 /**
  * Parses Markdown and renders LaTeX math formulas (KaTeX).
  * Supports inline ($...$, \(...\)) and block ($$...$$, \[...\]) math.
@@ -311,8 +330,15 @@ export function compressImageFile(imageInput, maxDimension = 800, quality = 0.85
 export function renderMathAndMarkdown(text) {
     if (!text) return '';
 
-    if (typeof marked !== 'undefined' && typeof marked.setOptions === 'function') {
+    const canCache = typeof marked !== 'undefined' && typeof katex !== 'undefined' && typeof DOMPurify !== 'undefined';
+    if (canCache) {
+        const cached = mathMarkdownCache.get(text);
+        if (cached !== undefined) return cached;
+    }
+
+    if (!markedOptionsInitialized && typeof marked !== 'undefined' && typeof marked.setOptions === 'function') {
         marked.setOptions({ gfm: true, breaks: true });
+        markedOptionsInitialized = true;
     }
 
     const mathBlocks = [];
@@ -335,7 +361,7 @@ export function renderMathAndMarkdown(text) {
         mathBlocks.push({ type: 'INLINE', text: math });
         return placeholder;
     });
-    placeholderText = placeholderText.replace(/\$(?!\s)((?:\\\$|[^\$])+?)(?<!\s)\$/g, (match, math) => {
+    placeholderText = placeholderText.replace(/\$(?!\s)((?:\\\$|[^$])+?)(?<!\s)\$/g, (match, math) => {
         const placeholder = `%%INLINE_MATH_${mathBlocks.length}%%`;
         mathBlocks.push({ type: 'INLINE', text: math });
         return placeholder;
@@ -393,8 +419,191 @@ export function renderMathAndMarkdown(text) {
     });
 
     // 8. Sanitize HTML via DOMPurify to prevent XSS (preserving KaTeX MathML, SVG, and <mark> elements)
-    return sanitizeHtml(html);
+    const sanitizedResult = sanitizeHtml(html);
+
+    if (canCache) {
+        if (mathMarkdownCache.size >= MAX_MATH_MARKDOWN_CACHE) {
+            const firstKey = mathMarkdownCache.keys().next().value;
+            mathMarkdownCache.delete(firstKey);
+        }
+        mathMarkdownCache.set(text, sanitizedResult);
+    }
+
+    return sanitizedResult;
 }
+
+// --- MATERIAL YOU EXPRESSIVE MOTION HELPERS ---
+const m3MotionTokens = new WeakMap();
+
+function nextM3MotionToken(el) {
+    const next = (m3MotionTokens.get(el) || 0) + 1;
+    m3MotionTokens.set(el, next);
+    return next;
+}
+
+/**
+ * Checks whether animations should run based on OS preference and app setting.
+ * @returns {boolean}
+ */
+export function prefersMotionEnabled() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return false;
+    if (document.body?.classList.contains('reduce-motion')) return false;
+    try {
+        if (localStorage.getItem('flashcardsAnimationsEnabled') === 'false') return false;
+    } catch {
+        // Ignore storage restrictions
+    }
+    return true;
+}
+
+/**
+ * Opens an element cleanly, cancelling any in-flight M3 exit transition.
+ * @param {HTMLElement|null} el
+ * @param {{ addClasses?: string[], removeClasses?: string[] }} [options]
+ */
+export function openWithMotion(el, { addClasses = [], removeClasses = [] } = {}) {
+    if (!el) return;
+    nextM3MotionToken(el);
+    el.removeAttribute('data-m3-closing');
+    if (removeClasses.length > 0) {
+        el.classList.remove(...removeClasses);
+    }
+    if (addClasses.length > 0) {
+        el.classList.add(...addClasses);
+    }
+    el.classList.remove('hidden');
+}
+
+/**
+ * Plays a Material You Expressive exit animation before hiding an element with `.hidden`.
+ * Safe against rapid close -> reopen races via token validation.
+ * @param {HTMLElement|null} el
+ * @param {{ addClasses?: string[], removeClasses?: string[], fallbackMs?: number, onClosed?: Function|null }} [options]
+ * @returns {Promise<void>}
+ */
+export async function closeWithMotion(
+    el,
+    { addClasses = ['hidden'], removeClasses = [], fallbackMs = 190, onClosed = null } = {}
+) {
+    if (!el) {
+        if (typeof onClosed === 'function') onClosed();
+        return;
+    }
+
+    if (el.classList.contains('hidden')) {
+        nextM3MotionToken(el);
+        el.removeAttribute('data-m3-closing');
+        if (removeClasses.length > 0) el.classList.remove(...removeClasses);
+        if (typeof onClosed === 'function') onClosed();
+        return;
+    }
+
+    // Avoid restarting an exit animation if already closing
+    if (el.hasAttribute('data-m3-closing')) {
+        return;
+    }
+
+    if (!prefersMotionEnabled() || typeof el.getAnimations !== 'function') {
+        nextM3MotionToken(el);
+        el.removeAttribute('data-m3-closing');
+        if (addClasses.length > 0) el.classList.add(...addClasses);
+        if (removeClasses.length > 0) el.classList.remove(...removeClasses);
+        if (typeof onClosed === 'function') onClosed();
+        return;
+    }
+
+    const token = nextM3MotionToken(el);
+    el.setAttribute('data-m3-closing', '');
+
+    const collectFiniteAnims = (target) => {
+        if (!target || typeof target.getAnimations !== 'function') return [];
+        try {
+            return target.getAnimations().filter((anim) => {
+                const iterations = anim.effect?.getComputedTiming?.().iterations;
+                return iterations !== Infinity;
+            });
+        } catch {
+            return [];
+        }
+    };
+
+    const animations = [
+        ...collectFiniteAnims(el),
+        ...collectFiniteAnims(el.firstElementChild)
+    ];
+
+    if (animations.length > 0) {
+        await Promise.race([
+            Promise.allSettled(animations.map((anim) => anim.finished)),
+            new Promise((resolve) => setTimeout(resolve, fallbackMs))
+        ]);
+    } else {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(160, fallbackMs)));
+    }
+
+    if (m3MotionTokens.get(el) !== token) {
+        return;
+    }
+
+    el.removeAttribute('data-m3-closing');
+    if (addClasses.length > 0) el.classList.add(...addClasses);
+    if (removeClasses.length > 0) el.classList.remove(...removeClasses);
+    if (typeof onClosed === 'function') onClosed();
+}
+
+/**
+ * Opens a modal overlay with M3 Shared Axis Z / elevation entrance.
+ * @param {HTMLElement|null} modal
+ * @param {{ displayClass?: string }} [options]
+ */
+export function openModalWithMotion(modal, { displayClass = '' } = {}) {
+    openWithMotion(modal, {
+        addClasses: displayClass ? [displayClass] : []
+    });
+}
+
+/**
+ * Closes a modal overlay with M3 Emphasized Accelerate exit before hiding.
+ * @param {HTMLElement|null} modal
+ * @param {{ removeDisplayClass?: string, fallbackMs?: number, onClosed?: Function|null }} [options]
+ * @returns {Promise<void>}
+ */
+export function closeModalWithMotion(
+    modal,
+    { removeDisplayClass = '', fallbackMs = 190, onClosed = null } = {}
+) {
+    return closeWithMotion(modal, {
+        addClasses: ['hidden'],
+        removeClasses: removeDisplayClass ? [removeDisplayClass] : [],
+        fallbackMs,
+        onClosed
+    });
+}
+
+/**
+ * Triggers a one-shot Material You Expressive spring pop class on an element.
+ * @param {HTMLElement|null} el
+ * @param {string} [className]
+ * @param {number} [durationMs]
+ */
+export function triggerSpringPop(el, className = 'm3-bookmark-pop', durationMs = 380) {
+    if (!el || !prefersMotionEnabled()) return;
+    el.classList.remove(className);
+    if (el._m3PopTimeout) {
+        clearTimeout(el._m3PopTimeout);
+        el._m3PopTimeout = null;
+    }
+    requestAnimationFrame(() => {
+        if (!el) return;
+        el.classList.add(className);
+        el._m3PopTimeout = setTimeout(() => {
+            el.classList.remove(className);
+            el._m3PopTimeout = null;
+        }, durationMs);
+    });
+}
+
 
 
 

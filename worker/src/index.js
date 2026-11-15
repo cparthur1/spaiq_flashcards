@@ -672,6 +672,13 @@ export default {
           }, 401, publicCorsHeaders);
         }
 
+        if (!/^fc_live_[0-9a-f]{32}$/i.test(apiKey)) {
+          return jsonResponse({
+            error: 'invalid_api_key',
+            message: 'Formato de chave de API inválido.'
+          }, 401, publicCorsHeaders);
+        }
+
         const serviceAccount = getServiceAccount(env);
         let keyDoc = await getDocument(serviceAccount, 'api_keys', apiKey).catch(() => null);
         let userDoc = null;
@@ -965,6 +972,7 @@ export default {
         try {
           const hookRes = await fetch(check.url, {
             method: 'POST',
+            redirect: 'error',
             headers: {
               'Content-Type': 'application/json',
               'User-Agent': 'SpaiqFlashcards-Webhook/1.0',
@@ -1011,7 +1019,9 @@ export default {
         }
 
         const body = await request.json().catch(() => ({}));
-        const todayStr = body.date || new Date().toISOString().slice(0, 10);
+        const todayStr = (typeof body.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date))
+          ? body.date
+          : new Date().toISOString().slice(0, 10);
         const streakTodayCount = Number(userDoc?.dailyStreak?.history?.[todayStr]) || 0;
         const cardsReviewed = Math.max(Number(body.cardsReviewed) || 0, streakTodayCount);
         const dailyGoal = Number(body.dailyGoal) || 0;
@@ -1037,6 +1047,7 @@ export default {
         ctx.waitUntil(
           fetch(check.url, {
             method: 'POST',
+            redirect: 'error',
             headers: {
               'Content-Type': 'application/json',
               'User-Agent': 'SpaiqFlashcards-Webhook/1.0',
@@ -1568,7 +1579,10 @@ async function handleStripeWebhook(request, env) {
     event = await stripe.webhooks.constructEventAsync(bodyText, sig, env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.warn('[Stripe Webhook] Erro ao validar assinatura:', err.message);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    return new Response('Webhook signature verification failed', {
+      status: 400,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    });
   }
 
   const serviceAccount = getServiceAccount(env);

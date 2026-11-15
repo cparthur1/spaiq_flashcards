@@ -50,7 +50,7 @@
     <meta name="twitter:image" content="https://flashcards.camblu.org/assets/img/og-image.png">
     <meta name="twitter:image:alt" content="Estudando Flashcards">
     <script src="../js/config.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/tailwind.min.css?v=1.0">
     <link rel="manifest" href="../manifest.json">
     <meta name="theme-color" content="#3b82f7" />
     <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
@@ -93,225 +93,184 @@
 
     <!-- HAMBURGER MENU DROPDOWN / DRAWER -->
     <nav id="hamburger-menu" aria-label="Menu de Navegação e Ações" data-i18n-aria-label="main_menu_aria"
-        class="hidden fixed z-[70] top-14 left-4 w-72 sm:w-80 max-h-[85vh] overflow-y-auto custom-scrollbar lg:top-24 lg:left-6 md:landscape:top-24 md:landscape:left-6 m3-dialog-card p-2 sm:p-3">
+        class="hidden fixed z-[70] top-14 left-4 w-[308px] sm:w-[344px] max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain custom-scrollbar lg:top-24 lg:left-6 lg:max-h-[calc(100dvh-7rem)] md:landscape:top-24 md:landscape:left-6 md:landscape:max-h-[calc(100dvh-7rem)] m3-dialog-card p-2.5 sm:p-3">
         
-        <!-- SECTION 1: QUICK SETTINGS (CONFIGURAÇÕES, AI & POMODORO) -->
-        <div class="px-1 py-1 space-y-0.5" role="group" aria-label="Quick settings">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1" data-i18n="quick_settings">Quick settings</span>
-
+        <!-- SECTION 1: QUICK SETTINGS (CONTA, CONFIGURAÇÕES, POMODORO & FALA) -->
+        <div class="px-0.5 py-0.5 space-y-1.5" role="group" aria-label="Quick settings">
             <!-- Account / Login Button -->
             <button type="button" id="menu-account-btn"
-                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
+                class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
                 title="Minha Conta e Sincronização" data-i18n-title="my_account_title">
                 <div class="flex items-center gap-3 min-w-0">
                     <span id="menu-account-icon" class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover:scale-110">account_circle</span>
                     <img id="menu-account-avatar" referrerpolicy="no-referrer" class="hidden w-7 h-7 rounded-full object-cover border border-blue-400 flex-shrink-0" alt="Avatar">
                     <div class="flex-1 min-w-0">
-                        <p id="menu-account-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="my_account">Minha Conta</p>
-                        <p id="menu-account-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="my_account_subtitle">Sincronização e Plano Pro</p>
+                        <p id="menu-account-title" class="text-[13px] font-semibold leading-tight text-[var(--md-sys-color-on-surface)] truncate" data-i18n="my_account">Minha Conta</p>
+                        <p id="menu-account-subtitle" class="text-[11px] leading-tight text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5" data-i18n="my_account_subtitle">Sincronização e Plano Pro</p>
                     </div>
                 </div>
-                <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+                <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform flex-shrink-0">chevron_right</span>
             </button>
 
             <!-- Configurações (Abre o Modal Completo de Configurações: Acessibilidade, Pomodoro, IA, Metas) -->
             <button type="button" id="open-settings-modal-btn"
-                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
-                title="Abrir Configurações do Aplicativo" data-i18n-title="open_app_settings">
+                class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
+                title="Acessibilidade, Pomodoro, IA e metas" data-i18n-title="settings_subtitle">
                 <div class="flex items-center gap-3 min-w-0">
                     <img id="settings-menu-icon" src="../assets/img/settings.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Configurações" data-i18n-alt="settings">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="settings">Configurações</p>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="settings_subtitle">Acessibilidade, Pomodoro, IA e metas</p>
-                    </div>
+                    <span class="text-[13px] font-semibold text-[var(--md-sys-color-on-surface)] truncate" data-i18n="settings">Configurações</span>
                 </div>
-                <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+                <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform flex-shrink-0">chevron_right</span>
             </button>
 
             <!-- Pomodoro Timer Toggle & Settings (Cognitive Rest & Micro-pauses) -->
             <div id="pomodoro-setting-row"
-                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group select-none no-ripple"
+                class="w-full flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group select-none no-ripple"
                 title="Ativar Pomodoro e Micro-pausas Cognitivas" data-i18n-title="pomodoro_setting_title">
                 <button type="button" id="pomodoro-config-trigger"
                     class="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer bg-transparent border-0 p-0 m-0 group/trigger"
                     title="Configurar tempos do Pomodoro" data-i18n-title="pomodoro_config_title">
-                    <span class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover/trigger:scale-110">timer</span>
+                    <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover/trigger:scale-110">timer</span>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="pomodoro_timer">Pomodoro</p>
-                        <p id="pomodoro-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="pomodoro_default_subtitle">25 min foco • 5 min pausa</p>
+                        <p class="text-[13px] font-semibold leading-tight text-[var(--md-sys-color-on-surface)]" data-i18n="pomodoro_timer">Pomodoro</p>
+                        <p id="pomodoro-subtitle" class="text-[11px] leading-tight text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="pomodoro_default_subtitle">25 min foco • 5 min pausa</p>
                     </div>
                 </button>
-                <md-switch id="pomodoro-switch" aria-label="Alternar timer Pomodoro" data-i18n-aria-label="toggle_pomodoro"></md-switch>
+                <md-switch id="pomodoro-switch" class="scale-90 origin-right flex-shrink-0" aria-label="Alternar timer Pomodoro" data-i18n-aria-label="toggle_pomodoro"></md-switch>
             </div>
 
             <!-- Speech / Voice Cards Toggle (Explicar em voz alta) -->
             <div id="speech-cards-setting-row"
-                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group select-none no-ripple"
+                class="w-full flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group select-none no-ripple"
                 title="Ativar ou desativar cards de fala nesta sessão" data-i18n-title="speech_cards_toggle_title">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <span class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover:scale-110">record_voice_over</span>
+                    <span class="material-symbols-rounded text-xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover:scale-110">record_voice_over</span>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="speech_cards_title">Cards de Fala</p>
-                        <p id="speech-cards-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="speech_cards_enabled_desc">Explicar em voz alta ativado</p>
+                        <p class="text-[13px] font-semibold leading-tight text-[var(--md-sys-color-on-surface)]" data-i18n="speech_cards_title">Cards de Fala</p>
+                        <p id="speech-cards-subtitle" class="text-[11px] leading-tight text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="speech_cards_enabled_desc">Explicar em voz alta ativado</p>
                     </div>
                 </div>
-                <md-switch id="speech-cards-switch" selected aria-label="Alternar cards de fala" data-i18n-aria-label="toggle_speech_cards"></md-switch>
+                <md-switch id="speech-cards-switch" selected class="scale-90 origin-right flex-shrink-0" aria-label="Alternar cards de fala" data-i18n-aria-label="toggle_speech_cards"></md-switch>
             </div>
         </div>
 
-        <div class="h-[1px] bg-[var(--md-sys-color-outline-variant)] my-1"></div>
+        <div class="h-[1px] bg-[var(--md-sys-color-outline-variant)] my-2"></div>
 
-        <!-- SECTION 2: BARALHO (SAVE & EDIT DECK) -->
-        <div class="px-1 py-1 space-y-0.5">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1" data-i18n="page_title_game">Baralho</span>
+        <!-- SECTION 2: BARALHO (SAVE, SHARE & EDIT DECK - 3 EXPRESSIVE TILES) -->
+        <div class="px-0.5 py-0.5 space-y-1.5">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2.5" data-i18n="page_title_game">Baralho</span>
             
-            <!-- Save Deck -->
-            <button id="export-btn"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Baixar JSON Atualizado" data-i18n-title="download_updated_json">
-                <img id="export-btn-icon" src="../assets/img/save.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Salvar" data-i18n-alt="save_deck">
-                <div class="flex-1 min-w-0">
-                    <p id="export-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="save_deck">Salvar Baralho</p>
-                    <p id="export-btn-desc" class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="export_deck">Exportar cópia em .json</p>
-                </div>
-            </button>
+            <div class="grid grid-cols-3 gap-2">
+                <!-- Save Deck -->
+                <button id="export-btn"
+                    class="flex flex-col items-center justify-center gap-1.5 px-2 py-3 min-h-[76px] rounded-2xl bg-[var(--md-sys-color-surface-container-low)] hover:bg-[var(--md-sys-color-surface-container-high)] active:scale-[0.97] border border-[var(--md-sys-color-outline-variant)]/60 transition-all text-center group cursor-pointer"
+                    title="Baixar JSON Atualizado" data-i18n-title="download_updated_json">
+                    <img id="export-btn-icon" src="../assets/img/save.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Salvar" data-i18n-alt="save_deck">
+                    <span id="export-btn-title" class="text-[11px] font-semibold leading-tight text-[var(--md-sys-color-on-surface)] line-clamp-2 w-full" data-i18n="save_deck">Salvar Baralho</span>
+                    <span id="export-btn-desc" class="sr-only" data-i18n="export_deck">Exportar cópia em .json</span>
+                </button>
 
-            <!-- Share Deck Link (Free for all users without login) -->
-            <button id="menu-share-deck-btn"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group cursor-pointer"
-                title="Compartilhar Baralho (Link Grátis)" data-i18n-title="share_deck">
-                <span class="material-symbols-rounded text-xl text-blue-600 flex-shrink-0 transition-transform group-hover:scale-110">share</span>
-                <div class="flex-1 min-w-0">
-                    <p id="menu-share-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="share_deck">Compartilhar Baralho</p>
-                    <p id="menu-share-btn-desc" class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="share_deck_free_hint">Link grátis sem precisar de login</p>
-                </div>
-            </button>
+                <!-- Share Deck Link (Free for all users without login) -->
+                <button id="menu-share-deck-btn"
+                    class="flex flex-col items-center justify-center gap-1.5 px-2 py-3 min-h-[76px] rounded-2xl bg-[var(--md-sys-color-surface-container-low)] hover:bg-[var(--md-sys-color-surface-container-high)] active:scale-[0.97] border border-[var(--md-sys-color-outline-variant)]/60 transition-all text-center group cursor-pointer"
+                    title="Link grátis sem precisar de login" data-i18n-title="share_deck_free_hint">
+                    <span class="material-symbols-rounded text-[22px] leading-none text-[#3b82f7] flex-shrink-0 transition-transform group-hover:scale-110">share</span>
+                    <span id="menu-share-btn-title" class="text-[11px] font-semibold leading-tight text-[var(--md-sys-color-on-surface)] line-clamp-2 w-full" data-i18n="share_deck">Compartilhar</span>
+                    <span id="menu-share-btn-desc" class="sr-only" data-i18n="share_deck_free_hint">Link grátis sem precisar de login</span>
+                </button>
 
-            <!-- Edit Deck -->
-            <button id="go-to-editor-btn"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Editar com Assistente de IA" data-i18n-title="edit_with_ai">
-                <img id="go-to-editor-btn-icon" src="../assets/img/edit.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Editar" data-i18n-alt="edit">
-                <div class="flex-1 min-w-0">
-                    <p id="go-to-editor-btn-title" class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="edit">Editar Baralho</p>
-                    <p id="go-to-editor-btn-desc" class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="ai_assistant">Abrir editor e gerador IA</p>
-                </div>
-            </button>
+                <!-- Edit Deck -->
+                <button id="go-to-editor-btn"
+                    class="flex flex-col items-center justify-center gap-1.5 px-2 py-3 min-h-[76px] rounded-2xl bg-[var(--md-sys-color-surface-container-low)] hover:bg-[var(--md-sys-color-surface-container-high)] active:scale-[0.97] border border-[var(--md-sys-color-outline-variant)]/60 transition-all text-center group cursor-pointer"
+                    title="Editar com Assistente de IA" data-i18n-title="edit_with_ai">
+                    <img id="go-to-editor-btn-icon" src="../assets/img/edit.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Editar" data-i18n-alt="edit">
+                    <span id="go-to-editor-btn-title" class="text-[11px] font-semibold leading-tight text-[var(--md-sys-color-on-surface)] line-clamp-2 w-full" data-i18n="edit">Editar Baralho</span>
+                    <span id="go-to-editor-btn-desc" class="sr-only" data-i18n="ai_assistant">Abrir editor e gerador IA</span>
+                </button>
+            </div>
         </div>
 
-        <div class="h-[1px] bg-[var(--md-sys-color-outline-variant)] my-1"></div>
+        <div class="h-[1px] bg-[var(--md-sys-color-outline-variant)] my-2"></div>
 
         <!-- SECTION 3: ESTUDO, REINICIAR & SINCRONIZAÇÃO -->
-        <div class="px-1 py-1 space-y-0.5">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1" data-i18n="stats_overview">Estudo & Sessão</span>
+        <div class="px-0.5 py-0.5 space-y-1.5">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2.5" data-i18n="stats_overview">Estudo & Sessão</span>
 
             <!-- Stats Page Link -->
             <a href="stats.html" id="stats-btn"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-blue-50 text-blue-600 transition text-left group"
-                title="Ver Estatísticas da Sessão e Anteriores" data-i18n-title="view_stats_title">
+                class="w-full flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-blue-50 text-blue-600 transition text-left group"
+                title="Progresso, retenção & histórico" data-i18n-title="stats_nav_subtitle">
                 <img src="../assets/img/stats.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Estatísticas" data-i18n-alt="stats_title">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold text-blue-600" data-i18n="stats_title">Estatísticas</p>
-                    <p class="text-xs text-blue-500/80" data-i18n="stats_nav_subtitle">Progresso, retenção & histórico</p>
-                </div>
-                <span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" data-i18n="view_stats">Ver</span>
+                <span class="text-[13px] font-bold text-blue-600 truncate flex-1" data-i18n="stats_title">Estatísticas</span>
+                <span class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full flex-shrink-0" data-i18n="view_stats">Ver</span>
             </a>
 
             <!-- Restart Game -->
             <button id="restart-game-btn"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Reiniciar Jogo" data-i18n-title="restart_game">
+                class="w-full flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
+                title="Recomeçar cartas do início" data-i18n-title="restart_game_subtitle">
                 <img src="../assets/img/reset.svg" class="w-5 h-5 flex-shrink-0 transition-all duration-300 group-hover:rotate-[-180deg]" alt="Reiniciar" data-i18n-alt="restart_game">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="restart_deck">Reiniciar Jogo</p>
-                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="restart_game_subtitle">Recomeçar cartas do início</p>
-                </div>
+                <span class="text-[13px] font-semibold text-[var(--md-sys-color-on-surface)] truncate flex-1" data-i18n="restart_deck">Reiniciar Jogo</span>
             </button>
 
-            <!-- Cast State (Transmitir) -->
-            <button id="transfer-session-btn"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Continuar no Celular (Cast)" data-i18n-title="cast_session_title">
-                <img src="../assets/img/cast.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Transmitir" data-i18n-alt="cast_session_name">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="cast_session_name">Transmitir Sessão</p>
-                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="cast_session_subtitle">Continuar no celular via QR Code</p>
-                </div>
-            </button>
+            <!-- Cast & Receive State (2-column pills with expressive spacing) -->
+            <div class="grid grid-cols-2 gap-2">
+                <button id="transfer-session-btn"
+                    class="flex items-center gap-2 px-2.5 py-2 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group min-w-0"
+                    title="Continuar no celular via QR Code" data-i18n-title="cast_session_subtitle">
+                    <img src="../assets/img/cast.svg" class="w-[18px] h-[18px] flex-shrink-0 transition-transform group-hover:scale-110" alt="Transmitir" data-i18n-alt="cast_session_name">
+                    <span class="text-xs font-semibold text-[var(--md-sys-color-on-surface)] truncate" data-i18n="cast_session_name">Transmitir Sessão</span>
+                </button>
 
-            <!-- Receive State (Receber) -->
-            <button id="receive-session-btn"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group"
-                title="Receber Sessão (QR Code)" data-i18n-title="receive_session_title">
-                <img src="../assets/img/download.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Receber" data-i18n-alt="receive_session_name">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="receive_session_name">Receber Sessão</p>
-                    <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="receive_session_subtitle">Escanear QR Code com a câmera</p>
-                </div>
-            </button>
+                <button id="receive-session-btn"
+                    class="flex items-center gap-2 px-2.5 py-2 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left group min-w-0"
+                    title="Escanear QR Code com a câmera" data-i18n-title="receive_session_subtitle">
+                    <img src="../assets/img/download.svg" class="w-[18px] h-[18px] flex-shrink-0 transition-transform group-hover:scale-110" alt="Receber" data-i18n-alt="receive_session_name">
+                    <span class="text-xs font-semibold text-[var(--md-sys-color-on-surface)] truncate" data-i18n="receive_session_name">Receber Sessão</span>
+                </button>
+            </div>
         </div>
 
-        <div class="h-[1px] bg-[var(--md-sys-color-outline-variant)] my-1"></div>
+        <div class="h-[1px] bg-[var(--md-sys-color-outline-variant)] my-2"></div>
 
-        <!-- SECTION: TESTE TAMBÉM (CROSS-PROMOTION) -->
-        <div class="px-1 py-1 space-y-0.5">
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] px-2 py-1" data-i18n="try_also">Teste também</span>
-
+        <!-- SECTION 4: GORIT, FEEDBACK, LIMPAR CADERNO & SAIR -->
+        <div class="px-0.5 py-0.5 space-y-1.5">
             <!-- Gorit Link -->
             <a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer" id="menu-gorit-btn"
-                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
+                class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
                 title="Gorit: Gestão de matérias, provas e tarefas" data-i18n-title="gorit_menu_tooltip">
-                <div class="flex items-center gap-3 min-w-0">
-                    <img src="../assets/img/gorit-logo.svg" class="w-5 h-5 rounded-lg object-contain flex-shrink-0 transition-transform group-hover:scale-110" alt="Gorit">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5">
-                            <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)] group-hover:text-[#3b82f7] transition-colors" data-i18n="gorit_app_name">Gorit</p>
-                            <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-100 text-[#1d61e8]" data-i18n="pro_included_badge">PRO Incluso</span>
-                        </div>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="gorit_desc">Gestão de matérias, provas e tarefas</p>
-                    </div>
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <img src="../assets/img/gorit-logo.svg" class="w-5 h-5 rounded-md object-contain flex-shrink-0 transition-transform group-hover:scale-110" alt="Gorit">
+                    <span class="text-[13px] font-semibold text-[var(--md-sys-color-on-surface)] group-hover:text-[#3b82f7] transition-colors truncate" data-i18n="gorit_app_name">Gorit</span>
+                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-[#1d61e8] flex-shrink-0" data-i18n="pro_included_badge">PRO Incluso</span>
                 </div>
-                <span class="material-symbols-rounded text-base text-[var(--md-sys-color-on-surface-variant)] group-hover:text-[#3b82f7] group-hover:translate-x-0.5 transition-all">open_in_new</span>
+                <span class="material-symbols-rounded text-base text-[var(--md-sys-color-on-surface-variant)] group-hover:text-[#3b82f7] group-hover:translate-x-0.5 transition-all flex-shrink-0">open_in_new</span>
             </a>
-        </div>
 
-        <div class="h-[1px] bg-[var(--md-sys-color-outline-variant)] my-1"></div>
-
-        <!-- SECTION 4: SAIR (EXIT) & LIMPAR CADERNO -->
-        <div class="px-1 py-1 space-y-0.5">
             <!-- Send Feedback Link -->
             <a href="https://github.com/cparthur1/spaiq_flashcards/discussions/new/choose" target="_blank" rel="noopener noreferrer" id="menu-feedback-btn"
-                class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
-                title="Send feedback" data-i18n-title="send_feedback_title">
+                class="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-2xl hover:bg-[var(--md-sys-color-surface-container-high)] transition text-left cursor-pointer group select-none no-ripple"
+                title="I actually listen to this" data-i18n-title="send_feedback_desc">
                 <div class="flex items-center gap-3 min-w-0">
                     <img src="../assets/img/feedback.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Feedback" data-i18n-alt="send_feedback">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-[var(--md-sys-color-on-surface)]" data-i18n="send_feedback">Send feedback</p>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate" data-i18n="send_feedback_desc">I actually listen to this</p>
-                    </div>
+                    <span class="text-[13px] font-semibold text-[var(--md-sys-color-on-surface)] truncate" data-i18n="send_feedback">Send feedback</span>
                 </div>
-                <span class="material-symbols-rounded text-base text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform">open_in_new</span>
+                <span class="material-symbols-rounded text-base text-[var(--md-sys-color-on-surface-variant)] group-hover:translate-x-0.5 transition-transform flex-shrink-0">open_in_new</span>
             </a>
 
             <!-- Clear Notebook (Only visible when activeMode === 'notebook') -->
             <button id="clear-notebook-btn"
-                class="hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
+                class="hidden w-full flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
                 title="Apagar todo o conteúdo do Caderno" data-i18n-title="clear_notebook_title">
                 <img src="../assets/img/delete.svg" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" alt="Limpar" data-i18n-alt="clear_notebook_title">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-red-600" data-i18n="clear_notebook">Limpar caderno</p>
-                    <p class="text-xs text-red-500/80" data-i18n="clear_notebook_desc">Apagar todos os cards do caderno</p>
-                </div>
+                <span class="text-[13px] font-semibold text-red-600 truncate" data-i18n="clear_notebook">Limpar caderno</span>
             </button>
 
             <button id="reset-btn"
-                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
-                title="Voltar ao início" data-i18n-title="back_to_home_title">
+                class="w-full flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-red-50 text-red-600 transition text-left group"
+                title="Encerrar e voltar ao início" data-i18n-title="back_to_home_subtitle">
                 <img id="exit-icon" src="../assets/img/exit.svg?v=3" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:translate-x-[-2px]" alt="Sair" data-i18n-alt="exit_app">
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold" data-i18n="exit_app">Sair do Jogo</p>
-                    <p class="text-xs text-red-500/80" data-i18n="back_to_home_subtitle">Encerrar e voltar ao início</p>
-                </div>
+                <span class="text-[13px] font-bold truncate" data-i18n="exit_app">Sair do Jogo</span>
             </button>
         </div>
     </nav>
@@ -452,11 +411,11 @@
     </header>
 
     <div id="game-container"
-        class="w-full max-w-2xl mx-auto my-auto m3-card-expressive p-3.5 sm:p-6 sm:p-8 transition-all duration-300 relative">
+        class="w-full max-w-2xl mx-auto my-auto m3-card-expressive p-3.5 sm:p-6 sm:p-8 transition-[transform,opacity,box-shadow,border-color] duration-200 relative">
         <!-- STREAK COUNTER PILL (Centralized on top of the deck holder) -->
         <div id="streak-pill-container" class="absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 select-none flex justify-center pointer-events-none">
             <div id="streak-pill"
-                class="pointer-events-auto relative overflow-hidden flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-black shadow-md border border-gray-200 bg-gray-100 text-gray-500 transition-all duration-300"
+                class="pointer-events-auto relative overflow-hidden flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-black shadow-md border border-gray-200 bg-gray-100 text-gray-500 transition-[transform,opacity,border-color,box-shadow,color] duration-200"
                 title="Sequência de acertos consecutivos" data-i18n-title="correct_streak_title">
                 <div id="streak-bg-color" class="absolute inset-0 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
                 <div id="streak-shimmer-sweep" class="absolute inset-0 pointer-events-none opacity-0"></div>
@@ -466,7 +425,7 @@
         </div>
 
         <div id="question-card"
-            class="bg-[var(--md-sys-color-surface-container-low)] p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-[var(--md-sys-color-outline-variant)] mb-3 sm:mb-6 min-h-[90px] sm:min-h-[130px] flex flex-col items-center justify-center relative z-10 group transition-all duration-300 shadow-sm">
+            class="bg-[var(--md-sys-color-surface-container-low)] p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-[var(--md-sys-color-outline-variant)] mb-3 sm:mb-6 min-h-[90px] sm:min-h-[130px] flex flex-col items-center justify-center relative z-10 group transition-[transform,opacity,border-color,box-shadow] duration-200 shadow-sm">
             <!-- Bookmark Button -->
             <button id="bookmark-card-btn"
                 class="absolute top-2 right-2 text-gray-400 hover:text-blue-500 p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] transition duration-300"
@@ -1671,7 +1630,7 @@
 
     <!-- SCANNER MODAL (Mobile Only) -->
     <div id="scanner-modal"
-        class="fixed inset-0 z-[60] hidden bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-md">
+        class="fixed inset-0 modal-overlay z-[60] hidden bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-md">
         <div class="w-full max-w-md m3-dialog-card overflow-hidden relative">
             <div class="px-6 py-4 flex justify-between items-center border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)]">
                 <h3 class="font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="receive_modal_title">Escanear QR Code</h3>
@@ -1689,7 +1648,7 @@
 
     <!-- LOADING OVERLAY PARA RECEBIMENTO DE SESSÃO -->
     <div id="sync-overlay"
-        class="hidden fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center p-6 space-y-6">
+        class="hidden m3-fullscreen-overlay fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center p-6 space-y-6">
         <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         <div class="text-center">
             <h2 class="text-2xl font-bold mb-2" data-i18n="syncing_session_title">Sincronizando Sessão</h2>

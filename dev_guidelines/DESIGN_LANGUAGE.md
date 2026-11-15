@@ -249,8 +249,11 @@ Motion in Material 3 is **informative**, **focused**, and **expressive**. The sy
    - Newly added cards enter from below (`translateY: 76px → -12px → 0px`), impacting the previous last card in the deck.
    - The struck previous card absorbs the collision impulse, shooting upward with elastic shock (`translateY: 0 → -20px`), then rebounds downward past equilibrium (`+7px`), and dampens smoothly back into place.
    - The editor viewport/container automatically auto-scrolls down (`scrollTo({ top: scrollHeight, behavior: 'smooth' })`) to keep the physical collision in full focus.
-6. **Accessibility**:
-   - Strictly respects `prefers-reduced-motion: reduce` by replacing spatial animations with instant transitions.
+6. **Complete Entry & Exit Coverage (Zero Abrupt Snaps)**:
+   - Animations are a core UX pillar across Flashcards: **all** modals, overlays, dropdown menus, popovers, notifications, and dynamic in-card UI state changes must animate smoothly on both **entry** (emphasized-decelerate / spring) and **exit** (emphasized-accelerate) using compositor-only properties (`transform`, `opacity`).
+   - Never dismiss an interactive modal, menu, or overlay with a bare `classList.add('hidden')`. Always route through the shared race-safe helpers in `js/utils.js` (`openWithMotion`, `closeWithMotion`, `openModalWithMotion`, `closeModalWithMotion`, `triggerSpringPop`) paired with `[data-m3-closing]` rules in `css/style.css`.
+7. **Accessibility**:
+   - Strictly respects `prefers-reduced-motion: reduce` and `.reduce-motion` by replacing spatial animations with instant transitions.
 
 ---
 
@@ -294,3 +297,38 @@ Click / Touch Coordinate (x, y)
 | **Ripple Surface** | `button, .m3-btn-expressive` | Automated via `js/ripple.js` & `.m3-ripple-wave` |
 | **Grouped Deck Card** | `.flashcard-item.m3-card-shape-*` | Dynamic radii: `24px` outer edges, `4px` inner seams, morphing transitions |
 | **Elastic Entrance** | `.m3-card-elastic-in` / `hit` | 540ms/580ms momentum transfer, upward launch, damped oscillation & auto-scroll |
+
+---
+
+## 7. Tailwind CSS Pre-Compilation & Build Workflow
+
+### 7.1 Why Tailwind CSS is Pre-Compiled
+Previously, the project loaded the Tailwind Play CDN (`https://cdn.tailwindcss.com`) at runtime in the browser. Because the Play CDN runs a live JavaScript compiler and a global `MutationObserver` over the entire DOM, every card transition (`appendChild` of card clones, `innerHTML` updates, class toggles) triggered `28–50ms` of `RunMicrotasks` and `15–21ms` of full-page `UpdateLayoutTree` recalculations, causing frame drops during animations.
+
+To guarantee 60/120 FPS animations, instant initial paint (no FOUC), and 100% offline PWA reliability, **Tailwind CSS is pre-compiled ahead-of-time into a static stylesheet (`css/tailwind.min.css`)**.
+
+### 7.2 Architecture & Configuration Files
+- [`tailwind.config.js`](../tailwind.config.js): Scans `./index.html`, `./pages/**/*.html`, and `./js/**/*.js`. Enforces `darkMode: 'class'` (Light Theme Only) and defines custom theme extensions (`gray-750`, `w-4.5`, `h-4.5`, `rounded-xs`, `shadow-2xs`, `shadow-xs`, `scale-130`).
+- [`css/tailwind-input.css`](../css/tailwind-input.css): Input directives (`@tailwind base; @tailwind components; @tailwind utilities;`) with preserved SPDX license header (`/*! SPDX-License-Identifier: GPL-2.0-only */`).
+- [`css/tailwind.min.css`](../css/tailwind.min.css): Generated, minified static CSS output linked across all HTML pages **before** `css/style.css` and cached by [`sw.js`](../sw.js).
+
+### 7.3 Instructions for Future Developers & AI Agents
+Whenever you add or modify HTML or JavaScript that introduces **new Tailwind utility classes** not previously used in the codebase:
+
+1. **Re-compile `css/tailwind.min.css`**:
+   ```bash
+   npm run build:css
+   ```
+   *(Or during active UI development, run `npm run watch:css` to rebuild automatically on save. If `node_modules` is not installed yet, run `npm install` once or use `npx tailwindcss@3.4.17 -c ./tailwind.config.js -i ./css/tailwind-input.css -o ./css/tailwind.min.css --minify`).*
+
+2. **Never use the Play CDN**:
+   - **Never** add `<script src="https://cdn.tailwindcss.com"></script>` to any HTML file.
+   - Always include `<link rel="stylesheet" href="css/tailwind.min.css?v=1.0">` (or `../css/tailwind.min.css?v=1.0` inside `pages/`) **before** `css/style.css`.
+
+3. **Write Complete Class Names (No Partial String Concatenation)**:
+   - Tailwind's static extractor scans source files as plain text.
+   - **Do NOT** construct class names dynamically like `` `bg-${color}-500` `` or `` `text-${size}` ``.
+   - **Always** write complete class strings (e.g., `isError ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'`) so the scanner detects and compiles them.
+
+4. **Cache Busting on Updates**:
+   - After regenerating `css/tailwind.min.css` for a release, increment the `?v=` query string on `tailwind.min.css` in the affected HTML files and bump `CACHE_NAME` in [`sw.js`](../sw.js).

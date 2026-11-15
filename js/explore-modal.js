@@ -18,9 +18,9 @@ import {
   loadSlotsFromCloud
 } from './slot-manager.js';
 import { shareDeckToCloud, subscribeToAllSharedSlots, showShareSuccessDialog } from './share-manager.js';
-import { getUserStatus, createCheckoutSession, deleteAccountAndCancelSubscription, verifyPaymentStatus, createExtraDeckCheckoutSession, BACKEND_URL } from './backend-api.js';
+import { getUserStatus, verifyPaymentStatus, createExtraDeckCheckoutSession, BACKEND_URL } from './backend-api.js';
 import { triggerProUnlockCelebration } from './engine/pro-unlock-celebration.js';
-import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl, encodeStoragePayload } from './utils.js';
+import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl, encodeStoragePayload, openModalWithMotion, closeModalWithMotion } from './utils.js';
 import { t, applyTranslations } from './i18n.js';
 
 let modalInitialized = false;
@@ -76,7 +76,7 @@ export async function refreshUserProStatus(user = (currentUser || auth.currentUs
   }
   if (isLifetime(user)) {
     userProStatus = { uid: user.uid, isPro: true, isLifetimePro: true };
-    try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, JSON.stringify(userProStatus)); } catch (e) {}
+    try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, encodeStoragePayload(userProStatus)); } catch (e) {}
     window.dispatchEvent(new CustomEvent('flashcards:pro-updated', { detail: userProStatus }));
     return userProStatus;
   }
@@ -86,7 +86,7 @@ export async function refreshUserProStatus(user = (currentUser || auth.currentUs
   const fetchedStatus = await getUserStatus().catch(() => null);
   if (fetchedStatus) {
     userProStatus = { ...fetchedStatus, uid: user.uid };
-    try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, JSON.stringify(userProStatus)); } catch (e) {}
+    try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, encodeStoragePayload(userProStatus)); } catch (e) {}
   } else {
     try {
       const cached = localStorage.getItem(`spaiq_pro_cache_${user.uid}`);
@@ -208,8 +208,7 @@ export function openExploreModal() {
   renderModalContent();
   const modal = document.getElementById('explore-modal');
   if (modal) {
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    openModalWithMotion(modal, { displayClass: 'flex' });
   }
   if (isUserPro()) {
     loadSlotsFromCloud().then(hasChanges => {
@@ -226,8 +225,7 @@ export function openExploreModal() {
 export function closeExploreModal() {
   const modal = document.getElementById('explore-modal');
   if (modal) {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    closeModalWithMotion(modal, { removeDisplayClass: 'flex' });
   }
 }
 
@@ -239,8 +237,7 @@ export function openProModal() {
   renderProModalContent();
   const proModal = document.getElementById('pro-subscription-modal');
   if (proModal) {
-    proModal.classList.remove('hidden');
-    proModal.classList.add('flex');
+    openModalWithMotion(proModal, { displayClass: 'flex' });
   }
 }
 
@@ -257,8 +254,7 @@ export function closeProModal() {
   stopProPaymentPolling();
   const proModal = document.getElementById('pro-subscription-modal');
   if (proModal) {
-    proModal.classList.add('hidden');
-    proModal.classList.remove('flex');
+    closeModalWithMotion(proModal, { removeDisplayClass: 'flex' });
   }
 }
 
@@ -267,16 +263,14 @@ export function openExtraDeckModal() {
   renderExtraDeckModalContent();
   const modal = document.getElementById('extra-deck-modal');
   if (modal) {
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    openModalWithMotion(modal, { displayClass: 'flex' });
   }
 }
 
 export function closeExtraDeckModal() {
   const modal = document.getElementById('extra-deck-modal');
   if (modal) {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    closeModalWithMotion(modal, { removeDisplayClass: 'flex' });
   }
 }
 
@@ -625,8 +619,7 @@ function attachModalEventListeners() {
     closeExploreModal();
     const examModal = document.getElementById('exam-modal');
     if (examModal) {
-      examModal.classList.remove('hidden');
-      examModal.classList.add('flex');
+      openModalWithMotion(examModal, { displayClass: 'flex' });
     } else {
       window.location.href = `${ROUTES.HOME}?openExam=1`;
     }
@@ -636,7 +629,6 @@ function attachModalEventListeners() {
 /**
  * Mount Stripe Embedded Checkout Form
  */
-let activeCheckoutForm = null;
 let stripeLoadPromise = null;
 
 export function ensureStripeLoaded() {
@@ -728,7 +720,6 @@ async function mountStripeEmbeddedForm() {
     if (loadingEl) loadingEl.classList.add('hidden');
 
     const form = checkout.createForm({ layout: 'expanded' });
-    activeCheckoutForm = form;
     form.mount('#checkout-form');
 
     const loadActionsResult = await checkout.loadActions();
@@ -847,117 +838,6 @@ export function renderProModalContent() {
     </div>
   `;
   mountStripeEmbeddedForm();
-}
-
-/**
- * Mount Stripe Embedded Checkout Form for Extra Deck Generation (R$ 0,99)
- */
-let activeExtraDeckForm = null;
-
-async function mountExtraDeckEmbeddedForm() {
-  const container = document.getElementById('extra-deck-checkout-form');
-  const loadingEl = document.getElementById('extra-deck-form-loading');
-  if (!container) return;
-
-  const publishableKey = window.STRIPE_PUBLISHABLE_KEY || 'pk_live_51UWEHsRynl9tIFFYm32d9vyXApB9FLeUcI5oNBuaCwkkxA0yc0pAVjKioRBO0Zy8j7CVQU6LSp09mM5Lss3EaDNg00qvRJ4VIT';
-
-  await ensureStripeLoaded();
-
-  if (!window.Stripe) {
-    if (loadingEl) {
-      loadingEl.innerHTML = `
-        <span class="material-symbols-rounded text-2xl text-red-500">error</span>
-        <span class="text-xs text-red-600 font-medium">${t('stripe_load_error')}</span>
-      `;
-    }
-    return;
-  }
-
-  try {
-    const stripe = window.Stripe(publishableKey);
-
-    const appearance = {
-      "theme": "flat",
-      "labels": "auto",
-      "inputs": "spaced",
-      "variables": {
-        "borderRadius": "4px",
-        "colorBackground": "#ffffff",
-        "colorDanger": "#df1b41",
-        "colorPrimary": "#3b82f7",
-        "colorSuccess": "#00c853",
-        "colorText": "#30313d",
-        "fontFamily": "'Roboto Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-        "fontSizeBase": "16px",
-        "spacingUnit": "4px"
-      }
-    };
-
-    const token = await getCurrentUserToken().catch(() => null);
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const apiEndpoint = (typeof BACKEND_URL !== 'undefined' && BACKEND_URL)
-      ? `${BACKEND_URL}/api/create-extra-deck-session`
-      : '/api/create-extra-deck-session';
-
-    const clientSecret = fetch(apiEndpoint, { method: 'POST', headers })
-      .then((response) => response.json())
-      .then((json) => {
-        if (json.error) {
-          throw new Error(json.message || json.error);
-        }
-        return json.client_secret;
-      });
-
-    const checkout = await stripe.initCheckoutFormSdk({ clientSecret, appearance });
-
-    if (loadingEl) loadingEl.classList.add('hidden');
-
-    const form = checkout.createForm({ layout: 'expanded' });
-    activeExtraDeckForm = form;
-    form.mount('#extra-deck-checkout-form');
-
-    const loadActionsResult = await checkout.loadActions();
-    if (loadActionsResult.type === 'success') {
-      form.on('confirm', async (event) => {
-        try {
-          const actionResult = await loadActionsResult.actions.confirm({
-            formConfirmEvent: event
-          });
-          console.log('[Stripe Extra Deck] Confirmação:', actionResult);
-          if (actionResult && actionResult.error) {
-            console.error('Payment confirmation error:', actionResult.error);
-            return;
-          }
-          setTimeout(async () => {
-            await refreshUserProStatus();
-            alert(t('extra_deck_payment_success'));
-            closeExtraDeckModal();
-          }, 2000);
-        } catch (error) {
-          console.error('Payment confirmation error:', error);
-        }
-      });
-    }
-  } catch (err) {
-    console.error('[Stripe Extra Deck Form Error]:', err);
-    if (loadingEl) {
-      loadingEl.classList.remove('hidden');
-      const safeErrorMsg = escapeHtml(err && err.message ? err.message : t('checkout_init_error'));
-      loadingEl.innerHTML = `
-        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-left space-y-1">
-          <div class="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-            <span class="material-symbols-rounded text-base text-amber-600">info</span>
-            <span>${t('checkout_load_error_title')}</span>
-          </div>
-          <p class="text-[11px] text-amber-800 leading-tight">
-            ${safeErrorMsg}
-          </p>
-        </div>
-      `;
-    }
-  }
 }
 
 export function renderExtraDeckModalContent() {

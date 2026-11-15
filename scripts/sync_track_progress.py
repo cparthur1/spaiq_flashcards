@@ -22,17 +22,25 @@ import os
 import json
 import argparse
 import urllib.request
+import urllib.parse
 import urllib.error
 import http.server
 from datetime import datetime
 
 DEFAULT_API_URL = "https://flashcards-backend.camblu.workers.dev/api/v1/stats"
 DEFAULT_TRACK_PATH = os.path.expanduser("~/apps/track_progress/data.json")
+MAX_WEBHOOK_BODY_BYTES = 1024 * 1024  # 1 MiB
 
 def fetch_flashcards_stats(api_key: str, api_url: str = DEFAULT_API_URL, date_str: str = None) -> dict:
+    parsed = urllib.parse.urlparse(api_url)
+    if parsed.scheme not in ("https", "http") or not parsed.netloc:
+        raise ValueError(f"URL da API inválida (apenas http/https permitidos): {api_url}")
+
     url = api_url
     if date_str:
-        url += f"?date={date_str}"
+        query = urllib.parse.urlencode({"date": date_str})
+        sep = "&" if "?" in url else "?"
+        url = f"{url}{sep}{query}"
 
     req = urllib.request.Request(url, headers={
         "X-API-Key": api_key,
@@ -122,11 +130,20 @@ def print_stats_summary(stats: dict):
     print(f" Histórico 14d (Tempo): {stats.get('past_14_days_time', 'N/A')}")
     print("=" * 55 + "\n")
 
-def run_webhook_server(port: int, data_path: str):
+def run_webhook_server(port: int, data_path: str, host: str = "127.0.0.1"):
     class WebhookHandler(http.server.BaseHTTPRequestHandler):
         def do_POST(self):
-            length = int(self.headers.get("Content-Length", 0))
-            raw_body = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+            except ValueError:
+                length = 0
+            if length < 0 or length > MAX_WEBHOOK_BODY_BYTES:
+                self.send_response(413)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "payload_too_large"}).encode("utf-8"))
+                return
+            raw_body = self.rfile.read(length).decode("utf-8", errors="replace") if length > 0 else "{}"
             try:
                 payload = json.loads(raw_body)
             except Exception:
@@ -149,7 +166,7 @@ def run_webhook_server(port: int, data_path: str):
             # Silencia logs padrão ruidosos do SimpleHTTP
             pass
 
-    server_address = ("0.0.0.0", port)
+    server_address = (host, port)
     httpd = http.server.HTTPServer(server_address, WebhookHandler)
     print(f"\n🚀 Servidor de Webhook Spaiq Flashcards ativo na porta {port}!")
     print(f"👉 URL para configurar no Spaiq Flashcards: http://localhost:{port}/webhook")
@@ -166,12 +183,13 @@ def main():
     parser.add_argument("--date", help="Data específica para consultar (YYYY-MM-DD)")
     parser.add_argument("--track-path", default=DEFAULT_TRACK_PATH, help="Caminho para o data.json do track_progress")
     parser.add_argument("--listen", type=int, help="Inicia o servidor receptor de Webhook na porta indicada (ex: 5050)")
+    parser.add_argument("--host", default="127.0.0.1", help="Endereço IP para escutar o servidor de Webhook (padrão: 127.0.0.1)")
 
     args = parser.parse_args()
 
     # Modo 1: Receptor de Webhook
     if args.listen:
-        run_webhook_server(args.listen, args.track_path)
+        run_webhook_server(args.listen, args.track_path, args.host)
         return
 
     # Modo 2: Consulta pontual e sincronização

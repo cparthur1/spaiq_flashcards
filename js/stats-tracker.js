@@ -9,12 +9,127 @@ import { stripHtml, encodeStoragePayload } from './utils.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
 
 const STATS_KEY = 'flashcards_stats';
+let cachedStatsData = null;
+let statsFlushTimer = null;
+let statsIdleHandle = null;
+let hasPendingStatsFlush = false;
+
+function flushPendingStatsStorage() {
+    if (statsFlushTimer) {
+        clearTimeout(statsFlushTimer);
+        statsFlushTimer = null;
+    }
+    if (statsIdleHandle && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(statsIdleHandle);
+        statsIdleHandle = null;
+    }
+    if (!hasPendingStatsFlush || !cachedStatsData) return;
+    hasPendingStatsFlush = false;
+    try {
+        const json = encodeStoragePayload(cachedStatsData);
+        localStorage.setItem(STATS_KEY, json);
+        localStorage.setItem('flashcardsStats', json);
+        debouncedSyncSlotsToCloud();
+    } catch (e) {
+        console.error("Erro ao salvar flashcards_stats:", e);
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', flushPendingStatsStorage);
+    window.addEventListener('pagehide', flushPendingStatsStorage);
+    window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === STATS_KEY || e.key === 'flashcardsStats') {
+            cachedStatsData = null;
+            hasPendingStatsFlush = false;
+        }
+    });
+    window.addEventListener('flashcards:sync-updated', () => {
+        flushPendingStatsStorage();
+        cachedStatsData = null;
+    });
+}
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            flushPendingStatsStorage();
+        }
+    });
+}
+
+const MAX_ARCHIVED_HISTORY_SESSIONS = 50;
+const MAX_DETAILED_HISTORY_SESSIONS = 5;
+
+export function pruneStatsDataInPlace(data) {
+    if (!data || typeof data !== 'object') return false;
+    let modified = false;
+
+    if (Array.isArray(data.history)) {
+        if (data.history.length > MAX_ARCHIVED_HISTORY_SESSIONS) {
+            data.history.length = MAX_ARCHIVED_HISTORY_SESSIONS;
+            modified = true;
+        }
+        for (let i = 0; i < data.history.length; i++) {
+            const sess = data.history[i];
+            if (!sess || typeof sess !== 'object') continue;
+            if (i >= MAX_DETAILED_HISTORY_SESSIONS) {
+                if (sess.answersLog !== undefined) {
+                    delete sess.answersLog;
+                    modified = true;
+                }
+                if (sess.cardAnswers !== undefined) {
+                    delete sess.cardAnswers;
+                    modified = true;
+                }
+                if (sess.strugglingCards !== undefined) {
+                    delete sess.strugglingCards;
+                    modified = true;
+                }
+            } else if (sess.strugglingCards && typeof sess.strugglingCards === 'object') {
+                for (const key of Object.keys(sess.strugglingCards)) {
+                    const sc = sess.strugglingCards[key];
+                    if (sc && typeof sc === 'object') {
+                        if (typeof sc.description === 'string' && sc.description.length > 350) {
+                            sc.description = sc.description.slice(0, 350);
+                            modified = true;
+                        }
+                        if (typeof sc.answer === 'string' && sc.answer.length > 350) {
+                            sc.answer = sc.answer.slice(0, 350);
+                            modified = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (data.currentSession && data.currentSession.strugglingCards && typeof data.currentSession.strugglingCards === 'object') {
+        for (const key of Object.keys(data.currentSession.strugglingCards)) {
+            const sc = data.currentSession.strugglingCards[key];
+            if (sc && typeof sc === 'object') {
+                if (typeof sc.description === 'string' && sc.description.length > 350) {
+                    sc.description = sc.description.slice(0, 350);
+                    modified = true;
+                }
+                if (typeof sc.answer === 'string' && sc.answer.length > 350) {
+                    sc.answer = sc.answer.slice(0, 350);
+                    modified = true;
+                }
+            }
+        }
+    }
+
+    return modified;
+}
 
 export function getStatsStorage() {
+    if (cachedStatsData) {
+        return cachedStatsData;
+    }
     try {
         const raw = localStorage.getItem(STATS_KEY);
         if (!raw) {
-            return {
+            cachedStatsData = {
                 currentSession: null,
                 history: [],
                 allTime: {
@@ -25,6 +140,7 @@ export function getStatsStorage() {
                     bestStreakAllTime: 0
                 }
             };
+            return cachedStatsData;
         }
         const parsed = JSON.parse(raw);
         if (!parsed.history) parsed.history = [];
@@ -37,26 +153,48 @@ export function getStatsStorage() {
                 bestStreakAllTime: 0
             };
         }
-        return parsed;
+        const wasPruned = pruneStatsDataInPlace(parsed);
+        cachedStatsData = parsed;
+        if (wasPruned || raw.length > 200000) {
+            hasPendingStatsFlush = true;
+            flushPendingStatsStorage();
+        }
+        return cachedStatsData;
     } catch (e) {
         console.error("Erro ao carregar flashcards_stats:", e);
-        return {
+        cachedStatsData = {
             currentSession: null,
             history: [],
             allTime: { totalSessions: 0, totalCardsAnswered: 0, totalCorrect: 0, totalTimeSeconds: 0, bestStreakAllTime: 0 }
         };
+        return cachedStatsData;
     }
 }
 
-export function saveStatsStorage(data) {
+export function saveStatsStorage(data, options = {}) {
     try {
         if (data && typeof data === 'object') {
             data.updatedAt = Date.now();
+            cachedStatsData = data;
         }
-        const json = encodeStoragePayload(data);
-        localStorage.setItem(STATS_KEY, json);
-        localStorage.setItem('flashcardsStats', json);
-        debouncedSyncSlotsToCloud();
+        if (options && options.defer) {
+            hasPendingStatsFlush = true;
+            if (statsFlushTimer) clearTimeout(statsFlushTimer);
+            statsFlushTimer = setTimeout(() => {
+                statsFlushTimer = null;
+                if (typeof requestIdleCallback === 'function') {
+                    statsIdleHandle = requestIdleCallback(() => {
+                        statsIdleHandle = null;
+                        flushPendingStatsStorage();
+                    }, { timeout: 1000 });
+                } else {
+                    flushPendingStatsStorage();
+                }
+            }, 700);
+            return;
+        }
+        hasPendingStatsFlush = true;
+        flushPendingStatsStorage();
     } catch (e) {
         console.error("Erro ao salvar flashcards_stats:", e);
     }
@@ -280,15 +418,15 @@ export function recordStatsAnswer({ card, isCorrect, rating, timeSpentSeconds, u
 
     // Struggling cards tracking
     if (!sess.strugglingCards) sess.strugglingCards = {};
-    const cardKey = card.description || `card_${now}`;
+    const cardKey = (card.description || `card_${now}`).slice(0, 350);
     const isIgnored = sess.ignoredStrugglingKeys && sess.ignoredStrugglingKeys.includes(cardKey);
     if (!isIgnored) {
         if (!isCorrect || rating === 'again' || rating === 'hard') {
             if (!sess.strugglingCards[cardKey]) {
                 sess.strugglingCards[cardKey] = {
-                    description: card.description || '',
-                    answer: card.answer || '',
-                    answer2: card.answer2 || '',
+                    description: (card.description || '').slice(0, 350),
+                    answer: (card.answer || '').slice(0, 350),
+                    answer2: (card.answer2 || '').slice(0, 200),
                     type: typeKey,
                     aiTopic: card.aiTopic || '',
                     aiSubject: card.aiSubject || '',
@@ -312,7 +450,7 @@ export function recordStatsAnswer({ card, isCorrect, rating, timeSpentSeconds, u
     if (isCorrect) data.allTime.totalCorrect = (data.allTime.totalCorrect || 0) + 1;
     data.allTime.totalTimeSeconds = (data.allTime.totalTimeSeconds || 0) + validTime;
 
-    saveStatsStorage(data);
+    saveStatsStorage(data, { defer: true });
         console.log("[StatsTracker] Resposta gravada com sucesso:", {
             card: (card.description || '').slice(0, 35),
             isCorrect: !!isCorrect,

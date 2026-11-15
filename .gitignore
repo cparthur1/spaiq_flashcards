@@ -5,3 +5,5 @@ __pycache__/
 .dev.vars
 .dev.vars.*
 *.local
+dev_guidelines/Trace-*.json
+dev_guidelines/console log.txt

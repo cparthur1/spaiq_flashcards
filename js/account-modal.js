@@ -7,7 +7,7 @@
 import { auth, signInWithGoogle, signOutUser, onAuthChange } from './firebase-client.js';
 import { isLifetime, isUserPro, openProModal, refreshUserProStatus, getUserProStatus } from './explore-modal.js';
 import { getSubscriptionDetails, cancelSubscriptionOnly, reactivateSubscription, deleteAccountAndCancelSubscription } from './backend-api.js';
-import { escapeHtml, sanitizeImageUrl } from './utils.js';
+import { escapeHtml, sanitizeImageUrl, openModalWithMotion, closeModalWithMotion } from './utils.js';
 import { t, applyTranslations } from './i18n.js';
 
 let accountModalInitialized = false;
@@ -28,7 +28,7 @@ function injectAccountModalHtml() {
   modalEl.setAttribute('aria-labelledby', 'account-modal-title');
 
   modalEl.innerHTML = `
-    <div class="m3-dialog-card w-full max-w-md bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
+    <div class="m3-dialog-card w-full max-w-md bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] overflow-hidden flex flex-col max-h-[90vh]">
       <!-- Header -->
       <div class="px-5 sm:px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex justify-between items-center flex-shrink-0">
         <div class="flex items-center gap-2.5">
@@ -377,9 +377,6 @@ async function renderAccountModalContent() {
         cancelAtPeriodEnd: true,
         activeUntil: res?.activeUntil || subDetailsCache?.nextDueDate
       };
-      const formattedDate = (res?.activeUntil || subDetailsCache?.nextDueDate)
-        ? new Date((res?.activeUntil || subDetailsCache?.nextDueDate) + 'T12:00:00Z').toLocaleDateString('pt-BR')
-        : '';
       alert(t('sub_canceled_success_modal'));
       renderAccountModalContent();
     } catch (err) {
@@ -473,8 +470,7 @@ export function openAccountModal() {
   renderAccountModalContent();
   const modal = document.getElementById('account-subscription-modal');
   if (modal) {
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    openModalWithMotion(modal, { displayClass: 'flex' });
   }
   if (auth.currentUser) {
     refreshUserProStatus(auth.currentUser).then(() => {
@@ -489,8 +485,7 @@ export function openAccountModal() {
 export function closeAccountModal() {
   const modal = document.getElementById('account-subscription-modal');
   if (modal) {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
+    closeModalWithMotion(modal, { removeDisplayClass: 'flex' });
   }
 }
 

@@ -228,48 +228,74 @@ function parseTemplateConfigProtobuf(bytes) {
 function decodeHtmlEntities(str) {
     if (!str) return '';
     const named = {
-        '&nbsp;': ' ',
-        '&amp;': '&',
-        '&lt;': '<',
-        '&gt;': '>',
-        '&quot;': '"',
-        '&#39;': "'",
-        '&apos;': "'",
-        '&ndash;': '–',
-        '&mdash;': '—',
-        '&hellip;': '…',
-        '&times;': '×',
-        '&divide;': '÷',
-        '&plusmn;': '±',
-        '&rarr;': '→',
-        '&larr;': '←',
-        '&harr;': '↔'
+        'nbsp': ' ',
+        'amp': '&',
+        'lt': '<',
+        'gt': '>',
+        'quot': '"',
+        '#39': "'",
+        'apos': "'",
+        'ndash': '–',
+        'mdash': '—',
+        'hellip': '…',
+        'times': '×',
+        'divide': '÷',
+        'plusmn': '±',
+        'rarr': '→',
+        'larr': '←',
+        'harr': '↔'
     };
-    return str
-        .replace(/&(?:nbsp|amp|lt|gt|quot|apos|ndash|mdash|hellip|times|divide|plusmn|rarr|larr|harr|#39);/gi, (m) => named[m.toLowerCase()] ?? m)
-        .replace(/&#(\d+);/g, (_, dec) => {
-            const code = parseInt(dec, 10);
-            return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
-        })
-        .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
-            const code = parseInt(hex, 16);
-            return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
-        });
+    return str.replace(
+        /&(?:#(\d+)|#x([0-9a-f]+)|(nbsp|amp|lt|gt|quot|apos|ndash|mdash|hellip|times|divide|plusmn|rarr|larr|harr|#39));/gi,
+        (full, dec, hex, name) => {
+            if (dec !== undefined) {
+                const code = parseInt(dec, 10);
+                return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+            }
+            if (hex !== undefined) {
+                const code = parseInt(hex, 16);
+                return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+            }
+            if (name !== undefined) {
+                return named[name.toLowerCase()] ?? full;
+            }
+            return full;
+        }
+    );
+}
+
+function stripStyleAndScriptBlocks(input) {
+    if (!input || typeof input !== 'string') return '';
+    let out = input;
+    let prev;
+    do {
+        prev = out;
+        out = out
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, '')
+            .replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, '')
+            .replace(/<\/?(?:style|script)\b[^>]*>/gi, '');
+    } while (out !== prev);
+    return out;
 }
 
 function extractImageRefsAndCleanMedia(html) {
     if (!html || typeof html !== 'string') return { cleanedHtml: '', imageRefs: [] };
     const imageRefs = [];
-    const cleanedHtml = html
-        .replace(/<img\b[^>]*>/gi, (tag) => {
-            const srcMatch = tag.match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
-            const rawSrc = (srcMatch && (srcMatch[1] || srcMatch[2] || srcMatch[3])) || '';
-            if (rawSrc) {
-                imageRefs.push(decodeHtmlEntities(rawSrc.trim()));
-            }
-            return '';
-        })
-        .replace(/\[sound:[^\]]+\]/gi, '');
+    let cleanedHtml = html;
+    let prev;
+    do {
+        prev = cleanedHtml;
+        cleanedHtml = cleanedHtml
+            .replace(/<img\b[^>]*>/gi, (tag) => {
+                const srcMatch = tag.match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+                const rawSrc = (srcMatch && (srcMatch[1] || srcMatch[2] || srcMatch[3])) || '';
+                if (rawSrc) {
+                    imageRefs.push(decodeHtmlEntities(rawSrc.trim()));
+                }
+                return '';
+            })
+            .replace(/\[sound:[^\]]+\]/gi, '');
+    } while (cleanedHtml !== prev);
     return { cleanedHtml, imageRefs };
 }
 
@@ -284,10 +310,8 @@ function extractImageRefsAndCleanMedia(html) {
 export function convertAnkiHtmlToText(rawHtml, preserveMarkdown = true) {
     if (!rawHtml || typeof rawHtml !== 'string') return '';
 
-    let text = rawHtml;
-    // Remove blocos perigosos ou estilização interna de templates
-    text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
-    text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+    // Remove blocos perigosos ou estilização interna de templates de forma iterativa
+    let text = stripStyleAndScriptBlocks(rawHtml);
 
     // Normaliza tags [latex] e [$] do Anki para KaTeX
     text = text.replace(/\[latex\]([\s\S]*?)\[\/latex\]/gi, (_, m) => `$$${m.trim()}$$`);
@@ -327,8 +351,11 @@ export function convertAnkiHtmlToText(rawHtml, preserveMarkdown = true) {
         prev = text;
         text = text.replace(/<[^<>]*>/g, '');
     } while (text !== prev);
+    text = text.replace(/[<>]/g, '');
 
     text = decodeHtmlEntities(text);
+    // Remove quaisquer colchetes angulares remanescentes pós-decodificação de entidades
+    text = text.replace(/[<>]/g, '');
     // Limpa espaços horizontais excessivos e linhas em branco repetidas
     text = text
         .replace(/\r\n/g, '\n')
@@ -359,9 +386,7 @@ function stripTypedAnswerDecorations(str) {
 function renderAnkiTemplate(template, fieldMap, { frontSideHtml = '', tags = '', deck = '', clozeTarget = null } = {}) {
     if (!template || typeof template !== 'string') return '';
 
-    let out = template
-        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+    let out = stripStyleAndScriptBlocks(template);
 
     // Condicionais positivas {{#Campo}}...{{/Campo}} e negativas {{^Campo}}...{{/Campo}}
     for (let pass = 0; pass < 3; pass++) {

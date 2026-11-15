@@ -6,7 +6,7 @@
  * interactive Bloom's Taxonomy explorer, and copyable card templates.
  */
 
-import { initI18n, setupHeaderLanguageMenu, t } from './i18n.js';
+import { setupHeaderLanguageMenu, t } from './i18n.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Language selector in top app bar

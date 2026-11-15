@@ -16,6 +16,7 @@
    - Strictly follow `dev_guidelines/DESIGN_LANGUAGE.md` (Material Design 3 / Material You Expressive).
    - Use the established tonal palette, smooth elevation shadows, and touch ripple effects. Do not introduce extraneous styling frameworks.
    - Use `#3b82f7` as the designated blue color for icons and buttons across the app's theme.
+   - Animations are mandatory for great UX: every new function, UI state reveal, popup, menu, and modal must implement optimized Material You Expressive entry and exit animations (compositor-only `transform`/`opacity`) via the shared motion helpers in `js/utils.js` and `css/style.css`.
 
 4. **Game State & Spaced Repetition**:
    - Maintain the logic defined in `dev_guidelines/GAME_ARCHITECTURE_AND_RULES.md` across the study modes (Active Recall, Double Open, Cloze, Multiple Choice, Anki 4-button).

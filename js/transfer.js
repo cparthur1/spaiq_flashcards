@@ -5,11 +5,16 @@
  */
 
 import { t } from './i18n.js';
-import { escapeHtml, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import {
+    NOTEBOOK_STORAGE_KEY,
+    encodeStoragePayload,
+    openWithMotion,
+    openModalWithMotion,
+    closeModalWithMotion
+} from './utils.js';
 
 // --- ELEMENTS ---
 const transferModal = document.getElementById('transfer-modal');
-const transferModalContent = document.getElementById('transfer-modal-content');
 const transferBtn = document.getElementById('transfer-session-btn');
 const closeTransferBtn = document.getElementById('close-transfer-modal');
 const receiveBtn = document.getElementById('receive-session-btn');
@@ -105,21 +110,12 @@ export function initTransfer() {
 
 export function openTransferModal() {
     if (!transferModal) return;
-    transferModal.classList.remove('hidden');
-    setTimeout(() => {
-        if (transferModalContent) {
-            transferModalContent.classList.remove('scale-95', 'opacity-0');
-            transferModalContent.classList.add('scale-100', 'opacity-100');
-        }
-    }, 10);
+    openModalWithMotion(transferModal);
     startSender();
 }
 
 export function closeTransferModal() {
-    if (!transferModalContent) return;
-    transferModalContent.classList.remove('scale-100', 'opacity-100');
-    transferModalContent.classList.add('scale-95', 'opacity-0');
-    setTimeout(() => transferModal?.classList.add('hidden'), 300);
+    closeModalWithMotion(transferModal);
 }
 
 /**
@@ -206,7 +202,7 @@ export async function openScanner() {
         return;
     }
 
-    if (scannerModal) scannerModal.classList.remove('hidden');
+    if (scannerModal) openModalWithMotion(scannerModal);
     
     try {
         await ensureHtml5Qrcode();
@@ -225,7 +221,7 @@ export async function closeScanner() {
     if (html5QrCode && html5QrCode.isScanning) {
         await html5QrCode.stop();
     }
-    if (scannerModal) scannerModal.classList.add('hidden');
+    if (scannerModal) await closeModalWithMotion(scannerModal);
 }
 
 function onScanSuccess(decodedText) {
@@ -242,7 +238,7 @@ function onScanSuccess(decodedText) {
 }
 
 async function applyProgress(stateString) {
-    syncOverlay.classList.remove('hidden');
+    openWithMotion(syncOverlay);
     logSync(t('reading_optimized_progress'));
 
     try {

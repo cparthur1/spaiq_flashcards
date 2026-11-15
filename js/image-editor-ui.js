@@ -6,15 +6,13 @@
  */
 
 import { t } from './i18n.js';
-import { sanitizeImageUrl } from './utils.js';
+import { sanitizeImageUrl, openModalWithMotion, closeModalWithMotion } from './utils.js';
 import {
     ARROW_COLORS,
-    getArrowColorTheme,
     buildArrowsSvgContent,
     renderAnnotatedImage
 } from './image-editor-modal.js';
 
-let modalInitialized = false;
 let currentCrop = null;
 let currentArrows = [];
 let activeTool = 'crop'; // 'crop' | 'arrow'
@@ -39,7 +37,7 @@ function injectImageEditorModalHtml() {
     const modalWrapper = document.createElement('div');
     modalWrapper.id = 'image-editor-modal-wrapper';
     modalWrapper.innerHTML = `
-        <div id="image-editor-modal" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn select-none">
+        <div id="image-editor-modal" class="hidden fixed inset-0 modal-overlay z-[120] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm select-none">
             <div class="m3-dialog-card w-full max-w-4xl bg-[var(--md-sys-color-surface-container-lowest,#ffffff)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] overflow-hidden flex flex-col max-h-[94vh]">
                 
                 <!-- HEADER -->
@@ -293,7 +291,6 @@ function updatePreviewBox() {
  * Attaches interactive pointer events and toolbar listeners.
  */
 function attachModalEvents() {
-    const modal = document.getElementById('image-editor-modal');
     const closeBtn = document.getElementById('img-edit-close-btn');
     const cancelBtn = document.getElementById('img-edit-cancel-btn');
     const saveBtn = document.getElementById('img-edit-save-btn');
@@ -588,7 +585,7 @@ export function openImageEditorModal({
     const togglePreviewBtn = document.getElementById('img-edit-toggle-preview-btn');
     const previewLabel = document.getElementById('img-edit-preview-label');
 
-    if (modal) modal.classList.remove('hidden');
+    if (modal) openModalWithMotion(modal);
     if (loader) loader.classList.remove('hidden');
     if (errorState) errorState.classList.add('hidden');
     if (stage) stage.classList.add('hidden');
@@ -653,11 +650,13 @@ export function openImageEditorModal({
  */
 export function closeImageEditorModal() {
     const modal = document.getElementById('image-editor-modal');
-    if (modal) modal.classList.add('hidden');
-
-    const sourceImg = document.getElementById('img-edit-source');
-    if (sourceImg) sourceImg.src = '';
-
     currentSaveCallback = null;
     currentCancelCallback = null;
+
+    closeModalWithMotion(modal, {
+        onClosed: () => {
+            const sourceImg = document.getElementById('img-edit-source');
+            if (sourceImg) sourceImg.src = '';
+        }
+    });
 }

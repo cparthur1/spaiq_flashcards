@@ -58,16 +58,58 @@
 
 
 
-    function addLog(msg, type = 'log') {
+    let isConsoleOpen = false;
+    const pendingLogs = [];
+    const MAX_LOG_ENTRIES = 150;
+
+    function formatTimestamp(ms) {
+        const d = new Date(ms);
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        return `${hh}:${mm}:${ss}`;
+    }
+
+    function formatArgs(args) {
+        return args.map(a => {
+            if (typeof a === 'object' && a !== null) {
+                try { return JSON.stringify(a, null, 2); } catch (_) { return String(a); }
+            }
+            return String(a);
+        }).join(' ');
+    }
+
+    function createLogNode(ts, args, type) {
         const entry = document.createElement('div');
         entry.style.marginBottom = '5px';
         entry.style.borderLeft = `3px solid ${type === 'error' ? 'red' : (type === 'warn' ? 'orange' : '#00ff00')}`;
         entry.style.paddingLeft = '5px';
+        entry.textContent = `[${formatTimestamp(ts)}] ${formatArgs(args)}`;
+        return entry;
+    }
 
-        const timestamp = new Date().toLocaleTimeString();
-        entry.textContent = `[${timestamp}] ${msg}`;
-        logArea.appendChild(entry);
+    function flushPendingLogs() {
+        if (!isConsoleOpen || pendingLogs.length === 0) return;
+        const frag = document.createDocumentFragment();
+        while (pendingLogs.length > 0) {
+            const item = pendingLogs.shift();
+            frag.appendChild(createLogNode(item.ts, item.args, item.type));
+        }
+        logArea.appendChild(frag);
+        while (logArea.childNodes.length > MAX_LOG_ENTRIES) {
+            logArea.removeChild(logArea.firstChild);
+        }
         logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    function enqueueLog(args, type = 'log') {
+        pendingLogs.push({ ts: Date.now(), args, type });
+        if (pendingLogs.length > MAX_LOG_ENTRIES) {
+            pendingLogs.shift();
+        }
+        if (isConsoleOpen) {
+            flushPendingLogs();
+        }
     }
 
     const originalLog = console.log;
@@ -76,7 +118,7 @@
 
     console.log = (...args) => {
         originalLog.apply(console, args);
-        addLog(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' '), 'log');
+        enqueueLog(args, 'log');
     };
 
     console.warn = (...args) => {
@@ -84,18 +126,21 @@
             return;
         }
         originalWarn.apply(console, args);
-        addLog(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' '), 'warn');
+        enqueueLog(args, 'warn');
     };
 
     console.error = (...args) => {
         originalError.apply(console, args);
-        addLog(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : a).join(' '), 'error');
+        enqueueLog(args, 'error');
     };
 
     function toggleConsole() {
         if (consoleContainer.style.display === 'none') {
+            isConsoleOpen = true;
             consoleContainer.style.display = 'flex';
+            flushPendingLogs();
         } else {
+            isConsoleOpen = false;
             consoleContainer.style.display = 'none';
         }
     }

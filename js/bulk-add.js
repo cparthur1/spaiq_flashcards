@@ -5,7 +5,7 @@
  * transferência direta com animações de física Material You Expressive, e edição/exclusão.
  */
 
-import { renderMathAndMarkdown, escapeHtml, sanitizeImageUrl, generateSecureId, stripHtml, ROUTES, NOTEBOOK_STORAGE_KEY, encodeStoragePayload } from './utils.js';
+import { renderMathAndMarkdown, escapeHtml, sanitizeImageUrl, generateSecureId, NOTEBOOK_STORAGE_KEY, encodeStoragePayload, openModalWithMotion, closeModalWithMotion } from './utils.js';
 import { triggerHaptic } from './engine/effects.js';
 import { isPlayableCard } from './engine/scheduler.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
@@ -23,8 +23,6 @@ const summaryCardsText = document.getElementById('summary-cards-text');
 const btnLoadMore = document.getElementById('btn-load-more');
 
 const deckPreviewsWorkspace = document.getElementById('deck-previews-workspace');
-const leftDeckPanel = document.getElementById('left-deck-panel');
-const rightDeckPanel = document.getElementById('right-deck-panel');
 const leftDeckBlur = document.getElementById('left-deck-blur');
 const rightDeckBlur = document.getElementById('right-deck-blur');
 const transferSquircle = document.getElementById('transfer-squircle');
@@ -973,12 +971,12 @@ function openEditModal(cardId) {
     if (editModalFront) editModalFront.value = card.description || '';
     if (editModalBack) editModalBack.value = card.answer || '';
 
-    editCardModal?.classList.remove('hidden');
+    openModalWithMotion(editCardModal);
     setTimeout(() => editModalFront?.focus(), 60);
 }
 
 function closeEditModal() {
-    editCardModal?.classList.add('hidden');
+    closeModalWithMotion(editCardModal);
     editingCardId = null;
 }
 
@@ -1100,12 +1098,12 @@ function openNotebookOverviewModal() {
     });
 
     renderNotebookOverviewModalContent();
-    notebookOverviewModal?.classList.remove('hidden');
+    openModalWithMotion(notebookOverviewModal);
     triggerHaptic('tick');
 }
 
 function closeNotebookOverviewModal() {
-    notebookOverviewModal?.classList.add('hidden');
+    closeModalWithMotion(notebookOverviewModal);
 }
 
 function renderNotebookOverviewModalContent() {

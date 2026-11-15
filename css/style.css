@@ -620,6 +620,14 @@ body {
     overflow: hidden;
 }
 
+.m3-dialog-card.overflow-y-auto,
+#hamburger-menu {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
 /* Material 3 Expressive Progress Bar */
 .m3-linear-progress {
     height: 6px;
@@ -645,74 +653,66 @@ body {
 }
 
 #question-card {
-    transition: box-shadow 0.4s ease-in-out;
+    transition: border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+    backface-visibility: hidden;
 }
 
 /* Card Shake on Wrong Guess */
 @keyframes cardShake {
     0%, 100% {
-        transform: translateX(0) rotate(0deg);
+        transform: translate3d(0, 0, 0) rotate(0deg);
     }
     15% {
-        transform: translateX(-10px) rotate(-1.5deg);
+        transform: translate3d(-10px, 0, 0) rotate(-1.5deg);
     }
     30% {
-        transform: translateX(9px) rotate(1.2deg);
+        transform: translate3d(9px, 0, 0) rotate(1.2deg);
     }
     45% {
-        transform: translateX(-7px) rotate(-0.8deg);
+        transform: translate3d(-7px, 0, 0) rotate(-0.8deg);
     }
     60% {
-        transform: translateX(5px) rotate(0.5deg);
+        transform: translate3d(5px, 0, 0) rotate(0.5deg);
     }
     75% {
-        transform: translateX(-3px) rotate(-0.2deg);
+        transform: translate3d(-3px, 0, 0) rotate(-0.2deg);
     }
     90% {
-        transform: translateX(1px) rotate(0deg);
+        transform: translate3d(1px, 0, 0) rotate(0deg);
     }
 }
 
 .card-shake {
+    will-change: transform;
+    backface-visibility: hidden;
     animation: cardShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
-/* Card Place-Behind-Deck Animation */
+/* Card Place-Behind-Deck Animation (GPU-Composited: transform + opacity only) */
 @keyframes cardToBack {
     0% {
-        transform: translateY(0) scale(1) rotate(0deg);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        z-index: 25;
+        transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
         opacity: 1;
-        filter: brightness(1);
     }
     35% {
-        transform: translateY(-45px) scale(1.03) rotate(-1.5deg);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
-        z-index: 25;
+        transform: translate3d(0, -45px, 0) scale(1.03) rotate(-1.5deg);
         opacity: 1;
-        filter: brightness(1.02);
-    }
-    40% {
-        z-index: 5;
     }
     65% {
-        transform: translateY(-5px) scale(0.94) rotate(0.5deg);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        z-index: 5;
+        transform: translate3d(0, -5px, 0) scale(0.94) rotate(0.5deg);
         opacity: 0.85;
-        filter: brightness(0.9);
     }
     100% {
-        transform: translateY(35px) scale(0.9) rotate(1deg);
-        box-shadow: none;
-        z-index: 5;
+        transform: translate3d(0, 35px, 0) scale(0.9) rotate(1deg);
         opacity: 0;
-        filter: brightness(0.75);
     }
 }
 
 .anim-card-to-back {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    contain: layout style paint;
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15);
     animation: cardToBack 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
@@ -723,7 +723,6 @@ body {
     }
     50% {
         transform: scale(1.35);
-        filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.8));
     }
     100% {
         transform: scale(1);
@@ -746,7 +745,7 @@ body {
     transform: scale(0.9);
 }
 
-.modal-overlay {
+:where(.modal-overlay) {
     background-color: rgba(0, 0, 0, 0.5);
 }
 
@@ -766,6 +765,44 @@ body {
         opacity: 1;
         transform: scale(1) translateY(0);
     }
+}
+
+@keyframes m3-backdrop-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes m3-dialog-exit {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.94) translateY(10px);
+    }
+}
+
+.modal-overlay[data-m3-closing] {
+    pointer-events: none !important;
+    animation: m3-backdrop-fade-out var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized-accelerate) forwards !important;
+}
+
+.modal-overlay[data-m3-closing] > div,
+.modal-overlay[data-m3-closing] > form > div,
+#transfer-modal[data-m3-closing] #transfer-modal-content,
+#pomodoro-break-overlay[data-m3-closing] #pomodoro-break-card {
+    animation: m3-dialog-exit var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized-accelerate) forwards !important;
+}
+
+/* Fullscreen Sync Overlay Motion */
+.m3-fullscreen-overlay:not(.hidden) {
+    animation: m3-fade-through-in var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate) both;
+}
+
+.m3-fullscreen-overlay[data-m3-closing] {
+    pointer-events: none !important;
+    animation: m3-fade-through-out var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized-accelerate) forwards;
 }
 
 /* Custom Scrollbars */
@@ -1567,22 +1604,48 @@ textarea::-webkit-scrollbar-thumb,
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
-/* Header Menus Physical Animation - Slide Down (M3 Emphasized Decelerate) */
+/* Header Menus & Popover Dropdowns Physical Animation (M3 Expressive Entry & Exit) */
 #hamburger-menu:not(.hidden),
 #deck-select-dropdown:not(.hidden) {
-    animation: headerMenuSlideDown var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate) forwards;
+    animation: headerMenuSlideDown var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-emphasized-decelerate) backwards;
     transform-origin: top left;
     will-change: transform, opacity;
+}
+
+#header-stats-dropdown:not(.hidden),
+#lang-dropdown-menu:not(.hidden) {
+    animation: headerMenuSlideDown var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-emphasized-decelerate) backwards;
+    transform-origin: top right;
+    will-change: transform, opacity;
+}
+
+#hamburger-menu[data-m3-closing],
+#deck-select-dropdown[data-m3-closing],
+#header-stats-dropdown[data-m3-closing],
+#lang-dropdown-menu[data-m3-closing] {
+    pointer-events: none !important;
+    animation: headerMenuSlideUp var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-emphasized-accelerate) forwards !important;
 }
 
 @keyframes headerMenuSlideDown {
     0% {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateY(-12px) scale(0.96);
     }
     100% {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes headerMenuSlideUp {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
     }
 }
 
@@ -2788,12 +2851,14 @@ mark.card-hl-purple {
 }
 
 .anim-streak-up {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
     animation: streakShimmerUp 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes streakShimmerDown {
     0% {
-        transform: translateY(-115%);
+        transform: translate3d(0, -115%, 0);
         opacity: 0;
     }
     20% {
@@ -2803,12 +2868,14 @@ mark.card-hl-purple {
         opacity: 0.95;
     }
     100% {
-        transform: translateY(115%);
+        transform: translate3d(0, 115%, 0);
         opacity: 0;
     }
 }
 
 .anim-streak-down {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
     animation: streakShimmerDown 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -2828,6 +2895,8 @@ mark.card-hl-purple {
 }
 
 .anim-streak-pop {
+    will-change: transform;
+    backface-visibility: hidden;
     animation: streakPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
@@ -2846,9 +2915,62 @@ mark.card-hl-purple {
 
     .modal-overlay:not(.hidden) > div,
     .modal-overlay:not(.hidden) > form > div,
+    .modal-overlay[data-m3-closing],
+    .modal-overlay[data-m3-closing] > div,
+    .modal-overlay[data-m3-closing] > form > div,
+    .m3-fullscreen-overlay:not(.hidden),
+    .m3-fullscreen-overlay[data-m3-closing],
+    #transfer-modal[data-m3-closing] #transfer-modal-content,
+    #pomodoro-break-overlay[data-m3-closing] #pomodoro-break-card,
     #hamburger-menu:not(.hidden),
+    #hamburger-menu[data-m3-closing],
     #deck-select-dropdown:not(.hidden),
+    #deck-select-dropdown[data-m3-closing],
+    #header-stats-dropdown:not(.hidden),
+    #header-stats-dropdown[data-m3-closing],
+    #lang-dropdown-menu:not(.hidden),
+    #lang-dropdown-menu[data-m3-closing],
     #text-highlight-popup:not(.hidden),
+    .m3-reveal-enter,
+    .m3-bookmark-pop,
+    #voice-controls-area:not(.hidden),
+    #voice-answer-container:not(.hidden),
+    #voice-evaluated-controls:not(.hidden),
+    #voice-key-points-container:not(.hidden),
+    #voice-thinking-msg:not(.hidden),
+    #anki-flipped-controls:not(.hidden),
+    #anki-unflipped-controls:not(.hidden),
+    #correction-options:not(.hidden),
+    #ask-ai-btn:not(.hidden),
+    #next-question-btn:not(.hidden),
+    #question-feedback-text:not(.hidden),
+    #flowchart-status-banner:not(.hidden),
+    #flowchart-solution-container:not(.hidden),
+    #flowchart-tray-empty:not(.hidden),
+    #session-completed-banner:not(.hidden),
+    #banner-stat-ai:not(.hidden),
+    #chart-trend-badge:not(.hidden),
+    #struggling-badge-count:not(.hidden),
+    #add-all-to-notebook-btn:not(.hidden),
+    #continue-session-btn:not(.hidden),
+    #exam-saved-badge:not(.hidden),
+    #exam-saved-session-box:not(.hidden),
+    #exam-error:not(.hidden),
+    #exam-empty-msg:not(.hidden),
+    .lang-check-icon:not(.hidden),
+    #modal-1-2-status:not(.hidden),
+    #modal-1-2-apkg-options:not(.hidden),
+    #modal-2-1-language-container:not(.hidden),
+    #modal-2-1-custom-language-container:not(.hidden),
+    #upload-summary-bar:not(.hidden),
+    #deck-previews-workspace:not(.hidden),
+    #selected-pill-counter:not(.hidden),
+    #transfer-squircle:not(.hidden),
+    #clear-notebook-search-btn:not(.hidden),
+    #img-arrow-color-bar:not(.hidden),
+    #deck-item-exam:not(.hidden),
+    #voice-points-covered-row:not(.hidden),
+    #voice-points-missed-row:not(.hidden),
     .card-shake,
     .fill-box-shake,
     .fill-box-pop,
@@ -3243,7 +3365,9 @@ mark.card-hl-purple {
     left: -160%;
     width: 280%;
     height: 220%;
-    transform: rotate(20deg);
+    transform: translate3d(0, 0, 0) rotate(20deg);
+    will-change: transform, opacity;
+    backface-visibility: hidden;
 }
 
 .header-shimmer-active #header-shimmer-sweep {
@@ -3259,7 +3383,7 @@ mark.card-hl-purple {
 .header-shimmer-active:not(.header-shimmer-goal) {
     border-color: rgba(249, 115, 22, 0.65) !important;
     box-shadow: 0 0 25px rgba(249, 115, 22, 0.45), 0 0 12px rgba(234, 179, 8, 0.35) !important;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.3s ease;
 }
 
 .header-shimmer-fire #header-shimmer-beam,
@@ -3274,14 +3398,13 @@ mark.card-hl-purple {
         rgba(234, 88, 12, 0) 90%,
         transparent 100%
     );
-    filter: drop-shadow(0 0 14px rgba(249, 115, 22, 0.75)) drop-shadow(0 0 8px rgba(253, 224, 71, 0.65));
 }
 
 /* 2. Meta Atingida Shimmer (Rosa, Azul Claro & Verde Neon) */
 .header-shimmer-goal {
     border-color: rgba(56, 189, 248, 0.6) !important;
     box-shadow: 0 0 24px rgba(56, 189, 248, 0.35), 0 0 12px rgba(244, 114, 182, 0.25) !important;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.3s ease;
 }
 
 .header-shimmer-goal #header-shimmer-beam {
@@ -3295,12 +3418,11 @@ mark.card-hl-purple {
         rgba(74, 222, 128, 0) 90%,
         transparent 100%
     );
-    filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.65)) drop-shadow(0 0 8px rgba(74, 222, 128, 0.5));
 }
 
 @keyframes fullHeaderShimmerSweep {
     0% {
-        transform: translateX(0) rotate(20deg);
+        transform: translate3d(0, 0, 0) rotate(20deg);
         opacity: 0;
     }
     15% {
@@ -3310,7 +3432,7 @@ mark.card-hl-purple {
         opacity: 1;
     }
     100% {
-        transform: translateX(135%) rotate(20deg);
+        transform: translate3d(135%, 0, 0) rotate(20deg);
         opacity: 0;
     }
 }
@@ -4483,6 +4605,107 @@ body.dark-mode .flowchart-tray-blank-chip {
     border: 1px solid rgba(59, 130, 247, 0.3);
     background: var(--md-sys-color-surface-container-low);
     color: var(--md-sys-color-on-surface);
+}
+
+/* ==========================================================================
+   MATERIAL YOU EXPRESSIVE REVEALS & MICRO-INTERACTIONS
+   ========================================================================== */
+@keyframes m3RevealUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes m3ChipSpringIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.88) translateY(4px);
+    }
+    68% {
+        opacity: 1;
+        transform: scale(1.03) translateY(-1px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes m3BookmarkPop {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+    28% {
+        transform: scale(0.74) rotate(-10deg);
+    }
+    68% {
+        transform: scale(1.26) rotate(5deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.m3-reveal-enter {
+    animation: m3RevealUp var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-emphasized-decelerate) backwards;
+}
+
+.m3-bookmark-pop {
+    animation: m3BookmarkPop var(--md-sys-motion-duration-medium3) var(--md-sys-motion-easing-spring);
+    will-change: transform;
+}
+
+/* In-card panels, voice mode, post-answer feedback & dynamic reveals */
+#voice-controls-area:not(.hidden),
+#voice-answer-container:not(.hidden),
+#voice-evaluated-controls:not(.hidden),
+#voice-key-points-container:not(.hidden),
+#voice-thinking-msg:not(.hidden),
+#anki-flipped-controls:not(.hidden),
+#anki-unflipped-controls:not(.hidden),
+#correction-options:not(.hidden),
+#ask-ai-btn:not(.hidden),
+#next-question-btn:not(.hidden),
+#question-feedback-text:not(.hidden),
+#flowchart-status-banner:not(.hidden),
+#flowchart-solution-container:not(.hidden),
+#flowchart-tray-empty:not(.hidden),
+#session-completed-banner:not(.hidden),
+#exam-saved-session-box:not(.hidden),
+#modal-1-2-status:not(.hidden),
+#modal-1-2-apkg-options:not(.hidden),
+#modal-2-1-language-container:not(.hidden),
+#modal-2-1-custom-language-container:not(.hidden),
+#upload-summary-bar:not(.hidden),
+#deck-previews-workspace:not(.hidden),
+#question-image-error:not(.hidden),
+#question-image-placeholder:not(.hidden) {
+    animation: m3RevealUp var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-emphasized-decelerate) backwards;
+}
+
+/* Expressive spring micro-entrances for pills, badges, checks & dynamic chips */
+#continue-session-btn:not(.hidden),
+#exam-saved-badge:not(.hidden),
+#exam-error:not(.hidden),
+#exam-empty-msg:not(.hidden),
+.lang-check-icon:not(.hidden),
+#chart-trend-badge:not(.hidden),
+#struggling-badge-count:not(.hidden),
+#add-all-to-notebook-btn:not(.hidden),
+#banner-stat-ai:not(.hidden),
+#selected-pill-counter:not(.hidden),
+#transfer-squircle:not(.hidden),
+#clear-notebook-search-btn:not(.hidden),
+#img-arrow-color-bar:not(.hidden),
+#deck-item-exam:not(.hidden),
+#voice-points-covered-row:not(.hidden),
+#voice-points-missed-row:not(.hidden) {
+    animation: m3ChipSpringIn var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring) backwards;
 }
 
 
