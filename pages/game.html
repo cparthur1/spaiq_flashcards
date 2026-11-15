@@ -59,10 +59,10 @@
     <link rel="icon" type="image/png" href="../assets/img/favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="../assets/img/apple-touch-icon.png">
     <!-- Material Design Expressive: Local Fonts & Components -->
+    <link rel="preload" as="font" type="font/woff2" href="../assets/fonts/bitcount-prop-single.woff2" crossorigin>
     <link rel="stylesheet" href="../assets/fonts/fonts.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@100..900&display=swap">
     <script type="module">
         import {styles as typescaleStyles} from '../assets/vendor/material-web.bundle.js';
         if (typescaleStyles?.styleSheet) {
@@ -1521,7 +1521,7 @@
                     Tempo Restante de Pausa
                 </span>
                 <span id="pomodoro-break-countdown"
-                    class="text-5xl sm:text-6xl md:text-7xl font-black tracking-wider transition-all duration-300">
+                    class="text-5xl sm:text-6xl md:text-7xl font-normal tracking-wider transition-all duration-300">
                     05:00
                 </span>
             </div>

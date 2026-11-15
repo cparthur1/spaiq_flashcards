@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.54'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.55'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -20,6 +20,7 @@ const RAW_ASSETS = [
   '/css/tailwind.min.css',
   '/css/style.css',
   '/assets/fonts/fonts.css',
+  '/assets/fonts/bitcount-prop-single.woff2',
   '/assets/fonts/material-symbols-rounded.woff2',
   '/assets/fonts/roboto-flex.woff2',
   '/assets/vendor/material-web.bundle.js',
