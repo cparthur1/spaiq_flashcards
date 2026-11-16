@@ -16,7 +16,8 @@ let currentBackendChatHistory = [];
 let currentChatModel = "gemini-flash-lite-latest";
 export const BACKGROUND_CORRECTOR_MODEL = "gemini-decision-1";
 const BACKGROUND_CORRECTOR_FALLBACK_MODEL = "gemini-flash-lite-latest";
-const DECISION_ACCEPT_THRESHOLD = 0.70;
+const DECISION_ACCEPT_THRESHOLD = 0.60;
+const DECISION_CORROBORATED_THRESHOLD = 0.50;
 let hasChatInteraction = false;
 
 export function isTutorEnabled() {
@@ -215,13 +216,16 @@ export async function evaluateAnswerSemantic({ questionObj, actualAnswer, onSlow
                 const confidence = typeof isCorrectAns.confidence === 'number'
                     ? isCorrectAns.confidence
                     : Math.max(probability, 1 - probability);
-                const correto = probability >= DECISION_ACCEPT_THRESHOLD;
-                const justificativa = formatDecisionJustification(correto, reasonAns?.choice, confidence);
+                const reasonChoice = reasonAns?.choice || null;
+                const isAcceptedReason = Boolean(reasonChoice && ACCEPTED_DECISION_REASON_KEYS[reasonChoice]);
+                const correto = probability >= DECISION_ACCEPT_THRESHOLD
+                    || (probability >= DECISION_CORROBORATED_THRESHOLD && isAcceptedReason);
+                const justificativa = formatDecisionJustification(correto, reasonChoice, confidence);
                 console.log(`[Tutor] Corretor em segundo plano (${BACKGROUND_CORRECTOR_MODEL}):`, {
                     correto,
                     probability,
                     confidence,
-                    reason: reasonAns?.choice || null
+                    reason: reasonChoice
                 });
                 return {
                     correto,
