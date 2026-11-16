@@ -371,7 +371,7 @@ Os módulos em `js/engine/` contêm a inteligência desacoplada do jogo.
 | Função | Linha | Contexto de Execução | O que faz | Oportunidade de Otimização |
 |---|---|---|---|---|
 | `initTutor(apiKey)` | 29 | Boot com IA ativa | Prepara configurações de chamada do assistente. | **Manter**: Setup leve. |
-| `evaluateAnswerSemantic(...)` | 94 | Dúvida de correção | Compara semântica da resposta do aluno com o gabarito via Gemini Flash-Lite. | **Manter**: Backend proxy seguro. |
+| `evaluateAnswerSemantic(...)` | 150 | Dúvida de correção | Compara semântica da resposta do aluno com o gabarito via Gemini Decision 1 (`/v1beta/decisions`, fallback para Gemini Flash-Lite). | **Manter**: Backend proxy seguro. |
 | `sendTutorChatMessage(...)` | 195 | Envio no chat do tutor | Envia histórico de chat estruturado para o backend `${BACKEND_URL}/api/ai/chat`. | **Manter**: Conversação pedagógica com IA. |
 | `getTermDefinition(term, context)` | 274 | Clique duplo / seleção | Solicita definição técnica concisa de um termo selecionado no card. | **Manter**: Micro-lookup pedagógico sob demanda. |
 | `logDefinitionToChat(...)` | 325 | Pós-definição de termo | Registra a explicação do termo no histórico do chat para consulta posterior. | **Manter**: Continuidade pedagógica. |

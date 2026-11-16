@@ -175,3 +175,57 @@ export async function callGemini({
     }
   });
 }
+
+/**
+ * Proxies Decisions API requests (gemini-decision-1) to Google Gemini
+ * @param {object} params
+ * @param {string} [params.model] - Defaults to "gemini-decision-1"
+ * @param {string|object|Array} params.input - Shared context input
+ * @param {object} params.questions - Decision questions map (noul, choice, score)
+ * @param {string} params.apiKey - Internal server Gemini API key
+ */
+export async function callGeminiDecision({
+  model = 'gemini-decision-1',
+  input,
+  questions,
+  apiKey
+}) {
+  const url = `${GEMINI_API_BASE}/decisions`;
+  const body = {
+    model: model || 'gemini-decision-1',
+    input,
+    questions
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey || ''
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Gemini Decisions API Error] (${response.status}) Model: ${model}:`, errorText);
+    return new Response(JSON.stringify({
+      error: 'gemini_decision_error',
+      status: response.status,
+      message: errorText
+    }), {
+      status: response.status,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+
+  const data = await response.json();
+  return new Response(JSON.stringify(data), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}

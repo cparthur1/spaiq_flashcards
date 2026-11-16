@@ -9,7 +9,7 @@
  */
 
 import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail } from './google-auth.js';
-import { callGemini } from './gemini.js';
+import { callGemini, callGeminiDecision } from './gemini.js';
 import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData, deleteDocument, findUserByApiKey } from './firestore.js';
 import {
   getStripeClient,
@@ -47,9 +47,19 @@ const ALLOWED_GEMINI_MODELS = new Set([
   'gemini-2.0-flash-lite'
 ]);
 
-function sanitizeGeminiModel(requestedModel, fallbackModel = 'gemini-flash-lite-latest') {
-  if (typeof requestedModel === 'string' && ALLOWED_GEMINI_MODELS.has(requestedModel.trim())) {
-    return requestedModel.trim();
+const ALLOWED_DECISION_MODELS = new Set([
+  'gemini-decision-1'
+]);
+
+function sanitizeGeminiModel(requestedModel, fallbackModel = 'gemini-flash-lite-latest', { allowDecision = false } = {}) {
+  if (typeof requestedModel === 'string') {
+    const trimmed = requestedModel.trim();
+    if (ALLOWED_GEMINI_MODELS.has(trimmed)) {
+      return trimmed;
+    }
+    if (allowDecision && ALLOWED_DECISION_MODELS.has(trimmed)) {
+      return trimmed;
+    }
   }
   return fallbackModel;
 }
@@ -1457,8 +1467,8 @@ export default {
         });
       }
 
-      // 7. Gemini AI - Tutor Feedback during study (Unlimited for Pro)
-      if (path === '/api/ai/tutor' && request.method === 'POST') {
+      // 7. Gemini AI - Tutor Feedback & Background Corrector during study (Unlimited for Pro)
+      if ((path === '/api/ai/tutor' || path === '/api/ai/decision') && request.method === 'POST') {
         const user = await authenticateUser();
         const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
         let isPro = isLifetime || Boolean(user.pro);
@@ -1483,16 +1493,40 @@ export default {
         }
 
         const reqBody = await request.json();
-        const geminiRes = await callGemini({
-          model: sanitizeGeminiModel(reqBody.model, 'gemini-flash-lite-latest'),
-          contents: reqBody.contents,
-          systemInstruction: reqBody.systemInstruction,
-          generationConfig: reqBody.generationConfig,
-          tools: reqBody.tools,
-          toolConfig: reqBody.toolConfig,
-          stream: false,
-          apiKey: env.GEMINI_API_KEY
-        });
+        const requestedModel = path === '/api/ai/decision'
+          ? 'gemini-decision-1'
+          : sanitizeGeminiModel(reqBody.model, 'gemini-flash-lite-latest', { allowDecision: true });
+
+        let geminiRes;
+        if (ALLOWED_DECISION_MODELS.has(requestedModel)) {
+          const hasValidQuestions = reqBody.questions
+            && typeof reqBody.questions === 'object'
+            && !Array.isArray(reqBody.questions)
+            && Object.keys(reqBody.questions).length > 0;
+          if (!reqBody.input || !hasValidQuestions) {
+            return jsonResponse({
+              error: 'bad_request',
+              message: 'Campos "input" e "questions" são obrigatórios para gemini-decision-1.'
+            }, 400, corsHeaders);
+          }
+          geminiRes = await callGeminiDecision({
+            model: requestedModel,
+            input: reqBody.input,
+            questions: reqBody.questions,
+            apiKey: env.GEMINI_API_KEY
+          });
+        } else {
+          geminiRes = await callGemini({
+            model: requestedModel,
+            contents: reqBody.contents,
+            systemInstruction: reqBody.systemInstruction,
+            generationConfig: reqBody.generationConfig,
+            tools: reqBody.tools,
+            toolConfig: reqBody.toolConfig,
+            stream: false,
+            apiKey: env.GEMINI_API_KEY
+          });
+        }
 
         const responseHeaders = new Headers(geminiRes.headers);
         Object.entries(corsHeaders).forEach(([k, v]) => responseHeaders.set(k, v));

@@ -14,6 +14,9 @@ import { t } from '../i18n.js';
 let lastUserAnswerForChat = "";
 let currentBackendChatHistory = [];
 let currentChatModel = "gemini-flash-lite-latest";
+export const BACKGROUND_CORRECTOR_MODEL = "gemini-decision-1";
+const BACKGROUND_CORRECTOR_FALLBACK_MODEL = "gemini-flash-lite-latest";
+const DECISION_ACCEPT_THRESHOLD = 0.70;
 let hasChatInteraction = false;
 
 export function isTutorEnabled() {
@@ -81,51 +84,167 @@ export function setHasChatInteraction(val) {
 }
 
 /**
+ * Formata a resposta esperada do cartão para avaliação semântica.
+ */
+function formatExpectedAnswerForEvaluation(questionObj) {
+    if (questionObj.type === 'fill' && questionObj.answers && questionObj.answers.length > 0) {
+        return questionObj.answers.join(' ; ');
+    }
+    if (questionObj.type === 'flowchart') {
+        if (!Array.isArray(questionObj?.nodes) || questionObj.nodes.length === 0) {
+            return questionObj?.answer || '';
+        }
+        const idToLabel = new Map();
+        questionObj.nodes.forEach((n, idx) => {
+            let bIdx = 0;
+            const filled = String(n.text || '').replace(/_/g, () => {
+                const ans = Array.isArray(n.blanks) && n.blanks[bIdx] !== undefined ? n.blanks[bIdx] : '_';
+                bIdx++;
+                return `[${ans}]`;
+            });
+            idToLabel.set(n.id, `${idx + 1}. ${filled}`);
+        });
+        return questionObj.nodes.map(n => {
+            const label = idToLabel.get(n.id);
+            const nexts = Array.isArray(n.next) && n.next.length > 0
+                ? ` -> [${n.next.map(nid => idToLabel.get(nid) || nid).join(', ')}]`
+                : '';
+            return `${label}${nexts}`;
+        }).join(' | ');
+    }
+    if (questionObj.type === 'image_arrows' && Array.isArray(questionObj.imageArrows) && questionObj.imageArrows.length > 0) {
+        return questionObj.imageArrows.map((a, i) => `${i + 1}. ${a.label || ''}`).join(' ; ');
+    }
+    const separator = questionObj.type === 'open_double' ? ' ; ' : ' / ';
+    return [questionObj.answer, questionObj.answer2].filter(Boolean).join(separator);
+}
+
+const ACCEPTED_DECISION_REASON_KEYS = {
+    exact_synonym: 'ai_decision_reason_exact_synonym',
+    standard_abbreviation: 'ai_decision_reason_standard_abbreviation',
+    core_technical_concept: 'ai_decision_reason_core_technical_concept',
+    minor_typo: 'ai_decision_reason_minor_typo'
+};
+
+const REJECTED_DECISION_REASON_KEYS = {
+    wrong_value_or_sequence: 'ai_decision_reason_wrong_value_or_sequence',
+    factual_error: 'ai_decision_reason_factual_error',
+    vague_or_incomplete: 'ai_decision_reason_vague_or_incomplete'
+};
+
+function formatDecisionJustification(correto, reasonChoice, confidence) {
+    const pct = Math.round((Number(confidence) || 0) * 100);
+    const keyMap = correto ? ACCEPTED_DECISION_REASON_KEYS : REJECTED_DECISION_REASON_KEYS;
+    const defaultKey = correto ? 'ai_decision_reason_accepted' : 'ai_decision_reason_rejected';
+    const key = (reasonChoice && keyMap[reasonChoice]) ? keyMap[reasonChoice] : defaultKey;
+    return t(key, { confidence: pct });
+}
+
+/**
  * Avalia semanticamente se a resposta digitada pelo usuário está correta
- * usando modelo Gemini com saída estruturada em JSON.
+ * usando Gemini Decision 1 (Decisions API) como modelo principal do corretor em segundo plano,
+ * com fallback automático para gemini-flash-lite-latest em caso de indisponibilidade.
  * 
  * @param {Object} options
  * @param {Object} options.questionObj - O cartão atual
  * @param {string} options.actualAnswer - Resposta digitada pelo usuário
  * @param {Function} [options.onSlowConnection] - Callback quando latência > 15s
  * @param {Function} [options.onAiDisabledByErrors] - Callback quando múltiplos erros 503 ocorrem
- * @returns {Promise<{correto: boolean, justificativa: string}|null>}
+ * @returns {Promise<{correto: boolean, justificativa: string, model?: string, probability?: number, confidence?: number}|null>}
  */
 export async function evaluateAnswerSemantic({ questionObj, actualAnswer, onSlowConnection, onAiDisabledByErrors }) {
     if (!isTutorEnabled() || !questionObj) return null;
 
     try {
-        const formatFlowchartSummary = (q) => {
-            if (!Array.isArray(q?.nodes) || q.nodes.length === 0) return q?.answer || '';
-            const idToLabel = new Map();
-            q.nodes.forEach((n, idx) => {
-                let bIdx = 0;
-                const filled = String(n.text || '').replace(/_/g, () => {
-                    const ans = Array.isArray(n.blanks) && n.blanks[bIdx] !== undefined ? n.blanks[bIdx] : '_';
-                    bIdx++;
-                    return `[${ans}]`;
-                });
-                idToLabel.set(n.id, `${idx + 1}. ${filled}`);
-            });
-            return q.nodes.map(n => {
-                const label = idToLabel.get(n.id);
-                const nexts = Array.isArray(n.next) && n.next.length > 0
-                    ? ` -> [${n.next.map(nid => idToLabel.get(nid) || nid).join(', ')}]`
-                    : '';
-                return `${label}${nexts}`;
-            }).join(' | ');
-        };
-        const expected = (questionObj.type === 'fill' && questionObj.answers && questionObj.answers.length > 0)
-            ? questionObj.answers.join(' ; ')
-            : questionObj.type === 'flowchart'
-                ? formatFlowchartSummary(questionObj)
-                : [questionObj.answer, questionObj.answer2].filter(Boolean).join(' / ');
+        const cleanQuestion = stripHtml(questionObj.description || '') || String(questionObj.description || '');
+        const expected = formatExpectedAnswerForEvaluation(questionObj);
 
+        const token = await getCurrentUserToken().catch(() => null);
+        if (!token) return null;
+
+        const decisionInput = [
+            `Flashcard Question: ${cleanQuestion}`,
+            `Card Type: ${questionObj.type || 'open'}`,
+            `Expected Answer(s): ${expected}`,
+            `User's Typed Answer: ${actualAnswer}`
+        ].join('\n');
+
+        const decisionQuestions = {
+            is_correct: {
+                type: 'noul',
+                instructions: [
+                    "Determine whether the User's Typed Answer is semantically valid or an acceptable equivalent to the Expected Answer(s) for this academic flashcard.",
+                    "Answer YES (true) ONLY if: (1) it is an exact synonym, equivalent academic term, or standard abbreviation/acronym; (2) it has a minor typo/spelling variation preserving the exact technical meaning; OR (3) it states the core essential technical term demonstrating exact knowledge (e.g., 'Braquial' for 'Músculo braquial').",
+                    "Answer NO (false) if: (1) the card asks for multiple values, durations, or a sequence (e.g., in order or 'respectively') and ANY value, duration, or order is wrong or missing (e.g., 50 ms instead of 40 ms); OR (2) it contains factual errors, wrong numbers, refers to a different structure/concept, or is too vague."
+                ].join(' ')
+            },
+            reason_category: {
+                type: 'choice',
+                instructions: "Classify the primary reason why the User's Typed Answer should be accepted or rejected relative to the Expected Answer(s).",
+                criteria: {
+                    exact_synonym: "Accepted: Exact synonym or equivalent academic term.",
+                    standard_abbreviation: "Accepted: Standard abbreviation or acronym with identical meaning.",
+                    core_technical_concept: "Accepted: Essential core term demonstrating exact technical knowledge.",
+                    minor_typo: "Accepted: Minor spelling or typing variation preserving exact meaning.",
+                    wrong_value_or_sequence: "Rejected: Incorrect numerical value, duration, unit, or sequence order.",
+                    factual_error: "Rejected: Factually incorrect or refers to a different concept/structure.",
+                    vague_or_incomplete: "Rejected: Too vague, ambiguous, or missing required elements."
+                }
+            }
+        };
+
+        const decisionRes = await fetch(`${BACKEND_URL}/api/ai/tutor`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                model: BACKGROUND_CORRECTOR_MODEL,
+                input: decisionInput,
+                questions: decisionQuestions
+            })
+        });
+
+        if (decisionRes.ok) {
+            const decisionData = await decisionRes.json().catch(() => null);
+            const isCorrectAns = decisionData?.answers?.is_correct;
+            const reasonAns = decisionData?.answers?.reason_category;
+            if (isCorrectAns && typeof isCorrectAns.noul === 'number') {
+                const probability = isCorrectAns.noul;
+                const confidence = typeof isCorrectAns.confidence === 'number'
+                    ? isCorrectAns.confidence
+                    : Math.max(probability, 1 - probability);
+                const correto = probability >= DECISION_ACCEPT_THRESHOLD;
+                const justificativa = formatDecisionJustification(correto, reasonAns?.choice, confidence);
+                console.log(`[Tutor] Corretor em segundo plano (${BACKGROUND_CORRECTOR_MODEL}):`, {
+                    correto,
+                    probability,
+                    confidence,
+                    reason: reasonAns?.choice || null
+                });
+                return {
+                    correto,
+                    justificativa,
+                    model: BACKGROUND_CORRECTOR_MODEL,
+                    probability,
+                    confidence
+                };
+            }
+            console.warn(`[Tutor] Resposta inesperada de ${BACKGROUND_CORRECTOR_MODEL}, tentando fallback...`, decisionData);
+        } else {
+            if (decisionRes.status === 401 || decisionRes.status === 403) {
+                return null;
+            }
+            console.warn(`[Tutor] ${BACKGROUND_CORRECTOR_MODEL} retornou status ${decisionRes.status}, tentando fallback para ${BACKGROUND_CORRECTOR_FALLBACK_MODEL}...`);
+        }
+
+        // Fallback para modelo generativo caso o endpoint de Decisions não esteja disponível
         const prompt = `
             Você é um revisor de flashcards acadêmicos rigoroso. 
             O sistema automático marcou a resposta do usuário como incorreta. Avalie se a resposta digitada é semanticamente válida ou uma variação aceitável em relação à resposta esperada.
 
-            Pergunta: "${questionObj.description}"
+            Pergunta: "${cleanQuestion}"
             Resposta(s) Esperada(s) no Banco: "${expected}"
             Resposta Digitada pelo Usuário: "${actualAnswer}"
 
@@ -138,9 +257,6 @@ export async function evaluateAnswerSemantic({ questionObj, actualAnswer, onSlow
             Retorne um JSON com 'correto' (boolean) e 'justificativa' (string).
         `;
 
-        const token = await getCurrentUserToken().catch(() => null);
-        if (!token) return null;
-
         const res = await fetch(`${BACKEND_URL}/api/ai/tutor`, {
             method: 'POST',
             headers: {
@@ -148,7 +264,7 @@ export async function evaluateAnswerSemantic({ questionObj, actualAnswer, onSlow
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                model: "gemini-flash-lite-latest",
+                model: BACKGROUND_CORRECTOR_FALLBACK_MODEL,
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 generationConfig: {
                     thinkingConfig: { thinkingLevel: "LOW" },

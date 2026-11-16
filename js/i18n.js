@@ -1764,6 +1764,15 @@ export const TRANSLATIONS = {
     try_again: "Tentar Novamente",
     day: "dia",
     days: "dias",
+    ai_decision_reason_exact_synonym: "Sinônimo exato ou termo equivalente aceito ({confidence}% de confiança).",
+    ai_decision_reason_standard_abbreviation: "Abreviação ou sigla padrão equivalente ({confidence}% de confiança).",
+    ai_decision_reason_core_technical_concept: "Conceito técnico fundamental exato ({confidence}% de confiança).",
+    ai_decision_reason_minor_typo: "Pequena variação ortográfica com mesmo significado ({confidence}% de confiança).",
+    ai_decision_reason_wrong_value_or_sequence: "Valor numérico, duração ou sequência incorreta ({confidence}% de confiança).",
+    ai_decision_reason_factual_error: "Erro factual ou estrutura/conceito distinto ({confidence}% de confiança).",
+    ai_decision_reason_vague_or_incomplete: "Resposta vaga ou incompleta para os critérios ({confidence}% de confiança).",
+    ai_decision_reason_accepted: "Aceito pela IA como semanticamente equivalente ({confidence}% de confiança).",
+    ai_decision_reason_rejected: "Mantido como incorreto pela IA ({confidence}% de confiança).",
   },
 
   'en-US': {
@@ -3516,6 +3525,15 @@ export const TRANSLATIONS = {
     try_again: "Try Again",
     day: "day",
     days: "days",
+    ai_decision_reason_exact_synonym: "Accepted exact synonym or equivalent term ({confidence}% confidence).",
+    ai_decision_reason_standard_abbreviation: "Accepted standard abbreviation or acronym ({confidence}% confidence).",
+    ai_decision_reason_core_technical_concept: "Accepted core technical concept ({confidence}% confidence).",
+    ai_decision_reason_minor_typo: "Accepted minor spelling variation preserving meaning ({confidence}% confidence).",
+    ai_decision_reason_wrong_value_or_sequence: "Incorrect numerical value, duration, or sequence ({confidence}% confidence).",
+    ai_decision_reason_factual_error: "Factual error or different concept/structure ({confidence}% confidence).",
+    ai_decision_reason_vague_or_incomplete: "Too vague or incomplete for required criteria ({confidence}% confidence).",
+    ai_decision_reason_accepted: "Accepted by AI as semantically equivalent ({confidence}% confidence).",
+    ai_decision_reason_rejected: "Kept as incorrect by AI ({confidence}% confidence).",
   }
 };
 
