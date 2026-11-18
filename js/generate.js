@@ -2729,7 +2729,8 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
             if (errData.error === 'quota_exceeded') {
-                const promptMsg = isUserPro() ? t('alert_pro_monthly_limit') : t('alert_non_pro_limit');
+                const limitCount = Number(errData.limit) || Number(getUserProStatus()?.monthlyIncluded) || 4;
+                const promptMsg = isUserPro() ? t('alert_pro_monthly_limit', { limit: limitCount }) : t('alert_non_pro_limit');
                 if (confirm(promptMsg)) {
                     if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
                         window.flashcardsOpenExtraDeckModal();
@@ -2967,7 +2968,8 @@ ${JSON.stringify(localCards, null, 2)}`;
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
             if (errData.error === 'quota_exceeded') {
-                const promptMsg = isUserPro() ? t('alert_pro_monthly_limit') : t('alert_non_pro_limit');
+                const limitCount = Number(errData.limit) || Number(getUserProStatus()?.monthlyIncluded) || 4;
+                const promptMsg = isUserPro() ? t('alert_pro_monthly_limit', { limit: limitCount }) : t('alert_non_pro_limit');
                 if (confirm(promptMsg)) {
                     if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
                         window.flashcardsOpenExtraDeckModal();
@@ -5698,6 +5700,7 @@ playDeckBtn.addEventListener('click', async () => {
 
 // --- INITIALIZATION ---
 window.addEventListener('flashcards:pro-updated', () => {
+    updateAiConfigStatusUI();
     updateProPaywalledUI();
 });
 

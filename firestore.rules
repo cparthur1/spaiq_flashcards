@@ -6,6 +6,7 @@ service cloud.firestore {
     function protectedUserFields() {
       return [
         'subscription',
+        'cambluClube',
         'pro',
         'extraGenerations',
         'monthlyGenerationsUsed',

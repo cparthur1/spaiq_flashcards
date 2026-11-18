@@ -5,10 +5,10 @@
  */
 
 import { auth, signInWithGoogle, signOutUser, onAuthChange } from './firebase-client.js';
-import { isLifetime, isUserPro, openProModal, refreshUserProStatus, getUserProStatus } from './explore-modal.js';
+import { isLifetime, isUserPro, openProModal, refreshUserProStatus, getUserProStatus, getCambluTierLabel } from './explore-modal.js';
 import { getSubscriptionDetails, cancelSubscriptionOnly, reactivateSubscription, deleteAccountAndCancelSubscription } from './backend-api.js';
 import { escapeHtml, sanitizeImageUrl, openModalWithMotion, closeModalWithMotion } from './utils.js';
-import { t, applyTranslations } from './i18n.js';
+import { t, applyTranslations, getCurrentLanguage } from './i18n.js';
 
 let accountModalInitialized = false;
 let subDetailsCache = null;
@@ -115,13 +115,25 @@ async function renderAccountModalContent() {
   const photo = sanitizeImageUrl(user.photoURL || '');
   const name = escapeHtml(user.displayName || user.email.split('@')[0]);
   const email = escapeHtml(user.email || '');
+  const userStatus = getUserProStatus(user);
   const lifetime = isLifetime(user);
-  const pro = isUserPro(user);
+  const pro = isUserPro(user, userStatus);
+  const isCambluPro = Boolean(pro && !lifetime && userStatus?.subscription?.provider === 'camblu_clube');
+  const cambluTierSlug = String(userStatus?.cambluClube?.tier || userStatus?.subscription?.tier || 'raro').toLowerCase();
+  const cambluTierCode = Number(userStatus?.cambluClube?.tierCode ?? userStatus?.subscription?.tierCode ?? 0);
+  const cambluTierLabel = escapeHtml(getCambluTierLabel(cambluTierSlug));
 
   let planBadge = '';
   if (lifetime) {
     planBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
       <span class="material-symbols-rounded text-xs">star</span> ${t('pro_lifetime_badge')}
+    </span>`;
+  } else if (isCambluPro) {
+    const badgeColorClass = cambluTierCode >= 4
+      ? 'bg-amber-100 text-amber-800 border-amber-300'
+      : (cambluTierCode === 3 ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-blue-100 text-blue-800 border-blue-300');
+    planBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeColorClass}">
+      <span class="material-symbols-rounded text-xs">verified</span> ${escapeHtml(t('camblu_clube_badge', { tier: cambluTierLabel.toUpperCase() }))}
     </span>`;
   } else if (pro) {
     planBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -164,6 +176,98 @@ async function renderAccountModalContent() {
         <p class="text-xs text-amber-800/90 leading-relaxed">
           ${t('lifetime_access_desc')}
         </p>
+      </div>
+    `;
+  } else if (isCambluPro) {
+    // 2.2 CLUBE CAMBLU PRO (Raro=2, Épico=3, Lendário=4)
+    const monthlyLimit = Math.max(1, Number(userStatus?.monthlyIncluded || userStatus?.subscription?.monthlyIncluded || 2));
+    const monthlyUsed = Math.max(0, Number(userStatus?.monthlyGenerationsUsed || 0));
+    const monthlyRemaining = Math.max(0, monthlyLimit - monthlyUsed);
+    const extraGens = Math.max(0, Number(userStatus?.extraGenerations || 0));
+    const quotaPct = Math.min(100, Math.round((monthlyUsed / monthlyLimit) * 100));
+    const rawValidUntil = userStatus?.cambluClube?.validUntil || userStatus?.subscription?.validUntil || null;
+    const locale = getCurrentLanguage() === 'en-US' ? 'en-US' : 'pt-BR';
+    const validUntilFormatted = rawValidUntil ? new Date(rawValidUntil).toLocaleDateString(locale) : null;
+
+    const cardBoxClass = cambluTierCode >= 4
+      ? 'bg-amber-50/60 border-amber-200'
+      : (cambluTierCode === 3 ? 'bg-purple-50/60 border-purple-200' : 'bg-blue-50/60 border-blue-200');
+    const titleColorClass = cambluTierCode >= 4
+      ? 'text-amber-950'
+      : (cambluTierCode === 3 ? 'text-purple-950' : 'text-blue-950');
+    const iconColorClass = cambluTierCode >= 4
+      ? 'text-amber-600'
+      : (cambluTierCode === 3 ? 'text-purple-600' : 'text-[#3b82f7]');
+    const pillClass = cambluTierCode >= 4
+      ? 'text-amber-800 bg-amber-100/80 border-amber-300'
+      : (cambluTierCode === 3 ? 'text-purple-800 bg-purple-100/80 border-purple-300' : 'text-blue-800 bg-blue-100/80 border-blue-300');
+    const barColorClass = cambluTierCode >= 4
+      ? 'bg-amber-500'
+      : (cambluTierCode === 3 ? 'bg-purple-600' : 'bg-[#3b82f7]');
+
+    html += `
+      <div class="p-4 rounded-2xl border ${cardBoxClass} space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 ${titleColorClass} font-bold text-xs sm:text-sm min-w-0">
+            <span class="material-symbols-rounded text-lg ${iconColorClass}">workspace_premium</span>
+            <span class="truncate">${escapeHtml(t('camblu_clube_plan_title', { tier: cambluTierLabel }))}</span>
+          </div>
+          <span class="text-[11px] font-black px-2.5 py-0.5 rounded-full border flex-shrink-0 ${pillClass}">
+            Spaiq + Gorit PRO
+          </span>
+        </div>
+
+        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
+          ${escapeHtml(t('camblu_clube_pro_desc', { tier: cambluTierLabel }))}
+        </p>
+
+        <!-- Monthly AI Quota Progress -->
+        <div class="p-3 bg-white/80 rounded-xl border border-[var(--md-sys-color-outline-variant)] space-y-1.5">
+          <div class="flex items-center justify-between text-[11px] font-semibold text-[var(--md-sys-color-on-surface)]">
+            <span>${escapeHtml(t('camblu_clube_quota_summary', { used: monthlyUsed, limit: monthlyLimit, remaining: monthlyRemaining }))}</span>
+          </div>
+          <div class="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-300 ${barColorClass}" style="width: ${quotaPct}%"></div>
+          </div>
+          ${extraGens > 0 ? `
+            <p class="text-[11px] text-amber-800 font-semibold flex items-center gap-1 pt-0.5">
+              <span class="material-symbols-rounded text-sm text-amber-700">stars</span>
+              <span>${t('extra_gens_available', { count: extraGens })}</span>
+            </p>
+          ` : ''}
+        </div>
+
+        <div class="space-y-1.5 text-xs text-[var(--md-sys-color-on-surface)] pt-0.5">
+          ${validUntilFormatted ? `
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-rounded text-base ${iconColorClass}">event_available</span>
+              <span>${escapeHtml(t('camblu_clube_valid_until', { date: validUntilFormatted }))}</span>
+            </div>
+          ` : ''}
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-rounded text-base ${iconColorClass}">bolt</span>
+            <span>${t('pro_unlimited_tutor_generations')}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-rounded text-base ${iconColorClass}">checklist_rtl</span>
+            <span><a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer" class="underline font-semibold hover:text-[#3b82f7] inline-flex items-center gap-1">${t('pro_active_gorit_perk')} <span class="material-symbols-rounded text-xs">open_in_new</span></a></span>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)] space-y-2">
+          <button type="button" id="account-buy-extra-deck-btn"
+            class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer shadow-xs">
+            <span class="material-symbols-rounded text-base text-amber-700">add_circle</span>
+            <span>${t('buy_extra_deck_btn')}</span>
+          </button>
+
+          <a href="https://camblu.web.app/clube" target="_blank" rel="noopener noreferrer"
+            class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-[#3b82f7] bg-white hover:bg-blue-50 border border-blue-200 transition cursor-pointer shadow-xs">
+            <span class="material-symbols-rounded text-base text-[#3b82f7]">card_membership</span>
+            <span>${t('camblu_clube_manage_btn')}</span>
+            <span class="material-symbols-rounded text-sm">open_in_new</span>
+          </a>
+        </div>
       </div>
     `;
   } else if (pro) {
@@ -212,6 +316,12 @@ async function renderAccountModalContent() {
               <span class="material-symbols-rounded text-base text-blue-600">checklist_rtl</span>
               <span><a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer" class="underline font-semibold hover:text-blue-700 inline-flex items-center gap-1">${t('pro_active_gorit_perk')} <span class="material-symbols-rounded text-xs">open_in_new</span></a></span>
             </div>
+            ${userStatus?.cambluClube?.eligible ? `
+              <div class="flex items-center gap-2 text-blue-800 font-medium">
+                <span class="material-symbols-rounded text-base text-[#3b82f7]">card_membership</span>
+                <span>${escapeHtml(t('camblu_clube_boost_note', { tier: cambluTierLabel, limit: Number(userStatus?.monthlyIncluded || 4) }))}</span>
+              </div>
+            ` : ''}
           </div>
         `}
 
@@ -257,8 +367,8 @@ async function renderAccountModalContent() {
     `;
   } else {
     // 2.3 USUÁRIO ${t('free_plan_badge')}
-    const userStatus = getUserProStatus();
     const extraGens = Number(userStatus?.extraGenerations || 0);
+    const isCambluComum = Boolean(userStatus?.cambluClube?.active && Number(userStatus?.cambluClube?.tierCode) === 1);
 
     html += `
       <div class="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-3">
@@ -288,6 +398,14 @@ async function renderAccountModalContent() {
             <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_cloud')}</li>
             <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_gorit')}</li>
           </ul>
+        </div>
+
+        <div class="p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl flex items-start gap-2 text-[11px] text-blue-900">
+          <span class="material-symbols-rounded text-base text-[#3b82f7] flex-shrink-0 mt-0.5">card_membership</span>
+          <div class="space-y-0.5">
+            <p class="font-semibold leading-snug">${isCambluComum ? t('camblu_clube_comum_detected') : t('camblu_clube_pro_perk_hint')}</p>
+            <p class="text-[10px] text-blue-700">${t('camblu_clube_tiers_quota_info')}</p>
+          </div>
         </div>
 
         <div class="space-y-2">
@@ -431,8 +549,8 @@ async function renderAccountModalContent() {
     }
   });
 
-  // Busca detalhes da assinatura em segundo plano se ainda não cacheados
-  if (pro && !lifetime && !subDetailsCache && !isLoadingSubDetails) {
+  // Busca detalhes da assinatura em segundo plano se ainda não cacheados (apenas Stripe)
+  if (pro && !lifetime && !isCambluPro && !subDetailsCache && !isLoadingSubDetails) {
     isLoadingSubDetails = true;
     getSubscriptionDetails().then(details => {
       subDetailsCache = details;

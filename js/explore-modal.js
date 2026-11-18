@@ -60,9 +60,27 @@ export function isUserPro(user = (currentUser || auth.currentUser), status = use
 }
 
 /**
- * Returns current loaded user status
+ * Formats a Clube CAMBLU tier slug into a localized display name.
  */
-export function getUserProStatus() {
+export function getCambluTierLabel(tier) {
+  const key = `camblu_tier_${String(tier || '').trim().toLowerCase()}`;
+  const translated = t(key);
+  return translated !== key ? translated : 'Raro';
+}
+
+/**
+ * Returns current loaded user status (with localStorage cache fallback)
+ */
+export function getUserProStatus(user = (currentUser || auth.currentUser)) {
+  if (userProStatus && (!user || !userProStatus.uid || userProStatus.uid === user.uid)) {
+    return userProStatus;
+  }
+  if (user) {
+    try {
+      const cached = localStorage.getItem(`spaiq_pro_cache_${user.uid}`);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+  }
   return userProStatus;
 }
 
@@ -114,6 +132,15 @@ export function initExploreModal() {
   window.addEventListener('flashcards:sync-updated', () => {
     renderDeckSlots();
     renderNotebookSlot();
+  });
+
+  // Listen to Pro status updates
+  window.addEventListener('flashcards:pro-updated', () => {
+    renderAuthHeader();
+    const proModal = document.getElementById('pro-subscription-modal');
+    if (proModal && !proModal.classList.contains('hidden')) {
+      renderProModalContent();
+    }
   });
 
   // Listen to language changes
@@ -383,7 +410,7 @@ function injectModalHtml() {
         </div>
 
         <!-- Gorit PRO Included Bonus Banner -->
-        <div class="p-3 bg-purple-50/90 border border-purple-200/90 rounded-2xl flex items-center gap-3 text-left mb-4 shadow-2xs">
+        <div class="p-3 bg-purple-50/90 border border-purple-200/90 rounded-2xl flex items-center gap-3 text-left mb-3 shadow-2xs">
           <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
             <span class="material-symbols-rounded text-lg text-purple-600">stars</span>
           </div>
@@ -393,6 +420,17 @@ function injectModalHtml() {
               <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-200/80 text-purple-800" data-i18n="pro_included_badge">${t('pro_included_badge')}</span>
             </div>
             <p class="text-[11px] text-purple-700 leading-tight mt-0.5" data-i18n="pro_gorit_bonus_desc">${t('pro_gorit_bonus_desc')}</p>
+          </div>
+        </div>
+
+        <!-- Clube CAMBLU Partner Banner -->
+        <div id="pro-camblu-clube-banner" class="p-3 bg-blue-50/80 border border-blue-200/90 rounded-2xl flex items-start gap-3 text-left mb-4 shadow-2xs">
+          <div class="w-8 h-8 rounded-xl bg-blue-100 text-[#3b82f7] flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span class="material-symbols-rounded text-lg text-[#3b82f7]">card_membership</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p id="pro-camblu-clube-hint" class="text-[11px] text-blue-900 font-semibold leading-snug" data-i18n="camblu_clube_pro_perk_hint">${t('camblu_clube_pro_perk_hint')}</p>
+            <p class="text-[10px] text-blue-700 leading-tight mt-1" data-i18n="camblu_clube_tiers_quota_info">${t('camblu_clube_tiers_quota_info')}</p>
           </div>
         </div>
 
@@ -781,15 +819,29 @@ export function renderProModalContent() {
   if (pixResult) pixResult.classList.add('hidden');
   container.classList.remove('hidden');
 
-  const pro = isUserPro(currentUser, userProStatus);
+  const status = getUserProStatus(currentUser);
+  const pro = isUserPro(currentUser, status);
   const lifetime = isLifetime(currentUser);
+  const cambluBannerHint = document.getElementById('pro-camblu-clube-hint');
+
+  if (cambluBannerHint) {
+    if (status?.cambluClube?.active && Number(status?.cambluClube?.tierCode) === 1) {
+      cambluBannerHint.textContent = t('camblu_clube_comum_detected');
+    } else {
+      cambluBannerHint.textContent = t('camblu_clube_pro_perk_hint');
+    }
+  }
 
   if (pro) {
     stopProPaymentPolling();
+    const isCamblu = !lifetime && status?.subscription?.provider === 'camblu_clube';
+    const statusLabel = lifetime
+      ? t('pro_lifetime_badge')
+      : (isCamblu ? t('camblu_clube_plan_title', { tier: getCambluTierLabel(status?.cambluClube?.tier || status?.subscription?.tier) }) : t('pro_active_badge'));
     container.innerHTML = `
       <div class="p-3.5 bg-green-50 border border-green-200 rounded-2xl text-xs text-green-800 font-bold flex items-center justify-center gap-2">
         <span class="material-symbols-rounded text-lg text-green-600">verified</span>
-        <span>${t('already_pro_plan', { status: lifetime ? t('pro_lifetime_badge') : t('pro_active_badge') })}</span>
+        <span>${t('already_pro_plan', { status: escapeHtml(statusLabel) })}</span>
       </div>
       <button id="pro-dismiss-btn" class="m3-btn-expressive m3-btn-filled w-full py-2.5 mt-3 font-bold text-xs bg-green-600 hover:bg-green-700 text-white shadow">
         ${t('continue_studying')}
@@ -948,7 +1000,12 @@ function renderAuthHeader() {
     const photo = sanitizeImageUrl(currentUser.photoURL || '');
     const name = escapeHtml(currentUser.displayName || currentUser.email.split('@')[0]);
     const lifetime = isLifetime(currentUser);
-    const isPro = Boolean(lifetime || userProStatus?.isPro || currentUser.pro);
+    const status = getUserProStatus(currentUser);
+    const isPro = isUserPro(currentUser, status);
+    const isCamblu = Boolean(isPro && !lifetime && status?.subscription?.provider === 'camblu_clube');
+    const headerProBadgeText = lifetime
+      ? t('pro_lifetime_badge')
+      : (isCamblu ? escapeHtml(t('camblu_clube_badge', { tier: getCambluTierLabel(status?.cambluClube?.tier || status?.subscription?.tier).toUpperCase() })) : 'PRO');
 
     container.innerHTML = `
       <div class="relative">
@@ -959,7 +1016,7 @@ function renderAuthHeader() {
       <div class="text-left min-w-0">
         <div class="flex items-center gap-1.5">
           <p class="font-bold text-sm text-[var(--md-sys-color-on-surface)] truncate max-w-[140px] sm:max-w-[200px]">${name}</p>
-          ${isPro ? `<span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded-full border border-amber-300">${lifetime ? t('pro_lifetime_badge') : 'PRO'}</span>` : ''}
+          ${isPro ? `<span class="text-[10px] ${isCamblu ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-amber-100 text-amber-800 border-amber-300'} font-bold px-1.5 py-0.2 rounded-full border">${headerProBadgeText}</span>` : ''}
         </div>
         <div class="flex items-center gap-3">
           <button id="modal-logout-btn" class="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer">

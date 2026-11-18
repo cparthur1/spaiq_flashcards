@@ -9987,6 +9987,13 @@ onAuthChange((user) => {
     updateSyncButtonsVisibility(user);
     updateHamburgerUserUI(user);
 });
+window.addEventListener('flashcards:pro-updated', () => {
+    updateAiUI();
+    updateHamburgerUserUI(auth.currentUser);
+    if (isUserPro()) {
+        initBackgroundCategorization();
+    }
+});
 updateSyncButtonsVisibility(auth.currentUser);
 updateHamburgerUserUI(auth.currentUser);
 

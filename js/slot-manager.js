@@ -1897,6 +1897,8 @@ export function initRealtimeCloudSync() {
   window.addEventListener('flashcards:pro-updated', () => {
     if (auth.currentUser && isUserPro(auth.currentUser)) {
       attachRealtimeUserSnapshot(auth.currentUser);
+    } else {
+      attachRealtimeUserSnapshot(null);
     }
   });
 }

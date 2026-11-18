@@ -1923,6 +1923,12 @@ onAuthChange(() => {
     renderAiSection(gameState, statsData);
 });
 
+window.addEventListener('flashcards:pro-updated', () => {
+    const gameState = getStoredGameState();
+    const statsData = getStatsStorage();
+    renderAiSection(gameState, statsData);
+});
+
 // REAL-TIME CROSS-TAB AUTO-SYNC (Ultra-lightweight: 0% CPU idle, RAF debounced, background-tab deferred)
 const SYNC_STORAGE_KEYS = new Set([
     'flashcards_stats',

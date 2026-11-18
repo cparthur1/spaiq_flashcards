@@ -11,6 +11,7 @@
 import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail } from './google-auth.js';
 import { callGemini, callGeminiDecision } from './gemini.js';
 import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData, deleteDocument, findUserByApiKey } from './firestore.js';
+import { fetchCambluClubeStatus, resolveUserEntitlement } from './camblu-clube.js';
 import {
   getStripeClient,
   createSubscription,
@@ -30,6 +31,11 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5500',
   'http://127.0.0.1:5500'
+];
+
+const ALLOWED_CORS_ORIGINS = [
+  ...ALLOWED_ORIGINS,
+  'https://gorit.camblu.org'
 ];
 
 export const LIFETIME_PRO_EMAILS = [
@@ -121,13 +127,14 @@ function validateWebhookUrl(rawUrl) {
 
 function getCorsHeaders(request) {
   const origin = request.headers.get('Origin');
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowedOrigin = ALLOWED_CORS_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-    'Access-Control-Max-Age': '86400'
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin'
   };
 }
 
@@ -149,6 +156,32 @@ function getServiceAccount(env) {
   return typeof env.FIREBASE_SERVICE_ACCOUNT === 'string'
     ? JSON.parse(env.FIREBASE_SERVICE_ACCOUNT)
     : env.FIREBASE_SERVICE_ACCOUNT;
+}
+
+async function getEntitlement({
+  env,
+  serviceAccount = null,
+  user = null,
+  userDoc = null,
+  ctx = null,
+  refreshLive = false,
+  allowStripeLookup = false,
+  syncClaim = false
+}) {
+  return await resolveUserEntitlement({
+    env,
+    serviceAccount,
+    user,
+    userDoc,
+    ctx,
+    refreshLive,
+    allowStripeLookup,
+    syncClaim,
+    lifetimeEmails: LIFETIME_PRO_EMAILS,
+    checkStripeFn: checkCustomerProStatusInStripe,
+    setProClaimFn: setFirebaseUserProClaim,
+    updateUserDocFn: updateUserDocument
+  });
 }
 
 export default {
@@ -241,13 +274,14 @@ export default {
         let isPro = false;
         try {
           user = await authenticateUser();
-          const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+          let serviceAccount = null;
           let userDoc = null;
           try {
-            const serviceAccount = getServiceAccount(env);
+            serviceAccount = getServiceAccount(env);
             userDoc = await getUserDocument(serviceAccount, user.uid);
           } catch (e) {}
-          isPro = Boolean(isLifetime || user.pro || userDoc?.subscription?.status === 'active');
+          const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
+          isPro = entitlement.isPro;
         } catch (e) {
           // Authentication is optional for initial checkout session creation, but links user if logged in
         }
@@ -269,7 +303,6 @@ export default {
       // 3. User Pro Status & Quota
       if (path === '/api/user/status' && request.method === 'GET') {
         const user = await authenticateUser();
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
         let userDoc = null;
         let serviceAccount = null;
 
@@ -280,63 +313,36 @@ export default {
           console.warn('[Status] Falha ao ler documento do Firestore:', docErr.message);
         }
 
-        let isPro = Boolean(isLifetime || user.pro || userDoc?.subscription?.status === 'active');
+        const entitlement = await getEntitlement({
+          env,
+          serviceAccount,
+          user,
+          userDoc,
+          ctx,
+          refreshLive: true,
+          allowStripeLookup: true,
+          syncClaim: true
+        });
 
-        // If not recognized as Pro or if Firestore doc is pending/out of sync, verify directly with Stripe first
-        if ((!isPro || userDoc?.subscription?.status !== 'active') && env.STRIPE_SECRET_KEY && user.email) {
-          try {
-            const stripeStatus = await checkCustomerProStatusInStripe({ env, email: user.email });
-            if (stripeStatus.isPro) {
-              isPro = true;
-              userDoc = userDoc || {};
-              userDoc.subscription = {
-                status: 'active',
-                plan: 'pro_monthly',
-                provider: 'stripe',
-                subscriptionId: stripeStatus.subscriptionId,
-                customerId: stripeStatus.customerId,
-                updatedAt: new Date().toISOString()
-              };
-              if (serviceAccount) {
-                ctx.waitUntil(Promise.all([
-                  setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
-                  updateUserDocument(serviceAccount, user.uid, {
-                    subscription: userDoc.subscription
-                  }).catch(() => {})
-                ]));
-              }
-            }
-          } catch (stripeErr) {
-            console.warn('[Status] Falha ao checar Stripe por e-mail:', stripeErr.message);
-          }
-        }
+        const resolvedDoc = entitlement.userDoc || userDoc;
+        const isPro = entitlement.isPro;
+        const isLifetime = entitlement.isLifetime;
+        const monthlyIncluded = isLifetime ? 9999 : (isPro ? entitlement.monthlyIncluded : 0);
 
         const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-10"
-        const lastReset = userDoc?.quotaLastResetMonth || '';
-        let monthlyUsed = userDoc?.monthlyGenerationsUsed || 0;
+        const lastReset = resolvedDoc?.quotaLastResetMonth || '';
+        let monthlyUsed = resolvedDoc?.monthlyGenerationsUsed || 0;
         if (lastReset !== currentMonth) {
           monthlyUsed = 0;
         }
-        const extraGenerations = userDoc?.extraGenerations || 0;
-        const remainingIncluded = isLifetime ? 9999 : Math.max(0, 4 - monthlyUsed);
-        const freeTrialRemaining = userDoc?.freeAiDeckUsed ? 0 : 1;
+        const extraGenerations = resolvedDoc?.extraGenerations || 0;
+        const remainingIncluded = isLifetime ? 9999 : Math.max(0, monthlyIncluded - monthlyUsed);
+        const freeTrialRemaining = resolvedDoc?.freeAiDeckUsed ? 0 : 1;
         const totalRemaining = isPro
           ? (isLifetime ? 9999 : remainingIncluded + extraGenerations)
           : (extraGenerations + freeTrialRemaining);
 
-        if (isLifetime && serviceAccount) {
-          ctx.waitUntil(Promise.all([
-            setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
-            updateUserDocument(serviceAccount, user.uid, {
-              subscription: {
-                status: 'active',
-                plan: 'pro_lifetime',
-                provider: 'whitelist',
-                updatedAt: new Date().toISOString()
-              }
-            }).catch(() => {})
-          ]));
-        } else if (!isPro && serviceAccount && ((userDoc?.deckSlots && userDoc.deckSlots.length > 0) || userDoc?.notebookSlot)) {
+        if (!isPro && serviceAccount && ((resolvedDoc?.deckSlots && resolvedDoc.deckSlots.length > 0) || resolvedDoc?.notebookSlot)) {
           // User is not Pro: ensure all saved cloud decks & slots are wiped from backend
           ctx.waitUntil(clearUserCloudData(serviceAccount, user.uid));
         }
@@ -346,12 +352,14 @@ export default {
           email: user.email,
           isPro,
           isLifetimePro: isLifetime,
-          freeAiDeckUsed: Boolean(userDoc?.freeAiDeckUsed),
+          proSource: entitlement.proSource,
+          cambluClube: entitlement.cambluClube,
+          freeAiDeckUsed: Boolean(resolvedDoc?.freeAiDeckUsed),
           monthlyGenerationsUsed: isPro ? monthlyUsed : 0,
-          monthlyIncluded: isLifetime ? 9999 : (isPro ? 4 : 0),
+          monthlyIncluded,
           extraGenerations,
           remainingGenerations: totalRemaining,
-          subscription: isLifetime ? { status: 'active', plan: 'pro_lifetime' } : (userDoc?.subscription || null)
+          subscription: entitlement.subscription || null
         }, 200, corsHeaders);
       }
 
@@ -359,13 +367,11 @@ export default {
       if (path === '/api/user/slots' && request.method === 'GET') {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
-        const userDoc = await getUserDocument(serviceAccount, user.uid);
+        const rawUserDoc = await getUserDocument(serviceAccount, user.uid);
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc: rawUserDoc, ctx, syncClaim: true });
+        const userDoc = rawUserDoc;
 
-        // Check Pro status
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
-
-        if (!isPro) {
+        if (!entitlement.isPro) {
           // If non-pro user has any data remaining in Firestore, wipe it!
           if (serviceAccount && ((userDoc?.deckSlots && userDoc.deckSlots.length > 0) || userDoc?.notebookSlot)) {
             await clearUserCloudData(serviceAccount, user.uid);
@@ -431,11 +437,9 @@ export default {
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
 
-        // Check Pro status
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
 
-        if (!isPro) {
+        if (!entitlement.isPro) {
           if (serviceAccount) {
             await clearUserCloudData(serviceAccount, user.uid);
           }
@@ -567,11 +571,9 @@ export default {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
 
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
-
-        if (!isPro) {
+        if (!entitlement.isPro) {
           return jsonResponse({
             error: 'pro_required',
             message: 'A API de estatísticas é exclusiva para assinantes Pro.'
@@ -589,11 +591,9 @@ export default {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
 
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
-
-        if (!isPro) {
+        if (!entitlement.isPro) {
           return jsonResponse({
             error: 'pro_required',
             message: 'A API de estatísticas é exclusiva para assinantes Pro.'
@@ -637,11 +637,9 @@ export default {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
 
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
-
-        if (!isPro) {
+        if (!entitlement.isPro) {
           return jsonResponse({
             error: 'pro_required',
             message: 'A API de estatísticas é exclusiva para assinantes Pro.'
@@ -724,11 +722,16 @@ export default {
           }, 401, publicCorsHeaders);
         }
 
-        // Verify that the user is currently PRO
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((userDoc.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc.subscription?.status === 'active' || userDoc.pro === true;
+        // Verify that the user is currently PRO (Lifetime, Stripe, or Clube CAMBLU tierCode >= 2)
+        const entitlement = await getEntitlement({
+          env,
+          serviceAccount,
+          user: { uid: userId, email: userDoc.email || keyDoc?.email || '' },
+          userDoc,
+          ctx
+        });
 
-        if (!isPro) {
+        if (!entitlement.isPro) {
           return jsonResponse({
             error: 'pro_required',
             message: 'A API de estatísticas é exclusiva para assinantes Pro.'
@@ -901,11 +904,9 @@ export default {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
 
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
-
-        if (!isPro) {
+        if (!entitlement.isPro) {
           return jsonResponse({ error: 'pro_required', message: 'Webhooks são exclusivos para assinantes Pro.' }, 403, corsHeaders);
         }
 
@@ -920,11 +921,9 @@ export default {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
 
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
-
-        if (!isPro) {
+        if (!entitlement.isPro) {
           return jsonResponse({ error: 'pro_required', message: 'Webhooks são exclusivos para assinantes Pro.' }, 403, corsHeaders);
         }
 
@@ -949,11 +948,9 @@ export default {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
 
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
-
-        if (!isPro) {
+        if (!entitlement.isPro) {
           return jsonResponse({ error: 'pro_required', message: 'Webhooks são exclusivos para assinantes Pro.' }, 403, corsHeaders);
         }
 
@@ -1010,11 +1007,9 @@ export default {
         const user = await authenticateUser();
         const serviceAccount = getServiceAccount(env);
         const userDoc = await getUserDocument(serviceAccount, user.uid);
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
 
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        const isPro = isLifetime || userDoc?.subscription?.status === 'active' || user.pro === true;
-
-        if (!isPro) {
+        if (!entitlement.isPro) {
           return jsonResponse({ error: 'pro_required' }, 403, corsHeaders);
         }
 
@@ -1132,7 +1127,8 @@ export default {
                         updatedAt: new Date().toISOString()
                       });
                     }
-                    return jsonResponse({ isPro: Boolean(user.pro || userDoc?.subscription?.status === 'active'), extraGenerations: currentExtras, type: 'extra_deck' }, 200, corsHeaders);
+                    const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
+                    return jsonResponse({ isPro: entitlement.isPro, extraGenerations: currentExtras, type: 'extra_deck' }, 200, corsHeaders);
                   } else {
                     return jsonResponse({ isPro: false, extraGenerations: 1, type: 'extra_deck', sessionId: session.id, paid: true }, 200, corsHeaders);
                   }
@@ -1180,6 +1176,28 @@ export default {
           }
         }
 
+        if (user) {
+          const userDoc = await getUserDocument(serviceAccount, user.uid).catch(() => null);
+          const entitlement = await getEntitlement({
+            env,
+            serviceAccount,
+            user,
+            userDoc,
+            ctx,
+            refreshLive: true,
+            syncClaim: true
+          });
+          if (entitlement.isPro) {
+            return jsonResponse({
+              isPro: true,
+              status: 'active',
+              plan: entitlement.subscription?.plan || 'pro_monthly',
+              proSource: entitlement.proSource,
+              cambluClube: entitlement.cambluClube
+            }, 200, corsHeaders);
+          }
+        }
+
         return jsonResponse({
           isPro: false,
           status: 'pending',
@@ -1215,19 +1233,9 @@ export default {
         }, 200, corsHeaders);
       }
 
-      // 5.1 Get Subscription Details from Stripe (for manage modal)
+      // 5.1 Get Subscription Details from Stripe or Clube CAMBLU (for manage modal)
       if (path === '/api/subscription/details' && request.method === 'GET') {
         const user = await authenticateUser();
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        if (isLifetime) {
-          return jsonResponse({
-            isPro: true,
-            isLifetime: true,
-            status: 'active',
-            plan: 'pro_lifetime'
-          }, 200, corsHeaders);
-        }
-
         let userDoc = null;
         let serviceAccount = null;
         try {
@@ -1237,24 +1245,71 @@ export default {
           console.warn('[Subscription] Erro ao buscar Firestore:', e.message);
         }
 
-        const subId = userDoc?.subscription?.subscriptionId;
-        const provider = userDoc?.subscription?.provider;
+        const entitlement = await getEntitlement({
+          env,
+          serviceAccount,
+          user,
+          userDoc,
+          ctx,
+          refreshLive: true,
+          syncClaim: true
+        });
 
-        if (subId && (provider === 'stripe' || subId.startsWith('sub_')) && env.STRIPE_SECRET_KEY) {
+        if (entitlement.isLifetime) {
+          return jsonResponse({
+            isPro: true,
+            isLifetime: true,
+            status: 'active',
+            plan: 'pro_lifetime',
+            monthlyIncluded: 9999
+          }, 200, corsHeaders);
+        }
+
+        const resolvedDoc = entitlement.userDoc || userDoc;
+        const subId = resolvedDoc?.subscription?.subscriptionId;
+        const provider = resolvedDoc?.subscription?.provider;
+
+        if (entitlement.proSource === 'stripe' && subId && (provider === 'stripe' || subId.startsWith('sub_')) && env.STRIPE_SECRET_KEY) {
           try {
-            const details = await getSubscriptionDetails({ env, subscriptionId: subId, userDoc });
+            const details = await getSubscriptionDetails({ env, subscriptionId: subId, userDoc: resolvedDoc });
             if (details) {
-              return jsonResponse(details, 200, corsHeaders);
+              return jsonResponse({
+                ...details,
+                monthlyIncluded: entitlement.monthlyIncluded,
+                cambluClube: entitlement.cambluClube
+              }, 200, corsHeaders);
             }
           } catch (stripeErr) {
             console.warn('[Subscription] Erro ao buscar assinatura Stripe:', stripeErr.message);
           }
         }
 
+        if (entitlement.proSource === 'camblu_clube') {
+          const validUntil = entitlement.cambluClube?.validUntil || null;
+          return jsonResponse({
+            isPro: true,
+            isLifetime: false,
+            provider: 'camblu_clube',
+            proSource: 'camblu_clube',
+            status: 'ACTIVE',
+            plan: entitlement.subscription?.plan || 'camblu_clube_raro',
+            tier: entitlement.cambluClube?.tier || null,
+            tierCode: entitlement.cambluClube?.tierCode || 0,
+            tierName: entitlement.cambluClube?.tierName || null,
+            validUntil,
+            activeUntil: validUntil ? validUntil.slice(0, 10) : null,
+            monthlyIncluded: entitlement.monthlyIncluded,
+            cambluClube: entitlement.cambluClube
+          }, 200, corsHeaders);
+        }
+
         return jsonResponse({
-          isPro: Boolean(userDoc?.subscription?.status === 'active' || user.pro),
+          isPro: entitlement.isPro,
           isLifetime: false,
-          status: userDoc?.subscription?.status || 'inactive'
+          provider: resolvedDoc?.subscription?.provider || null,
+          status: resolvedDoc?.subscription?.status || 'inactive',
+          monthlyIncluded: entitlement.monthlyIncluded,
+          cambluClube: entitlement.cambluClube
         }, 200, corsHeaders);
       }
 
@@ -1272,6 +1327,13 @@ export default {
 
         const subId = userDoc?.subscription?.subscriptionId;
         const provider = userDoc?.subscription?.provider;
+
+        if (provider === 'camblu_clube') {
+          return jsonResponse({
+            error: 'camblu_managed_subscription',
+            message: 'Seu acesso PRO é concedido pelo Clube CAMBLU e deve ser gerenciado no Portal do CAMBLU.'
+          }, 400, corsHeaders);
+        }
         let activeUntil = null;
 
         if (subId) {
@@ -1359,7 +1421,6 @@ export default {
         }
 
         if (user) {
-          const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
           let userDoc = null;
           let serviceAccount = null;
           try {
@@ -1369,31 +1430,35 @@ export default {
             console.warn('[Generate] Falha ao ler Firestore:', e.message);
           }
 
-          const isPro = Boolean(isLifetime || user.pro || userDoc?.subscription?.status === 'active');
-          const hasUsedFreeTrial = Boolean(userDoc?.freeAiDeckUsed);
-          let extraGens = userDoc?.extraGenerations || 0;
+          const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
+          const resolvedDoc = entitlement.userDoc || userDoc;
+          const isPro = entitlement.isPro;
+          const isLifetime = entitlement.isLifetime;
+          const monthlyLimit = entitlement.monthlyIncluded;
+          const hasUsedFreeTrial = Boolean(resolvedDoc?.freeAiDeckUsed);
+          let extraGens = resolvedDoc?.extraGenerations || 0;
 
           // Quota check logic
           if (isNewDeck && !isLifetime) {
             if (isPro) {
-              // PRO USER: 4 free deck generations per month + any purchased extra generations
+              // PRO USER: monthlyLimit deck generations per month (Stripe: 4, Clube Raro: 2, Épico: 4, Lendário: 8) + extras
               const currentMonth = new Date().toISOString().slice(0, 7);
-              const lastReset = userDoc?.quotaLastResetMonth || '';
-              let monthlyUsed = userDoc?.monthlyGenerationsUsed || 0;
+              const lastReset = resolvedDoc?.quotaLastResetMonth || '';
+              let monthlyUsed = resolvedDoc?.monthlyGenerationsUsed || 0;
 
               if (lastReset !== currentMonth) {
                 monthlyUsed = 0;
               }
 
-              if (monthlyUsed < 4) {
+              if (monthlyUsed < monthlyLimit) {
                 monthlyUsed += 1;
               } else if (extraGens > 0) {
                 extraGens -= 1;
               } else {
                 return jsonResponse({
                   error: 'quota_exceeded',
-                  message: 'Você atingiu o limite de 4 baralhos por IA este mês. Adquira gerações extras por R$ 0,99 cada.',
-                  limit: 4,
+                  message: `Você atingiu o limite de ${monthlyLimit} baralhos por IA este mês. Adquira gerações extras por R$ 0,99 cada.`,
+                  limit: monthlyLimit,
                   used: monthlyUsed,
                   extra: extraGens
                 }, 402, corsHeaders);
@@ -1470,22 +1535,18 @@ export default {
       // 7. Gemini AI - Tutor Feedback & Background Corrector during study (Unlimited for Pro)
       if ((path === '/api/ai/tutor' || path === '/api/ai/decision') && request.method === 'POST') {
         const user = await authenticateUser();
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        let isPro = isLifetime || Boolean(user.pro);
-
-        if (!isPro) {
-          try {
-            const serviceAccount = getServiceAccount(env);
-            const userDoc = await getUserDocument(serviceAccount, user.uid);
-            if (userDoc?.subscription?.status === 'active') {
-              isPro = true;
-            }
-          } catch (e) {
-            console.warn('[Tutor] Falha ao checar assinatura no Firestore:', e.message);
-          }
+        let serviceAccount = null;
+        let userDoc = null;
+        try {
+          serviceAccount = getServiceAccount(env);
+          userDoc = await getUserDocument(serviceAccount, user.uid);
+        } catch (e) {
+          console.warn('[Tutor] Falha ao checar assinatura no Firestore:', e.message);
         }
 
-        if (!isPro) {
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
+
+        if (!entitlement.isPro) {
           return jsonResponse({
             error: 'subscription_required',
             message: 'O Tutor de IA é exclusivo para assinantes Pro.'
@@ -1539,22 +1600,18 @@ export default {
       // 8. Gemini AI - Stats Diagnostic Insights (Unlimited for Pro)
       if (path === '/api/ai/stats' && request.method === 'POST') {
         const user = await authenticateUser();
-        const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
-        let isPro = isLifetime || Boolean(user.pro);
-
-        if (!isPro) {
-          try {
-            const serviceAccount = getServiceAccount(env);
-            const userDoc = await getUserDocument(serviceAccount, user.uid);
-            if (userDoc?.subscription?.status === 'active') {
-              isPro = true;
-            }
-          } catch (e) {
-            console.warn('[Stats] Falha ao checar assinatura no Firestore:', e.message);
-          }
+        let serviceAccount = null;
+        let userDoc = null;
+        try {
+          serviceAccount = getServiceAccount(env);
+          userDoc = await getUserDocument(serviceAccount, user.uid);
+        } catch (e) {
+          console.warn('[Stats] Falha ao checar assinatura no Firestore:', e.message);
         }
 
-        if (!isPro) {
+        const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
+
+        if (!entitlement.isPro) {
           return jsonResponse({
             error: 'subscription_required',
             message: 'O Diagnóstico Cognitivo por IA é exclusivo para assinantes Pro.'
@@ -1694,15 +1751,43 @@ async function handleStripeWebhook(request, env) {
     }
 
     if (uid) {
-      await setFirebaseUserProClaim(serviceAccount, uid, false);
-      await updateUserDocument(serviceAccount, uid, {
-        'subscription.status': 'canceled',
-        'subscription.cancelAtPeriodEnd': false,
-        'subscription.canceledAt': new Date().toISOString()
-      });
-      // Non-Pro user: wipe all saved cloud decks & notebook from backend database
-      await clearUserCloudData(serviceAccount, uid);
-      console.log(`[Stripe Webhook] Pro desativado e dados de nuvem apagados para UID: ${uid}`);
+      const existingDoc = await getUserDocument(serviceAccount, uid).catch(() => null);
+      const email = (existingDoc?.email || '').toLowerCase().trim();
+      const isLifetime = LIFETIME_PRO_EMAILS.includes(email);
+      const cambluCheck = (!isLifetime && email) ? await fetchCambluClubeStatus(email, env).catch(() => null) : null;
+
+      if (isLifetime) {
+        await setFirebaseUserProClaim(serviceAccount, uid, true);
+        console.log(`[Stripe Webhook] Assinatura Stripe encerrada, mas usuário ${uid} mantém Pro Vitalício.`);
+      } else if (cambluCheck?.ok && cambluCheck.isEligiblePro) {
+        const nowIso = new Date().toISOString();
+        await setFirebaseUserProClaim(serviceAccount, uid, true);
+        await updateUserDocument(serviceAccount, uid, {
+          subscription: {
+            status: 'active',
+            plan: `camblu_clube_${cambluCheck.tier}`,
+            provider: 'camblu_clube',
+            tier: cambluCheck.tier,
+            tierCode: cambluCheck.tierCode,
+            tierName: cambluCheck.tierName,
+            validUntil: cambluCheck.validUntil,
+            monthlyIncluded: cambluCheck.monthlyIncluded,
+            checkedAt: nowIso,
+            updatedAt: nowIso
+          }
+        });
+        console.log(`[Stripe Webhook] Assinatura Stripe encerrada, mantido Pro via Clube CAMBLU (${cambluCheck.tier}) para UID: ${uid}`);
+      } else {
+        await setFirebaseUserProClaim(serviceAccount, uid, false);
+        await updateUserDocument(serviceAccount, uid, {
+          'subscription.status': 'canceled',
+          'subscription.cancelAtPeriodEnd': false,
+          'subscription.canceledAt': new Date().toISOString()
+        });
+        // Non-Pro user: wipe all saved cloud decks & notebook from backend database
+        await clearUserCloudData(serviceAccount, uid);
+        console.log(`[Stripe Webhook] Pro desativado e dados de nuvem apagados para UID: ${uid}`);
+      }
     }
   }
 
