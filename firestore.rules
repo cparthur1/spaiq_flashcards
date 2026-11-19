@@ -23,11 +23,10 @@ service cloud.firestore {
       ];
     }
 
-    // Shared decks can be read publicly by anyone with the link.
-    // Writes are schema-validated and hard deletes are forbidden (soft-delete only).
-    match /shares/{shareSlug} {
-      allow read: if true;
-      allow create, update: if request.resource.data.keys().hasOnly([
+    // Helper: Validate Flashcards shared deck writes (excludes gorit-* namespace)
+    function isValidFlashcardsShare(shareSlug) {
+      return !shareSlug.matches('^gorit-.*')
+        && request.resource.data.keys().hasOnly([
           'shareSlug', 'title', 'cardCount', 'deckData',
           'deleted', 'deletedAt', 'updatedAt', 'createdAt'
         ])
@@ -35,6 +34,66 @@ service cloud.firestore {
         && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 500))
         && (!('cardCount' in request.resource.data) || (request.resource.data.cardCount is number && request.resource.data.cardCount >= 0 && request.resource.data.cardCount <= 10000))
         && (!('deleted' in request.resource.data) || request.resource.data.deleted is bool);
+    }
+
+    // Helper: Validate Gorit shared subject writes (authenticated owner only)
+    function isValidGoritSubjectShare(shareSlug) {
+      let data = request.resource.data;
+      return request.auth != null
+        && data.keys().hasOnly(['type', 'shareSlug', 'title', 'subjectData', 'sharedBy', 'createdAt'])
+        && data.keys().hasAll(['type', 'shareSlug', 'title', 'subjectData', 'sharedBy', 'createdAt'])
+        && data.type == 'gorit_subject'
+        && data.shareSlug is string
+        && data.shareSlug == shareSlug
+        && shareSlug.matches('^gorit-[a-z0-9-]+$')
+        && shareSlug.size() <= 100
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 500
+        && data.createdAt is number
+        && data.createdAt > 0
+        && data.sharedBy is map
+        && data.sharedBy.keys().hasOnly(['uid', 'name'])
+        && data.sharedBy.keys().hasAll(['uid', 'name'])
+        && data.sharedBy.uid is string
+        && data.sharedBy.uid == request.auth.uid
+        && data.sharedBy.name is string
+        && data.sharedBy.name.size() >= 1
+        && data.sharedBy.name.size() <= 200
+        && data.subjectData is map
+        && data.subjectData.keys().hasOnly(['name', 'code', 'color', 'icon', 'emoji', 'contents'])
+        && data.subjectData.keys().hasAll(['name', 'contents'])
+        && data.subjectData.name is string
+        && data.subjectData.name.size() >= 1
+        && data.subjectData.name.size() <= 500
+        && (!('code' in data.subjectData) || (data.subjectData.code is string && data.subjectData.code.size() <= 100))
+        && (!('color' in data.subjectData) || (data.subjectData.color is string && data.subjectData.color.size() <= 50))
+        && (!('icon' in data.subjectData) || (data.subjectData.icon is string && data.subjectData.icon.size() <= 100))
+        && (!('emoji' in data.subjectData) || (data.subjectData.emoji is string && data.subjectData.emoji.size() <= 100))
+        && data.subjectData.contents is list
+        && data.subjectData.contents.size() <= 500;
+    }
+
+    // Shared decks (Flashcards) and shared subjects (Gorit) can be read publicly by anyone with the link.
+    // Writes are schema-validated and hard deletes are forbidden (soft-delete only for Flashcards).
+    match /shares/{shareSlug} {
+      allow read: if true;
+      allow create: if isValidFlashcardsShare(shareSlug)
+        || isValidGoritSubjectShare(shareSlug);
+      allow update: if (
+          (!('type' in resource.data) || resource.data.type != 'gorit_subject')
+          && isValidFlashcardsShare(shareSlug)
+        ) || (
+          'type' in resource.data
+          && resource.data.type == 'gorit_subject'
+          && request.auth != null
+          && 'sharedBy' in resource.data
+          && resource.data.sharedBy is map
+          && 'uid' in resource.data.sharedBy
+          && resource.data.sharedBy.uid == request.auth.uid
+          && isValidGoritSubjectShare(shareSlug)
+          && request.resource.data.createdAt == resource.data.createdAt
+        );
       allow delete: if false;
     }
 
