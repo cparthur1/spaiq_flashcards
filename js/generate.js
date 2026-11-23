@@ -2740,6 +2740,9 @@ async function executeAiGenerationFromMaterials(files, customInstructions = '', 
     window.dispatchEvent(new CustomEvent('flashcardsDeckGenerationStarted', { detail: { filesCount: files.length } }));
 
     deckCards = [];
+    currentEditingMode = 'normal';
+    currentEditingSlotIndex = null;
+    currentEditingExamData = null;
     deckTitleDisplay.value = files[0].name.replace(/\.[^/.]+$/, "");
 
     showGeneratingAnimation(t('processing_uploaded_materials'));

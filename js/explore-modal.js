@@ -1231,8 +1231,18 @@ window.flashcardsOpenSlot = function(slotIdx) {
   const slots = getLocalSlots();
   const slot = slots[slotIdx];
   if (slot?.deckData) {
-    slots.forEach((s, idx) => { s.isCurrent = (idx === slotIdx); });
-    localStorage.setItem('flashcards_deck_slots', encodeStoragePayload(slots));
+    const now = Date.now();
+    slots.forEach((s, idx) => {
+      if (!s) return;
+      s.isCurrent = (idx === slotIdx);
+      if (idx === slotIdx) {
+        s.updatedAt = now;
+        if (s.deckData && typeof s.deckData === 'object') {
+          s.deckData.updatedAt = now;
+        }
+      }
+    });
+    saveLocalSlots(slots);
     const isExam = Boolean(slot.isExam || slot.mode === 'exam' || (slot.deckData && slot.deckData.decks));
     if (isExam) {
       localStorage.setItem('flashcardsExam', encodeStoragePayload(slot.deckData));

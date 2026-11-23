@@ -110,10 +110,13 @@ export function getLocalSlots() {
  */
 export function saveLocalSlots(slots) {
   try {
+    const serialized = encodeStoragePayload(slots);
+    localStorage.setItem(SLOTS_STORAGE_KEY, serialized);
     cachedLocalSlots = slots;
-    localStorage.setItem(SLOTS_STORAGE_KEY, encodeStoragePayload(slots));
+    return true;
   } catch (e) {
     console.error('Erro ao salvar slots locais:', e);
+    return false;
   }
 }
 
@@ -157,11 +160,13 @@ export function getNotebookSlotData() {
  */
 export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'normal', preferredSlotIndex = null, options = {}) {
   const slots = getLocalSlots();
+  const now = Date.now();
   const cardCount = (deckData.allQuestions || []).length;
   const isExam = mode === 'exam' || Boolean(deckData.decks && Array.isArray(deckData.decks));
-  const newDeckId = deckData.deckId || (isExam ? `exam_${Date.now()}` : `deck_${Date.now()}`);
+  const newDeckId = deckData.deckId || (isExam ? `exam_${now}` : `deck_${now}`);
   deckData.deckId = newDeckId;
   deckData.deckName = deckName;
+  deckData.updatedAt = Math.max(Number(deckData.updatedAt) || 0, now);
 
   // 1. If preferredSlotIndex is explicitly specified
   if (preferredSlotIndex !== null && preferredSlotIndex >= 0 && preferredSlotIndex < slots.length) {
@@ -182,7 +187,7 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
       isExam,
       mode: isExam ? 'exam' : 'normal',
       deckData,
-      updatedAt: Date.now()
+      updatedAt: now
     };
 
     localStorage.removeItem(`flashcards_slot_${preferredSlotIndex}_deleted_at`);
@@ -220,7 +225,7 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
       cardCount,
       deckData,
       isCurrent: true,
-      updatedAt: Date.now()
+      updatedAt: now
     };
 
     saveLocalSlots(slots);
@@ -299,11 +304,11 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
     slots[2] = {
       ...existingDecks[1],
       slotIndex: 2,
-      isCurrent: false
+      isCurrent: false,
+      updatedAt: now
     };
     localStorage.removeItem('flashcards_slot_2_deleted_at');
   } else {
-    const now = Date.now();
     slots[2] = {
       slotIndex: 2,
       deckId: null,
@@ -328,11 +333,11 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
     slots[1] = {
       ...existingDecks[0],
       slotIndex: 1,
-      isCurrent: false
+      isCurrent: false,
+      updatedAt: now
     };
     localStorage.removeItem('flashcards_slot_1_deleted_at');
   } else {
-    const now = Date.now();
     slots[1] = {
       slotIndex: 1,
       deckId: null,
@@ -366,7 +371,7 @@ export async function openDeckInSlots(deckData, deckName = 'Baralho', mode = 'no
     isExam,
     mode: isExam ? 'exam' : 'normal',
     deckData,
-    updatedAt: Date.now()
+    updatedAt: now
   };
   localStorage.removeItem('flashcards_slot_0_deleted_at');
 
@@ -1432,22 +1437,23 @@ export async function loadSlotsFromCloud() {
     const cloudData = await getCloudSlots();
     if (!cloudData || cloudData.syncDisabled) return false;
 
-    const hasSlotChanges = applyCloudSlotsData(cloudData);
+    const syncDetails = { hasSlotChanges: false, hasDeckChanges: false, hasAnyChanges: false };
+    const hasChanges = applyCloudSlotsData(cloudData, { outDetails: syncDetails });
 
     // Broadcast sync update event across page
     try {
       window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
         detail: {
-          hasSlotChanges,
-          hasDeckChanges: hasSlotChanges,
-          hasChanges: hasSlotChanges,
+          hasSlotChanges: syncDetails.hasSlotChanges,
+          hasDeckChanges: syncDetails.hasDeckChanges,
+          hasChanges,
           lastSyncedAt: cloudData.lastSyncedAt || Date.now(),
           source: 'cloud-load'
         }
       }));
     } catch (e) {}
 
-    return hasSlotChanges;
+    return hasChanges;
   } catch (e) {
     console.warn('Erro ao carregar slots da nuvem:', e);
     return false;
@@ -1458,27 +1464,61 @@ export async function loadSlotsFromCloud() {
  * Apply remote cloud data into local storage slots, notebook, streak and settings.
  * Reusable across initial load and real-time onSnapshot events.
  */
-export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
+export function applyCloudSlotsData(cloudData, { isRealtime = false, outDetails = null } = {}) {
   if (!cloudData || cloudData.syncDisabled) return false;
 
-  let hasSlotChanges = false;
+  let hasAnyChanges = false;
+  let hasDeckOrSlotChanges = false;
+  let hasNewerLocalState = false;
   const localSlots = getLocalSlots();
+
+  let localMaxSlotMutationAt = 0;
+  for (let i = 0; i < 3; i++) {
+    const ls = localSlots[i];
+    const delAt = Number(localStorage.getItem(`flashcards_slot_${i}_deleted_at`)) || 0;
+    localMaxSlotMutationAt = Math.max(
+      localMaxSlotMutationAt,
+      Number(ls?.updatedAt) || 0,
+      Number(ls?.deletedAt) || 0,
+      delAt
+    );
+  }
+
+  let localActiveSaveUpdatedAt = 0;
+  try {
+    const activeKey = localStorage.getItem(ACTIVE_MODE_KEY) === 'exam' ? 'flashcardsExam' : SAVE_KEY;
+    const rawActive = localStorage.getItem(activeKey);
+    if (rawActive) {
+      localActiveSaveUpdatedAt = Number(JSON.parse(rawActive)?.updatedAt) || 0;
+    }
+  } catch (e) {}
+
+  const cloudSyncAt = Number(cloudData.lastSyncedAt) || 0;
 
   if (cloudData.deckSlots && Array.isArray(cloudData.deckSlots) && cloudData.deckSlots.length > 0) {
     for (let i = 0; i < 3; i++) {
       const cloudSlot = cloudData.deckSlots.find(s => s.slotIndex === i);
       const localSlot = localSlots[i];
-      const localUpdatedAt = localSlot?.updatedAt || 0;
+      const localUpdatedAt = Number(localSlot?.updatedAt) || 0;
+      const localDeletedAt = Number(localStorage.getItem(`flashcards_slot_${i}_deleted_at`)) || Number(localSlot?.deletedAt) || 0;
 
       if (cloudSlot) {
-        const cloudUpdatedAt = cloudSlot.updatedAt || cloudData.lastSyncedAt || 0;
-        const cloudDeletedAt = cloudSlot.deletedAt || (cloudSlot.deckData ? 0 : cloudUpdatedAt);
+        if (cloudSlot._skippedStaleFetch) {
+          hasNewerLocalState = true;
+          continue;
+        }
+        const cloudUpdatedAt = Number(cloudSlot.updatedAt || cloudData.lastSyncedAt) || 0;
+        const cloudDeletedAt = Number(cloudSlot.deletedAt || (cloudSlot.deckData ? 0 : cloudUpdatedAt)) || 0;
 
         if (cloudSlot.deckData) {
-          // Cloud has an active deck or exam mix: load if local is empty, cloud is newer/equal, or real-time update differs
-          if (!localSlot?.deckData || cloudUpdatedAt >= localUpdatedAt || (isRealtime && cloudUpdatedAt !== localUpdatedAt)) {
+          // Only apply cloud slot if local is empty (and not newer-deleted) or cloud is strictly newer.
+          // Never let a stale realtime snapshot overwrite a newer local deck/slot.
+          const shouldApplyCloudSlot = !localSlot?.deckData
+            ? (cloudUpdatedAt > localDeletedAt)
+            : (cloudUpdatedAt > localUpdatedAt);
+
+          if (shouldApplyCloudSlot) {
             const isExam = Boolean(cloudSlot.isExam || cloudSlot.mode === 'exam' || (cloudSlot.deckData && cloudSlot.deckData.decks));
-            const wasLocalCurrent = Boolean(localSlot?.isCurrent);
             const isNowCurrent = Boolean(cloudSlot.isCurrent);
             localSlots[i] = {
               slotIndex: i,
@@ -1496,24 +1536,28 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
               updatedAt: cloudUpdatedAt
             };
             localStorage.removeItem(`flashcards_slot_${i}_deleted_at`);
-            hasSlotChanges = true;
+            hasAnyChanges = true;
+            hasDeckOrSlotChanges = true;
 
-            if (isNowCurrent || wasLocalCurrent) {
+            if (isNowCurrent && cloudUpdatedAt >= localActiveSaveUpdatedAt) {
               if (isExam) {
                 localStorage.setItem('flashcardsExam', encodeStoragePayload(cloudSlot.deckData));
-                if (isNowCurrent) localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
+                localStorage.setItem(ACTIVE_MODE_KEY, 'exam');
               } else {
                 localStorage.setItem(SAVE_KEY, encodeStoragePayload(cloudSlot.deckData));
-                if (isNowCurrent) localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
+                localStorage.setItem(ACTIVE_MODE_KEY, 'normal');
               }
             }
+          } else if (localSlot?.deckData && localUpdatedAt > cloudUpdatedAt) {
+            hasNewerLocalState = true;
           }
         } else {
-          // Cloud slot is EMPTY or DELETED: propagate deletion only if explicitly deleted or confirmed empty in cloud
-          const isExplicitlyDeletedInCloud = Boolean(cloudSlot?.deletedAt && cloudDeletedAt >= localUpdatedAt);
-          const isConfirmedEmptyInCloud = Boolean(!cloudSlot?.deckId && (cloudSlot?.cardCount || 0) === 0 && cloudDeletedAt >= localUpdatedAt && cloudDeletedAt > 0);
+          // Cloud slot is EMPTY or DELETED: propagate deletion only if cloud snapshot is at least as new as local mutations
+          const isExplicitlyDeletedInCloud = Boolean(cloudSlot?.deletedAt && cloudDeletedAt > localUpdatedAt);
+          const isConfirmedEmptyInCloud = Boolean(!cloudSlot?.deckId && (cloudSlot?.cardCount || 0) === 0 && cloudDeletedAt > localUpdatedAt && cloudDeletedAt > 0);
+          const isCloudAtOrAfterLocalMutations = cloudSyncAt === 0 || cloudSyncAt >= localMaxSlotMutationAt;
 
-          if (localSlot?.deckData && (isExplicitlyDeletedInCloud || isConfirmedEmptyInCloud)) {
+          if (localSlot?.deckData && isCloudAtOrAfterLocalMutations && (isExplicitlyDeletedInCloud || isConfirmedEmptyInCloud)) {
             const wasExam = Boolean(localSlot.isExam || localSlot.mode === 'exam');
             if (localSlot.isCurrent) {
               if (wasExam) {
@@ -1540,7 +1584,10 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
               deletedAt: cloudDeletedAt
             };
             localStorage.setItem(`flashcards_slot_${i}_deleted_at`, String(cloudDeletedAt));
-            hasSlotChanges = true;
+            hasAnyChanges = true;
+            hasDeckOrSlotChanges = true;
+          } else if (localSlot?.deckData) {
+            hasNewerLocalState = true;
           }
         }
       }
@@ -1559,7 +1606,7 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
       }
     }
 
-    if (hasSlotChanges) {
+    if (hasDeckOrSlotChanges) {
       saveLocalSlots(localSlots);
     }
   } else {
@@ -1568,31 +1615,34 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
     const localNotebook = getNotebookSlotData();
     const hasLocalExam = Boolean(localStorage.getItem('flashcardsExam'));
     if (hasLocalDecks || localNotebook?.deckData || hasLocalExam) {
-      syncSlotsToCloud();
+      hasNewerLocalState = true;
     }
   }
 
   // Load cloud notebook or propagate notebook deletion
   const localNotebook = getNotebookSlotData();
   const localNotebookUpdated = Number(localNotebook?.deckData?.updatedAt) || 0;
+  const localNotebookDeletedAt = Number(localStorage.getItem('flashcards_notebook_deleted_at')) || 0;
 
   if (cloudData.notebookSlot?.deckData) {
     const cloudNotebookUpdated = Number(cloudData.notebookSlot.deckData.updatedAt || cloudData.notebookSlot.updatedAt || cloudData.lastSyncedAt) || 0;
-    if (!localNotebook?.deckData || cloudNotebookUpdated > localNotebookUpdated) {
+    if ((!localNotebook?.deckData && cloudNotebookUpdated > localNotebookDeletedAt) || (localNotebook?.deckData && cloudNotebookUpdated > localNotebookUpdated)) {
       localStorage.setItem(NOTEBOOK_KEY, encodeStoragePayload(cloudData.notebookSlot.deckData));
       localStorage.removeItem('flashcards_notebook_deleted_at');
-      hasSlotChanges = true;
+      hasAnyChanges = true;
+      hasDeckOrSlotChanges = true;
     } else if (localNotebook?.deckData && localNotebookUpdated > cloudNotebookUpdated) {
       // Local has newer un-synced progress: push to cloud!
-      debouncedSyncSlotsToCloud(500);
+      hasNewerLocalState = true;
     }
   } else if (localNotebook?.deckData && (cloudData.notebookSlot?.deletedAt || (cloudData.notebookSlot && !cloudData.notebookSlot.deckId && (cloudData.notebookSlot.cardCount || 0) === 0))) {
     // Cloud notebook is deleted/empty: check deletion timestamp
     const cloudNotebookDeletedAt = Number(cloudData.notebookSlot?.deletedAt) || 0;
-    if (cloudNotebookDeletedAt > 0 && cloudNotebookDeletedAt >= localNotebookUpdated) {
+    if (cloudNotebookDeletedAt > 0 && cloudNotebookDeletedAt > localNotebookUpdated) {
       localStorage.removeItem(NOTEBOOK_KEY);
       localStorage.setItem('flashcards_notebook_deleted_at', String(cloudNotebookDeletedAt));
-      hasSlotChanges = true;
+      hasAnyChanges = true;
+      hasDeckOrSlotChanges = true;
     }
   }
 
@@ -1605,12 +1655,12 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
 
       const mergedStreak = mergeDailyStreaks(localStreak, cloudData.dailyStreak);
       localStorage.setItem('flashcards_daily_streak', encodeStoragePayload(mergedStreak));
-      hasSlotChanges = true;
+      hasAnyChanges = true;
     } catch (e) {
       console.warn('Erro ao sincronizar streak diário:', e);
     }
   } else if (localStorage.getItem('flashcards_daily_streak')) {
-    syncSlotsToCloud();
+    hasNewerLocalState = true;
   }
 
   // Synchronize Stats (merging history and allTime)
@@ -1623,34 +1673,49 @@ export function applyCloudSlotsData(cloudData, { isRealtime = false } = {}) {
       const mergedStats = mergeStatsData(localStats, cloudData.stats);
       localStorage.setItem('flashcards_stats', encodeStoragePayload(mergedStats));
       localStorage.setItem('flashcardsStats', encodeStoragePayload(mergedStats));
-      hasSlotChanges = true;
+      hasAnyChanges = true;
     } catch (e) {
       console.warn('Erro ao sincronizar estatísticas:', e);
     }
   } else if (localStorage.getItem('flashcards_stats') || localStorage.getItem('flashcardsStats')) {
-    syncSlotsToCloud();
+    hasNewerLocalState = true;
   }
 
   // Synchronize Settings
   if (cloudData.settings && typeof cloudData.settings === 'object') {
     try {
       const settingsChanged = applyCloudSettings(cloudData.settings);
-      if (settingsChanged) hasSlotChanges = true;
+      if (settingsChanged) hasAnyChanges = true;
     } catch (e) {
       console.warn('Erro ao aplicar configurações da nuvem:', e);
     }
   }
 
-  // Synchronize Active Mode
+  // Synchronize Active Mode (only apply from realtime cloud if cloud actually drove deck/slot changes and isn't stale)
   if (cloudData.activeMode && (cloudData.activeMode === 'normal' || cloudData.activeMode === 'exam' || cloudData.activeMode === 'notebook')) {
     const currentActive = localStorage.getItem(ACTIVE_MODE_KEY);
-    if (!currentActive || isRealtime) {
-      localStorage.setItem(ACTIVE_MODE_KEY, cloudData.activeMode);
-      hasSlotChanges = true;
+    if (!currentActive || (isRealtime && hasDeckOrSlotChanges && !hasNewerLocalState && cloudSyncAt >= localMaxSlotMutationAt)) {
+      if (currentActive !== cloudData.activeMode) {
+        localStorage.setItem(ACTIVE_MODE_KEY, cloudData.activeMode);
+        hasAnyChanges = true;
+        hasDeckOrSlotChanges = true;
+      }
     }
   }
 
-  return hasSlotChanges;
+  if (hasNewerLocalState) {
+    setTimeout(() => {
+      syncSlotsToCloud();
+    }, 150);
+  }
+
+  if (outDetails && typeof outDetails === 'object') {
+    outDetails.hasSlotChanges = hasDeckOrSlotChanges;
+    outDetails.hasDeckChanges = hasDeckOrSlotChanges;
+    outDetails.hasAnyChanges = hasAnyChanges;
+  }
+
+  return hasAnyChanges;
 }
 
 /**
@@ -1743,6 +1808,10 @@ async function hydrateCloudUserDoc(userDocData, uid) {
 
           if (canReuseLocal) {
             clonedSlot.deckData = localMatch.deckData;
+          } else if (localMatch?.deckData && (Number(localMatch.updatedAt) || 0) > (Number(clonedSlot.updatedAt) || 0)) {
+            // Local slot is strictly newer than cloud metadata; skip unnecessary deck fetch
+            clonedSlot.deckData = null;
+            clonedSlot._skippedStaleFetch = true;
           } else {
             try {
               const deckSnap = await getDoc(doc(db, 'decks', clonedSlot.deckId));
@@ -1851,12 +1920,13 @@ function attachRealtimeUserSnapshot(user) {
 
       try {
         const hydratedData = await hydrateCloudUserDoc(data, user.uid);
-        const hasChanges = applyCloudSlotsData(hydratedData, { isRealtime: true });
+        const syncDetails = { hasSlotChanges: false, hasDeckChanges: false, hasAnyChanges: false };
+        const hasChanges = applyCloudSlotsData(hydratedData, { isRealtime: true, outDetails: syncDetails });
         if (hasChanges) {
           window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
             detail: {
-              hasSlotChanges: true,
-              hasDeckChanges: true,
+              hasSlotChanges: syncDetails.hasSlotChanges,
+              hasDeckChanges: syncDetails.hasDeckChanges,
               source: 'realtime-user-doc'
             }
           }));

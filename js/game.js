@@ -10343,7 +10343,7 @@ window.addEventListener('flashcards:sync-updated', (event) => {
         }
 
         // Live-update active deck cards if updated in real time via onSnapshot (shared link or user doc)
-        if (event.detail?.hasDeckChanges || event.detail?.source === 'realtime-shared-deck' || event.detail?.source === 'realtime-user-doc') {
+        if (event.detail?.hasDeckChanges || event.detail?.source === 'realtime-shared-deck') {
             const storageKey = activeMode === 'notebook' ? NOTEBOOK_STORAGE_KEY : (activeMode === 'exam' ? 'flashcardsExam' : 'flashcardsSave');
             try {
                 const freshSaved = JSON.parse(localStorage.getItem(storageKey) || '{}');
