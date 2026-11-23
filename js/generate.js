@@ -405,7 +405,6 @@ function closeInlineEditModal() {
         window.scrollTo({ top: inlineEditSavedWindowY, behavior: 'instant' });
     });
 }
-let currentEditorModel = "gemini-flash-lite-latest";
 let promptQueue = [];
 let isProcessingPromptQueue = false;
 
@@ -2627,6 +2626,106 @@ modal21Files.addEventListener('change', () => {
 });
 
 /**
+ * Reads an SSE response stream from /api/ai/generate, normalizes and deduplicates cards into deckCards,
+ * and tracks server-driven post-generation coverage audit/complementation phases.
+ */
+async function streamDeckCardsFromSseResponse(res, seenSignatures) {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let streamText = '';
+    let phaseAddedCount = 0;
+    let totalAddedCount = 0;
+    let complementAddedCount = 0;
+    let complementTopics = [];
+    let activePhase = 'initial';
+
+    const flushFallbackForCurrentPhase = () => {
+        if (phaseAddedCount === 0 && streamText.trim()) {
+            const fallbackCards = parseJsonCardsSafely(streamText);
+            for (const card of fallbackCards) {
+                const sig = `${card.type}::${card.description}::${card.answer}`;
+                if (!seenSignatures.has(sig)) {
+                    seenSignatures.add(sig);
+                    deckCards.push(card);
+                    phaseAddedCount++;
+                    totalAddedCount++;
+                    if (activePhase === 'complementing') {
+                        complementAddedCount++;
+                    }
+                }
+            }
+            if (phaseAddedCount > 0) {
+                updateGeneratingProgress(deckCards.length);
+                renderCardsList(true);
+            }
+        }
+    };
+
+    for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+        const { value } = chunk;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === '[DONE]') continue;
+            try {
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.spaiqMeta) {
+                    const meta = parsed.spaiqMeta;
+                    if (meta.phase === 'auditing') {
+                        flushFallbackForCurrentPhase();
+                        activePhase = 'auditing';
+                        updateGeneratingStatus(t('verifying_material_coverage', { count: meta.playableCount || deckCards.length }));
+                    } else if (meta.phase === 'complementing') {
+                        flushFallbackForCurrentPhase();
+                        activePhase = 'complementing';
+                        streamText = '';
+                        phaseAddedCount = 0;
+                        complementTopics = Array.isArray(meta.missingTopics) ? meta.missingTopics : [];
+                        updateGeneratingStatus(t('complementing_missing_concepts', { count: complementTopics.length }));
+                    }
+                    continue;
+                }
+
+                const chunkText = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                if (!chunkText) continue;
+                streamText += chunkText;
+                const streamObjects = extractBalancedJsonObjects(streamText);
+                for (const rawObj of streamObjects) {
+                    const card = normalizeCard(rawObj);
+                    if (!card) continue;
+                    const sig = `${card.type}::${card.description}::${card.answer}`;
+                    if (!seenSignatures.has(sig)) {
+                        seenSignatures.add(sig);
+                        deckCards.push(card);
+                        phaseAddedCount++;
+                        totalAddedCount++;
+                        if (activePhase === 'complementing') {
+                            complementAddedCount++;
+                        }
+                        updateGeneratingProgress(deckCards.length);
+                        renderCardsList();
+                    }
+                }
+            } catch (e) {}
+        }
+    }
+
+    flushFallbackForCurrentPhase();
+
+    return {
+        fullText: streamText,
+        addedCount: totalAddedCount,
+        complementedCount: complementAddedCount,
+        complementedTopics: complementTopics
+    };
+}
+
+/**
  * Executes AI generation from materials (Mode 2.1)
  * @param {File[]} files
  * @param {string} [customInstructions='']
@@ -2668,12 +2767,14 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             userTaskPrompt += `\n\nDemandas adicionais do usuário (prioridade máxima sobre os padrões quando conflitarem):\n${customText}`;
         }
 
+        let targetLanguagePrompt = '';
         if (getCurrentLanguage() !== 'pt-BR') {
             let targetDeckLanguage = selectedLanguage || 'Inglês';
             if (targetDeckLanguage === 'custom') {
                 targetDeckLanguage = (customLanguage || '').trim() || 'Inglês';
             }
-            userTaskPrompt += `\n\nGere em ${targetDeckLanguage}`;
+            targetLanguagePrompt = `Gere em ${targetDeckLanguage}`;
+            userTaskPrompt += `\n\n${targetLanguagePrompt}`;
         }
 
         const parts = [{ text: userTaskPrompt }];
@@ -2715,7 +2816,6 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
 
         updateGeneratingStatus(t('connecting_gemini_generating'));
 
-        let fullText = "";
         const seenSignatures = new Set();
 
         const token = await getCurrentUserToken().catch(() => null);
@@ -2738,7 +2838,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             method: 'POST',
             headers: reqHeaders,
             body: JSON.stringify({
-                model: currentEditorModel || "gemini-flash-latest",
+                model: "gemini-flash-latest",
                 contents: [{ role: 'user', parts }],
                 systemInstruction: { parts: [{ text: generationSystemInstruction }] },
                 generationConfig: {
@@ -2748,7 +2848,9 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
                     responseMimeType: "application/json"
                 },
                 stream: true,
-                isNewDeck: true
+                isNewDeck: true,
+                enableCoverageAudit: true,
+                targetLanguagePrompt
             })
         });
 
@@ -2766,58 +2868,9 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             throw new Error(errData.message || `Erro no servidor (${res.status})`);
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let buffer = '';
-
-        for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-            const { value } = chunk;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const jsonStr = line.slice(6).trim();
-                    if (jsonStr === '[DONE]') continue;
-                    try {
-                        const parsed = JSON.parse(jsonStr);
-                        const chunkText = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                        if (chunkText) {
-                            fullText += chunkText;
-                            const streamObjects = extractBalancedJsonObjects(fullText);
-                            for (const rawObj of streamObjects) {
-                                const card = normalizeCard(rawObj);
-                                if (card) {
-                                    const sig = `${card.type}::${card.description}::${card.answer}`;
-                                    if (!seenSignatures.has(sig)) {
-                                        seenSignatures.add(sig);
-                                        deckCards.push(card);
-                                        updateGeneratingProgress(deckCards.length);
-                                        renderCardsList();
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e) {}
-                }
-            }
-        }
-
-        // Stream completed. If no cards were extracted or some were missed, run safe fallback parser
-        if (deckCards.length === 0 && fullText.trim()) {
-            const fallbackCards = parseJsonCardsSafely(fullText);
-            for (const card of fallbackCards) {
-                const sig = `${card.type}::${card.description}::${card.answer}`;
-                if (!seenSignatures.has(sig)) {
-                    seenSignatures.add(sig);
-                    deckCards.push(card);
-                }
-            }
-            if (deckCards.length > 0) {
-                renderCardsList(true);
-            }
-        }
+        const streamResult = await streamDeckCardsFromSseResponse(res, seenSignatures);
+        const complementedCount = streamResult.complementedCount || 0;
+        const complementedTopics = streamResult.complementedTopics || [];
 
         if (deckCards.length > 0) {
             if (window.currentDeckIsFreeAiTrial) {
@@ -2833,7 +2886,15 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             refreshUserProStatus().then(() => updateProPaywalledUI());
             finishGeneratingAnimation(true, deckCards.length);
             removeAiChatGeneratingBubble();
-            addChatMessage('model', t('deck_generated_chat_msg', { count: deckCards.length }));
+            if (complementedCount > 0) {
+                addChatMessage('model', t('deck_complemented_chat_msg', {
+                    added: complementedCount,
+                    total: deckCards.length,
+                    topics: complementedTopics.slice(0, 6).join(', ')
+                }));
+            } else {
+                addChatMessage('model', t('deck_generated_chat_msg', { count: deckCards.length }));
+            }
         } else {
             finishGeneratingAnimation(false, 0);
             removeAiChatGeneratingBubble();
@@ -2841,8 +2902,13 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             renderCardsList(true);
         }
 
-        // Initialize chat session for subsequent agentic edits in the sidebar
-        geminiChatSession = { _history: [] };
+        // Preserve lightweight generation summary in chat session for subsequent agentic edits
+        geminiChatSession = {
+            _history: deckCards.length > 0 ? [
+                { role: 'user', parts: [{ text: `Gere flashcards com base nos arquivos enviados: ${files.map(f => f.name).join(', ')}` }] },
+                { role: 'model', parts: [{ text: `Gerei ${deckCards.length} flashcards cobrindo os materiais enviados.${complementedCount > 0 ? ` Complementei ${complementedCount} cards adicionais para: ${complementedTopics.join('; ')}.` : ''}` }] }
+            ] : []
+        };
 
     } catch (err) {
         console.error("Erro na geração 2.1:", err);
@@ -4413,12 +4479,8 @@ function renderCardsList(fullReRender = false, preserveScroll = true) {
     // Capture current scroll positions before DOM changes
     const prevScrollTop = cardsList ? cardsList.scrollTop : 0;
     const prevWindowY = window.scrollY || document.documentElement.scrollTop || 0;
-    const prevScrollHeight = cardsList ? cardsList.scrollHeight : 0;
 
     if (fullReRender) {
-        if (cardsList && prevScrollHeight > 0) {
-            cardsList.style.minHeight = prevScrollHeight + 'px';
-        }
         const fragment = document.createDocumentFragment();
         for (let i = 0; i < deckCards.length; i++) {
             const item = deckCards[i];
@@ -4458,11 +4520,57 @@ function renderCardsList(fullReRender = false, preserveScroll = true) {
         requestAnimationFrame(() => {
             if (cardsList) {
                 cardsList.scrollTop = prevScrollTop;
-                cardsList.style.minHeight = '';
             }
             window.scrollTo({ top: prevWindowY, behavior: 'instant' });
         });
     }
+}
+
+function removeDeckItemInPlace(itemEl) {
+    if (!itemEl) return;
+    const idx = Number(itemEl.dataset.index);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= deckCards.length) return;
+
+    const prevScrollTop = cardsList ? cardsList.scrollTop : 0;
+    const prevWindowY = window.scrollY || document.documentElement.scrollTop || 0;
+
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+    }
+
+    deckCards.splice(idx, 1);
+
+    if (deckCards.length === 0 || !cardsList) {
+        renderCardsList(true);
+        syncCurrentDeckToSlotAndCloud();
+        return;
+    }
+
+    itemEl.remove();
+
+    const playableCount = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note').length;
+    deckSizeBadge.textContent = playableCount;
+    updateVoiceLimitBadge();
+
+    const children = Array.from(cardsList.children);
+    for (let i = idx; i < children.length; i++) {
+        const child = children[i];
+        child.dataset.index = String(i);
+        const numBadge = child.querySelector('.deck-card-num-badge');
+        if (numBadge) {
+            numBadge.textContent = `#${i + 1}`;
+        }
+    }
+
+    updateCardsBorderRadius();
+    syncCurrentDeckToSlotAndCloud();
+
+    cardsList.scrollTop = prevScrollTop;
+    window.scrollTo({ top: prevWindowY, behavior: 'instant' });
+    requestAnimationFrame(() => {
+        if (cardsList) cardsList.scrollTop = prevScrollTop;
+        window.scrollTo({ top: prevWindowY, behavior: 'instant' });
+    });
 }
 
 function createDivisorElement(divisor, index, withAnimation = true) {
@@ -4537,20 +4645,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
             e.preventDefault();
             e.stopPropagation();
         }
-        const currentScroll = cardsList ? cardsList.scrollTop : 0;
-        const currentWindowY = window.scrollY || document.documentElement.scrollTop || 0;
-        if (document.activeElement && typeof document.activeElement.blur === 'function') {
-            document.activeElement.blur();
-        }
-        deckCards.splice(index, 1);
-        renderCardsList(true);
-        syncCurrentDeckToSlotAndCloud();
-        if (cardsList) cardsList.scrollTop = currentScroll;
-        window.scrollTo({ top: currentWindowY, behavior: 'instant' });
-        requestAnimationFrame(() => {
-            if (cardsList) cardsList.scrollTop = currentScroll;
-            window.scrollTo({ top: currentWindowY, behavior: 'instant' });
-        });
+        removeDeckItemInPlace(divisorEl);
     };
 
     actionsDiv.appendChild(editBtn);
@@ -4577,7 +4672,7 @@ function createCardElement(card, index, withAnimation = true) {
     typeBadge.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded";
 
     const cardNumBadge = document.createElement('span');
-    cardNumBadge.className = "text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/80 select-none";
+    cardNumBadge.className = "deck-card-num-badge text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/80 select-none";
     cardNumBadge.textContent = `#${index + 1}`;
 
     if (card.type === 'anki') {
@@ -4731,7 +4826,10 @@ function createCardElement(card, index, withAnimation = true) {
             e.preventDefault();
             e.stopPropagation();
         }
-        openInlineEditModal(index);
+        const currentIdx = Number(cardEl.dataset.index);
+        if (Number.isInteger(currentIdx)) {
+            openInlineEditModal(currentIdx);
+        }
     };
 
     const delBtn = document.createElement('button');
@@ -4743,21 +4841,8 @@ function createCardElement(card, index, withAnimation = true) {
             e.preventDefault();
             e.stopPropagation();
         }
-        const currentScroll = cardsList ? cardsList.scrollTop : 0;
-        const currentWindowY = window.scrollY || document.documentElement.scrollTop || 0;
         if (confirm(t('confirm_delete_card'))) {
-            if (document.activeElement && typeof document.activeElement.blur === 'function') {
-                document.activeElement.blur();
-            }
-            deckCards.splice(index, 1);
-            renderCardsList(true);
-            syncCurrentDeckToSlotAndCloud();
-            if (cardsList) cardsList.scrollTop = currentScroll;
-            window.scrollTo({ top: currentWindowY, behavior: 'instant' });
-            requestAnimationFrame(() => {
-                if (cardsList) cardsList.scrollTop = currentScroll;
-                window.scrollTo({ top: currentWindowY, behavior: 'instant' });
-            });
+            removeDeckItemInPlace(cardEl);
         }
     };
 
@@ -5375,7 +5460,6 @@ async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
     const token = await getCurrentUserToken().catch(() => null);
     if (!token) throw new Error("Usuário não autenticado.");
 
-    currentEditorModel = modelName;
     history.push({ role: 'user', parts: [{ text: enrichedPrompt }] });
 
     try {

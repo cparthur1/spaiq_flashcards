@@ -9,7 +9,7 @@
  */
 
 import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail } from './google-auth.js';
-import { callGemini, callGeminiDecision } from './gemini.js';
+import { callGemini, callGeminiDecision, callGeminiWithCoverageAudit } from './gemini.js';
 import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData, deleteDocument, findUserByApiKey } from './firestore.js';
 import { fetchCambluClubeStatus, resolveUserEntitlement } from './camblu-clube.js';
 import {
@@ -1557,17 +1557,30 @@ export default {
           }
         }
 
-        // Proxy Gemini call
-        const geminiRes = await callGemini({
-          model: sanitizeGeminiModel(reqBody.model, 'gemini-flash-latest'),
-          contents: reqBody.contents,
-          systemInstruction: reqBody.systemInstruction,
-          generationConfig: reqBody.generationConfig,
-          tools: reqBody.tools,
-          toolConfig: reqBody.toolConfig,
-          stream: Boolean(reqBody.stream),
-          apiKey: env.GEMINI_API_KEY
-        });
+        // Proxy Gemini call (with server-side coverage audit + complementation when requested on new deck streams)
+        const shouldAuditCoverage = isNewDeck && Boolean(reqBody.stream) && Boolean(reqBody.enableCoverageAudit);
+        const sanitizedModel = sanitizeGeminiModel(reqBody.model, 'gemini-flash-latest');
+        const geminiRes = shouldAuditCoverage
+          ? await callGeminiWithCoverageAudit({
+              model: sanitizedModel,
+              contents: reqBody.contents,
+              systemInstruction: reqBody.systemInstruction,
+              generationConfig: reqBody.generationConfig,
+              tools: reqBody.tools,
+              toolConfig: reqBody.toolConfig,
+              targetLanguagePrompt: typeof reqBody.targetLanguagePrompt === 'string' ? reqBody.targetLanguagePrompt : '',
+              apiKey: env.GEMINI_API_KEY
+            })
+          : await callGemini({
+              model: sanitizedModel,
+              contents: reqBody.contents,
+              systemInstruction: reqBody.systemInstruction,
+              generationConfig: reqBody.generationConfig,
+              tools: reqBody.tools,
+              toolConfig: reqBody.toolConfig,
+              stream: Boolean(reqBody.stream),
+              apiKey: env.GEMINI_API_KEY
+            });
 
         // Forward headers with CORS
         const responseHeaders = new Headers(geminiRes.headers);

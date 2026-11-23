@@ -4541,7 +4541,7 @@ function resetUI() {
     fillInputs.forEach(inp => {
         inp.disabled = false;
         inp.readOnly = false;
-        inp.classList.remove('animate-pulse', 'border-red-500', 'border-green-500', 'border-amber-400', 'bg-amber-50', 'bg-green-50', 'bg-red-50', 'text-amber-800', 'fill-box-shake', 'fill-box-pop', 'fill-box-pop-yellow');
+        inp.classList.remove('animate-pulse', 'is-correct', 'is-wrong', 'is-revealed', 'border-solid', 'border-red-500', 'border-green-500', 'border-amber-400', 'bg-amber-50', 'bg-green-50', 'bg-red-50', 'text-green-600', 'text-red-600', 'text-amber-800', 'fill-box-shake', 'fill-box-pop', 'fill-box-pop-yellow');
     });
 
     if (currentQuestion) {
@@ -4669,8 +4669,8 @@ function handleFillSubmit() {
             inputs.forEach(input => {
                 input.readOnly = true;
                 input.blur();
-                input.classList.remove('border-dashed', 'border-blue-400');
-                input.classList.add('border-solid', 'border-green-500', 'bg-green-50', 'text-green-600');
+                input.classList.remove('border-dashed', 'border-blue-400', 'is-wrong', 'is-revealed');
+                input.classList.add('is-correct', 'border-solid', 'border-green-500', 'bg-green-50', 'text-green-600');
             });
             showFeedback(true);
         } else {
@@ -4680,12 +4680,12 @@ function handleFillSubmit() {
             blankResults.forEach(({ input, isCorrect }) => {
                 input.readOnly = true;
                 input.blur();
-                input.classList.remove('border-dashed', 'border-blue-400', 'border-green-500', 'border-red-500', 'border-amber-400', 'bg-green-50', 'bg-red-50', 'bg-amber-50', 'text-green-600', 'text-red-600', 'text-amber-800', 'fill-box-shake', 'fill-box-pop', 'fill-box-pop-yellow');
+                input.classList.remove('border-dashed', 'border-blue-400', 'is-correct', 'is-wrong', 'is-revealed', 'border-green-500', 'border-red-500', 'border-amber-400', 'bg-green-50', 'bg-red-50', 'bg-amber-50', 'text-green-600', 'text-red-600', 'text-amber-800', 'fill-box-shake', 'fill-box-pop', 'fill-box-pop-yellow');
 
                 if (isCorrect) {
-                    input.classList.add('border-solid', 'border-green-500', 'bg-green-50', 'text-green-600');
+                    input.classList.add('is-correct', 'border-solid', 'border-green-500', 'bg-green-50', 'text-green-600');
                 } else {
-                    input.classList.add('border-solid', 'border-red-500', 'bg-red-50', 'text-red-600', 'fill-box-shake');
+                    input.classList.add('is-wrong', 'border-solid', 'border-red-500', 'bg-red-50', 'text-red-600', 'fill-box-shake');
                 }
             });
 
@@ -4699,8 +4699,8 @@ function handleFillSubmit() {
                     if (!isCorrect) {
                         anyPopped = true;
                         const primaryExpected = synonyms[0] || expectedVal;
-                        input.classList.remove('border-red-500', 'bg-red-50', 'text-red-600', 'fill-box-shake');
-                        input.classList.add('border-solid', 'border-amber-400', 'bg-amber-50', 'text-amber-800', 'fill-box-pop-yellow');
+                        input.classList.remove('is-wrong', 'border-red-500', 'bg-red-50', 'text-red-600', 'fill-box-shake');
+                        input.classList.add('is-revealed', 'border-solid', 'border-amber-400', 'bg-amber-50', 'text-amber-800', 'fill-box-pop-yellow');
                         input.value = primaryExpected;
                         if (synonyms.length > 1) {
                             input.title = synonyms.join(' / ');

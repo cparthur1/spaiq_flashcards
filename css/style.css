@@ -2570,7 +2570,7 @@ mark.card-hl-purple {
                 color 0.2s ease;
 }
 
-.fill-blank-input:focus {
+.fill-blank-input:focus:not(:read-only) {
     outline: none;
     background-color: #ffffff;
     border-color: #3b82f6;
@@ -2580,6 +2580,31 @@ mark.card-hl-purple {
 .fill-blank-input:read-only {
     cursor: default;
     user-select: text;
+}
+
+.fill-blank-input.border-red-500 {
+    border-color: #ef4444;
+}
+
+.fill-blank-input.is-correct {
+    border-style: solid;
+    border-color: #22c55e;
+    background-color: #f0fdf4;
+    color: #16a34a;
+}
+
+.fill-blank-input.is-wrong {
+    border-style: solid;
+    border-color: #ef4444;
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+.fill-blank-input.is-revealed {
+    border-style: solid;
+    border-color: #fbbf24;
+    background-color: #fffbeb;
+    color: #92400e;
 }
 
 /* ==========================================================================
