@@ -2019,15 +2019,27 @@ mark.card-hl-purple {
     }
 }
 
-/* Definition card enter animation */
+/* Definition card enter animation (no translateX(-50%) because parent #text-highlight-popup already centers it) */
+@keyframes hlCardEnter {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 #hl-ai-card:not(.hidden):not(.hl-card-collapse-circle) {
-    animation: popupEnter 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: hlCardEnter 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Ensure text selection popup (AI define & highlight) is always centered horizontally on mobile */
 @media (max-width: 767px) {
     #text-highlight-popup {
         left: 50% !important;
+        transform: translateX(-50%);
     }
 }
 
@@ -2944,7 +2956,6 @@ mark.card-hl-purple {
     #next-question-btn:not(.hidden),
     #question-feedback-text:not(.hidden),
     #flowchart-status-banner:not(.hidden),
-    #flowchart-solution-container:not(.hidden),
     #flowchart-tray-empty:not(.hidden),
     #session-completed-banner:not(.hidden),
     #banner-stat-ai:not(.hidden),
@@ -4440,9 +4451,36 @@ body.dark-mode .flowchart-toolbar-btn.is-active {
     background: rgba(59, 130, 247, 0.06);
 }
 
-.flowchart-node-card.is-drag-over {
+.flowchart-node-card.is-drag-over,
+.flowchart-node-card.is-swap-target {
     border-color: #3b82f7;
     background: rgba(59, 130, 247, 0.1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 247, 0.2);
+}
+
+.flowchart-drop-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    margin-bottom: 0.6rem;
+    border-radius: 9999px;
+    background: rgba(239, 246, 255, 0.95);
+    border: 1px solid rgba(59, 130, 247, 0.35);
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(59, 130, 247, 0.14);
+}
+
+.flowchart-touch-ghost {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.92;
+    transform: translate(-50%, -50%) scale(1.03);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
+    max-width: 260px;
 }
 
 .flowchart-node-card.is-correct {
@@ -4544,6 +4582,12 @@ body.dark-mode .flowchart-node-step-pill {
     border-color: #ef4444;
     background: rgba(239, 68, 68, 0.12);
     color: #b91c1c;
+}
+
+.flowchart-blank-input.is-revealed {
+    border-color: #fbbf24;
+    background-color: #fffbeb;
+    color: #92400e;
 }
 
 body.dark-mode .flowchart-blank-input.is-correct {
@@ -4675,7 +4719,6 @@ body.dark-mode .flowchart-tray-blank-chip {
 #next-question-btn:not(.hidden),
 #question-feedback-text:not(.hidden),
 #flowchart-status-banner:not(.hidden),
-#flowchart-solution-container:not(.hidden),
 #flowchart-tray-empty:not(.hidden),
 #session-completed-banner:not(.hidden),
 #exam-saved-session-box:not(.hidden),
@@ -4708,6 +4751,30 @@ body.dark-mode .flowchart-tray-blank-chip {
 #voice-points-covered-row:not(.hidden),
 #voice-points-missed-row:not(.hidden) {
     animation: m3ChipSpringIn var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-spring) backwards;
+}
+
+/* Card Editor: Mobile Sidebar Collapse */
+@media (max-width: 767px) {
+    #editor-left-sidebar.is-mobile-collapsed {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    #editor-left-sidebar.is-mobile-collapsed > #card-creator-panel,
+    #editor-left-sidebar.is-mobile-collapsed > #ai-editor-chat-panel {
+        display: none !important;
+    }
+    #editor-right-deck-panel.is-mobile-expanded {
+        height: 75vh !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #hl-ai-card:not(.hidden):not(.hl-card-collapse-circle),
+    #editor-left-sidebar,
+    #editor-right-deck-panel {
+        animation: none !important;
+        transition: none !important;
+    }
 }
 
 

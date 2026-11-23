@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/index.js';
+import { assertValidFirestoreId, getUserDocument } from '../src/firestore.js';
 import {
   CAMBLU_CACHE_TTL_MS,
   DEFAULT_CAMBLU_CLUBE_API_URL,
@@ -275,5 +276,45 @@ test('worker allows CORS for gorit.camblu.org and flashcards.camblu.org', async 
   const spaiqRes = await worker.fetch(spaiqReq, {}, {});
   assert.equal(spaiqRes.status, 204);
   assert.equal(spaiqRes.headers.get('Access-Control-Allow-Origin'), 'https://flashcards.camblu.org');
+});
+
+test('firestore ID guard rejects undefined, null, empty, and path traversal IDs', async () => {
+  for (const bad of [undefined, null, '', '   ', 'undefined', 'null', 'a/b', 'a..b']) {
+    assert.throws(() => assertValidFirestoreId(bad, 'uid'));
+  }
+  assert.equal(assertValidFirestoreId('user_123', 'uid'), 'user_123');
+  await assert.rejects(() => getUserDocument({ project_id: 'test' }, undefined));
+  await assert.rejects(() => getUserDocument({ project_id: 'test' }, 'undefined'));
+});
+
+test('resolveUserEntitlement isolates new user from mismatched userDoc email and stale whitelist claim', async () => {
+  const res = await resolveUserEntitlement({
+    env: {},
+    serviceAccount: { project_id: 'test' },
+    user: { uid: 'uid-maria', email: 'marialaurateixeira.araujo@gmail.com', pro: true, emailVerified: true },
+    userDoc: {
+      email: 'arthur.paludo.c@gmail.com',
+      cambluClube: {
+        active: true,
+        tier: 'lendario',
+        tierCode: 4,
+        validUntil: FUTURE_ISO,
+        checkedAt: new Date(NOW_MS - 10_000).toISOString()
+      },
+      subscription: {
+        status: 'active',
+        plan: 'pro_lifetime',
+        provider: 'whitelist'
+      }
+    },
+    refreshLive: false,
+    nowMs: NOW_MS,
+    fetchImpl: async () => new Response(JSON.stringify({ active: false, tier: 'none', tierCode: 0, validUntil: null }), { status: 200 })
+  });
+
+  assert.equal(res.isPro, false);
+  assert.equal(res.isLifetime, false);
+  assert.equal(res.proSource, null);
+  assert.equal(res.monthlyIncluded, 0);
 });
 

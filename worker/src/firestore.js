@@ -7,6 +7,20 @@ import { getGoogleAdminAccessToken } from './google-auth.js';
 const FIRESTORE_BASE = 'https://firestore.googleapis.com/v1';
 
 /**
+ * Validates Firestore document / user IDs so undefined/null/traversal values can never be read or written.
+ */
+export function assertValidFirestoreId(id, label = 'documentId') {
+  if (typeof id !== 'string') {
+    throw new Error(`Identificador inválido para ${label}`);
+  }
+  const trimmed = id.trim();
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null' || trimmed.includes('/') || trimmed.includes('..')) {
+    throw new Error(`Identificador inválido para ${label}`);
+  }
+  return trimmed;
+}
+
+/**
  * Extracts and parses Firebase Service Account from Worker environment
  */
 export function getServiceAccount(env) {
@@ -81,9 +95,10 @@ function fromFirestoreFields(fields) {
  * Get user document from Firestore
  */
 export async function getUserDocument(serviceAccountConfig, uid) {
+  const validUid = assertValidFirestoreId(uid, 'uid');
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
   const projectId = encodeURIComponent(serviceAccountConfig.project_id);
-  const safeUid = encodeURIComponent(uid);
+  const safeUid = encodeURIComponent(validUid);
   const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${safeUid}`;
 
   const res = await fetch(url, {
@@ -106,9 +121,10 @@ export async function getUserDocument(serviceAccountConfig, uid) {
  * Update or patch user document in Firestore
  */
 export async function updateUserDocument(serviceAccountConfig, uid, fieldsToUpdate) {
+  const validUid = assertValidFirestoreId(uid, 'uid');
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
   const projectId = encodeURIComponent(serviceAccountConfig.project_id);
-  const safeUid = encodeURIComponent(uid);
+  const safeUid = encodeURIComponent(validUid);
 
   const updateMask = Object.keys(fieldsToUpdate)
     .map(key => `updateMask.fieldPaths=${encodeURIComponent(key)}`)
@@ -143,9 +159,10 @@ export async function updateUserDocument(serviceAccountConfig, uid, fieldsToUpda
  * Delete user document and associated decks/shares from Firestore
  */
 export async function deleteUserDocument(serviceAccountConfig, uid) {
+  const validUid = assertValidFirestoreId(uid, 'uid');
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
   const projectId = encodeURIComponent(serviceAccountConfig.project_id);
-  const safeUid = encodeURIComponent(uid);
+  const safeUid = encodeURIComponent(validUid);
   const userUrl = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/users/${safeUid}`;
 
   // First fetch user doc to find deck IDs and API keys
@@ -184,10 +201,11 @@ export async function deleteUserDocument(serviceAccountConfig, uid) {
  */
 export async function clearUserCloudData(serviceAccountConfig, uid) {
   try {
-    const userDoc = await getUserDocument(serviceAccountConfig, uid);
+    const validUid = assertValidFirestoreId(uid, 'uid');
+    const userDoc = await getUserDocument(serviceAccountConfig, validUid);
     const cleanupTasks = [
-      deleteDeckDocument(serviceAccountConfig, `notebook_${uid}`).catch(() => {}),
-      deleteDocument(serviceAccountConfig, 'user_stats', uid).catch(() => {})
+      deleteDeckDocument(serviceAccountConfig, `notebook_${validUid}`).catch(() => {}),
+      deleteDocument(serviceAccountConfig, 'user_stats', validUid).catch(() => {})
     ];
 
     if (userDoc?.deckSlots && Array.isArray(userDoc.deckSlots)) {
@@ -206,7 +224,7 @@ export async function clearUserCloudData(serviceAccountConfig, uid) {
     await Promise.all(cleanupTasks);
 
     // Clear cloud slots and data on user document
-    await updateUserDocument(serviceAccountConfig, uid, {
+    await updateUserDocument(serviceAccountConfig, validUid, {
       deckSlots: [],
       notebookSlot: null,
       stats: null,
@@ -228,10 +246,12 @@ export async function clearUserCloudData(serviceAccountConfig, uid) {
  * Get any document from Firestore
  */
 export async function getDocument(serviceAccountConfig, collectionName, docId) {
+  const validCollection = assertValidFirestoreId(collectionName, 'collectionName');
+  const validDocId = assertValidFirestoreId(docId, 'docId');
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
   const projectId = encodeURIComponent(serviceAccountConfig.project_id);
-  const safeCollection = encodeURIComponent(collectionName);
-  const safeDocId = encodeURIComponent(docId);
+  const safeCollection = encodeURIComponent(validCollection);
+  const safeDocId = encodeURIComponent(validDocId);
   const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${safeCollection}/${safeDocId}`;
 
   const res = await fetch(url, {
@@ -252,10 +272,12 @@ export async function getDocument(serviceAccountConfig, collectionName, docId) {
  * Set or replace any document in Firestore
  */
 export async function setDocument(serviceAccountConfig, collectionName, docId, fieldsToSet) {
+  const validCollection = assertValidFirestoreId(collectionName, 'collectionName');
+  const validDocId = assertValidFirestoreId(docId, 'docId');
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
   const projectId = encodeURIComponent(serviceAccountConfig.project_id);
-  const safeCollection = encodeURIComponent(collectionName);
-  const safeDocId = encodeURIComponent(docId);
+  const safeCollection = encodeURIComponent(validCollection);
+  const safeDocId = encodeURIComponent(validDocId);
   
   // In Firestore REST API, updateMask is required for PATCH to create/upsert a document if it doesn't already exist.
   // Without updateMask, Firestore requires the document to already exist and returns 404 NOT_FOUND.
@@ -335,10 +357,12 @@ export async function findUserByApiKey(serviceAccountConfig, apiKey) {
  * Delete any document from Firestore
  */
 export async function deleteDocument(serviceAccountConfig, collectionName, docId) {
+  const validCollection = assertValidFirestoreId(collectionName, 'collectionName');
+  const validDocId = assertValidFirestoreId(docId, 'docId');
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
   const projectId = encodeURIComponent(serviceAccountConfig.project_id);
-  const safeCollection = encodeURIComponent(collectionName);
-  const safeDocId = encodeURIComponent(docId);
+  const safeCollection = encodeURIComponent(validCollection);
+  const safeDocId = encodeURIComponent(validDocId);
   const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/${safeCollection}/${safeDocId}`;
 
   return await fetch(url, {
@@ -351,9 +375,10 @@ export async function deleteDocument(serviceAccountConfig, collectionName, docId
  * Delete a specific deck document
  */
 export async function deleteDeckDocument(serviceAccountConfig, deckId) {
+  const validDeckId = assertValidFirestoreId(deckId, 'deckId');
   const token = await getGoogleAdminAccessToken(serviceAccountConfig);
   const projectId = encodeURIComponent(serviceAccountConfig.project_id);
-  const safeDeckId = encodeURIComponent(deckId);
+  const safeDeckId = encodeURIComponent(validDeckId);
   const url = `${FIRESTORE_BASE}/projects/${projectId}/databases/(default)/documents/decks/${safeDeckId}`;
 
   return await fetch(url, {

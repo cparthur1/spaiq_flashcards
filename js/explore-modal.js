@@ -15,7 +15,8 @@ import {
   fixSlot,
   clearNotebookSlot,
   importNotebookBackupData,
-  loadSlotsFromCloud
+  loadSlotsFromCloud,
+  clearUserLocalSessionData
 } from './slot-manager.js';
 import { shareDeckToCloud, subscribeToAllSharedSlots, showShareSuccessDialog } from './share-manager.js';
 import { getUserStatus, verifyPaymentStatus, createExtraDeckCheckoutSession, BACKEND_URL } from './backend-api.js';
@@ -27,20 +28,23 @@ let modalInitialized = false;
 let currentUser = null;
 let userProStatus = null;
 
-export const LIFETIME_PRO_EMAILS = [
-  'arthur.paludo.c@gmail.com',
-  'clarazanchett@gmail.com',
-  'manuelapinhadias@gmail.com'
-];
-
-export function isLifetime(user) {
-  if (!user || !user.email) return false;
-  return LIFETIME_PRO_EMAILS.includes(user.email.toLowerCase().trim());
+export function isLifetime(user = (currentUser || auth.currentUser), status = null) {
+  if (!user) return false;
+  let currentStatus = status || (userProStatus && (!userProStatus.uid || userProStatus.uid === user.uid) ? userProStatus : null);
+  if (!currentStatus) {
+    try {
+      const cached = localStorage.getItem(`spaiq_pro_cache_${user.uid}`);
+      if (cached) currentStatus = JSON.parse(cached);
+    } catch (e) {}
+  }
+  if (currentStatus && (!currentStatus.uid || currentStatus.uid === user.uid)) {
+    return Boolean(currentStatus.isLifetimePro || currentStatus.proSource === 'whitelist');
+  }
+  return false;
 }
 
 export function isUserPro(user = (currentUser || auth.currentUser), status = userProStatus) {
   if (!user) return false;
-  if (isLifetime(user)) return true;
   if (user.pro === true) return true;
 
   let currentStatus = status;
@@ -54,7 +58,7 @@ export function isUserPro(user = (currentUser || auth.currentUser), status = use
   }
 
   if (currentStatus && (!currentStatus.uid || currentStatus.uid === user.uid)) {
-    return Boolean(currentStatus.isPro || currentStatus.subscription?.status === 'active');
+    return Boolean(currentStatus.isPro || currentStatus.isLifetimePro || currentStatus.subscription?.status === 'active');
   }
   return false;
 }
@@ -92,24 +96,30 @@ export async function refreshUserProStatus(user = (currentUser || auth.currentUs
     userProStatus = null;
     return null;
   }
-  if (isLifetime(user)) {
-    userProStatus = { uid: user.uid, isPro: true, isLifetimePro: true };
-    try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, encodeStoragePayload(userProStatus)); } catch (e) {}
-    window.dispatchEvent(new CustomEvent('flashcards:pro-updated', { detail: userProStatus }));
-    return userProStatus;
-  }
   if (forceTokenRefresh && typeof user.getIdToken === 'function') {
     await user.getIdToken(true).catch(() => {});
   }
+  let previousCached = null;
+  try {
+    const rawPrev = localStorage.getItem(`spaiq_pro_cache_${user.uid}`);
+    if (rawPrev) previousCached = JSON.parse(rawPrev);
+  } catch (e) {}
+
   const fetchedStatus = await getUserStatus().catch(() => null);
   if (fetchedStatus) {
+    // Self-heal: if browser cache previously held leaked Pro data from another email/whitelist, wipe local session data
+    if (
+      previousCached?.isPro &&
+      !fetchedStatus.isPro &&
+      (previousCached.proSource === 'whitelist' ||
+        (previousCached.email && user.email && previousCached.email.toLowerCase().trim() !== user.email.toLowerCase().trim()))
+    ) {
+      clearUserLocalSessionData();
+    }
     userProStatus = { ...fetchedStatus, uid: user.uid };
     try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, encodeStoragePayload(userProStatus)); } catch (e) {}
   } else {
-    try {
-      const cached = localStorage.getItem(`spaiq_pro_cache_${user.uid}`);
-      if (cached) userProStatus = JSON.parse(cached);
-    } catch (e) {}
+    if (previousCached) userProStatus = previousCached;
   }
   if (userProStatus?.freeAiDeckUsed) {
     localStorage.setItem('spaiq_free_ai_deck_used', 'true');
@@ -208,19 +218,42 @@ export function initExploreModal() {
     }
 
     if (user) {
+      let prevStoredUid = null;
+      try {
+        prevStoredUid = localStorage.getItem('spaiq_active_uid');
+      } catch (e) {}
+
+      // If a different account was previously active on this browser, wipe its local data before loading this account
+      if (prevStoredUid && prevStoredUid !== user.uid) {
+        clearUserLocalSessionData();
+      }
+      try {
+        localStorage.setItem('spaiq_active_uid', user.uid);
+      } catch (e) {}
+
       if (prevUid !== user.uid) {
-        userProStatus = isLifetime(user) ? { uid: user.uid, isPro: true, isLifetimePro: true } : null;
+        userProStatus = getUserProStatus(user);
       }
       try {
         await refreshUserProStatus(user);
         if (isUserPro(user)) {
           await loadSlotsFromCloud();
+        } else {
+          // Ensure non-Pro users never retain stale Pro cache
+          try {
+            if (userProStatus && !userProStatus.isPro) {
+              localStorage.removeItem(`spaiq_pro_cache_${user.uid}`);
+            }
+          } catch (e) {}
         }
       } catch (e) {
         console.warn('Erro ao atualizar dados Pro do usuário:', e);
       }
     } else {
       userProStatus = null;
+      if (prevUid) {
+        clearUserLocalSessionData();
+      }
     }
     renderModalContent();
   });

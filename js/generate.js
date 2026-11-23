@@ -152,6 +152,10 @@ const retryGeminiBtn = document.getElementById('retry-gemini-btn');
 const closeGeminiDownModalBtn = document.getElementById('close-gemini-down-modal-btn');
 
 // Editor Sidebar Tabs & Panels
+const editorLeftSidebar = document.getElementById('editor-left-sidebar');
+const editorRightDeckPanel = document.getElementById('editor-right-deck-panel');
+const toggleEditorSidebarBtn = document.getElementById('toggle-editor-sidebar-btn');
+const toggleEditorSidebarChevron = document.getElementById('toggle-editor-sidebar-chevron');
 const tabCreatorBtn = document.getElementById('tab-creator-btn');
 const tabAiChatBtn = document.getElementById('tab-ai-chat-btn');
 const cardCreatorPanel = document.getElementById('card-creator-panel');
@@ -1931,10 +1935,38 @@ function openEditorView(initialTab = 'creator') {
 
 // Sidebar Tab Switching (Material Design 3 Shared Axis X Motion)
 let currentSidebarTab = 'creator';
+let isMobileSidebarCollapsed = false;
+
+function setMobileSidebarCollapsed(collapsed) {
+    isMobileSidebarCollapsed = Boolean(collapsed);
+    if (editorLeftSidebar) {
+        editorLeftSidebar.classList.toggle('is-mobile-collapsed', isMobileSidebarCollapsed);
+    }
+    if (editorRightDeckPanel) {
+        editorRightDeckPanel.classList.toggle('is-mobile-expanded', isMobileSidebarCollapsed);
+    }
+    if (toggleEditorSidebarBtn) {
+        toggleEditorSidebarBtn.setAttribute('aria-expanded', String(!isMobileSidebarCollapsed));
+        toggleEditorSidebarBtn.title = isMobileSidebarCollapsed ? t('editor_expand_panel') : t('editor_collapse_panel');
+    }
+    if (toggleEditorSidebarChevron) {
+        toggleEditorSidebarChevron.style.transform = isMobileSidebarCollapsed ? 'rotate(180deg)' : '';
+    }
+}
+
+if (toggleEditorSidebarBtn) {
+    toggleEditorSidebarBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setMobileSidebarCollapsed(!isMobileSidebarCollapsed);
+    });
+}
 
 function switchSidebarTab(tab, force = false) {
-    if (!force && tab === currentSidebarTab && (!cardCreatorPanel.classList.contains('hidden') || !aiEditorChatPanel.classList.contains('hidden'))) {
+    if (!force && tab === currentSidebarTab && !isMobileSidebarCollapsed && (!cardCreatorPanel.classList.contains('hidden') || !aiEditorChatPanel.classList.contains('hidden'))) {
         return;
+    }
+    if (isMobileSidebarCollapsed) {
+        setMobileSidebarCollapsed(false);
     }
 
     const direction = tab === 'ai' ? 'forward' : 'backward';
@@ -4544,8 +4576,15 @@ function createCardElement(card, index, withAnimation = true) {
     cardEl.className = "bg-white border border-gray-200 p-4 relative group shadow-sm flex flex-col gap-2 transition flashcard-item" + animClass;
     cardEl.dataset.index = index;
 
+    const topRightMeta = document.createElement('div');
+    topRightMeta.className = "absolute top-3 right-3 flex items-center gap-1.5";
+
     const typeBadge = document.createElement('span');
-    typeBadge.className = "absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded";
+    typeBadge.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded";
+
+    const cardNumBadge = document.createElement('span');
+    cardNumBadge.className = "text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/80 select-none";
+    cardNumBadge.textContent = `#${index + 1}`;
 
     if (card.type === 'anki') {
         typeBadge.className += " bg-indigo-100 text-indigo-800";
@@ -4575,7 +4614,9 @@ function createCardElement(card, index, withAnimation = true) {
         typeBadge.className += " bg-gray-100 text-gray-700";
         typeBadge.textContent = t('card_type_open');
     }
-    cardEl.appendChild(typeBadge);
+    topRightMeta.appendChild(typeBadge);
+    topRightMeta.appendChild(cardNumBadge);
+    cardEl.appendChild(topRightMeta);
 
     const descLabel = card.type === 'anki' ? `${t('front_label')}:` : (card.type === 'fill' ? `${t('phrase_label')}:` : (card.type === 'voice' ? `${t('question_concept_label')}:` : `${t('question_label')}:`));
     let descContent = card.description || t('no_text_placeholder');
@@ -4647,7 +4688,7 @@ function createCardElement(card, index, withAnimation = true) {
     }
 
     const textCont = document.createElement('div');
-    textCont.innerHTML = `<div class="mb-2 text-sm mt-3 pr-20">${descStr}</div><div class="text-sm">${ansStr}</div>`;
+    textCont.innerHTML = `<div class="mb-2 text-sm mt-3 pr-28">${descStr}</div><div class="text-sm">${ansStr}</div>`;
     cardEl.appendChild(textCont);
 
     // Question Image
@@ -5331,11 +5372,11 @@ async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
 
     const contextLines = deckCards.map((c, i) => {
         if (c.type === 'divisor' || c.type === 'divider' || c.type === 'note') {
-            return `[${i}] (divisor) # ${c.text || c.description || ''}`;
+            return `Item #${i + 1} (index ${i}) (divisor): # ${c.text || c.description || ''}`;
         }
-        return `[${i}] (${c.type}) ${(c.description || '').substring(0, 60)}... | R: ${c.answer || ''}`;
+        return `Card #${i + 1} (index ${i}) (${c.type}): ${(c.description || '').substring(0, 60)}... | R: ${c.answer || ''}`;
     }).join('\n');
-    const enrichedPrompt = `ATENÇÃO: O estado atual do baralho é:\n${contextLines}\n\nComando do Usuário: ${userPrompt}`;
+    const enrichedPrompt = `ATENÇÃO: Os cards exibem na interface o número #1, #2, ... (onde #N corresponde ao index N-1 nas ferramentas). O estado atual do baralho é:\n${contextLines}\n\nComando do Usuário: ${userPrompt}`;
 
     const token = await getCurrentUserToken().catch(() => null);
     if (!token) throw new Error("Usuário não autenticado.");

@@ -100,7 +100,7 @@ export async function verifyFirebaseIdToken(token, projectId) {
   if (payload.iss !== `https://securetoken.google.com/${projectId}`) {
     throw new Error('Emissor (iss) do token inválido');
   }
-  if (!payload.sub || typeof payload.sub !== 'string') {
+  if (!payload.sub || typeof payload.sub !== 'string' || payload.sub === 'undefined' || payload.sub === 'null' || payload.sub.includes('/') || payload.sub.includes('..')) {
     throw new Error('Subject (sub) do token inválido');
   }
 
@@ -144,7 +144,12 @@ export async function verifyFirebaseIdToken(token, projectId) {
     throw new Error('Assinatura do token inválida');
   }
 
-  return payload;
+  return {
+    ...payload,
+    uid: payload.sub,
+    email: typeof payload.email === 'string' ? payload.email : '',
+    emailVerified: Boolean(payload.email_verified)
+  };
 }
 
 /**

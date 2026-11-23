@@ -178,7 +178,9 @@ export async function resolveUserEntitlement({
   nowMs = Date.now()
 }) {
   const uid = user?.uid || userDoc?.uid || null;
-  const email = (user?.email || userDoc?.email || '').toLowerCase().trim();
+  const emailAllowed = user?.emailVerified !== false;
+  const rawEmail = user?.email || (!user?.uid ? userDoc?.email : '') || '';
+  const email = emailAllowed ? rawEmail.toLowerCase().trim() : '';
   const nowIso = new Date(nowMs).toISOString();
 
   // 1. Lifetime whitelist priority
@@ -225,6 +227,7 @@ export async function resolveUserEntitlement({
   const hasLegacyClaim = Boolean(
     user?.pro === true &&
     existingSub?.provider !== 'camblu_clube' &&
+    existingSub?.provider !== 'whitelist' &&
     existingSub?.status !== 'canceled' &&
     existingSub?.status !== 'inactive'
   );
@@ -254,7 +257,11 @@ export async function resolveUserEntitlement({
   // 3. Clube CAMBLU check (live when refreshLive or cache stale; graceful fallback on transient error)
   let cambluClube = null;
   let cambluFetchedLive = false;
-  const cachedCamblu = getCachedCambluClubeStatus(userDoc, nowMs);
+  const docEmail = (userDoc?.email || '').toLowerCase().trim();
+  const cacheBelongsToUser = !docEmail || docEmail === email;
+  const cachedCamblu = cacheBelongsToUser
+    ? getCachedCambluClubeStatus(userDoc, nowMs)
+    : { fresh: false, validNotExpired: false, status: null };
 
   if (email) {
     if (!refreshLive && cachedCamblu.fresh) {

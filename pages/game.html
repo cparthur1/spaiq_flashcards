@@ -658,12 +658,6 @@
                     <span id="flowchart-progress-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">0/0</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                    <button type="button" id="flowchart-new-branch-btn"
-                        class="flowchart-toolbar-btn"
-                        title="Próxima etapa será um início paralelo" data-i18n-title="flowchart_new_branch_btn">
-                        <span class="material-symbols-rounded text-sm text-[#3b82f7]">alt_route</span>
-                        <span data-i18n="flowchart_new_branch_btn">Novo início paralelo</span>
-                    </button>
                     <button type="button" id="flowchart-clear-btn"
                         class="flowchart-toolbar-btn"
                         title="Limpar" data-i18n-title="flowchart_clear_btn">
@@ -684,6 +678,10 @@
 
             <!-- Canvas with SVG Connectors + Level Rows -->
             <div id="flowchart-canvas" class="flowchart-canvas">
+                <div id="flowchart-drop-hint" class="hidden flowchart-drop-hint" aria-live="polite">
+                    <span id="flowchart-drop-hint-icon" class="material-symbols-rounded text-sm text-[#3b82f7]">arrow_downward</span>
+                    <span id="flowchart-drop-hint-text"></span>
+                </div>
                 <div id="flowchart-levels-wrapper" class="flowchart-levels-wrapper">
                     <svg id="flowchart-edges-svg" class="flowchart-edges-svg" aria-hidden="true"></svg>
                     <div id="flowchart-levels-container" class="flowchart-levels-container"></div>
@@ -702,9 +700,6 @@
                     <span data-i18n="flowchart_tray_empty">Todas as etapas foram encadeadas! Preencha eventuais lacunas e verifique.</span>
                 </div>
             </div>
-
-            <!-- Solution / Answer Key (Shown after wrong submission) -->
-            <div id="flowchart-solution-container" class="hidden flowchart-solution-card"></div>
         </div>
 
         <!-- Dynamic Multiple Choice Area (2 to 6 options) -->
@@ -1673,7 +1668,7 @@
     </div>
 
     <!-- TEXT HIGHLIGHT FLOATING POPUP -->
-    <div id="text-highlight-popup" class="hidden fixed z-[80] select-none -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-1.5">
+    <div id="text-highlight-popup" class="hidden fixed z-[80] select-none -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-1.5 max-w-[calc(100vw-24px)]">
         <div id="hl-actions-bar" class="flex items-center gap-1.5 p-1 bg-white/95 backdrop-blur-md rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.8)] border border-gray-200/80">
             <!-- Main Trigger Button (Only highlight.svg, no text) -->
             <button id="hl-trigger-btn" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-95 transition-all text-gray-700" title="Marca-texto (1-4)" aria-label="Marca-texto (1-4)" data-i18n-title="hl_trigger_title" data-i18n-aria-label="hl_trigger_title">

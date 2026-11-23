@@ -171,20 +171,21 @@ const imageArrowsInputsList = document.getElementById('image-arrows-inputs-list'
 // Flowchart DOM Elements
 const flowchartAnswerArea = document.getElementById('flowchart-answer-area');
 const flowchartProgressBadge = document.getElementById('flowchart-progress-badge');
-const flowchartNewBranchBtn = document.getElementById('flowchart-new-branch-btn');
 const flowchartClearBtn = document.getElementById('flowchart-clear-btn');
 const flowchartStatusBanner = document.getElementById('flowchart-status-banner');
 const flowchartStatusIcon = document.getElementById('flowchart-status-icon');
 const flowchartStatusText = document.getElementById('flowchart-status-text');
 const flowchartCancelModeBtn = document.getElementById('flowchart-cancel-mode-btn');
 const flowchartCanvas = document.getElementById('flowchart-canvas');
+const flowchartDropHint = document.getElementById('flowchart-drop-hint');
+const flowchartDropHintIcon = document.getElementById('flowchart-drop-hint-icon');
+const flowchartDropHintText = document.getElementById('flowchart-drop-hint-text');
 const flowchartLevelsWrapper = document.getElementById('flowchart-levels-wrapper');
 const flowchartEdgesSvg = document.getElementById('flowchart-edges-svg');
 const flowchartLevelsContainer = document.getElementById('flowchart-levels-container');
 const flowchartTrayWrapper = document.getElementById('flowchart-tray-wrapper');
 const flowchartTrayList = document.getElementById('flowchart-tray-list');
 const flowchartTrayEmpty = document.getElementById('flowchart-tray-empty');
-const flowchartSolutionContainer = document.getElementById('flowchart-solution-container');
 
 // Anki DOM Elements
 const ankiAnswerContainer = document.getElementById('anki-answer-container');
@@ -1020,12 +1021,12 @@ function renderFillBlanksQuestion(text) {
 const flowchartState = {
     nodes: [],
     trayOrder: [],
+    displayOrder: [],
     placedIds: new Set(),
     edges: [],
     userBlanks: {},
     activeOriginId: null,
     linkingFromId: null,
-    startParallelRoot: false,
     draggedNodeId: null,
     locked: false,
     evaluation: null,
@@ -1132,24 +1133,120 @@ function removeFlowchartEdge(fromId, toId) {
     renderFlowchartUI();
 }
 
-function placeFlowchartNode(nodeId, explicitParentId) {
+function getOrderedPlacedNodes() {
+    const orderMap = new Map(flowchartState.displayOrder.map((id, i) => [id, i]));
+    return flowchartState.nodes
+        .filter(n => flowchartState.placedIds.has(n.id))
+        .sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+}
+
+function getLastPlacedFlowchartNodeId() {
+    if (flowchartState.activeOriginId && flowchartState.placedIds.has(flowchartState.activeOriginId)) {
+        return flowchartState.activeOriginId;
+    }
+    const placed = Array.from(flowchartState.placedIds);
+    return placed.length > 0 ? placed[placed.length - 1] : null;
+}
+
+function computeCanvasDropPlacement(clientX, clientY) {
+    const refId = getLastPlacedFlowchartNodeId();
+    if (!refId || !flowchartLevelsContainer) {
+        return { mode: 'root', parentIds: [], refId: null };
+    }
+    const refEl = flowchartLevelsContainer.querySelector(`[data-fc-node-id="${CSS.escape(refId)}"]`);
+    if (!refEl) {
+        return { mode: 'sequent', parentIds: [refId], refId };
+    }
+    const refRect = refEl.getBoundingClientRect();
+
+    // Below the bottom of the last step -> add as sequent step
+    if (clientY > refRect.bottom + 4) {
+        return { mode: 'sequent', parentIds: [refId], refId };
+    }
+    // To the left or right side of the last step -> start parallel sequence
+    if (clientX < refRect.left - 4 || clientX > refRect.right + 4) {
+        const parentsOfRef = flowchartState.edges.filter(e => e.to === refId).map(e => e.from);
+        return { mode: 'parallel', parentIds: parentsOfRef, refId };
+    }
+    // Inside or directly below defaults to sequent step
+    return { mode: 'sequent', parentIds: [refId], refId };
+}
+
+function showFlowchartDropHint(mode) {
+    if (!flowchartDropHint || !flowchartDropHintText || !flowchartDropHintIcon) return;
+    if (!mode) {
+        flowchartDropHint.classList.add('hidden');
+        return;
+    }
+    flowchartDropHint.classList.remove('hidden');
+    if (mode === 'parallel') {
+        flowchartDropHintIcon.textContent = 'alt_route';
+        flowchartDropHintText.textContent = t('flowchart_drop_parallel');
+    } else if (mode === 'swap') {
+        flowchartDropHintIcon.textContent = 'swap_horiz';
+        flowchartDropHintText.textContent = t('flowchart_drop_swap');
+    } else {
+        flowchartDropHintIcon.textContent = 'arrow_downward';
+        flowchartDropHintText.textContent = t('flowchart_drop_sequent');
+    }
+}
+
+function placeFlowchartNode(nodeId, explicitParentIds) {
     if (flowchartState.locked || !nodeId) return;
     const alreadyPlaced = flowchartState.placedIds.has(nodeId);
     flowchartState.placedIds.add(nodeId);
 
-    const parentId = explicitParentId !== undefined
-        ? explicitParentId
-        : (flowchartState.startParallelRoot ? null : flowchartState.activeOriginId);
-
-    if (parentId && parentId !== nodeId && flowchartState.placedIds.has(parentId)) {
-        addFlowchartEdge(parentId, nodeId);
+    let parentIds;
+    if (Array.isArray(explicitParentIds)) {
+        parentIds = explicitParentIds;
+    } else if (explicitParentIds === null) {
+        parentIds = [];
+    } else if (typeof explicitParentIds === 'string') {
+        parentIds = [explicitParentIds];
+    } else {
+        parentIds = flowchartState.activeOriginId ? [flowchartState.activeOriginId] : [];
     }
 
-    if (!alreadyPlaced || explicitParentId === undefined) {
+    parentIds.forEach(pid => {
+        if (pid && pid !== nodeId && flowchartState.placedIds.has(pid)) {
+            addFlowchartEdge(pid, nodeId);
+        }
+    });
+
+    if (!alreadyPlaced || explicitParentIds === undefined) {
         flowchartState.activeOriginId = nodeId;
     }
-    flowchartState.startParallelRoot = false;
     flowchartState.linkingFromId = null;
+    showFlowchartDropHint(null);
+    renderFlowchartUI();
+}
+
+function swapFlowchartNodes(nodeIdA, nodeIdB) {
+    if (flowchartState.locked || !nodeIdA || !nodeIdB || nodeIdA === nodeIdB) return;
+    if (!flowchartState.placedIds.has(nodeIdA) || !flowchartState.placedIds.has(nodeIdB)) return;
+
+    const remap = (id) => (id === nodeIdA ? nodeIdB : (id === nodeIdB ? nodeIdA : id));
+    flowchartState.edges = flowchartState.edges.map(e => ({
+        from: remap(e.from),
+        to: remap(e.to)
+    }));
+
+    // Swap visual tie-breaker order too so parallel siblings swap left/right cleanly
+    const idxA = flowchartState.displayOrder.indexOf(nodeIdA);
+    const idxB = flowchartState.displayOrder.indexOf(nodeIdB);
+    if (idxA !== -1 && idxB !== -1) {
+        [flowchartState.displayOrder[idxA], flowchartState.displayOrder[idxB]] =
+            [flowchartState.displayOrder[idxB], flowchartState.displayOrder[idxA]];
+    }
+
+    if (flowchartState.activeOriginId === nodeIdA) {
+        flowchartState.activeOriginId = nodeIdB;
+    } else if (flowchartState.activeOriginId === nodeIdB) {
+        flowchartState.activeOriginId = nodeIdA;
+    }
+    flowchartState.linkingFromId = null;
+    showFlowchartDropHint(null);
+    triggerHaptic('cardFlip');
     renderFlowchartUI();
 }
 
@@ -1351,10 +1448,6 @@ function renderFlowchartUI() {
         flowchartProgressBadge.textContent = `${placedCount}/${total}`;
     }
 
-    if (flowchartNewBranchBtn) {
-        flowchartNewBranchBtn.classList.toggle('is-active', flowchartState.startParallelRoot);
-        flowchartNewBranchBtn.disabled = flowchartState.locked;
-    }
     if (flowchartClearBtn) {
         flowchartClearBtn.disabled = flowchartState.locked || placedCount === 0;
     }
@@ -1367,11 +1460,6 @@ function renderFlowchartUI() {
             flowchartStatusBanner.classList.remove('hidden');
             flowchartStatusIcon.textContent = 'link';
             flowchartStatusText.textContent = t('flowchart_link_target_hint');
-            if (flowchartCancelModeBtn) flowchartCancelModeBtn.classList.remove('hidden');
-        } else if (flowchartState.startParallelRoot) {
-            flowchartStatusBanner.classList.remove('hidden');
-            flowchartStatusIcon.textContent = 'alt_route';
-            flowchartStatusText.textContent = t('flowchart_root_mode_label');
             if (flowchartCancelModeBtn) flowchartCancelModeBtn.classList.remove('hidden');
         } else if (flowchartState.activeOriginId && placedCount < total) {
             const originNode = flowchartState.nodes.find(n => n.id === flowchartState.activeOriginId);
@@ -1391,7 +1479,7 @@ function renderFlowchartUI() {
     const activeBlankIdx = activeEl?.classList?.contains('flowchart-blank-input') ? activeEl.dataset.blankIndex : null;
 
     // Render placed DAG levels
-    const placedNodes = flowchartState.nodes.filter(n => flowchartState.placedIds.has(n.id));
+    const placedNodes = getOrderedPlacedNodes();
     const levels = computeFlowchartLevels(placedNodes, flowchartState.edges);
     flowchartLevelsContainer.replaceChildren();
 
@@ -1420,7 +1508,7 @@ function renderFlowchartUI() {
                         cardEl.classList.add('is-linking-source');
                     } else if (flowchartState.linkingFromId && !wouldFlowchartEdgeCreateCycle(flowchartState.linkingFromId, node.id)) {
                         cardEl.classList.add('is-link-candidate');
-                    } else if (flowchartState.activeOriginId === node.id && !flowchartState.startParallelRoot) {
+                    } else if (flowchartState.activeOriginId === node.id) {
                         cardEl.classList.add('is-origin');
                     }
                 } else if (evalData?.nodeResults?.has(node.id)) {
@@ -1447,7 +1535,6 @@ function renderFlowchartUI() {
                     linkBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         flowchartState.linkingFromId = (flowchartState.linkingFromId === node.id) ? null : node.id;
-                        flowchartState.startParallelRoot = false;
                         renderFlowchartUI();
                     });
 
@@ -1474,25 +1561,41 @@ function renderFlowchartUI() {
                 const savedVals = flowchartState.userBlanks[node.id] || [];
                 const inputs = Array.from(body.querySelectorAll('.flowchart-blank-input'));
                 inputs.forEach((inp, bIdx) => {
-                    inp.value = savedVals[bIdx] || '';
-                    const resizeInput = () => {
-                        inp.style.width = Math.max(72, Math.min(220, (inp.value.length + 2) * 10)) + 'px';
-                    };
-                    resizeInput();
+                    const bRes = nodeEval?.blankResults?.[bIdx];
+                    if (flowchartState.locked && bRes && !bRes.isCorrect && evalData?.revealedBlanks) {
+                        const primaryExpected = bRes.primaryExpected || bRes.expectedVal || '';
+                        inp.value = primaryExpected;
+                        if (bRes.synonyms && bRes.synonyms.length > 1) {
+                            inp.title = bRes.synonyms.join(' / ');
+                        }
+                        inp.style.width = Math.max(64, Math.min(240, (primaryExpected.length + 2) * 11)) + 'px';
+                    } else {
+                        inp.value = savedVals[bIdx] || '';
+                        const resizeInput = () => {
+                            inp.style.width = Math.max(72, Math.min(220, (inp.value.length + 2) * 10)) + 'px';
+                        };
+                        resizeInput();
+                    }
 
                     if (flowchartState.locked) {
                         inp.readOnly = true;
-                        const bRes = nodeEval?.blankResults?.[bIdx];
                         if (bRes) {
-                            inp.classList.add(bRes.isCorrect ? 'is-correct' : 'is-wrong');
+                            if (bRes.isCorrect) {
+                                inp.classList.add('is-correct');
+                            } else if (evalData?.revealedBlanks) {
+                                inp.classList.add('is-revealed', 'border-amber-400', 'bg-amber-50', 'text-amber-800');
+                            } else {
+                                inp.classList.add('is-wrong', 'fill-box-shake');
+                            }
                         }
                     } else {
                         inp.addEventListener('mousedown', (ev) => ev.stopPropagation());
+                        inp.addEventListener('pointerdown', (ev) => ev.stopPropagation());
                         inp.addEventListener('click', (ev) => ev.stopPropagation());
                         inp.addEventListener('input', () => {
                             if (!flowchartState.userBlanks[node.id]) flowchartState.userBlanks[node.id] = [];
                             flowchartState.userBlanks[node.id][bIdx] = inp.value;
-                            resizeInput();
+                            inp.style.width = Math.max(72, Math.min(220, (inp.value.length + 2) * 10)) + 'px';
                         });
                         inp.addEventListener('keydown', (ev) => {
                             if (ev.key === 'Enter') {
@@ -1518,25 +1621,44 @@ function renderFlowchartUI() {
                     flowchartState.draggedNodeId = node.id;
                     e.dataTransfer?.setData('text/plain', node.id);
                 });
+                cardEl.addEventListener('dragend', () => {
+                    flowchartState.draggedNodeId = null;
+                    showFlowchartDropHint(null);
+                    flowchartCanvas?.classList.remove('is-drop-target');
+                });
                 cardEl.addEventListener('dragover', (e) => {
                     if (flowchartState.locked || !flowchartState.draggedNodeId || flowchartState.draggedNodeId === node.id) return;
                     e.preventDefault();
-                    cardEl.classList.add('is-drag-over');
+                    e.stopPropagation();
+                    if (flowchartState.placedIds.has(flowchartState.draggedNodeId)) {
+                        cardEl.classList.add('is-swap-target');
+                        showFlowchartDropHint('swap');
+                    } else {
+                        cardEl.classList.add('is-drag-over');
+                        showFlowchartDropHint('sequent');
+                    }
                 });
-                cardEl.addEventListener('dragleave', () => cardEl.classList.remove('is-drag-over'));
+                cardEl.addEventListener('dragleave', () => {
+                    cardEl.classList.remove('is-drag-over', 'is-swap-target');
+                });
                 cardEl.addEventListener('drop', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    cardEl.classList.remove('is-drag-over');
+                    cardEl.classList.remove('is-drag-over', 'is-swap-target');
+                    flowchartCanvas?.classList.remove('is-drop-target');
                     const draggedId = flowchartState.draggedNodeId || e.dataTransfer?.getData('text/plain');
                     flowchartState.draggedNodeId = null;
+                    showFlowchartDropHint(null);
                     if (!draggedId || draggedId === node.id || flowchartState.locked) return;
                     if (flowchartState.placedIds.has(draggedId)) {
-                        if (addFlowchartEdge(node.id, draggedId)) renderFlowchartUI();
+                        swapFlowchartNodes(draggedId, node.id);
                     } else {
-                        placeFlowchartNode(draggedId, node.id);
+                        placeFlowchartNode(draggedId, [node.id]);
                     }
                 });
+
+                // Touch / non-mouse pointer drag for swapping two placed steps on mobile
+                attachFlowchartTouchDrag(cardEl, node.id, 'canvas');
 
                 cardEl.addEventListener('click', () => {
                     if (flowchartState.locked) return;
@@ -1553,7 +1675,6 @@ function renderFlowchartUI() {
                         return;
                     }
                     flowchartState.activeOriginId = node.id;
-                    flowchartState.startParallelRoot = false;
                     renderFlowchartUI();
                 });
 
@@ -1581,6 +1702,10 @@ function renderFlowchartUI() {
         btn.innerHTML = `<span class="material-symbols-rounded text-base text-[#3b82f7] flex-shrink-0">add_circle</span><span class="min-w-0">${renderTextWithBlanks(node.text, { mode: 'flowchart-tray', nodeId: node.id })}</span>`;
 
         btn.addEventListener('click', () => {
+            if (btn.dataset.suppressClick === '1') {
+                delete btn.dataset.suppressClick;
+                return;
+            }
             if (!flowchartState.locked) placeFlowchartNode(node.id);
         });
         btn.addEventListener('dragstart', (e) => {
@@ -1591,6 +1716,12 @@ function renderFlowchartUI() {
             flowchartState.draggedNodeId = node.id;
             e.dataTransfer?.setData('text/plain', node.id);
         });
+        btn.addEventListener('dragend', () => {
+            flowchartState.draggedNodeId = null;
+            showFlowchartDropHint(null);
+            flowchartCanvas?.classList.remove('is-drop-target');
+        });
+        attachFlowchartTouchDrag(btn, node.id, 'tray');
         flowchartTrayList.appendChild(btn);
     });
 
@@ -1602,18 +1733,130 @@ function renderFlowchartUI() {
     scheduleFlowchartEdgesRedraw();
 }
 
+function attachFlowchartTouchDrag(el, nodeId, sourceKind) {
+    if (!el || flowchartState.locked) return;
+    el.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' || flowchartState.locked) return;
+        if (e.target?.closest('.flowchart-blank-input, .flowchart-node-action-btn')) return;
+
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const pointerId = e.pointerId;
+        let dragging = false;
+        let ghost = null;
+        let lastTargetCard = null;
+
+        const cleanup = () => {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+            document.removeEventListener('pointercancel', onCancel);
+            if (ghost) {
+                ghost.remove();
+                ghost = null;
+            }
+            if (lastTargetCard) {
+                lastTargetCard.classList.remove('is-drag-over', 'is-swap-target');
+                lastTargetCard = null;
+            }
+            flowchartCanvas?.classList.remove('is-drop-target');
+            showFlowchartDropHint(null);
+            flowchartState.draggedNodeId = null;
+        };
+
+        const onMove = (ev) => {
+            if (ev.pointerId !== pointerId) return;
+            const dx = ev.clientX - startX;
+            const dy = ev.clientY - startY;
+            if (!dragging) {
+                if (Math.hypot(dx, dy) < 10) return;
+                dragging = true;
+                flowchartState.draggedNodeId = nodeId;
+                el.dataset.suppressClick = '1';
+                ghost = el.cloneNode(true);
+                ghost.className = `${el.className} flowchart-touch-ghost`;
+                ghost.style.width = `${Math.min(260, el.offsetWidth || 200)}px`;
+                document.body.appendChild(ghost);
+            }
+            ev.preventDefault();
+            if (ghost) {
+                ghost.style.left = `${ev.clientX}px`;
+                ghost.style.top = `${ev.clientY}px`;
+            }
+
+            if (lastTargetCard) {
+                lastTargetCard.classList.remove('is-drag-over', 'is-swap-target');
+                lastTargetCard = null;
+            }
+
+            const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+            const targetCard = hit?.closest?.('.flowchart-node-card[data-fc-node-id]');
+            const targetNodeId = targetCard?.dataset?.fcNodeId;
+
+            if (targetCard && targetNodeId && targetNodeId !== nodeId) {
+                lastTargetCard = targetCard;
+                if (sourceKind === 'canvas') {
+                    targetCard.classList.add('is-swap-target');
+                    showFlowchartDropHint('swap');
+                } else {
+                    targetCard.classList.add('is-drag-over');
+                    showFlowchartDropHint('sequent');
+                }
+                flowchartCanvas?.classList.add('is-drop-target');
+            } else if (sourceKind === 'tray' && flowchartCanvas) {
+                const cRect = flowchartCanvas.getBoundingClientRect();
+                if (ev.clientX >= cRect.left && ev.clientX <= cRect.right && ev.clientY >= cRect.top && ev.clientY <= cRect.bottom) {
+                    flowchartCanvas.classList.add('is-drop-target');
+                    const placement = computeCanvasDropPlacement(ev.clientX, ev.clientY);
+                    showFlowchartDropHint(placement.mode);
+                } else {
+                    flowchartCanvas.classList.remove('is-drop-target');
+                    showFlowchartDropHint(null);
+                }
+            }
+        };
+
+        const onUp = (ev) => {
+            if (ev.pointerId !== pointerId) return;
+            const wasDragging = dragging;
+            const hit = wasDragging ? document.elementFromPoint(ev.clientX, ev.clientY) : null;
+            const targetCard = hit?.closest?.('.flowchart-node-card[data-fc-node-id]');
+            const targetNodeId = targetCard?.dataset?.fcNodeId;
+            const cRect = flowchartCanvas?.getBoundingClientRect();
+            cleanup();
+
+            if (!wasDragging) return;
+            setTimeout(() => { delete el.dataset.suppressClick; }, 50);
+
+            if (targetNodeId && targetNodeId !== nodeId) {
+                if (sourceKind === 'canvas') {
+                    swapFlowchartNodes(nodeId, targetNodeId);
+                } else {
+                    placeFlowchartNode(nodeId, [targetNodeId]);
+                }
+                return;
+            }
+
+            if (sourceKind === 'tray' && cRect && ev.clientX >= cRect.left && ev.clientX <= cRect.right && ev.clientY >= cRect.top && ev.clientY <= cRect.bottom) {
+                const placement = computeCanvasDropPlacement(ev.clientX, ev.clientY);
+                placeFlowchartNode(nodeId, placement.parentIds);
+            }
+        };
+
+        const onCancel = (ev) => {
+            if (ev.pointerId !== pointerId) return;
+            cleanup();
+            setTimeout(() => { delete el.dataset.suppressClick; }, 50);
+        };
+
+        document.addEventListener('pointermove', onMove, { passive: false });
+        document.addEventListener('pointerup', onUp);
+        document.addEventListener('pointercancel', onCancel);
+    });
+}
+
 function wireFlowchartEventsOnce() {
     if (flowchartState.eventsWired) return;
     flowchartState.eventsWired = true;
-
-    if (flowchartNewBranchBtn) {
-        flowchartNewBranchBtn.addEventListener('click', () => {
-            if (flowchartState.locked) return;
-            flowchartState.startParallelRoot = !flowchartState.startParallelRoot;
-            flowchartState.linkingFromId = null;
-            renderFlowchartUI();
-        });
-    }
 
     if (flowchartClearBtn) {
         flowchartClearBtn.addEventListener('click', () => {
@@ -1622,7 +1865,7 @@ function wireFlowchartEventsOnce() {
             flowchartState.edges = [];
             flowchartState.activeOriginId = null;
             flowchartState.linkingFromId = null;
-            flowchartState.startParallelRoot = false;
+            showFlowchartDropHint(null);
             renderFlowchartUI();
         });
     }
@@ -1630,7 +1873,6 @@ function wireFlowchartEventsOnce() {
     if (flowchartCancelModeBtn) {
         flowchartCancelModeBtn.addEventListener('click', () => {
             flowchartState.linkingFromId = null;
-            flowchartState.startParallelRoot = false;
             renderFlowchartUI();
         });
     }
@@ -1640,16 +1882,27 @@ function wireFlowchartEventsOnce() {
             if (flowchartState.locked || !flowchartState.draggedNodeId) return;
             e.preventDefault();
             flowchartCanvas.classList.add('is-drop-target');
+            if (!flowchartState.placedIds.has(flowchartState.draggedNodeId)) {
+                const placement = computeCanvasDropPlacement(e.clientX, e.clientY);
+                showFlowchartDropHint(placement.mode);
+            }
         });
-        flowchartCanvas.addEventListener('dragleave', () => flowchartCanvas.classList.remove('is-drop-target'));
+        flowchartCanvas.addEventListener('dragleave', (e) => {
+            if (!flowchartCanvas.contains(e.relatedTarget)) {
+                flowchartCanvas.classList.remove('is-drop-target');
+                showFlowchartDropHint(null);
+            }
+        });
         flowchartCanvas.addEventListener('drop', (e) => {
             e.preventDefault();
             flowchartCanvas.classList.remove('is-drop-target');
             const draggedId = flowchartState.draggedNodeId || e.dataTransfer?.getData('text/plain');
             flowchartState.draggedNodeId = null;
+            showFlowchartDropHint(null);
             if (!draggedId || flowchartState.locked) return;
             if (!flowchartState.placedIds.has(draggedId)) {
-                placeFlowchartNode(draggedId);
+                const placement = computeCanvasDropPlacement(e.clientX, e.clientY);
+                placeFlowchartNode(draggedId, placement.parentIds);
             }
         });
     }
@@ -1668,20 +1921,16 @@ function initFlowchartQuestion() {
     const nodes = normalizeGameFlowchartNodes(currentQuestion?.nodes);
     flowchartState.nodes = nodes;
     flowchartState.trayOrder = shuffleArray(nodes.map(n => n.id));
+    flowchartState.displayOrder = nodes.map(n => n.id);
     flowchartState.placedIds = new Set();
     flowchartState.edges = [];
     flowchartState.userBlanks = {};
     flowchartState.activeOriginId = null;
     flowchartState.linkingFromId = null;
-    flowchartState.startParallelRoot = false;
     flowchartState.draggedNodeId = null;
     flowchartState.locked = false;
     flowchartState.evaluation = null;
-
-    if (flowchartSolutionContainer) {
-        flowchartSolutionContainer.classList.add('hidden');
-        flowchartSolutionContainer.innerHTML = '';
-    }
+    showFlowchartDropHint(null);
 
     renderFlowchartUI();
 }
@@ -1699,43 +1948,6 @@ function formatFlowchartUserSummary() {
     const parts = flowchartState.edges.map(e => `${formatNode(e.from)} -> ${formatNode(e.to)}`);
     if (parts.length > 0) return parts.join(' | ');
     return Array.from(flowchartState.placedIds).map(formatNode).join(' | ');
-}
-
-function renderFlowchartSolutionBlock() {
-    if (!flowchartSolutionContainer) return;
-    const nodes = flowchartState.nodes;
-    const expectedEdges = [];
-    nodes.forEach(n => (n.next || []).forEach(tid => expectedEdges.push({ from: n.id, to: tid })));
-    const levels = computeFlowchartLevels(nodes, expectedEdges);
-
-    const stepNumById = new Map();
-    let seq = 0;
-    levels.forEach(row => row.forEach(n => stepNumById.set(n.id, ++seq)));
-
-    let html = `<div class="flex items-center gap-2 mb-2.5 text-xs font-bold uppercase tracking-wider text-[#3b82f7]"><span class="material-symbols-rounded text-base">account_tree</span><span>${escapeHtml(t('flowchart_solution_title'))}</span></div>`;
-    html += '<div class="space-y-2">';
-    levels.forEach(row => {
-        row.forEach(node => {
-            const num = stepNumById.get(node.id);
-            let bIdx = 0;
-            const rawHtml = escapeHtml(node.text || '').replace(/_/g, () => {
-                const expectedVal = node.blanks && node.blanks[bIdx] !== undefined ? node.blanks[bIdx] : '_';
-                bIdx++;
-                return `<span class="inline-block px-1.5 py-0.5 mx-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-xs">${escapeHtml(expectedVal)}</span>`;
-            });
-            const nextPills = (node.next || []).map(tid => `#${stepNumById.get(tid) || tid}`).join(', ');
-            html += `<div class="p-2.5 rounded-xl bg-[var(--md-sys-color-surface)] border border-[var(--md-sys-color-outline-variant)] text-xs leading-relaxed">`;
-            html += `<div class="flex flex-wrap items-center justify-between gap-2"><div><span class="font-bold text-[#3b82f7] mr-1.5">#${num}</span>${rawHtml}</div>`;
-            if (nextPills) {
-                html += `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">&rarr; ${escapeHtml(nextPills)}</span>`;
-            }
-            html += '</div></div>';
-        });
-    });
-    html += '</div>';
-
-    flowchartSolutionContainer.innerHTML = sanitizeHtml(html);
-    flowchartSolutionContainer.classList.remove('hidden');
 }
 
 function handleFlowchartSubmit() {
@@ -1800,12 +2012,13 @@ function handleFlowchartSubmit() {
             const blankResults = blanks.map((expectedVal, bIdx) => {
                 const userVal = String(vals[bIdx] || '').trim();
                 const synonyms = String(expectedVal || '').split('/').map(s => s.trim()).filter(Boolean);
+                const primaryExpected = synonyms[0] || expectedVal;
                 const maxSim = synonyms.length > 0
                     ? Math.max(...synonyms.map(syn => calculateSimilarity(normalizeString(userVal), normalizeString(syn))))
                     : 0;
                 const isCorrect = maxSim >= 0.8;
                 if (!isCorrect) allBlanksCorrect = false;
-                return { userVal, expectedVal, isCorrect };
+                return { userVal, expectedVal, synonyms, primaryExpected, isCorrect };
             });
 
             // Check incident edges for this specific node
@@ -1826,20 +2039,68 @@ function handleFlowchartSubmit() {
             nodeResults.set(node.id, { blankResults, nodeCorrect: blanksOk && incidentOk });
         });
 
+        const hasWrongBlanks = !allBlanksCorrect;
         const isCorrect = allEdgesCorrect && allBlanksCorrect;
         flowchartState.locked = true;
-        flowchartState.evaluation = { isCorrect, edgeStatusMap, nodeResults };
+        flowchartState.evaluation = {
+            isCorrect,
+            allEdgesCorrect,
+            hasWrongBlanks,
+            revealedBlanks: false,
+            edgeStatusMap,
+            nodeResults
+        };
         currentQuestion._lastUserAnswer = formatFlowchartUserSummary();
 
         renderFlowchartUI();
 
-        if (!isCorrect) {
-            renderFlowchartSolutionBlock();
+        if (!isCorrect && hasWrongBlanks) {
+            isAnimating = true;
+            triggerHaptic('shake');
+            showFeedback(false);
+
+            // Phase 2 (~550ms): wrong blank inputs pop yellow with the right answer just like (fill)
+            setTimeout(() => {
+                if (!flowchartState.evaluation) {
+                    isAnimating = false;
+                    return;
+                }
+                flowchartState.evaluation.revealedBlanks = true;
+                let anyPopped = false;
+                const renderedInputs = Array.from(flowchartLevelsContainer?.querySelectorAll('.flowchart-blank-input') || []);
+                renderedInputs.forEach(inp => {
+                    const nId = inp.dataset.nodeId;
+                    const bIdx = Number(inp.dataset.blankIndex);
+                    const bRes = flowchartState.evaluation.nodeResults?.get(nId)?.blankResults?.[bIdx];
+                    if (bRes && !bRes.isCorrect) {
+                        anyPopped = true;
+                        const primaryExpected = bRes.primaryExpected || bRes.expectedVal || '';
+                        inp.classList.remove('is-wrong', 'border-red-500', 'bg-red-50', 'text-red-600', 'fill-box-shake');
+                        inp.classList.add('is-revealed', 'border-solid', 'border-amber-400', 'bg-amber-50', 'text-amber-800', 'fill-box-pop-yellow');
+                        inp.value = primaryExpected;
+                        if (bRes.synonyms && bRes.synonyms.length > 1) {
+                            inp.title = bRes.synonyms.join(' / ');
+                        }
+                        inp.style.width = Math.max(64, Math.min(240, (primaryExpected.length + 2) * 11)) + 'px';
+                    }
+                });
+
+                if (anyPopped) {
+                    triggerHaptic('fillPop');
+                }
+                scheduleFlowchartEdgesRedraw();
+
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 650);
+            }, 550);
+        } else {
+            showFeedback(isCorrect);
         }
-        showFeedback(isCorrect);
     } catch (err) {
         console.error("[Game] Erro em handleFlowchartSubmit:", err);
         isOpenSubmitting = false;
+        isAnimating = false;
     }
 }
 
@@ -2874,6 +3135,49 @@ function loadQuestion() {
             return;
         }
 
+        if (activeMode === 'exam') {
+            let examData = {};
+            try { examData = JSON.parse(localStorage.getItem('flashcardsExam')) || {}; } catch (e) {}
+            const hasDisabledDecks = (examData.decks || []).some(d => d.enabled === false);
+            if (hasDisabledDecks && allQuestions.some(isPlayableCard)) {
+                currentQuestion = null;
+                clearBalls();
+                resetUI();
+                bookmarkCardBtn?.classList.add('hidden');
+                questionCard?.classList.remove('glow-correct', 'glow-incorrect', 'card-shake');
+                updateScoreDisplay();
+
+                const sourceTagElem = document.getElementById('question-source-tag');
+                const bodyElem = document.getElementById('question-body-text');
+                if (sourceTagElem) sourceTagElem.classList.add('hidden');
+                if (notebookStageTag) notebookStageTag.classList.add('hidden');
+
+                const emptyHtml = `
+                    <div class="py-6 flex flex-col items-center justify-center text-center gap-3 select-none">
+                        <div class="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-xs">
+                            <span class="material-symbols-rounded text-3xl">layers_clear</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-800">${t('exam_all_decks_disabled_title')}</h3>
+                        <p class="text-xs sm:text-sm text-gray-500 max-w-sm leading-relaxed">
+                            ${t('exam_all_decks_disabled_desc')}
+                        </p>
+                    </div>
+                `;
+                if (bodyElem) {
+                    bodyElem.innerHTML = emptyHtml;
+                } else if (questionText) {
+                    questionText.innerHTML = emptyHtml;
+                }
+                submitBtn?.classList.add('hidden');
+                nextQuestionBtn?.classList.add('hidden');
+                correctionOptions?.classList.add('hidden');
+                ankiControls?.classList.add('hidden');
+                mcAnswerArea?.classList.add('hidden');
+                openAnswerArea?.classList.add('hidden');
+                return;
+            }
+        }
+
         showDeckCompletionScreen();
         return;
     }
@@ -3031,10 +3335,6 @@ function loadQuestion() {
     if (voiceEvaluatedControls) voiceEvaluatedControls.classList.add('hidden');
     resetVoiceUIState();
     if (flowchartAnswerArea) flowchartAnswerArea.classList.add('hidden');
-    if (flowchartSolutionContainer) {
-        flowchartSolutionContainer.classList.add('hidden');
-        flowchartSolutionContainer.innerHTML = '';
-    }
     flowchartState.locked = false;
     if (imageArrowsAnswerArea) imageArrowsAnswerArea.classList.add('hidden');
 
@@ -4266,10 +4566,6 @@ function resetUI() {
     if (voiceEvaluatedControls) voiceEvaluatedControls.classList.add('hidden');
     resetVoiceUIState();
     if (flowchartAnswerArea) flowchartAnswerArea.classList.add('hidden');
-    if (flowchartSolutionContainer) {
-        flowchartSolutionContainer.classList.add('hidden');
-        flowchartSolutionContainer.innerHTML = '';
-    }
     flowchartState.locked = false;
 
     submitBtn.disabled = false;
@@ -4747,7 +5043,9 @@ function showFeedback(isCorrect, element) {
         }
 
         if (!isCorrect) {
-            if (currentQuestion.type !== 'fill') {
+            const skipCardShake = currentQuestion.type === 'fill' ||
+                (currentQuestion.type === 'flowchart' && flowchartState.evaluation?.hasWrongBlanks && flowchartState.evaluation?.allEdgesCorrect);
+            if (!skipCardShake) {
                 // Card shakes on wrong guess and waits for user to skip/ask/edit/delete
                 questionCard.classList.remove('card-shake');
                 void questionCard.offsetWidth; // Force reflow
@@ -9353,6 +9651,7 @@ function toggleDeckInExamMix(deckId, enabled) {
     targetDeck.enabled = enabled;
     examData.decks = decks;
 
+    const wasEmptyPool = questionsPool.length === 0;
     if (enabled) {
         const cardsToAdd = allQuestions.filter(q => (q.deckId === deckId || q.sourceDeck === targetDeck.name) && isPlayableCard(q));
         const existingDescriptions = new Set(questionsPool.map(q => q.description));
@@ -9362,10 +9661,26 @@ function toggleDeckInExamMix(deckId, enabled) {
         questionsPool = questionsPool.filter(q => q.deckId !== deckId && q.sourceDeck !== targetDeck.name);
     }
 
-    saveGameState();
+    // Persist updated decks[].enabled immediately BEFORE saveGameState() so executeSaveGameState() never reads stale enabled=true
+    examData.questionsPool = questionsPool;
+    examData.allQuestions = allQuestions;
+    examData.updatedAt = Date.now();
+    try {
+        localStorage.setItem('flashcardsExam', encodeStoragePayload(examData));
+    } catch (e) {}
+
+    saveGameState(true);
     updateScoreDisplay();
 
+    if (deckItemExamSub) {
+        const numDecks = decks.length;
+        const totalCards = questionsPool.length;
+        deckItemExamSub.textContent = `${numDecks} ${numDecks === 1 ? t('deck_unit_singular') : t('decks_unit')} • ${totalCards} ${totalCards === 1 ? t('card_unit_singular') : t('cards_unit')}`;
+    }
+
     if (!enabled && currentQuestion && (currentQuestion.deckId === deckId || currentQuestion.sourceDeck === targetDeck.name)) {
+        loadQuestion();
+    } else if (enabled && (wasEmptyPool || !currentQuestion) && questionsPool.length > 0) {
         loadQuestion();
     }
 
@@ -9597,6 +9912,10 @@ deckSelectTrigger.addEventListener('click', (e) => {
     } else {
         openDeckDropdown();
     }
+    e.stopPropagation();
+});
+
+deckSelectDropdown?.addEventListener('click', (e) => {
     e.stopPropagation();
 });
 

@@ -38,11 +38,34 @@ const ALLOWED_CORS_ORIGINS = [
   'https://gorit.camblu.org'
 ];
 
-export const LIFETIME_PRO_EMAILS = [
-  'arthur.paludo.c@gmail.com',
-  'clarazanchett@gmail.com',
-  'manuelapinhadias@gmail.com'
-];
+const WHITELIST_CACHE_TTL_MS = 60 * 1000;
+let cachedLifetimeEmails = null;
+let lifetimeCacheExpiry = 0;
+
+/**
+ * Fetches the Lifetime Pro email whitelist from server-only Firestore document `app_config/pro_whitelist`.
+ * Cached briefly per isolate (60s) to avoid redundant Firestore reads while keeping console edits fast to propagate.
+ */
+async function getLifetimeProEmails(serviceAccount) {
+  if (!serviceAccount) return [];
+  const now = Date.now();
+  if (cachedLifetimeEmails && now < lifetimeCacheExpiry) {
+    return cachedLifetimeEmails;
+  }
+  try {
+    const doc = await getDocument(serviceAccount, 'app_config', 'pro_whitelist');
+    const rawList = Array.isArray(doc?.emails) ? doc.emails : [];
+    const normalized = rawList
+      .map(e => String(e || '').toLowerCase().trim())
+      .filter(e => e.includes('@'));
+    cachedLifetimeEmails = normalized;
+    lifetimeCacheExpiry = now + WHITELIST_CACHE_TTL_MS;
+    return normalized;
+  } catch (err) {
+    console.warn('[Whitelist] Falha ao ler app_config/pro_whitelist no Firestore:', err?.message || err);
+    return cachedLifetimeEmails || [];
+  }
+}
 
 const ALLOWED_GEMINI_MODELS = new Set([
   'gemini-flash-latest',
@@ -168,6 +191,7 @@ async function getEntitlement({
   allowStripeLookup = false,
   syncClaim = false
 }) {
+  const lifetimeEmails = serviceAccount ? await getLifetimeProEmails(serviceAccount) : [];
   return await resolveUserEntitlement({
     env,
     serviceAccount,
@@ -177,7 +201,7 @@ async function getEntitlement({
     refreshLive,
     allowStripeLookup,
     syncClaim,
-    lifetimeEmails: LIFETIME_PRO_EMAILS,
+    lifetimeEmails,
     checkStripeFn: checkCustomerProStatusInStripe,
     setProClaimFn: setFirebaseUserProClaim,
     updateUserDocFn: updateUserDocument
@@ -394,13 +418,13 @@ export default {
         }
 
         const deckSlots = userDoc.deckSlots || [];
-        // Populate full deckData for each slot, notebook, and separated user_stats in parallel
+        // Populate full deckData for each slot, notebook, and separated user_stats in parallel (strictly enforcing ownerUid)
         const [, notebookDoc, userStatsDoc] = await Promise.all([
           Promise.all(
             deckSlots.map(async (slot) => {
-              if (slot.deckId) {
+              if (slot.deckId && !String(slot.deckId).startsWith('notebook_')) {
                 const deckDoc = await getDocument(serviceAccount, 'decks', slot.deckId).catch(() => null);
-                if (deckDoc) {
+                if (deckDoc && deckDoc.ownerUid === user.uid) {
                   slot.deckData = deckDoc.deckData;
                 }
               }
@@ -410,8 +434,8 @@ export default {
           getDocument(serviceAccount, 'user_stats', user.uid).catch(() => null)
         ]);
 
-        const notebookData = notebookDoc ? notebookDoc.deckData : null;
-        const resolvedStats = userStatsDoc?.stats || userDoc.stats || null;
+        const notebookData = (notebookDoc && notebookDoc.ownerUid === user.uid) ? notebookDoc.deckData : null;
+        const resolvedStats = (userStatsDoc && userStatsDoc.ownerUid === user.uid) ? userStatsDoc.stats : null;
 
         return jsonResponse({
           isPro: true,
@@ -463,30 +487,51 @@ export default {
         const now = Date.now();
         const deckOps = [];
 
-        // 1. Clean up any previously saved deck documents that were removed or cleared
+        // 1. Clean up any previously saved deck documents that were removed or cleared (verify ownership first)
         const prevSlots = userDoc?.deckSlots || [];
         const activeDeckIds = new Set(slots.filter(s => s.deckId && s.deckData).map(s => s.deckId));
         for (const prev of prevSlots) {
-          if (prev.deckId && !activeDeckIds.has(prev.deckId)) {
-            deckOps.push(deleteDeckDocument(serviceAccount, prev.deckId).catch(() => {}));
+          if (prev.deckId && !activeDeckIds.has(prev.deckId) && !String(prev.deckId).startsWith('notebook_')) {
+            deckOps.push(
+              getDocument(serviceAccount, 'decks', prev.deckId)
+                .then(existingPrev => {
+                  if (existingPrev && existingPrev.ownerUid === user.uid) {
+                    return deleteDeckDocument(serviceAccount, prev.deckId);
+                  }
+                })
+                .catch(() => {})
+            );
           }
         }
 
         // 2. Save full deck documents FIRST so they are ready before user doc snapshot triggers
         for (const slot of slots) {
           if (slot.deckId && slot.deckData) {
+            const safeSlotDeckId = String(slot.deckId).trim();
+            if (!safeSlotDeckId || safeSlotDeckId.includes('/') || safeSlotDeckId.includes('..') || safeSlotDeckId.startsWith('notebook_')) {
+              continue;
+            }
             const isExam = Boolean(slot.isExam || slot.mode === 'exam' || (slot.deckData && slot.deckData.decks));
             deckOps.push(
-              setDocument(serviceAccount, 'decks', slot.deckId, {
-                ownerUid: user.uid,
-                title: slot.title,
-                cardCount: slot.cardCount,
-                isFixed: Boolean(slot.isFixed),
-                isExam,
-                mode: isExam ? 'exam' : 'normal',
-                deckData: slot.deckData,
-                updatedAt: slot.updatedAt || now
-              }).catch(err => console.warn(`Erro ao salvar deck ${slot.deckId}:`, err))
+              getDocument(serviceAccount, 'decks', safeSlotDeckId)
+                .catch(() => null)
+                .then(existingDeck => {
+                  if (existingDeck && existingDeck.ownerUid && existingDeck.ownerUid !== user.uid) {
+                    console.warn(`[Security] Bloqueada sobrescrita cross-account do deck ${safeSlotDeckId} por ${user.uid}`);
+                    return;
+                  }
+                  return setDocument(serviceAccount, 'decks', safeSlotDeckId, {
+                    ownerUid: user.uid,
+                    title: slot.title,
+                    cardCount: slot.cardCount,
+                    isFixed: Boolean(slot.isFixed),
+                    isExam,
+                    mode: isExam ? 'exam' : 'normal',
+                    deckData: slot.deckData,
+                    updatedAt: slot.updatedAt || now
+                  });
+                })
+                .catch(err => console.warn(`Erro ao salvar deck ${safeSlotDeckId}:`, err))
             );
           }
         }
@@ -1085,7 +1130,8 @@ export default {
         const serviceAccount = getServiceAccount(env);
 
         if (user) {
-          const isLifetime = LIFETIME_PRO_EMAILS.includes((user.email || '').toLowerCase().trim());
+          const lifetimeEmails = await getLifetimeProEmails(serviceAccount);
+          const isLifetime = lifetimeEmails.includes((user.email || '').toLowerCase().trim());
           if (isLifetime) {
             await setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {});
             return jsonResponse({ isPro: true, status: 'active', plan: 'pro_lifetime' }, 200, corsHeaders);
@@ -1753,7 +1799,8 @@ async function handleStripeWebhook(request, env) {
     if (uid) {
       const existingDoc = await getUserDocument(serviceAccount, uid).catch(() => null);
       const email = (existingDoc?.email || '').toLowerCase().trim();
-      const isLifetime = LIFETIME_PRO_EMAILS.includes(email);
+      const lifetimeEmails = await getLifetimeProEmails(serviceAccount);
+      const isLifetime = lifetimeEmails.includes(email);
       const cambluCheck = (!isLifetime && email) ? await fetchCambluClubeStatus(email, env).catch(() => null) : null;
 
       if (isLifetime) {

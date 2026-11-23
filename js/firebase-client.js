@@ -71,11 +71,30 @@ export async function signInWithGoogle() {
   }
 }
 
+const signOutCleanupCallbacks = new Set();
+
+/**
+ * Register a cleanup callback to run synchronously when signOutUser() is invoked.
+ */
+export function registerSignOutCleanup(cb) {
+  if (typeof cb === 'function') {
+    signOutCleanupCallbacks.add(cb);
+  }
+}
+
 /**
  * Sign out current user
  */
 export async function signOutUser() {
   try {
+    for (const cb of signOutCleanupCallbacks) {
+      try {
+        cb();
+      } catch (e) {}
+    }
+    try {
+      localStorage.removeItem('spaiq_active_uid');
+    } catch (e) {}
     await signOut(auth);
   } catch (error) {
     console.error('Erro ao sair:', error);

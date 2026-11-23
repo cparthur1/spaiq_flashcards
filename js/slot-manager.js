@@ -4,7 +4,7 @@
  * Manages the 3 deck slots, the dedicated notebook slot, and cloud synchronization
  */
 
-import { auth, db, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, onAuthChange } from './firebase-client.js';
+import { auth, db, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, onAuthChange, registerSignOutCleanup } from './firebase-client.js';
 import { getCloudSlots, saveCloudSlots } from './backend-api.js';
 import { isUserPro } from './explore-modal.js';
 import { syncSharedDeckToFirestore } from './share-manager.js';
@@ -1902,6 +1902,78 @@ export function initRealtimeCloudSync() {
     }
   });
 }
+
+/**
+ * Wipe all user-scoped local session data (slots, saves, notebook, stats, streaks, pro caches)
+ * so signing out or switching accounts never leaks one user's data into another account.
+ */
+export function clearUserLocalSessionData() {
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+    syncTimeout = null;
+  }
+  if (syncIdleId && typeof cancelIdleCallback === 'function') {
+    cancelIdleCallback(syncIdleId);
+    syncIdleId = null;
+  }
+  hasPendingSync = false;
+
+  cachedLocalSlots = null;
+  lastSyncedSlotSignature = '';
+  lastNotebookRaw = null;
+  cachedNotebookSlotData = null;
+  lastCloudSyncedNotebookState = '';
+  lastCloudSyncedStatsRaw = '';
+  cachedCompactedStatsForCloud = null;
+  directWriteForbiddenDocs.clear();
+  for (const k of Object.keys(lastCloudSyncedSlotState)) {
+    delete lastCloudSyncedSlotState[k];
+  }
+
+  try {
+    const keysToRemove = [
+      SLOTS_STORAGE_KEY,
+      ACTIVE_MODE_KEY,
+      SAVE_KEY,
+      'flashcardsExam',
+      NOTEBOOK_KEY,
+      'flashcards_stats',
+      'flashcardsStats',
+      'flashcards_daily_streak',
+      'flashcards_notebook_share_slug',
+      'flashcards_notebook_deleted_at',
+      'flashcards_slot_0_deleted_at',
+      'flashcards_slot_1_deleted_at',
+      'flashcards_slot_2_deleted_at',
+      'spaiq_extra_generations',
+      'spaiq_free_ai_deck_used',
+      'spaiq_active_uid',
+      'editing_deck',
+      'editing_deck_title',
+      'editing_deck_mode',
+      'editing_deck_slot_index',
+      'editing_deck_exam_data',
+      'editing_deck_is_free_trial'
+    ];
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+
+    // Remove all per-uid pro caches
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('spaiq_pro_cache_')) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch (e) {}
+
+  try {
+    window.dispatchEvent(new CustomEvent('flashcards:sync-updated', {
+      detail: { hasSlotChanges: true, hasDeckChanges: true, source: 'session-cleared' }
+    }));
+  } catch (e) {}
+}
+
+registerSignOutCleanup(clearUserLocalSessionData);
 
 // Auto-initialize real-time sync immediately on module load
 initRealtimeCloudSync();

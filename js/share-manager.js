@@ -248,7 +248,9 @@ export async function checkAndLoadSharedDeck() {
         return true;
       }
 
-      const deckData = shareData.deckData;
+      const deckData = shareData.deckData && typeof shareData.deckData === 'object'
+        ? { ...shareData.deckData }
+        : shareData.deckData;
       const title = shareData.title || 'Baralho Compartilhado';
       const isExam = Boolean(shareData.isExam || (deckData && deckData.decks && Array.isArray(deckData.decks)));
 
@@ -256,6 +258,15 @@ export async function checkAndLoadSharedDeck() {
       const existingSlots = getLocalSlots();
       const existingIdx = existingSlots.findIndex(s => s.shareSlug === shareSlug);
       let targetSlot = existingIdx !== -1 ? existingIdx : null;
+
+      // Always give a new shared import its own local deckId so it never collides with the creator's Firestore decks/{deckId}
+      if (deckData && typeof deckData === 'object') {
+        if (existingIdx !== -1 && existingSlots[existingIdx]?.deckId) {
+          deckData.deckId = existingSlots[existingIdx].deckId;
+        } else {
+          deckData.deckId = isExam ? generateSecureId('exam') : generateSecureId('deck');
+        }
+      }
 
       if (targetSlot === null) {
         const allThreeShared = existingSlots.length === 3 && existingSlots.every(s => s && s.deckData && s.cardCount > 0 && (s.shareSlug || s.isFixed));

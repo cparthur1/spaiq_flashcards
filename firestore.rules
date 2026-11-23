@@ -156,6 +156,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Server-only app configuration (e.g. lifetime Pro whitelist) - NEVER readable or writable by clients
+    match /app_config/{docId} {
+      allow read, write: if false;
+    }
+
     // Default deny for any other collection
     match /{document=**} {
       allow read, write: if false;
