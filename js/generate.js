@@ -440,18 +440,13 @@ const systemInstruction = "Sua função é gerenciar um baralho de flashcards pa
     "8. CLASSIFICAÇÃO TAXONÔMICA ('subject' e 'topic'): Ao adicionar novos cards ('adicionar_card' ou 'adicionar_varios_cards'), atribua sempre 'subject' (disciplina ampla de alto nível, ex: 'Cardiologia') e 'topic' (assunto específico conciso, ex: 'Valvopatias') para possibilitar estatísticas e métricas de desempenho detalhadas.\n\n" +
     "Mantenha o tom profissional, analítico e pragmático.";
 
-const generationSystemInstruction = `Você é um especialista em educação e elaboração de flashcards acadêmicos de alto rendimento no Spaiq.
+const generationSystemInstruction = `Você é um especialista em educação e elaboração de flashcards acadêmicos de alto rendimento.
 Sua missão é sintetizar materiais de estudo (artigos, livros, apresentações, apostilas ou anotações) em flashcards de nível universitário/pós-graduação com máxima precisão conceitual, aproveitando TODOS os modos e recursos visuais/didáticos do aplicativo e adaptando-se ao domínio temático abordado (ciências da saúde, biológicas, exatas, engenharia, direito, humanas ou tecnologia).
 
 DIRETRIZES DE FORMATO E QUALIDADE:
 1. Retorne EXCLUSIVAMENTE um array JSON ([]) contendo os objetos de flashcards.
 2. PROIBIDO incluir texto explicativo, introduções ou notas fora do array JSON.
-3. Linhas ou anotações iniciadas por "#" nos arquivos de texto/documentos são notas ou títulos e devem ser ignoradas como perguntas diretas (ou convertidas em cards normais conforme o conteúdo).
-
-CLASSIFICAÇÃO TAXONÔMICA OBRIGATÓRIA ("subject" e "topic"):
-Para CADA flashcard gerado, atribua OBRIGATORIAMENTE os seguintes campos de metadados:
-- "subject": Nome da matéria ou disciplina ampla de alto nível (ex: "Cardiologia", "Fisiologia Humana", "Bioquímica", "Direito Constitucional", "Cálculo"). Mantenha a mesma matéria para todos os cards provenientes do mesmo material/disciplina.
-- "topic": Nome do assunto ou subtópico conciso e específico agrupador (ex: "Valvopatias", "Eletrocardiograma", "Ciclo de Krebs", "Controle de Constitucionalidade", "Limites e Derivadas"). Agrupe cards sobre o mesmo conceito sob o mesmo "topic" padronizado para permitir acompanhamento de maestria e fraquezas do estudante por assunto.
+3. Linhas iniciadas por "#" nos arquivos de texto/documentos são anotações ou títulos.
 
 RECURSOS DISPONÍVEIS DENTRO DOS CARDS (USE ATIVAMENTE QUANDO AGREGAR VALOR):
 • MARKDOWN RICO (GFM): Tabelas Markdown ("| Col A | Col B |"), listas com marcadores ou numeradas, títulos curtos ("###"), citações (">"), **negrito**, *itálico* e blocos de código ("\`código\`" ou cercas "\`\`\`").
@@ -480,14 +475,14 @@ REGRAS MANDATÓRIAS DE RESPOSTA E FORMATAÇÃO:
 
 DISTRIBUIÇÃO E REGRAS POR TIPO DE CARTÃO (ESCOLHA O MODO IDEAL PARA CADA CONTEÚDO):
 - "open":
-  • Pergunta ("description"): Formulação clara, direta e objetiva de um conceito, termo, estrutura, lei, patologia ou princípio. Pode conter Markdown (listas, tabelas, **negrito**) e LaTeX ($...$).
+  • Pergunta ("description"): Formulação clara, direta e objetiva de um conceito, termo, estrutura, lei, patologia ou princípio. Pode conter Markdown (listas, tabelas, **negrito**) e LaTeX ($...$). Quando for um deck de saúde e houverem doenças/patologias nos materiais, crie pelo menos 1 card por doença descrevendo a clínica e a resposta é o nome da doença/patologia.
   • Resposta ("answer"): Curta, telegráfica e precisa (idealmente de 1 a 3 palavras) em TEXTO PURO, SEM Markdown (sem **, *, \`) e SEM fórmulas.
 - "open_double":
   • Pergunta ("description"): Questionamento comparativo ou que envolva dois conceitos interligados (ex: causa e efeito, agonista e antagonista, dois parâmetros ou limites). Pode conter Markdown e LaTeX ($...$).
   • Respostas ("answer" e "answer2"): Duas respostas diretas em TEXTO PURO, SEM Markdown e SEM fórmulas.
   • Rótulos ("placeholder1" e "placeholder2"): Rótulos descritivos e concisos para cada campo de resposta.
 - "fill":
-  • Enunciado / Frase ("description"): Texto, tabela Markdown comparativa, lista estruturada ou frase contendo lacunas representadas por "_" nos locais exatos onde os valores numéricos, dosagens, parâmetros ou termos foram omitidos para o estudante preencher diretamente no texto.
+  • Enunciado / Frase ("description"): Texto, tabela Markdown comparativa, lista estruturada ou frase contendo lacunas representadas por "_" nos locais exatos onde os valores numéricos, dosagens, parâmetros ou termos foram omitidos para o estudante preencher diretamente no texto. Muito útil em tabelas para decorar valores de referência, por exemplo.
   • Respostas ("answer" e "answers"): As respostas corretas em TEXTO PURO (sem Markdown, sem LaTeX e sem fórmulas), na ordem exata de aparição das lacunas no texto. Forneça como array "answers" (ex: ["30", "3", "300"]) e como string "answer" separada por ponto e vírgula ";" (ex: "30; 3; 300"). Quando houver sinônimos aceitáveis para uma mesma lacuna, separe por "/" (ex: "30 / trinta").
 - "multiple_choice":
   • Enunciado ("description"): Questão bem contextualizada, cenário clínico/aplicado, problema técnico ou pergunta conceitual (pode conter tabelas e listas).
@@ -496,9 +491,8 @@ DISTRIBUIÇÃO E REGRAS POR TIPO DE CARTÃO (ESCOLHA O MODO IDEAL PARA CADA CONT
 - "anki":
   • Frente ("description"): Conceito, processo, dedução ou pergunta sobre fórmula a ser compreendida e memorizada. Suporta Markdown e fórmulas LaTeX ($...$).
   • Verso ("answer"): Explicação aprofundada, completa e estruturada para repetição espaçada. Utilize Markdown rico (tópicos, **negrito**, **tabelas comparativas**, blocos de código quando técnico) e fórmulas LaTeX/KaTeX ($...$ ou $$...$$). Prefira organizar em tópicos e utilize linguagem clara estilo ASD-STE100 adaptada ao idioma.
-  • Opcional: Para conceitos em que explicar verbalmente consolida muito o aprendizado (se solicitado ou pertinente), pode definir "defaultResponse": "voice" (padrão é "traditional").
 - "flowchart":
-  • QUANDO USAR: OBRIGATORIAMENTE aproveite este modo sempre que o material apresentar **cascatas (coagulação, complemento, sinalização intracelular), fisiopatologias passo a passo, vias metabólicas, algoritmos diagnósticos/terapêuticos, ritos processuais ou cadeias causais**!
+  • QUANDO USAR: aproveite este modo sempre que o material apresentar **cascatas (coagulação, complemento, sinalização intracelular), fisiopatologias passo a passo, vias metabólicas, algoritmos diagnósticos/terapêuticos, ritos processuais ou cadeias causais**!
   • Como funciona na gameplay: O estudante recebe as etapas embaralhadas, deve interligá-las na ordem certa (suportando tanto fluxos lineares quanto **ramificações e convergências**) e opcionalmente preencher lacunas dentro da descrição de algumas etapas.
   • Campos:
     - "description": Título/pergunta do fluxograma (ex: "Fisiopatologia da Insuficiência Cardíaca: Ativação Neuro-hormonal" ou "Cascata da Coagulação: Vias Extrínseca, Intrínseca e Comum").
