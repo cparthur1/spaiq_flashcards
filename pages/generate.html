@@ -796,17 +796,20 @@
         
         <!-- Left Column: Card Creator UI & AI Assistant -->
         <div id="editor-left-sidebar" class="w-full md:w-5/12 lg:w-4/12 bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden h-[60vh] md:h-[85vh] order-2 md:order-1 transition-all duration-300">
-            <!-- Sidebar Mode Tabs -->
-            <div class="p-2 border-b border-gray-200 bg-gray-50 flex items-center gap-2 shrink-0">
-                <button id="tab-creator-btn" class="flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition bg-[#3b82f7] text-white shadow-sm cursor-pointer">
-                    <span class="material-symbols-rounded text-base select-none">add</span>
-                    <span data-i18n="card_creator_tab">Criador de Cards</span>
-                </button>
-                <button id="tab-ai-chat-btn" class="flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition text-gray-600 hover:bg-gray-200">
-                    <img id="tab-ai-chat-icon" src="../assets/img/robot.svg" class="w-4 h-4 light-invert" alt="Robô" data-i18n-alt="robot_alt">
-                    <span data-i18n="ai_assistant_tab">Assistente IA</span>
-                </button>
-                <button type="button" id="toggle-editor-sidebar-btn" class="md:hidden p-2 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 text-gray-700 transition flex items-center justify-center shrink-0" aria-expanded="true" aria-controls="card-creator-panel ai-editor-chat-panel" title="Recolher painel" data-i18n-title="editor_collapse_panel">
+            <!-- Sidebar Mode Tabs (M3 Expressive Sliding Segmented Pill Bar) -->
+            <div class="p-2 border-b border-gray-200 bg-white flex items-center gap-2 shrink-0">
+                <div id="editor-sidebar-tablist" class="editor-sidebar-tablist flex-1 min-w-0" role="tablist">
+                    <div class="editor-sidebar-tab-indicator" aria-hidden="true"></div>
+                    <button type="button" id="tab-creator-btn" role="tab" aria-selected="true" class="editor-sidebar-tab-btn active text-xs sm:text-sm">
+                        <span class="material-symbols-rounded text-base select-none">add</span>
+                        <span data-i18n="card_creator_tab" class="truncate">Criador de Cards</span>
+                    </button>
+                    <button type="button" id="tab-ai-chat-btn" role="tab" aria-selected="false" class="editor-sidebar-tab-btn text-xs sm:text-sm">
+                        <img id="tab-ai-chat-icon" src="../assets/img/robot.svg" class="w-4 h-4 light-invert shrink-0" alt="Robô" data-i18n-alt="robot_alt">
+                        <span data-i18n="ai_assistant_tab" class="truncate">Assistente IA</span>
+                    </button>
+                </div>
+                <button type="button" id="toggle-editor-sidebar-btn" class="md:hidden p-2 rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 text-gray-700 transition flex items-center justify-center shrink-0" aria-expanded="true" aria-controls="card-creator-panel ai-editor-chat-panel" title="Recolher painel" data-i18n-title="editor_collapse_panel">
                     <span id="toggle-editor-sidebar-chevron" class="material-symbols-rounded text-xl transition-transform duration-300">keyboard_arrow_down</span>
                 </button>
             </div>

@@ -165,6 +165,7 @@ const editorLeftSidebar = document.getElementById('editor-left-sidebar');
 const editorRightDeckPanel = document.getElementById('editor-right-deck-panel');
 const toggleEditorSidebarBtn = document.getElementById('toggle-editor-sidebar-btn');
 const toggleEditorSidebarChevron = document.getElementById('toggle-editor-sidebar-chevron');
+const editorSidebarTablist = document.getElementById('editor-sidebar-tablist');
 const tabCreatorBtn = document.getElementById('tab-creator-btn');
 const tabAiChatBtn = document.getElementById('tab-ai-chat-btn');
 const cardCreatorPanel = document.getElementById('card-creator-panel');
@@ -2064,9 +2065,13 @@ function switchSidebarTab(tab, force = false) {
         cardCreatorPanel.classList.remove('m3-tab-panel-enter-forward', 'm3-tab-panel-enter-backward');
         aiEditorChatPanel.classList.remove('m3-tab-panel-enter-forward', 'm3-tab-panel-enter-backward');
 
+        if (editorSidebarTablist) {
+            editorSidebarTablist.classList.toggle('is-tab-ai', tab === 'ai');
+        }
+
         if (tab === 'creator') {
-            tabCreatorBtn.className = "flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition bg-[#3b82f7] text-white shadow-sm cursor-pointer";
-            tabAiChatBtn.className = "flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition text-gray-600 hover:bg-gray-200";
+            tabCreatorBtn.classList.add('active');
+            tabAiChatBtn.classList.remove('active');
             tabCreatorBtn.setAttribute('aria-selected', 'true');
             tabAiChatBtn.setAttribute('aria-selected', 'false');
             if (tabAiChatIcon) {
@@ -2076,8 +2081,8 @@ function switchSidebarTab(tab, force = false) {
             cardCreatorPanel.classList.add(direction === 'forward' ? 'm3-tab-panel-enter-forward' : 'm3-tab-panel-enter-backward');
             aiEditorChatPanel.classList.add('hidden');
         } else {
-            tabAiChatBtn.className = "flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition bg-purple-600 text-white shadow-sm";
-            tabCreatorBtn.className = "flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition text-gray-600 hover:bg-gray-200";
+            tabAiChatBtn.classList.add('active');
+            tabCreatorBtn.classList.remove('active');
             tabAiChatBtn.setAttribute('aria-selected', 'true');
             tabCreatorBtn.setAttribute('aria-selected', 'false');
             if (tabAiChatIcon) {
@@ -2090,14 +2095,7 @@ function switchSidebarTab(tab, force = false) {
         currentSidebarTab = tab;
     };
 
-    if (document.startViewTransition) {
-        document.startViewTransition({
-            update: updateDOM,
-            types: [direction]
-        });
-    } else {
-        updateDOM();
-    }
+    updateDOM();
 }
 
 tabCreatorBtn.addEventListener('click', () => switchSidebarTab('creator'));

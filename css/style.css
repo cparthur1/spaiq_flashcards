@@ -203,11 +203,96 @@ button,
 }
 
 /* Ensure tab icons turn pure white when tab is selected */
+#tab-ai-chat-btn.active img,
 #tab-ai-chat-btn.bg-purple-600 img,
 #tab-ai-chat-btn.text-white img,
 #tab-ai-chat-btn[aria-selected="true"] img,
 .tab-selected img {
   filter: none !important;
+}
+
+/* Editor Sidebar Mode Selector: M3 Expressive Sliding Segmented Pill Bar */
+.editor-sidebar-tablist {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.28rem;
+  background: #f1f4f9;
+  padding: 0.28rem;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  isolation: isolate;
+}
+
+.editor-sidebar-tab-indicator {
+  position: absolute;
+  top: 0.28rem;
+  bottom: 0.28rem;
+  left: 0.28rem;
+  width: calc(50% - 0.42rem);
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #5697ff 0%, #3b82f7 55%, #266be4 100%);
+  border: 1.5px solid #1e5ed6;
+  box-shadow:
+    0 4px 12px rgba(59, 130, 247, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52),
+    inset 0 -1.5px 0 rgba(15, 42, 110, 0.22);
+  transition:
+    transform 360ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 240ms cubic-bezier(0.2, 0, 0, 1),
+    border-color 240ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 240ms cubic-bezier(0.2, 0, 0, 1);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.editor-sidebar-tablist.is-tab-ai .editor-sidebar-tab-indicator {
+  transform: translateX(calc(100% + 0.28rem));
+  background: linear-gradient(180deg, #a855f7 0%, #9333ea 55%, #7e22ce 100%);
+  border-color: #6b21a8;
+  box-shadow:
+    0 4px 12px rgba(147, 51, 234, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.48),
+    inset 0 -1.5px 0 rgba(59, 7, 100, 0.26);
+}
+
+.editor-sidebar-tab-btn {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  padding: 0.52rem 0.75rem;
+  border-radius: 9999px;
+  border: none;
+  font-weight: 700;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color 200ms cubic-bezier(0.2, 0, 0, 1),
+    transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.editor-sidebar-tab-btn:hover:not(.active) {
+  color: #0f172a;
+}
+
+.editor-sidebar-tab-btn:active {
+  transform: scale(0.97);
+}
+
+.editor-sidebar-tab-btn.active {
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgba(15, 36, 94, 0.22);
+}
+
+.editor-sidebar-tab-btn.active .material-symbols-rounded {
+  color: #ffffff;
 }
 
 /* Material 3 Switch Component */
