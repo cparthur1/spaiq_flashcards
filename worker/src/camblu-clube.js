@@ -178,7 +178,8 @@ export async function resolveUserEntitlement({
   nowMs = Date.now()
 }) {
   const uid = user?.uid || userDoc?.uid || null;
-  const emailAllowed = user?.emailVerified !== false;
+  const providerAllowed = !user?.signInProvider || user.signInProvider === 'google.com';
+  const emailAllowed = user?.emailVerified !== false && providerAllowed;
   const rawEmail = user?.email || (!user?.uid ? userDoc?.email : '') || '';
   const email = emailAllowed ? rawEmail.toLowerCase().trim() : '';
   const nowIso = new Date(nowMs).toISOString();
@@ -192,19 +193,22 @@ export async function resolveUserEntitlement({
       provider: 'whitelist',
       updatedAt: nowIso
     };
-    if (refreshLive && serviceAccount && uid) {
-      const tasks = [];
-      if (setProClaimFn && !user?.pro) {
-        tasks.push(setProClaimFn(serviceAccount, uid, true).catch(() => {}));
+    if ((refreshLive || syncClaim) && serviceAccount && uid) {
+      if ((refreshLive || syncClaim) && setProClaimFn && !user?.pro) {
+        if (refreshLive) {
+          await setProClaimFn(serviceAccount, uid, true).catch(() => {});
+        } else {
+          await scheduleBackgroundTask(ctx, setProClaimFn(serviceAccount, uid, true).catch(() => {}));
+        }
       }
-      if (updateUserDocFn) {
-        tasks.push(updateUserDocFn(serviceAccount, uid, {
-          ...(email ? { email } : {}),
-          subscription: lifetimeSub
-        }).catch(() => {}));
-      }
-      if (tasks.length > 0) {
-        await scheduleBackgroundTask(ctx, Promise.all(tasks));
+      if (refreshLive && updateUserDocFn) {
+        await scheduleBackgroundTask(
+          ctx,
+          updateUserDocFn(serviceAccount, uid, {
+            ...(email ? { email } : {}),
+            subscription: lifetimeSub
+          }).catch(() => {})
+        );
       }
     }
     return {
@@ -326,7 +330,8 @@ export async function resolveUserEntitlement({
   const nextUserDoc = userDoc ? { ...userDoc } : {};
   const docPatch = {};
 
-  if (email && !userDoc?.email) {
+  const normalizedDocEmail = (userDoc?.email || '').toLowerCase().trim();
+  if (email && normalizedDocEmail !== email) {
     docPatch.email = email;
     nextUserDoc.email = email;
   }
@@ -384,7 +389,11 @@ export async function resolveUserEntitlement({
       syncTasks.push(updateUserDocFn(serviceAccount, uid, docPatch).catch(() => {}));
     }
     if (syncClaim && setProClaimFn && Boolean(user?.pro) !== isPro) {
-      syncTasks.push(setProClaimFn(serviceAccount, uid, isPro).catch(() => {}));
+      if (refreshLive) {
+        await setProClaimFn(serviceAccount, uid, isPro).catch(() => {});
+      } else {
+        syncTasks.push(setProClaimFn(serviceAccount, uid, isPro).catch(() => {}));
+      }
     }
     if (syncTasks.length > 0) {
       await scheduleBackgroundTask(ctx, Promise.all(syncTasks));

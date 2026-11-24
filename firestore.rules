@@ -1,10 +1,70 @@
 rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: /shares/{shareSlug}
+//   - Flashcards shared decks (shareSlug does NOT start with 'gorit-'):
+//       Publicly readable by link; client-writable with schema validation; hard deletes forbidden.
+//       Fields: shareSlug (string), title (string <= 500), cardCount (number 0..10000),
+//               deckData (map), deleted (bool), deletedAt (number), updatedAt (number), createdAt (number)
+//   - Gorit shared subjects (shareSlug matches '^gorit-[a-z0-9-]+$'):
+//       Publicly readable by link; create/update restricted to verified Google Auth owner.
+//       Fields: type ('gorit_subject'), shareSlug (string <= 100), title (string 1..500),
+//               subjectData (map), sharedBy ({ uid, name }), createdAt (number > 0, immutable)
+//
+// Collection: /decks/{deckId}
+//   - Private synced decks & notebooks (Pro Google users only, unless isShared == true for read).
+//   - Fields: ownerUid (string == auth.uid, immutable), title (string <= 500 or null),
+//             cardCount (number 0..10000), isFixed (bool), isExam (bool),
+//             mode ('normal' | 'exam'), deckData (map), updatedAt (number), isShared (bool)
+//
+// Collection: /users/{userId}
+//   - Private user sync document (Pro Google owner only; server Admin SDK manages billing/quota/email).
+//   - Protected server-only fields: email, subscription, cambluClube, pro, extraGenerations,
+//     monthlyGenerationsUsed, quotaLastResetMonth, freeAiDeckUsed, freeAiDeckUsedAt,
+//     paidSessionIds, apiKey, apiKeyCreatedAt, apiKeyLastUsedAt,
+//     dailyGoalWebhookUrl, dailyGoalWebhookLastTriggeredAt, dailyGoalWebhookLastTriggeredDate
+//   - Client-writable sync fields: deckSlots, notebookSlot, settings, dailyStreak,
+//     activeMode, lastSyncedAt, lastClientSyncId (+ legacy deleteField() cleanup of stats, slots, notebookData)
+//
+// Collection: /user_stats/{userId}
+//   - Separated user statistics document (Pro Google owner only).
+//   - Fields: ownerUid (string == auth.uid, immutable), stats (map), updatedAt (number),
+//             lastClientSyncId (string <= 128 or null)
+//
+// Collection: /api_keys/{apiKey}
+//   - Server-only API key index (Admin SDK only; never readable or writable by clients).
+//
+// Collection: /app_config/{docId}
+//   - Server-only app configuration such as pro_whitelist (Admin SDK only; never readable or writable by clients).
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper: Require verified Google Sign-In authentication
+    function isGoogleAuth() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    // Helper: Require verified Google Sign-In with active Pro custom claim
+    function isProGoogleUser() {
+      return isGoogleAuth() && request.auth.token.pro == true;
+    }
+
+    // Helper: Check verified Google Pro ownership by userId path parameter
+    function isProOwner(userId) {
+      return isProGoogleUser() && request.auth.uid == userId;
+    }
 
     // Helper: Protected server-only fields on /users/{userId}
     function protectedUserFields() {
       return [
+        'email',
         'subscription',
         'cambluClube',
         'pro',
@@ -23,7 +83,61 @@ service cloud.firestore {
       ];
     }
 
-    // Helper: Validate Flashcards shared deck writes (excludes gorit-* namespace)
+    // Helper: Allowed client-writable sync fields on /users/{userId}
+    function allowedClientUserSyncFields() {
+      return [
+        'deckSlots',
+        'notebookSlot',
+        'stats',
+        'slots',
+        'notebookData',
+        'settings',
+        'dailyStreak',
+        'activeMode',
+        'lastSyncedAt',
+        'lastClientSyncId'
+      ];
+    }
+
+    // Validator: Client sync fields on /users/{userId}
+    function isValidClientUserSync(data) {
+      return (!('deckSlots' in data) || (data.deckSlots is list && data.deckSlots.size() <= 10))
+        && (!('notebookSlot' in data) || data.notebookSlot == null || data.notebookSlot is map)
+        && (!('settings' in data) || data.settings == null || data.settings is map)
+        && (!('dailyStreak' in data) || data.dailyStreak == null || data.dailyStreak is map)
+        && (!('activeMode' in data) || data.activeMode == null || (data.activeMode is string && data.activeMode.size() <= 32))
+        && (!('lastSyncedAt' in data) || data.lastSyncedAt is number)
+        && (!('lastClientSyncId' in data) || data.lastClientSyncId == null || (data.lastClientSyncId is string && data.lastClientSyncId.size() <= 128));
+    }
+
+    // Validator: Deck documents in /decks/{deckId}
+    function isValidDeckDoc(data) {
+      return data.keys().hasOnly([
+          'ownerUid', 'title', 'cardCount', 'isFixed', 'isExam',
+          'mode', 'deckData', 'updatedAt', 'isShared'
+        ])
+        && data.ownerUid is string
+        && data.ownerUid == request.auth.uid
+        && (!('title' in data) || data.title == null || (data.title is string && data.title.size() <= 500))
+        && (!('cardCount' in data) || (data.cardCount is number && data.cardCount >= 0 && data.cardCount <= 10000))
+        && (!('isFixed' in data) || data.isFixed is bool)
+        && (!('isExam' in data) || data.isExam is bool)
+        && (!('mode' in data) || (data.mode is string && data.mode in ['normal', 'exam']))
+        && (!('updatedAt' in data) || data.updatedAt is number)
+        && (!('isShared' in data) || data.isShared is bool);
+    }
+
+    // Validator: Separated stats documents in /user_stats/{userId}
+    function isValidUserStatsDoc(data) {
+      return data.keys().hasOnly(['ownerUid', 'stats', 'updatedAt', 'lastClientSyncId'])
+        && data.ownerUid is string
+        && data.ownerUid == request.auth.uid
+        && (!('stats' in data) || data.stats is map)
+        && (!('updatedAt' in data) || data.updatedAt is number)
+        && (!('lastClientSyncId' in data) || data.lastClientSyncId == null || (data.lastClientSyncId is string && data.lastClientSyncId.size() <= 128));
+    }
+
+    // Validator: Flashcards shared deck writes (excludes gorit-* namespace)
     function isValidFlashcardsShare(shareSlug) {
       return !shareSlug.matches('^gorit-.*')
         && request.resource.data.keys().hasOnly([
@@ -36,10 +150,10 @@ service cloud.firestore {
         && (!('deleted' in request.resource.data) || request.resource.data.deleted is bool);
     }
 
-    // Helper: Validate Gorit shared subject writes (authenticated owner only)
+    // Validator: Gorit shared subject writes (verified Google owner only)
     function isValidGoritSubjectShare(shareSlug) {
       let data = request.resource.data;
-      return request.auth != null
+      return isGoogleAuth()
         && data.keys().hasOnly(['type', 'shareSlug', 'title', 'subjectData', 'sharedBy', 'createdAt'])
         && data.keys().hasAll(['type', 'shareSlug', 'title', 'subjectData', 'sharedBy', 'createdAt'])
         && data.type == 'gorit_subject'
@@ -86,7 +200,7 @@ service cloud.firestore {
         ) || (
           'type' in resource.data
           && resource.data.type == 'gorit_subject'
-          && request.auth != null
+          && isGoogleAuth()
           && 'sharedBy' in resource.data
           && resource.data.sharedBy is map
           && 'uid' in resource.data.sharedBy
@@ -97,56 +211,45 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Decks are strictly isolated to their ownerUid (unless explicitly marked isShared == true for read)
+    // Decks are strictly isolated to their Pro Google ownerUid (unless explicitly marked isShared == true for read)
     match /decks/{deckId} {
       allow get: if (resource != null && resource.data.isShared == true)
-        || (request.auth != null && (resource == null || resource.data.ownerUid == request.auth.uid));
+        || (isProGoogleUser() && (resource == null || resource.data.ownerUid == request.auth.uid));
       allow list: if (resource != null && resource.data.isShared == true)
-        || (request.auth != null && resource.data.ownerUid == request.auth.uid);
-      allow create: if request.auth != null
-        && request.resource.data.ownerUid == request.auth.uid
-        && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 500));
-      allow update: if request.auth != null
+        || (isProGoogleUser() && resource.data.ownerUid == request.auth.uid);
+      allow create: if isProGoogleUser()
+        && isValidDeckDoc(request.resource.data);
+      allow update: if isProGoogleUser()
         && (!('ownerUid' in resource.data) || resource.data.ownerUid == request.auth.uid)
-        && request.resource.data.ownerUid == request.auth.uid
-        && (!('title' in request.resource.data) || (request.resource.data.title is string && request.resource.data.title.size() <= 500));
-      allow delete: if request.auth != null
+        && isValidDeckDoc(request.resource.data);
+      allow delete: if isProGoogleUser()
         && resource.data.ownerUid == request.auth.uid;
     }
 
-    // User private data (slots, streaks, settings).
-    // Clients cannot create or mutate billing, quota, API key, or webhook fields.
+    // User private sync data (slots, streaks, settings) — Pro Google owner only.
+    // Clients cannot create or mutate email, billing, quota, API key, or webhook fields.
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null
-        && request.auth.uid == userId
-        && !request.resource.data.keys().hasAny(protectedUserFields());
-      allow update: if request.auth != null
-        && request.auth.uid == userId
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields());
+      allow read: if isProOwner(userId);
+      allow create: if isProOwner(userId)
+        && !request.resource.data.keys().hasAny(protectedUserFields())
+        && request.resource.data.keys().hasOnly(allowedClientUserSyncFields())
+        && isValidClientUserSync(request.resource.data);
+      allow update: if isProOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedUserFields())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedClientUserSyncFields())
+        && isValidClientUserSync(request.resource.data);
       allow delete: if false;
     }
 
-    // Separated user statistics document (keeps /users/{userId} well below the 1 MiB limit).
+    // Separated user statistics document (Pro Google owner only; keeps /users/{userId} well below 1 MiB).
     match /user_stats/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['ownerUid', 'stats', 'updatedAt', 'lastClientSyncId'])
-        && request.resource.data.ownerUid == request.auth.uid
-        && (!('stats' in request.resource.data) || request.resource.data.stats is map)
-        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is number)
-        && (!('lastClientSyncId' in request.resource.data) || (request.resource.data.lastClientSyncId is string && request.resource.data.lastClientSyncId.size() <= 128));
-      allow update: if request.auth != null
-        && request.auth.uid == userId
+      allow read: if isProOwner(userId);
+      allow create: if isProOwner(userId)
+        && isValidUserStatsDoc(request.resource.data);
+      allow update: if isProOwner(userId)
         && (!('ownerUid' in resource.data) || resource.data.ownerUid == request.auth.uid)
-        && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.keys().hasOnly(['ownerUid', 'stats', 'updatedAt', 'lastClientSyncId'])
-        && (!('stats' in request.resource.data) || request.resource.data.stats is map)
-        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is number)
-        && (!('lastClientSyncId' in request.resource.data) || (request.resource.data.lastClientSyncId is string && request.resource.data.lastClientSyncId.size() <= 128));
-      allow delete: if request.auth != null
-        && request.auth.uid == userId
+        && isValidUserStatsDoc(request.resource.data);
+      allow delete: if isProOwner(userId)
         && resource != null
         && resource.data.ownerUid == request.auth.uid;
     }

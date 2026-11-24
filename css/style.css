@@ -1667,7 +1667,13 @@ textarea::-webkit-scrollbar-thumb,
     -webkit-touch-callout: none;
 }
 
-#question-body-text, #anki-answer-text {
+#question-body-text,
+#question-feedback-text,
+#anki-answer-text,
+#voice-reference-text-display,
+#voice-ai-feedback-text,
+#voice-user-transcript-display,
+#voice-key-points-container {
     -webkit-user-select: text;
     user-select: text;
 }
@@ -1716,6 +1722,12 @@ mark.card-hl-blue {
 /* Pastel Purple */
 mark.card-hl-purple {
     background-color: #e9d5ff;
+    color: #1e293b;
+}
+
+/* Pastel Red */
+mark.card-hl-red {
+    background-color: #fecaca;
     color: #1e293b;
 }
 
@@ -1810,7 +1822,7 @@ mark.card-hl-purple {
         overflow: hidden;
     }
     55% {
-        max-width: 175px;
+        max-width: 215px;
         opacity: 1;
         transform: scaleX(1.08) scaleY(1.04);
         overflow: hidden;
@@ -1820,7 +1832,7 @@ mark.card-hl-purple {
         overflow: hidden;
     }
     100% {
-        max-width: 175px;
+        max-width: 215px;
         opacity: 1;
         transform: scaleX(1) scaleY(1);
         overflow: visible;
@@ -1838,7 +1850,7 @@ mark.card-hl-purple {
 
 @keyframes hlPaletteCollapse {
     0% {
-        max-width: 175px;
+        max-width: 215px;
         opacity: 1;
         transform: scaleX(1);
     }
@@ -1885,6 +1897,10 @@ mark.card-hl-purple {
 
 #hl-palette.is-expanded .hl-color-btn[data-color="purple"] {
     animation-delay: 0.18s;
+}
+
+#hl-palette.is-expanded .hl-color-btn[data-color="red"] {
+    animation-delay: 0.23s;
 }
 
 @keyframes hlColorPopBounce {
@@ -2684,10 +2700,18 @@ mark.card-hl-purple {
     transition: all 0.15s ease;
 }
 
+.mc-option-btn:disabled {
+    cursor: text;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
 .mc-option-label {
     display: block;
     word-break: break-word;
     padding-bottom: 2px;
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .mc-option-btn:hover:not(:disabled) .mc-key-badge {

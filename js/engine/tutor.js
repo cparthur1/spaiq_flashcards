@@ -431,6 +431,8 @@ export async function getTermDefinition({ selectedText, currentQuestion }) {
         const cleanQuestion = currentQuestion?.description ? stripHtml(currentQuestion.description) : '';
         const cleanAnswer = (currentQuestion?.type === 'fill' && currentQuestion?.answers && currentQuestion.answers.length > 0)
             ? currentQuestion.answers.join(' ; ')
+            : currentQuestion?.type === 'image_arrows' && Array.isArray(currentQuestion?.imageArrows) && currentQuestion.imageArrows.length > 0
+                ? currentQuestion.imageArrows.map((a, idx) => `${idx + 1}. ${stripHtml(String(a?.label || ''))}`).join(' ; ')
             : currentQuestion?.type === 'flowchart' && Array.isArray(currentQuestion?.nodes) && currentQuestion.nodes.length > 0
                 ? currentQuestion.nodes.map(n => {
                     let bIdx = 0;

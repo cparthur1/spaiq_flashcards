@@ -1669,9 +1669,9 @@
 
     <!-- TEXT HIGHLIGHT FLOATING POPUP -->
     <div id="text-highlight-popup" class="hidden fixed z-[80] select-none -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-1.5 max-w-[calc(100vw-24px)]">
-        <div id="hl-actions-bar" class="flex items-center gap-1.5 p-1 bg-white/95 backdrop-blur-md rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.8)] border border-gray-200/80">
+        <div id="hl-actions-bar" role="toolbar" aria-label="Ações de texto selecionado" class="flex items-center gap-1.5 p-1 bg-white/95 backdrop-blur-md rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.8)] border border-gray-200/80">
             <!-- Main Trigger Button (Only highlight.svg, no text) -->
-            <button id="hl-trigger-btn" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-95 transition-all text-gray-700" title="Marca-texto (1-4)" aria-label="Marca-texto (1-4)" data-i18n-title="hl_trigger_title" data-i18n-aria-label="hl_trigger_title">
+            <button type="button" id="hl-trigger-btn" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:scale-95 transition-all text-gray-700" title="Marca-texto (1-5)" aria-label="Marca-texto (1-5)" data-i18n-title="hl_trigger_title" data-i18n-aria-label="hl_trigger_title">
                 <img src="../assets/img/highlight.svg" class="w-4 h-4 pointer-events-none" alt="Marca-texto" data-i18n-alt="highlighter">
             </button>
 
@@ -1679,17 +1679,19 @@
             <div id="hl-palette" class="hidden items-center gap-1.5 pl-0.5 pr-1">
                 <div class="h-4 w-[1px] bg-gray-200"></div>
                 <!-- Yellow (1) -->
-                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#fef08a] border border-[#facc15]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-amber-900/80 select-none" data-color="yellow" title="Amarelo (1)" aria-label="Marca-texto Amarelo (1)" data-i18n-title="hl_yellow" data-i18n-aria-label="hl_yellow">1</button>
+                <button type="button" class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#fef08a] border border-[#facc15]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-amber-900/80 select-none" data-color="yellow" title="Amarelo (1)" aria-label="Marca-texto Amarelo (1)" data-i18n-title="hl_yellow" data-i18n-aria-label="hl_yellow">1</button>
                 <!-- Green (2) -->
-                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#bbf7d0] border border-[#86efac]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-emerald-900/80 select-none" data-color="green" title="Verde (2)" aria-label="Marca-texto Verde (2)" data-i18n-title="hl_green" data-i18n-aria-label="hl_green">2</button>
+                <button type="button" class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#bbf7d0] border border-[#86efac]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-emerald-900/80 select-none" data-color="green" title="Verde (2)" aria-label="Marca-texto Verde (2)" data-i18n-title="hl_green" data-i18n-aria-label="hl_green">2</button>
                 <!-- Blue (3) -->
-                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#bfdbfe] border border-[#93c5fd]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-blue-900/80 select-none" data-color="blue" title="Azul (3)" aria-label="Marca-texto Azul (3)" data-i18n-title="hl_blue" data-i18n-aria-label="hl_blue">3</button>
+                <button type="button" class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#bfdbfe] border border-[#93c5fd]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-blue-900/80 select-none" data-color="blue" title="Azul (3)" aria-label="Marca-texto Azul (3)" data-i18n-title="hl_blue" data-i18n-aria-label="hl_blue">3</button>
                 <!-- Purple (4) -->
-                <button class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#e9d5ff] border border-[#d8b4fe]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-purple-900/80 select-none" data-color="purple" title="Roxo (4)" aria-label="Marca-texto Roxo (4)" data-i18n-title="hl_purple" data-i18n-aria-label="hl_purple">4</button>
+                <button type="button" class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#e9d5ff] border border-[#d8b4fe]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-purple-900/80 select-none" data-color="purple" title="Roxo (4)" aria-label="Marca-texto Roxo (4)" data-i18n-title="hl_purple" data-i18n-aria-label="hl_purple">4</button>
+                <!-- Red (5) -->
+                <button type="button" class="hl-color-btn w-7 h-7 sm:w-6 sm:h-6 rounded-full bg-[#fecaca] border border-[#fca5a5]/70 hover:scale-110 active:scale-95 shadow-xs transition-transform cursor-pointer flex items-center justify-center text-[11px] sm:text-[10px] font-bold text-red-900/80 select-none" data-color="red" title="Vermelho (5)" aria-label="Marca-texto Vermelho (5)" data-i18n-title="hl_red" data-i18n-aria-label="hl_red">5</button>
             </div>
 
             <!-- Peça ajuda Button (AI Tutor quick definition) -->
-            <button id="hl-ai-btn" class="w-8 h-8 flex items-center justify-center rounded-full bg-white hover:bg-gray-50 active:scale-95 transition-all text-gray-700 relative overflow-hidden" title="Peça ajuda" aria-label="Peça ajuda" data-i18n-title="hl_ai_help" data-i18n-aria-label="hl_ai_help">
+            <button type="button" id="hl-ai-btn" class="w-8 h-8 flex items-center justify-center rounded-full bg-white hover:bg-gray-50 active:scale-95 transition-all text-gray-700 relative overflow-hidden" title="Peça ajuda" aria-label="Peça ajuda" data-i18n-title="hl_ai_help" data-i18n-aria-label="hl_ai_help">
                 <img src="../assets/img/tutor.svg" class="w-4 h-4 pointer-events-none relative z-10" alt="Peça ajuda" data-i18n-alt="ask_help">
             </button>
         </div>

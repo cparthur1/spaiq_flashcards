@@ -3034,7 +3034,7 @@ async function executeAiEnhanceFromDoc(file) {
             reqHeaders['Authorization'] = `Bearer ${token}`;
         }
 
-        const batchSize = token ? 30 : pendingItems.length;
+        const batchSize = (token && isUserPro()) ? 30 : pendingItems.length;
         const batches = [];
         for (let i = 0; i < pendingItems.length; i += batchSize) {
             batches.push(pendingItems.slice(i, i + batchSize));

@@ -91,7 +91,7 @@ export async function verifyFirebaseIdToken(token, projectId) {
 
   // Check timing & claims
   const now = Math.floor(Date.now() / 1000);
-  if (payload.exp && payload.exp < now) {
+  if (typeof payload.exp !== 'number' || payload.exp < now) {
     throw new Error('Token expirado');
   }
   if (payload.aud !== projectId) {
@@ -102,6 +102,13 @@ export async function verifyFirebaseIdToken(token, projectId) {
   }
   if (!payload.sub || typeof payload.sub !== 'string' || payload.sub === 'undefined' || payload.sub === 'null' || payload.sub.includes('/') || payload.sub.includes('..')) {
     throw new Error('Subject (sub) do token inválido');
+  }
+  const signInProvider = payload.firebase?.sign_in_provider;
+  if (signInProvider !== 'google.com') {
+    throw new Error('Apenas login com Google é permitido');
+  }
+  if (payload.email_verified !== true) {
+    throw new Error('E-mail do Google não verificado');
   }
 
   let cryptoKey = cachedPublicCryptoKeys.get(header.kid);
@@ -148,7 +155,8 @@ export async function verifyFirebaseIdToken(token, projectId) {
     ...payload,
     uid: payload.sub,
     email: typeof payload.email === 'string' ? payload.email : '',
-    emailVerified: Boolean(payload.email_verified)
+    emailVerified: true,
+    signInProvider
   };
 }
 
@@ -288,6 +296,48 @@ export async function getFirebaseUserByEmail(serviceAccountConfig, email) {
       uid: data.users[0].localId,
       email: data.users[0].email,
       displayName: data.users[0].displayName
+    };
+  }
+  return null;
+}
+
+/**
+ * Look up an authoritative Firebase Auth user record by UID
+ */
+export async function getFirebaseUserByUid(serviceAccountConfig, uid) {
+  if (!uid || typeof uid !== 'string') return null;
+  const trimmedUid = uid.trim();
+  if (!trimmedUid || trimmedUid === 'undefined' || trimmedUid === 'null' || trimmedUid.includes('/') || trimmedUid.includes('..')) {
+    return null;
+  }
+  const accessToken = await getGoogleAdminAccessToken(serviceAccountConfig);
+  const projectId = serviceAccountConfig.project_id;
+
+  const url = `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:lookup`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ localId: [trimmedUid] })
+  });
+
+  if (!res.ok) {
+    return null;
+  }
+
+  const data = await res.json();
+  if (data.users && data.users.length > 0) {
+    const u = data.users[0];
+    const hasGoogleProvider = Array.isArray(u.providerUserInfo)
+      && u.providerUserInfo.some(p => p?.providerId === 'google.com');
+    return {
+      uid: u.localId,
+      email: typeof u.email === 'string' ? u.email : '',
+      emailVerified: Boolean(u.emailVerified),
+      hasGoogleProvider,
+      displayName: u.displayName || ''
     };
   }
   return null;

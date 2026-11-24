@@ -118,6 +118,16 @@ export async function refreshUserProStatus(user = (currentUser || auth.currentUs
     }
     userProStatus = { ...fetchedStatus, uid: user.uid };
     try { localStorage.setItem(`spaiq_pro_cache_${user.uid}`, encodeStoragePayload(userProStatus)); } catch (e) {}
+    // Keep Firebase Auth ID token custom claim (`pro`) in sync for Pro-gated Firestore security rules
+    if (typeof user.getIdTokenResult === 'function' && typeof user.getIdToken === 'function') {
+      try {
+        const tokenResult = await user.getIdTokenResult();
+        const tokenHasPro = tokenResult?.claims?.pro === true;
+        if (tokenHasPro !== Boolean(fetchedStatus.isPro)) {
+          await user.getIdToken(true);
+        }
+      } catch (e) {}
+    }
   } else {
     if (previousCached) userProStatus = previousCached;
   }

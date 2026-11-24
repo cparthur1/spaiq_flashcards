@@ -1936,6 +1936,13 @@ function attachRealtimeUserSnapshot(user) {
       }
     }, (err) => {
       console.warn('[RealtimeSync] Snapshot listener error on user doc:', err);
+      if (err?.code === 'permission-denied') {
+        if (userDocUnsubscribe) {
+          try { userDocUnsubscribe(); } catch (_) {}
+          userDocUnsubscribe = null;
+        }
+        subscribedUserUid = null;
+      }
     });
   } catch (e) {
     console.warn('[RealtimeSync] Could not attach user snapshot listener:', e);
@@ -1966,6 +1973,7 @@ export function initRealtimeCloudSync() {
 
   window.addEventListener('flashcards:pro-updated', () => {
     if (auth.currentUser && isUserPro(auth.currentUser)) {
+      directWriteForbiddenDocs.clear();
       attachRealtimeUserSnapshot(auth.currentUser);
     } else {
       attachRealtimeUserSnapshot(null);

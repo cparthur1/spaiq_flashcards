@@ -8,7 +8,7 @@
  * 4. User Quota & Pro Claim Management
  */
 
-import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail } from './google-auth.js';
+import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail, getFirebaseUserByUid } from './google-auth.js';
 import { callGemini, callGeminiDecision, callGeminiWithCoverageAudit } from './gemini.js';
 import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData, deleteDocument, findUserByApiKey } from './firestore.js';
 import { fetchCambluClubeStatus, resolveUserEntitlement } from './camblu-clube.js';
@@ -768,10 +768,20 @@ export default {
         }
 
         // Verify that the user is currently PRO (Lifetime, Stripe, or Clube CAMBLU tierCode >= 2)
+        // Always resolve the verified Google email from Firebase Auth (never trust client-writable userDoc.email)
+        const authUser = await getFirebaseUserByUid(serviceAccount, userId).catch(() => null);
+        const authoritativeEmail = (authUser && authUser.emailVerified && authUser.hasGoogleProvider)
+          ? authUser.email
+          : '';
         const entitlement = await getEntitlement({
           env,
           serviceAccount,
-          user: { uid: userId, email: userDoc.email || keyDoc?.email || '' },
+          user: {
+            uid: userId,
+            email: authoritativeEmail,
+            emailVerified: Boolean(authUser?.emailVerified && authUser?.hasGoogleProvider),
+            signInProvider: authUser?.hasGoogleProvider ? 'google.com' : 'unknown'
+          },
           userDoc,
           ctx
         });
@@ -1129,12 +1139,24 @@ export default {
         const sessionId = body.session_id || url.searchParams.get('session_id');
         const serviceAccount = getServiceAccount(env);
 
-        if (user) {
+        if (user && user.emailVerified === true && (!user.signInProvider || user.signInProvider === 'google.com')) {
           const lifetimeEmails = await getLifetimeProEmails(serviceAccount);
-          const isLifetime = lifetimeEmails.includes((user.email || '').toLowerCase().trim());
+          const normalizedEmail = (user.email || '').toLowerCase().trim();
+          const isLifetime = Boolean(normalizedEmail && lifetimeEmails.includes(normalizedEmail));
           if (isLifetime) {
-            await setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {});
-            return jsonResponse({ isPro: true, status: 'active', plan: 'pro_lifetime' }, 200, corsHeaders);
+            await Promise.all([
+              setFirebaseUserProClaim(serviceAccount, user.uid, true).catch(() => {}),
+              updateUserDocument(serviceAccount, user.uid, {
+                email: normalizedEmail,
+                subscription: {
+                  status: 'active',
+                  plan: 'pro_lifetime',
+                  provider: 'whitelist',
+                  updatedAt: new Date().toISOString()
+                }
+              }).catch(() => {})
+            ]);
+            return jsonResponse({ isPro: true, status: 'active', plan: 'pro_lifetime', proSource: 'whitelist' }, 200, corsHeaders);
           }
         }
 
@@ -1198,7 +1220,7 @@ export default {
             }
 
             // 2. Direct customer check by email in Stripe
-            if (user && user.email) {
+            if (user && user.email && user.emailVerified === true) {
               const stripeStatus = await checkCustomerProStatusInStripe({ env, email: user.email });
               if (stripeStatus.isPro) {
                 await Promise.all([
@@ -1483,6 +1505,14 @@ export default {
           const monthlyLimit = entitlement.monthlyIncluded;
           const hasUsedFreeTrial = Boolean(resolvedDoc?.freeAiDeckUsed);
           let extraGens = resolvedDoc?.extraGenerations || 0;
+
+          // Editor AI agent turns (isNewDeck === false) strictly require an active Pro entitlement
+          if (!isNewDeck && !isPro) {
+            return jsonResponse({
+              error: 'subscription_required',
+              message: 'O assistente de edição por IA é exclusivo para assinantes Flashcards Pro.'
+            }, 403, corsHeaders);
+          }
 
           // Quota check logic
           if (isNewDeck && !isLifetime) {
@@ -1810,14 +1840,26 @@ async function handleStripeWebhook(request, env) {
     }
 
     if (uid) {
-      const existingDoc = await getUserDocument(serviceAccount, uid).catch(() => null);
-      const email = (existingDoc?.email || '').toLowerCase().trim();
+      const authUser = await getFirebaseUserByUid(serviceAccount, uid).catch(() => null);
+      const email = (authUser && authUser.emailVerified && authUser.hasGoogleProvider)
+        ? (authUser.email || '').toLowerCase().trim()
+        : '';
       const lifetimeEmails = await getLifetimeProEmails(serviceAccount);
-      const isLifetime = lifetimeEmails.includes(email);
+      const isLifetime = Boolean(email && lifetimeEmails.includes(email));
       const cambluCheck = (!isLifetime && email) ? await fetchCambluClubeStatus(email, env).catch(() => null) : null;
 
       if (isLifetime) {
+        const nowIso = new Date().toISOString();
         await setFirebaseUserProClaim(serviceAccount, uid, true);
+        await updateUserDocument(serviceAccount, uid, {
+          email,
+          subscription: {
+            status: 'active',
+            plan: 'pro_lifetime',
+            provider: 'whitelist',
+            updatedAt: nowIso
+          }
+        }).catch(() => {});
         console.log(`[Stripe Webhook] Assinatura Stripe encerrada, mas usuário ${uid} mantém Pro Vitalício.`);
       } else if (cambluCheck?.ok && cambluCheck.isEligiblePro) {
         const nowIso = new Date().toISOString();

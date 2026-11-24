@@ -5175,6 +5175,10 @@ function handleOpenSubmit() {
 
 function handleMCSubmit(btn) {
     if (btn.disabled) return;
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && sel.toString().trim().length > 0 && btn.contains(sel.anchorNode)) {
+        return;
+    }
     const chosenText = btn.dataset.optionText || btn.querySelector('.mc-option-label')?.textContent || btn.textContent;
     const isCorrect = normalizeString(chosenText) === normalizeString(currentQuestion.answer);
     console.log("[Game] Opção múltipla escolha clicada:", {
@@ -6705,7 +6709,9 @@ const menuFeedbackBtn = document.getElementById('menu-feedback-btn');
 
 // --- TEXT HIGHLIGHTER & PASTEL COLORS LOGIC ---
 let activeHighlightRange = null;
-let activeHighlightField = null; // 'description' or 'answer'
+let activeHighlightField = null; // 'description', 'answer', or 'readonly-answer'
+let activeHighlightContainer = null;
+let activeHighlightCanHighlight = true;
 let isInteractingWithPopup = false;
 let selectionDebounceTimer = null;
 
@@ -6781,6 +6787,8 @@ function hideHighlightPopup() {
     isInteractingWithPopup = false;
     activeHighlightRange = null;
     activeHighlightField = null;
+    activeHighlightContainer = null;
+    activeHighlightCanHighlight = true;
     lastAiDefinitionTerm = '';
     lastAiDefinitionText = '';
     if (!textHighlightPopup || textHighlightPopup.classList.contains('hidden')) return;
@@ -6806,13 +6814,13 @@ function hideHighlightPopup() {
     }
     closeHighlightPalette(true);
     if (hlTriggerBtn) {
-        hlTriggerBtn.classList.remove('is-marked');
+        hlTriggerBtn.classList.remove('hidden', 'is-marked');
         hlTriggerBtn.title = t('highlighter_shortcut_title');
     }
     textHighlightPopup.classList.add('hidden');
 }
 
-function showHighlightPopup(range, isMarked) {
+function showHighlightPopup(range, isMarked, canHighlight = true) {
     if (!textHighlightPopup || !range) return;
 
     const rect = range.getBoundingClientRect();
@@ -6849,20 +6857,26 @@ function showHighlightPopup(range, isMarked) {
     }
 
     if (hlTriggerBtn) {
-        if (isMarked) {
-            hlTriggerBtn.classList.add('is-marked');
-            hlTriggerBtn.title = t('remove_highlight_title');
-        } else {
+        if (!canHighlight) {
+            hlTriggerBtn.classList.add('hidden');
             hlTriggerBtn.classList.remove('is-marked');
-            hlTriggerBtn.title = t('highlighter_shortcut_title');
+        } else {
+            hlTriggerBtn.classList.remove('hidden');
+            if (isMarked) {
+                hlTriggerBtn.classList.add('is-marked');
+                hlTriggerBtn.title = t('remove_highlight_title');
+            } else {
+                hlTriggerBtn.classList.remove('is-marked');
+                hlTriggerBtn.title = t('highlighter_shortcut_title');
+            }
         }
     }
 
     textHighlightPopup.classList.remove('hidden');
 
     const popupHeight = 44;
-    // Account for potential open palette or action buttons width (~220px) so popup never cuts off on mobile edges
-    const estimatedPopupWidth = 220;
+    // Account for potential open palette (5 colors + AI button) vs AI-only button width
+    const estimatedPopupWidth = canHighlight ? 260 : 56;
 
     const isMobile = window.innerWidth < 768;
     let left = isMobile ? window.innerWidth / 2 : (rect.left + rect.width / 2);
@@ -6916,35 +6930,84 @@ function isRangeMarked(range, container) {
     return false;
 }
 
-function getActiveTextSelection() {
-    const questionBody = document.getElementById('question-body-text') || questionText;
+function resolveTextSelectionTarget(range) {
+    if (!range) return null;
+    const common = range.commonAncestorContainer;
+
+    const isInside = (container) => {
+        if (!container) return false;
+        return container.contains(common) || (container.contains(range.startContainer) && container.contains(range.endContainer));
+    };
+
+    const questionBody = document.getElementById('question-body-text');
+    const feedbackElem = document.getElementById('question-feedback-text');
     const ankiAnswer = ankiAnswerText;
 
+    // 1. Revealed answer feedback (open, open_double, correction) — AI definition popup
+    if (feedbackElem && !feedbackElem.classList.contains('hidden') && isInside(feedbackElem)) {
+        return { field: 'readonly-answer', container: feedbackElem, canHighlight: false };
+    }
+
+    // 2. Question body (highlight + AI definition)
+    if (isInside(questionBody || questionText)) {
+        return { field: 'description', container: questionBody || questionText, canHighlight: true };
+    }
+
+    // 3. Anki answer (highlight + AI definition)
+    if (isInside(ankiAnswer) && !ankiAnswerContainer?.classList.contains('hidden')) {
+        return { field: 'answer', container: ankiAnswer, canHighlight: true };
+    }
+
+    // 4. Voice reference answer (highlight + AI definition)
+    if (isInside(voiceReferenceTextDisplay) && !voiceAnswerContainer?.classList.contains('hidden')) {
+        return { field: 'answer', container: voiceReferenceTextDisplay, canHighlight: true };
+    }
+
+    // 5. Voice evaluation feedback, spoken transcript & key points — AI definition popup
+    if (isInside(voiceAnswerContainer) && !voiceAnswerContainer?.classList.contains('hidden')) {
+        return { field: 'readonly-answer', container: voiceAnswerContainer, canHighlight: false };
+    }
+
+    // 6. Multiple choice options — AI definition popup
+    if (isInside(mcAnswerArea) && !mcAnswerArea?.classList.contains('hidden')) {
+        return { field: 'readonly-answer', container: mcAnswerArea, canHighlight: false };
+    }
+
+    // 7. Image arrows revealed answer labels — AI definition popup
+    if (isInside(imageArrowsInputsList) && !imageArrowsAnswerArea?.classList.contains('hidden')) {
+        return { field: 'readonly-answer', container: imageArrowsInputsList, canHighlight: false };
+    }
+
+    // 8. Flowchart answer steps — AI definition popup
+    if (isInside(flowchartAnswerArea) && !flowchartAnswerArea?.classList.contains('hidden')) {
+        return { field: 'readonly-answer', container: flowchartAnswerArea, canHighlight: false };
+    }
+
+    return null;
+}
+
+function getActiveTextSelection() {
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0 && !sel.isCollapsed && sel.toString().trim().length > 0) {
         const range = sel.getRangeAt(0);
-        const common = range.commonAncestorContainer;
-
-        const isInside = (container) => {
-            if (!container) return false;
-            return container.contains(common) || (container.contains(range.startContainer) && container.contains(range.endContainer));
-        };
-
-        if (isInside(questionBody)) {
-            return { range: range.cloneRange(), field: 'description', container: questionBody };
-        }
-        if (isInside(ankiAnswer) && !ankiAnswerContainer?.classList.contains('hidden')) {
-            return { range: range.cloneRange(), field: 'answer', container: ankiAnswer };
-        }
-        if (isInside(voiceReferenceTextDisplay) && !voiceAnswerContainer?.classList.contains('hidden')) {
-            return { range: range.cloneRange(), field: 'answer', container: voiceReferenceTextDisplay };
+        const resolved = resolveTextSelectionTarget(range);
+        if (resolved) {
+            return { range: range.cloneRange(), ...resolved };
         }
     }
 
     if (activeHighlightRange && activeHighlightField && textHighlightPopup && !textHighlightPopup.classList.contains('hidden')) {
-        const container = activeHighlightField === 'description' ? questionBody : ankiAnswer;
+        const fallbackContainer = activeHighlightField === 'description'
+            ? (document.getElementById('question-body-text') || questionText)
+            : ankiAnswerText;
+        const container = activeHighlightContainer || fallbackContainer;
         if (container) {
-            return { range: activeHighlightRange, field: activeHighlightField, container };
+            return {
+                range: activeHighlightRange,
+                field: activeHighlightField,
+                container,
+                canHighlight: activeHighlightCanHighlight
+            };
         }
     }
 
@@ -6954,11 +7017,11 @@ function getActiveTextSelection() {
 function applyHighlight(color) {
     isInteractingWithPopup = false;
     clearTimeout(selectionDebounceTimer);
-    if (!activeHighlightRange || !activeHighlightField) return;
+    if (!activeHighlightRange || !activeHighlightField || !activeHighlightCanHighlight) return;
 
-    const container = activeHighlightField === 'description'
+    const container = activeHighlightContainer || (activeHighlightField === 'description'
         ? (document.getElementById('question-body-text') || questionText)
-        : ankiAnswerText;
+        : ankiAnswerText);
     if (!container) return;
 
     const range = activeHighlightRange;
@@ -6985,7 +7048,7 @@ function applyHighlight(color) {
     if (targetMark && targetMark.textContent.trim() === selectedText) {
         targetMark.className = `card-hl card-hl-${color}`;
         container.normalize();
-        persistHighlightedContent(activeHighlightField);
+        persistHighlightedContent(activeHighlightField, container);
         hideHighlightPopup();
         const sel = window.getSelection();
         if (sel) sel.removeAllRanges();
@@ -7019,7 +7082,7 @@ function applyHighlight(color) {
     }
 
     container.normalize();
-    persistHighlightedContent(activeHighlightField);
+    persistHighlightedContent(activeHighlightField, container);
     hideHighlightPopup();
 
     const sel = window.getSelection();
@@ -7028,11 +7091,11 @@ function applyHighlight(color) {
 
 function removeHighlight() {
     isInteractingWithPopup = false;
-    if (!activeHighlightRange || !activeHighlightField) return;
+    if (!activeHighlightRange || !activeHighlightField || !activeHighlightCanHighlight) return;
 
-    const container = activeHighlightField === 'description'
+    const container = activeHighlightContainer || (activeHighlightField === 'description'
         ? (document.getElementById('question-body-text') || questionText)
-        : ankiAnswerText;
+        : ankiAnswerText);
     if (!container) return;
 
     const range = activeHighlightRange;
@@ -7062,7 +7125,7 @@ function removeHighlight() {
 
     if (removedAny) {
         container.normalize();
-        persistHighlightedContent(activeHighlightField);
+        persistHighlightedContent(activeHighlightField, container);
     }
 
     hideHighlightPopup();
@@ -7070,15 +7133,21 @@ function removeHighlight() {
     if (sel) sel.removeAllRanges();
 }
 
-function persistHighlightedContent(targetField) {
+function persistHighlightedContent(targetField, targetContainer = null) {
     if (!currentQuestion) return;
 
     if (targetField === 'description') {
         const bodyElem = document.getElementById('question-body-text');
         const descHtml = bodyElem ? bodyElem.innerHTML : questionText.innerHTML;
         currentQuestion.description = descHtml;
-    } else if (targetField === 'answer' && ankiAnswerText) {
-        currentQuestion.answer = ankiAnswerText.innerHTML;
+    } else if (targetField === 'answer') {
+        const answerSource = targetContainer || ankiAnswerText;
+        if (answerSource) {
+            currentQuestion.answer = answerSource.innerHTML;
+            if (ankiAnswerText && answerSource !== ankiAnswerText) {
+                ankiAnswerText.innerHTML = currentQuestion.answer;
+            }
+        }
     }
 
     // Update reference in allQuestions
@@ -7158,26 +7227,9 @@ function handleTextSelection(e) {
     }
 
     const range = sel.getRangeAt(0);
-    const common = range.commonAncestorContainer;
+    const target = resolveTextSelectionTarget(range);
 
-    const questionBody = document.getElementById('question-body-text') || questionText;
-    const ankiAnswer = ankiAnswerText;
-
-    let field = null;
-    let container = null;
-
-    const isInside = (c) => {
-        if (!c) return false;
-        return c.contains(common) || (c.contains(range.startContainer) && c.contains(range.endContainer));
-    };
-
-    if (isInside(questionBody)) {
-        field = 'description';
-        container = questionBody;
-    } else if (isInside(ankiAnswer) && !ankiAnswerContainer?.classList.contains('hidden')) {
-        field = 'answer';
-        container = ankiAnswer;
-    } else {
+    if (!target) {
         if (!isInteractingWithPopup) {
             hideHighlightPopup();
         }
@@ -7185,14 +7237,16 @@ function handleTextSelection(e) {
     }
 
     activeHighlightRange = range.cloneRange();
-    activeHighlightField = field;
+    activeHighlightField = target.field;
+    activeHighlightContainer = target.container;
+    activeHighlightCanHighlight = target.canHighlight;
 
     if (chatInput && document.activeElement === chatInput) {
         chatInput.blur();
     }
 
-    const isMarked = isRangeMarked(range, container);
-    showHighlightPopup(range, isMarked);
+    const isMarked = target.canHighlight ? isRangeMarked(range, target.container) : false;
+    showHighlightPopup(range, isMarked, target.canHighlight);
 }
 
 if (hlTriggerBtn) {
@@ -7569,7 +7623,11 @@ function onSelectionChange() {
     if (isInteractingWithPopup) return;
     const activeEl = document.activeElement;
     if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-        return;
+        const sel = window.getSelection();
+        const hasCardSelection = sel && sel.rangeCount > 0 && !sel.isCollapsed && Boolean(resolveTextSelectionTarget(sel.getRangeAt(0)));
+        if (!hasCardSelection) {
+            return;
+        }
     }
     clearTimeout(selectionDebounceTimer);
     selectionDebounceTimer = setTimeout(() => {
@@ -7621,15 +7679,22 @@ document.addEventListener('click', (e) => {
         }
 
         const ankiAnswer = ankiAnswerText;
-        const field = (ankiAnswer && ankiAnswer.contains(mark)) ? 'answer' : 'description';
+        const isAnkiAnswer = Boolean(ankiAnswer && ankiAnswer.contains(mark));
+        const isVoiceRefAnswer = Boolean(voiceReferenceTextDisplay && voiceReferenceTextDisplay.contains(mark));
+        const field = (isAnkiAnswer || isVoiceRefAnswer) ? 'answer' : 'description';
+        const container = isAnkiAnswer
+            ? ankiAnswer
+            : (isVoiceRefAnswer ? voiceReferenceTextDisplay : (document.getElementById('question-body-text') || questionText));
 
         const range = document.createRange();
         range.selectNode(mark);
         activeHighlightRange = range.cloneRange();
         activeHighlightField = field;
+        activeHighlightContainer = container;
+        activeHighlightCanHighlight = true;
 
         isInteractingWithPopup = true;
-        showHighlightPopup(range, true);
+        showHighlightPopup(range, true, true);
         return;
     }
 
@@ -9130,9 +9195,11 @@ initInputController({
     isChatOpen: () => Boolean(aiChatContainer && aiChatContainer.classList.contains('open')),
     onHighlightShortcut: (hlColor) => {
         const target = getActiveTextSelection();
-        if (target) {
+        if (target && target.canHighlight) {
             activeHighlightRange = target.range;
             activeHighlightField = target.field;
+            activeHighlightContainer = target.container;
+            activeHighlightCanHighlight = true;
             applyHighlight(hlColor);
             return true;
         }

@@ -23,7 +23,7 @@ function isTextInputElement(el) {
 function handleKeyDown(e) {
     if (!controllerHandlers) return;
 
-    // Atalhos rápidos de marca-texto (1: Amarelo, 2: Verde, 3: Azul, 4: Roxo)
+    // Atalhos rápidos de marca-texto (1: Amarelo, 2: Verde, 3: Azul, 4: Roxo, 5: Vermelho)
     // Tenta aplicar o marca-texto com prioridade quando há texto do cartão selecionado ou popup de marca-texto ativo
     if (!e.ctrlKey && !e.metaKey && !e.altKey) {
         let hlColor = null;
@@ -31,6 +31,7 @@ function handleKeyDown(e) {
         else if (e.key === '2' || e.code === 'Numpad2') hlColor = 'green';
         else if (e.key === '3' || e.code === 'Numpad3') hlColor = 'blue';
         else if (e.key === '4' || e.code === 'Numpad4') hlColor = 'purple';
+        else if (e.key === '5' || e.code === 'Numpad5') hlColor = 'red';
 
         if (hlColor && controllerHandlers.onHighlightShortcut) {
             const handled = controllerHandlers.onHighlightShortcut(hlColor);

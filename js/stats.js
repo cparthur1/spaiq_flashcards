@@ -112,6 +112,7 @@ const hlCountYellow = document.getElementById('hl-count-yellow');
 const hlCountGreen = document.getElementById('hl-count-green');
 const hlCountBlue = document.getElementById('hl-count-blue');
 const hlCountPurple = document.getElementById('hl-count-purple');
+const hlCountRed = document.getElementById('hl-count-red');
 
 // History Elements
 const alltimeSessions = document.getElementById('alltime-sessions');
@@ -647,6 +648,7 @@ function renderHighlightsStats(gameState) {
     let greenCount = 0;
     let blueCount = 0;
     let purpleCount = 0;
+    let redCount = 0;
 
     cards.forEach(q => {
         const text = `${q.description || ''} ${q.answer || ''}`;
@@ -654,8 +656,9 @@ function renderHighlightsStats(gameState) {
         const greenMatches = text.match(/card-hl-green/g) || [];
         const blueMatches = text.match(/card-hl-blue/g) || [];
         const purpleMatches = text.match(/card-hl-purple/g) || [];
+        const redMatches = text.match(/card-hl-red/g) || [];
 
-        const totalCardMarks = yellowMatches.length + greenMatches.length + blueMatches.length + purpleMatches.length;
+        const totalCardMarks = yellowMatches.length + greenMatches.length + blueMatches.length + purpleMatches.length + redMatches.length;
         if (totalCardMarks > 0) {
             markedCardsCount++;
             totalHighlightsCount += totalCardMarks;
@@ -663,6 +666,7 @@ function renderHighlightsStats(gameState) {
             greenCount += greenMatches.length;
             blueCount += blueMatches.length;
             purpleCount += purpleMatches.length;
+            redCount += redMatches.length;
         }
     });
 
@@ -677,6 +681,7 @@ function renderHighlightsStats(gameState) {
     if (hlCountGreen) hlCountGreen.textContent = greenCount;
     if (hlCountBlue) hlCountBlue.textContent = blueCount;
     if (hlCountPurple) hlCountPurple.textContent = purpleCount;
+    if (hlCountRed) hlCountRed.textContent = redCount;
 }
 
 let showAllTimelineCards = false;
