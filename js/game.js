@@ -213,8 +213,6 @@ const ankiBtnEasy = document.getElementById('anki-btn-easy');
 
 // Voice "Explicar em voz alta" DOM Elements
 const voiceAnswerContainer = document.getElementById('voice-answer-container');
-const voiceUserTranscriptDisplay = document.getElementById('voice-user-transcript-display');
-const voiceReferenceTextDisplay = document.getElementById('voice-reference-text-display');
 const voiceAiFeedbackText = document.getElementById('voice-ai-feedback-text');
 const voiceEvaluationRatingBadge = document.getElementById('voice-evaluation-rating-badge');
 const voiceKeyPointsContainer = document.getElementById('voice-key-points-container');
@@ -3864,7 +3862,7 @@ function cancelActiveAnkiFlipAnimation() {
     }
 }
 
-function revealAnkiAnswerContent() {
+function revealAnkiAnswerContent({ showAnkiControls = true } = {}) {
     if (ankiAnswerContainer) {
         ankiAnswerText.innerHTML = renderMathAndMarkdown(currentQuestion.answer || '');
         const ansImg = currentQuestion?.answerImage || currentQuestion?.answerImageUrl || currentQuestion?.ansImage || '';
@@ -3882,8 +3880,10 @@ function revealAnkiAnswerContent() {
         ankiAnswerContainer.classList.remove('hidden');
     }
 
-    if (ankiUnflippedControls) ankiUnflippedControls.classList.add('hidden');
-    if (ankiFlippedControls) ankiFlippedControls.classList.remove('hidden');
+    if (showAnkiControls) {
+        if (ankiUnflippedControls) ankiUnflippedControls.classList.add('hidden');
+        if (ankiFlippedControls) ankiFlippedControls.classList.remove('hidden');
+    }
 }
 
 function flipAnkiCard() {
@@ -4421,7 +4421,7 @@ async function finishVoiceRecordingAndSend() {
         if (voiceGeminiGlow) voiceGeminiGlow.classList.add('hidden');
         if (voiceThinkingMsg) voiceThinkingMsg.classList.add('hidden');
 
-        renderVoiceAnswerAndEvaluation(evaluation, evaluation.user_transcript || '');
+        renderVoiceAnswerAndEvaluation(evaluation);
 
         // Border pulsates light blue once
         if (questionCard) {
@@ -4442,11 +4442,10 @@ async function finishVoiceRecordingAndSend() {
 
         renderVoiceAnswerAndEvaluation({
             rating: 'good',
-            feedback: 'A conexão com a IA oscilou, mas você pode conferir a explicação de referência abaixo e avaliar seu aprendizado.',
-            user_transcript: '(Áudio gravado)',
+            feedback: 'A conexão com a IA oscilou, mas você pode conferir a resposta do card e avaliar seu aprendizado.',
             key_points_covered: [],
             key_points_missed: []
-        }, '(Áudio gravado)');
+        });
 
         if (questionCard && isAnimationsEnabled()) {
             questionCard.classList.remove('voice-border-pulse');
@@ -4474,15 +4473,14 @@ ${reference}
 
 DIRETRIZES DE AVALIAÇÃO:
 1. Ouça com atenção o arquivo de áudio do estudante.
-2. Forneça no campo 'user_transcript' uma transcrição concisa do que o aluno explicou no áudio. Se o áudio estiver inaudível, vazio ou contiver apenas ruído, registre isso claramente no 'user_transcript'.
-3. Avalie a compreensão substantiva e técnica. Não exija palavras idênticas, mas sim a precisão da ideia, mecanismos e termos fundamentais.
-4. Seja construtivo e pedagógico no feedback (2 a 3 frases em português) no campo 'feedback'. Destaque o que o estudante acertou e o que faltou ou pode ser refinado.
-5. Classifique o desempenho seguindo as opções dos cards Anki:
+2. Avalie a compreensão substantiva e técnica. Não exija palavras idênticas, mas sim a precisão da ideia, mecanismos e termos fundamentais.
+3. Seja construtivo e pedagógico no feedback (2 a 3 frases em português) no campo 'feedback'. Destaque o que o estudante acertou e o que faltou ou pode ser refinado.
+4. Classifique o desempenho seguindo as opções dos cards Anki:
    - "again": Errou conceitos fundamentais, disse algo incoerente, não explicou o conceito pedido ou o áudio estava vazio/inaudível.
    - "hard": Lembrou de parte do conceito, mas com hesitações graves, definições imprecisas ou faltou elemento essencial.
    - "good": Boa explicação, cobriu os pilares essenciais do conceito com clareza.
    - "easy": Explicação completa, precisa, com excelente articulação e domínio técnico.
-6. Chame OBRIGATORIAMENTE a ferramenta 'classify_voice_response' com os campos 'rating', 'feedback', 'user_transcript', 'key_points_covered' e 'key_points_missed'.
+5. Chame OBRIGATORIAMENTE a ferramenta 'classify_voice_response' com os campos 'rating', 'feedback', 'key_points_covered' e 'key_points_missed'.
 `;
 
     const classifyVoiceTool = {
@@ -4501,10 +4499,6 @@ DIRETRIZES DE AVALIAÇÃO:
                         feedback: {
                             type: "STRING",
                             description: "Feedback pedagógico claro e construtivo em português."
-                        },
-                        user_transcript: {
-                            type: "STRING",
-                            description: "Transcrição resumida do que o aluno explicou no áudio."
                         },
                         key_points_covered: {
                             type: "ARRAY",
@@ -4572,7 +4566,6 @@ DIRETRIZES DE AVALIAÇÃO:
         return {
             rating: args.rating || 'good',
             feedback: args.feedback || 'Avaliação concluída.',
-            user_transcript: args.user_transcript || '',
             key_points_covered: Array.isArray(args.key_points_covered) ? args.key_points_covered : [],
             key_points_missed: Array.isArray(args.key_points_missed) ? args.key_points_missed : []
         };
@@ -4586,7 +4579,6 @@ DIRETRIZES DE AVALIAÇÃO:
             return {
                 rating: parsed.rating || 'good',
                 feedback: parsed.feedback || textPart,
-                user_transcript: parsed.user_transcript || '',
                 key_points_covered: parsed.key_points_covered || [],
                 key_points_missed: parsed.key_points_missed || []
             };
@@ -4596,19 +4588,17 @@ DIRETRIZES DE AVALIAÇÃO:
     return {
         rating: 'good',
         feedback: textPart || 'Conceito revisado com sucesso.',
-        user_transcript: '',
         key_points_covered: [],
         key_points_missed: []
     };
 }
 
-function renderVoiceAnswerAndEvaluation(evaluation, userSpokenText) {
-    if (voiceUserTranscriptDisplay) {
-        voiceUserTranscriptDisplay.textContent = userSpokenText || t('voice_no_transcript_detected') || '(Nenhuma transcrição detectada)';
-    }
-    if (voiceReferenceTextDisplay) {
-        voiceReferenceTextDisplay.innerHTML = renderMathAndMarkdown(currentQuestion.answer || '');
-    }
+function renderVoiceAnswerAndEvaluation(evaluation) {
+    // Render the card already flipped when Gemini finishes thinking
+    isAnkiFlipped = true;
+    if (questionCard) questionCard.classList.remove('anki-flippable-card');
+    revealAnkiAnswerContent({ showAnkiControls: false });
+
     if (voiceAiFeedbackText) {
         voiceAiFeedbackText.textContent = evaluation.feedback || '';
     }
@@ -7028,12 +7018,7 @@ function resolveTextSelectionTarget(range) {
         return { field: 'answer', container: ankiAnswer, canHighlight: true };
     }
 
-    // 4. Voice reference answer (highlight + AI definition)
-    if (isInside(voiceReferenceTextDisplay) && !voiceAnswerContainer?.classList.contains('hidden')) {
-        return { field: 'answer', container: voiceReferenceTextDisplay, canHighlight: true };
-    }
-
-    // 5. Voice evaluation feedback, spoken transcript & key points — AI definition popup
+    // 4. Voice evaluation feedback & key points — AI definition popup
     if (isInside(voiceAnswerContainer) && !voiceAnswerContainer?.classList.contains('hidden')) {
         return { field: 'readonly-answer', container: voiceAnswerContainer, canHighlight: false };
     }
@@ -7750,11 +7735,10 @@ document.addEventListener('click', (e) => {
 
         const ankiAnswer = ankiAnswerText;
         const isAnkiAnswer = Boolean(ankiAnswer && ankiAnswer.contains(mark));
-        const isVoiceRefAnswer = Boolean(voiceReferenceTextDisplay && voiceReferenceTextDisplay.contains(mark));
-        const field = (isAnkiAnswer || isVoiceRefAnswer) ? 'answer' : 'description';
+        const field = isAnkiAnswer ? 'answer' : 'description';
         const container = isAnkiAnswer
             ? ankiAnswer
-            : (isVoiceRefAnswer ? voiceReferenceTextDisplay : (document.getElementById('question-body-text') || questionText));
+            : (document.getElementById('question-body-text') || questionText);
 
         const range = document.createRange();
         range.selectNode(mark);

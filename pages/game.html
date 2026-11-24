@@ -480,9 +480,9 @@
                 </div>
             </div>
 
-            <!-- Voice "Explicar em voz alta" Answer & Feedback Reveal Area (Clean 2-Tier Hierarchy) -->
+            <!-- Voice "Explicar em voz alta" AI Evaluation Area -->
             <div id="voice-answer-container" class="hidden w-full mt-4 pt-4 border-t border-[var(--md-sys-color-outline-variant)] flex flex-col gap-3 text-left">
-                <!-- Primary Tier: AI Evaluation & Key Points -->
+                <!-- AI Evaluation & Key Points -->
                 <div id="voice-ai-feedback-card" class="w-full p-4 rounded-2xl bg-purple-50/75 border border-purple-200/80 space-y-2.5">
                     <div class="flex items-center justify-between gap-2 flex-wrap">
                         <div class="flex items-center gap-1.5 text-xs font-bold text-purple-800">
@@ -509,24 +509,6 @@
                             </span>
                             <div id="voice-points-missed-chips" class="flex flex-wrap gap-1"></div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Secondary Tier: Clean Divider Comparison (No Heavy Nested Card Frames) -->
-                <div class="w-full rounded-2xl bg-white/85 divide-y divide-[var(--md-sys-color-outline-variant)]/70 overflow-hidden">
-                    <div class="px-3.5 py-3">
-                        <div class="flex items-center gap-1.5 mb-1 text-[11px] font-bold uppercase tracking-wider text-[#3b82f7]">
-                            <span class="material-symbols-rounded text-sm">record_voice_over</span>
-                            <span data-i18n="voice_your_answer">Sua explicação falada</span>
-                        </div>
-                        <p id="voice-user-transcript-display" class="text-sm text-[var(--md-sys-color-on-surface-variant)] leading-relaxed italic"></p>
-                    </div>
-                    <div class="px-3.5 py-3 bg-blue-50/35">
-                        <div class="flex items-center gap-1.5 mb-1 text-[11px] font-bold uppercase tracking-wider text-[#1e3a8a]">
-                            <span class="material-symbols-rounded text-sm text-[#3b82f7]">menu_book</span>
-                            <span data-i18n="voice_reference_answer">Explicação de Referência</span>
-                        </div>
-                        <div id="voice-reference-text-display" class="text-sm text-[var(--md-sys-color-on-surface)] leading-relaxed anki-markdown-content"></div>
                     </div>
                 </div>
             </div>
