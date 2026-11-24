@@ -573,7 +573,7 @@ export const TRANSLATIONS = {
     rule4_title: 'No Cloze, Oculte o Conceito Central, Não a Sintaxe',
     rule4_desc: 'Ao utilizar o modo de preenchimento de lacunas (fill), posicione as chaves {...} estritamente sobre a palavra técnica chave ou elemento causal, preservando todo o restante da oração gramaticalmente intacto.',
     rule5_title: 'Otimize Distratores com IA Gemini ("Aprimore um doc")',
-    rule5_desc: 'Elaborar alternativas falsas, porém verossímeis, para cartões de múltipla escolha consome muito tempo. No nosso app, basta criar a pergunta com a resposta correta e clicar no modo "Aprimore um doc" (Opção 2.2): o Gemini Flash analisa o contexto e preenche automaticamente as alternativas plausíveis.',
+    rule5_desc: 'Elaborar alternativas falsas, porém verossímeis, para cartões de múltipla escolha consome muito tempo. No nosso app, basta criar a pergunta com a resposta correta e clicar no modo "Aprimore um doc": a IA analisa o contexto e preenche automaticamente as alternativas plausíveis.',
     rule6_title: 'Grooming Regular: Refatore Cartões que Causam Erros Repetidos',
     rule6_desc: 'Se um cartão atinge o status de "Sanguessuga" (Leech, ≥ 4 erros) nas estatísticas analíticas do app, não insista em decorá-lo na marra. Esse é o diagnóstico infalível de que o cartão está mal redigido, vago ou complexo demais. Clique no ícone de lápis no jogo, edite a redação e reestruture-o como dois cartões atômicos.',
 
@@ -1031,7 +1031,7 @@ export const TRANSLATIONS = {
     "notebook_shared_copied": "Caderno compartilhado!\n\nLink copiado para a área de transferência:\n{url}",
     "error_sharing_notebook": "Erro ao compartilhar caderno.",
     "extra_deck_title": "Geração de Baralho com IA",
-    "extra_deck_subtitle": "Gere um baralho completo usando Gemini Flash Thinking a partir de seus arquivos e notas.",
+    "extra_deck_subtitle": "Gere um baralho completo com Inteligência Artificial a partir de seus arquivos e notas.",
     "extra_deck_title_pro": "Geração de Baralho Extra",
     "extra_deck_subtitle_pro": "Gere um baralho adicional usando Gemini High Thinking sem aguardar a renovação mensal.",
     "per_deck": "/ baralho",
@@ -1542,7 +1542,7 @@ export const TRANSLATIONS = {
     stable_status: "Estável",
     ai_categorization_title: "Categorização Inteligente",
     ai_categorization_desc: "Classifique os cards para analisar a performance por categoria",
-    recalculate_ai_cat_tooltip: "Recalcular categorização com Gemini Flash-Lite",
+    recalculate_ai_cat_tooltip: "Recalcular categorização com IA",
     recategorize_with_ai: "Recategorizar com IA",
     topics_of_this_deck: "Assuntos deste Baralho",
     worst_to_best_tooltip: "Lista ordenada do menor para o maior desempenho",
@@ -1734,7 +1734,7 @@ export const TRANSLATIONS = {
     processing_file_progress: "Processando arquivo {current} de {total}: {name}...",
     connecting_gemini_generating: "Conectando ao Gemini e gerando os cartões...",
     verifying_material_coverage: "Verificando se todos os conceitos dos materiais foram abordados ({count} cards)...",
-    complementing_missing_concepts: "Complementando {count} conteúdos pouco abordados com o Gemini Flash...",
+    complementing_missing_concepts: "Complementando {count} conteúdos pouco abordados com IA...",
     deck_complemented_chat_msg: "✓ Baralho gerado e complementado! Adicionei mais {added} flashcards (total: {total}) cobrindo: {topics}. Quer que eu ajuste algo?",
     deck_generated_chat_msg: "✓ Baralho gerado com sucesso! Criei {count} flashcards técnicos com base no material enviado. Quer que eu ajuste algo, adicione mais perguntas ou altere alguma alternativa?",
     deck_generation_empty_chat_msg: "Não foi possível extrair flashcards a partir dos materiais fornecidos. Tente enviar outros arquivos ou descrever o conteúdo.",
@@ -1774,7 +1774,7 @@ export const TRANSLATIONS = {
     categorize_deck_with_ai_title: "Categorizar Baralho com IA",
     categorize_deck_with_ai_desc: "Classifique os cards de \"<b>{title}</b>\" em tópicos e matérias para análise de retenção. A categorização é permanente e salva no seu navegador.",
     categorize_with_ai_btn: "Categorizar com IA",
-    analyzing_decks_gemini_title: "Analisando Baralhos e Assuntos com Gemini Flash-Lite...",
+    analyzing_decks_gemini_title: "Analisando Baralhos e Assuntos com IA...",
     analyzing_decks_gemini_desc: "Categorizando seus baralhos em matérias amplas e mapeando os tópicos específicos dos cards com o menor número possível de categorias.",
     ai_stats_generated_toast: "Estatísticas de IA geradas e salvas com sucesso!",
     ai_stats_error_title: "Não foi possível gerar as estatísticas com IA",
@@ -1804,6 +1804,47 @@ export const TRANSLATIONS = {
     ai_decision_reason_vague_or_incomplete: "Resposta vaga ou incompleta para os critérios ({confidence}% de confiança).",
     ai_decision_reason_accepted: "Aceito pela IA como semanticamente equivalente ({confidence}% de confiança).",
     ai_decision_reason_rejected: "Mantido como incorreto pela IA ({confidence}% de confiança).",
+    flowchart_correct_sequence_title: "Sequência correta do fluxograma",
+    flowchart_end_label: "Fim",
+    voice_points_covered_label: "Pontos abordados",
+    voice_points_missed_label: "Pontos ausentes",
+    no_limit_short: "Sem limite",
+    editor_back_to_modes: "Voltar aos modos de criação",
+    confirm_leave_generating: "A geração por IA ainda está em andamento. Deseja voltar aos modos de criação?",
+    modal_2_2_guide_summary: "Tags aprimoradas automaticamente pela IA",
+    modal_2_2_guide_intro: "Todas as tags padrão e pacotes Anki (.apkg) são suportados. As tags abaixo recebem preenchimento inteligente automático pela IA:",
+    modal_2_2_mc_desc: "Você informa apenas o gabarito correto e a IA cria 3 alternativas distratoras plausíveis no mesmo nível técnico.",
+    modal_2_2_double_desc: "A IA gera rótulos contextuais (ex.: Diagnóstico e Conduta) para guiar cada campo de resposta durante o jogo.",
+    modal_2_2_fill_desc: "Use {termo} para definir lacunas exatas ou deixe _ em branco para a IA inferir as respostas corretas pelo contexto.",
+    modal_2_2_other_formats: "Outros formatos aceitos:",
+    load_more_decks_short: "Mais",
+    search_loaded_cards_placeholder: "Filtrar cartões carregados...",
+    bulk_edit_structured_note: "As etapas do fluxograma ou marcações de setas deste cartão serão preservadas automaticamente.",
+    color_label: "Cor:",
+    delete_selected_arrow: "Apagar seta",
+    monthly_label: "Mensal",
+    account_chip_label: "Gerenciar conta",
+    view_subjects_in_history: "Ver matérias no Histórico",
+    timeline_inspect_hint: "Toque ou passe o cursor em um card para ver os detalhes",
+    chart_inspect_hint: "Toque ou passe o cursor em uma barra para ver os detalhes da sessão",
+    ai_badge_short: "IA",
+    dialog_ok: "Entendi",
+    dialog_confirm: "Confirmar",
+    dialog_alert_title: "Aviso",
+    dialog_confirm_title: "Confirmação",
+    dialog_danger_title: "Confirmar ação",
+    dialog_prompt_title: "Digite para continuar",
+    dialog_input_placeholder: "Digite aqui...",
+    explore_load_deck_short: "Carregar",
+    explore_mix_decks_short: "Misturar",
+    explore_create_deck_short: "Criar baralho",
+    ai_editor_subtitle: "Assistente Gemini",
+    ai_editor_chip_add_cards: "Adicionar 3 cards",
+    ai_editor_prompt_add_cards: "Adicione 3 novos cartões de alta qualidade que complementem este baralho.",
+    ai_editor_chip_improve: "Melhorar enunciados",
+    ai_editor_prompt_improve: "Revise e deixe as perguntas e respostas deste baralho mais claras e objetivas.",
+    ai_editor_chip_mc: "Criar múltipla escolha",
+    ai_editor_prompt_mc: "Crie 3 cartões de múltipla escolha bem elaborados sobre o tema deste baralho.",
   },
 
   'en-US': {
@@ -2365,7 +2406,7 @@ export const TRANSLATIONS = {
     rule4_title: 'In Cloze, Conceal the Core Concept, Not the Syntax',
     rule4_desc: 'When using fill mode, place brackets {...} strictly over the key technical term or causal agent, keeping the surrounding sentence grammatically intact.',
     rule5_title: 'Generate Plausible Distractors with Gemini ("Enhance a doc")',
-    rule5_desc: 'Crafting credible incorrect options for multiple choice cards takes time. In our app, type the question and answer, then click "Enhance a doc" (Option 2.2): Gemini Flash fills in realistic alternatives automatically.',
+    rule5_desc: 'Crafting credible incorrect options for multiple choice cards takes time. In our app, type the question and answer, then click "Enhance a doc": AI analyzes the context and fills in realistic alternatives automatically.',
     rule6_title: 'Regular Grooming: Refactor Chronic Leech Cards',
     rule6_desc: 'If a card reaches Leech status (≥ 4 mistakes) in your analytics, do not stubbornly force it. It is a sure sign the card is ambiguous, vague, or too broad. Edit it into two crisp atomic cards.',
 
@@ -2823,7 +2864,7 @@ export const TRANSLATIONS = {
     "notebook_shared_copied": "Notebook shared!\n\nLink copied to clipboard:\n{url}",
     "error_sharing_notebook": "Error sharing notebook.",
     "extra_deck_title": "AI Deck Generation",
-    "extra_deck_subtitle": "Generate a complete deck using Gemini Flash Thinking from your study materials.",
+    "extra_deck_subtitle": "Generate a complete deck with AI from your study materials and notes.",
     "extra_deck_title_pro": "Extra Deck Generation",
     "extra_deck_subtitle_pro": "Generate an additional deck using Gemini High Thinking without waiting for monthly renewal.",
     "per_deck": "/ deck",
@@ -3334,7 +3375,7 @@ export const TRANSLATIONS = {
     stable_status: "Stable",
     ai_categorization_title: "Smart Categorization",
     ai_categorization_desc: "Categorize cards to analyze performance by topic and subject",
-    recalculate_ai_cat_tooltip: "Recalculate categorization with Gemini Flash-Lite",
+    recalculate_ai_cat_tooltip: "Recalculate categorization with AI",
     recategorize_with_ai: "Recategorize with AI",
     topics_of_this_deck: "Topics in this Deck",
     worst_to_best_tooltip: "Sorted from lowest to highest retention",
@@ -3526,7 +3567,7 @@ export const TRANSLATIONS = {
     processing_file_progress: "Processing file {current} of {total}: {name}...",
     connecting_gemini_generating: "Connecting to Gemini and generating cards...",
     verifying_material_coverage: "Checking whether all concepts from the materials were covered ({count} cards)...",
-    complementing_missing_concepts: "Complementing {count} under-covered topics with Gemini Flash...",
+    complementing_missing_concepts: "Complementing {count} under-covered topics with AI...",
     deck_complemented_chat_msg: "✓ Deck generated and complemented! Added {added} more flashcards (total: {total}) covering: {topics}. Want me to adjust anything?",
     deck_generated_chat_msg: "✓ Deck generated successfully! I created {count} technical flashcards based on your material. Want me to adjust anything, add more questions, or edit an option?",
     deck_generation_empty_chat_msg: "Could not extract flashcards from the provided materials. Try uploading other files or describing the content.",
@@ -3566,7 +3607,7 @@ export const TRANSLATIONS = {
     categorize_deck_with_ai_title: "Categorize Deck with AI",
     categorize_deck_with_ai_desc: "Classify the cards of \"<b>{title}</b>\" into topics and subjects for retention analysis. Categorization is permanent and saved in your browser.",
     categorize_with_ai_btn: "Categorize with AI",
-    analyzing_decks_gemini_title: "Analyzing Decks and Topics with Gemini Flash-Lite...",
+    analyzing_decks_gemini_title: "Analyzing Decks and Topics with AI...",
     analyzing_decks_gemini_desc: "Categorizing your decks into broad subjects and mapping specific card topics with the fewest categories possible.",
     ai_stats_generated_toast: "AI statistics generated and saved successfully!",
     ai_stats_error_title: "Could not generate AI statistics",
@@ -3596,6 +3637,47 @@ export const TRANSLATIONS = {
     ai_decision_reason_vague_or_incomplete: "Too vague or incomplete for required criteria ({confidence}% confidence).",
     ai_decision_reason_accepted: "Accepted by AI as semantically equivalent ({confidence}% confidence).",
     ai_decision_reason_rejected: "Kept as incorrect by AI ({confidence}% confidence).",
+    flowchart_correct_sequence_title: "Correct flowchart sequence",
+    flowchart_end_label: "End",
+    voice_points_covered_label: "Covered points",
+    voice_points_missed_label: "Missed points",
+    no_limit_short: "No limit",
+    editor_back_to_modes: "Back to creation modes",
+    confirm_leave_generating: "AI generation is still in progress. Return to creation modes?",
+    modal_2_2_guide_summary: "Tags automatically enhanced by AI",
+    modal_2_2_guide_intro: "All standard tags and Anki packages (.apkg) are supported. The tags below receive automatic smart completion by AI:",
+    modal_2_2_mc_desc: "Provide only the correct answer and AI creates 3 plausible distractors at the same technical level.",
+    modal_2_2_double_desc: "AI generates contextual field labels (e.g., Diagnosis and Treatment) to guide each answer input during gameplay.",
+    modal_2_2_fill_desc: "Use {term} for explicit blanks or leave _ empty so AI infers the correct answers from context.",
+    modal_2_2_other_formats: "Other accepted formats:",
+    load_more_decks_short: "Add more",
+    search_loaded_cards_placeholder: "Filter loaded cards...",
+    bulk_edit_structured_note: "Flowchart steps or arrow annotations on this card will be preserved automatically.",
+    color_label: "Color:",
+    delete_selected_arrow: "Delete arrow",
+    monthly_label: "Monthly",
+    account_chip_label: "Manage account",
+    view_subjects_in_history: "View subjects in History",
+    timeline_inspect_hint: "Tap or hover a card dot to inspect details",
+    chart_inspect_hint: "Tap or hover a session bar to inspect details",
+    ai_badge_short: "AI",
+    dialog_ok: "Got it",
+    dialog_confirm: "Confirm",
+    dialog_alert_title: "Notice",
+    dialog_confirm_title: "Confirmation",
+    dialog_danger_title: "Confirm action",
+    dialog_prompt_title: "Enter to continue",
+    dialog_input_placeholder: "Type here...",
+    explore_load_deck_short: "Load deck",
+    explore_mix_decks_short: "Mix decks",
+    explore_create_deck_short: "Create deck",
+    ai_editor_subtitle: "Gemini Assistant",
+    ai_editor_chip_add_cards: "Add 3 cards",
+    ai_editor_prompt_add_cards: "Add 3 high-quality new flashcards that complement this deck.",
+    ai_editor_chip_improve: "Improve wording",
+    ai_editor_prompt_improve: "Review and make the questions and answers in this deck clearer and more concise.",
+    ai_editor_chip_mc: "Add multiple choice",
+    ai_editor_prompt_mc: "Create 3 well-crafted multiple-choice cards on this deck's topic.",
   }
 };
 
@@ -3865,15 +3947,47 @@ export function setupHeaderLanguageMenu(btnId = 'lang-menu-btn', dropdownId = 'l
     });
   }
 
+  let closeDropdownTimer = null;
+  const openDropdown = () => {
+    if (closeDropdownTimer) { clearTimeout(closeDropdownTimer); closeDropdownTimer = null; }
+    langDropdown.removeAttribute('data-m3-closing');
+    langDropdown.classList.remove('hidden');
+    langBtn.setAttribute('aria-expanded', 'true');
+  };
+  const closeDropdown = () => {
+    if (langDropdown.classList.contains('hidden') || langDropdown.hasAttribute('data-m3-closing')) return;
+    langBtn.setAttribute('aria-expanded', 'false');
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      langDropdown.classList.add('hidden');
+      return;
+    }
+    langDropdown.setAttribute('data-m3-closing', '');
+    if (closeDropdownTimer) clearTimeout(closeDropdownTimer);
+    closeDropdownTimer = setTimeout(() => {
+      langDropdown.classList.add('hidden');
+      langDropdown.removeAttribute('data-m3-closing');
+    }, 170);
+  };
+
+  langBtn.setAttribute('aria-expanded', 'false');
   langBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    langDropdown.classList.toggle('hidden');
+    if (langDropdown.classList.contains('hidden') || langDropdown.hasAttribute('data-m3-closing')) {
+      openDropdown();
+    } else {
+      closeDropdown();
+    }
   });
 
   document.addEventListener('click', (e) => {
     if (!langDropdown.contains(e.target) && !langBtn.contains(e.target)) {
-      langDropdown.classList.add('hidden');
+      closeDropdown();
     }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDropdown();
   });
 
   optionBtns.forEach(btn => {
@@ -3881,7 +3995,7 @@ export function setupHeaderLanguageMenu(btnId = 'lang-menu-btn', dropdownId = 'l
       const selected = btn.getAttribute('data-lang');
       setLanguage(selected);
       updateLanguageUI();
-      langDropdown.classList.add('hidden');
+      closeDropdown();
     });
   });
 

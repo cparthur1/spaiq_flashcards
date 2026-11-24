@@ -46,8 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const href = link.getAttribute('href');
                         if (href === `#${id}`) {
                             link.classList.add('active');
-                            // Ensure visible on mobile horizontal scroll
-                            link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                            // Pure horizontal scroll on TOC container to avoid vertical scroll jitter (L249)
+                            const scroller = document.getElementById('article-toc-scroller');
+                            if (scroller && scroller.scrollWidth > scroller.clientWidth) {
+                                const targetLeft = link.offsetLeft - (scroller.clientWidth / 2) + (link.offsetWidth / 2);
+                                scroller.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+                            }
                         } else {
                             link.classList.remove('active');
                         }

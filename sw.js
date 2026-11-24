@@ -3,7 +3,7 @@
  * Copyright (C) 2026 Arthur <arthur.paludo.c@gmail.com>
  */
 
-const CACHE_NAME = 'flashcards-v15.69'; // Increment version to trigger update
+const CACHE_NAME = 'flashcards-v15.71'; // Increment version to trigger update
 
 const BASE_PATH = self.registration && self.registration.scope 
   ? new URL(self.registration.scope).pathname.replace(/\/$/, '') 
@@ -33,6 +33,7 @@ const RAW_ASSETS = [
   '/assets/audio/trophy.mp3',
   '/assets/img/trophy.svg',
   '/js/i18n.js',
+  '/js/dialogs.js',
   '/js/tutorial.js',
   '/js/index.js',
   '/js/game.js',
@@ -123,7 +124,9 @@ const RAW_ASSETS = [
   '/assets/img/apple_add.svg',
   '/assets/img/Google__G__logo.svg',
   '/assets/img/google_g_logo.svg',
-  '/assets/img/gorit-logo.svg'
+  '/assets/img/gorit-logo.svg',
+  '/assets/img/warning.svg',
+  '/assets/img/error.svg'
 ];
 
 const ASSETS_TO_CACHE = RAW_ASSETS.map(p => p === '/' ? (BASE_PATH || '/') : `${BASE_PATH}${p}`);

@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import worker from '../src/index.js';
 import { verifyFirebaseIdToken } from '../src/google-auth.js';
 import { resolveUserEntitlement } from '../src/camblu-clube.js';
+import { isVertexExpressProvider, resolveModelConfig, resolveModelCandidates, callGemini } from '../src/gemini.js';
 
 const PROJECT_ID = 'flashcards-ead57';
 const WHITELISTED_EMAIL = 'vip-owner@gmail.com';
@@ -542,6 +543,253 @@ test('worker /api/payment/verify persists whitelist subscription metadata alongs
     assert.equal(userPatches.length, 1);
     assert.equal(userPatches[0].fields.subscription.mapValue.fields.provider.stringValue, 'whitelist');
     assert.equal(userPatches[0].fields.email.stringValue, WHITELISTED_EMAIL);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('ai-models.json config resolves Gemini 3.5/3.8/decision-1, strictly blocks Gemini 2, and falls back cleanly on Vertex AI', async () => {
+  assert.equal(isVertexExpressProvider('AQ.dummy-key'), true);
+  assert.equal(isVertexExpressProvider('AIza-dummy-key'), false);
+  assert.equal(isVertexExpressProvider('any-key', 'vertex'), true);
+  assert.equal(isVertexExpressProvider('AQ.dummy-key', 'aistudio'), false);
+
+  assert.deepEqual(resolveModelCandidates('flash'), [
+    'gemini-3.8-flash',
+    'gemini-3.5-flash-lite'
+  ]);
+  assert.deepEqual(resolveModelCandidates('gemini-flash-latest'), [
+    'gemini-3.8-flash',
+    'gemini-3.5-flash-lite'
+  ]);
+  assert.deepEqual(resolveModelCandidates('flash-lite'), [
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash'
+  ]);
+  assert.deepEqual(resolveModelCandidates('gemini-flash-lite-latest'), [
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash'
+  ]);
+  assert.equal(resolveModelConfig('gemini-decision-1', 'flashLite', { allowDecision: true }).model, 'gemini-decision-1');
+
+  // Strictly reject any Gemini 2.x models — never allow them to pass through
+  for (const forbidden of ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']) {
+    const resolvedFlash = resolveModelConfig(forbidden, 'flash');
+    assert.equal(resolvedFlash.model, 'gemini-3.8-flash');
+    assert.equal(resolvedFlash.candidates.some(m => m.startsWith('gemini-2')), false);
+
+    const resolvedLite = resolveModelConfig(forbidden, 'flashLite');
+    assert.equal(resolvedLite.model, 'gemini-3.5-flash-lite');
+    assert.equal(resolvedLite.candidates.some(m => m.startsWith('gemini-2')), false);
+  }
+
+  const seenCalls = [];
+  const mockFetch = async (url, init) => {
+    seenCalls.push({
+      url: String(url),
+      apiKeyHeader: init.headers['x-goog-api-key'],
+      body: JSON.parse(init.body)
+    });
+    if (seenCalls.length === 1) {
+      // Simulate 400 when thinkingConfig is rejected on Vertex AI
+      return new Response('thinkingConfig unsupported', { status: 400 });
+    }
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: 'ok-vertex' }] } }]
+    }), { status: 200 });
+  };
+
+  const res = await callGemini({
+    model: 'flash',
+    contents: [{ parts: [{ text: 'hello' }] }],
+    generationConfig: { thinkingConfig: { thinkingLevel: 'HIGH' } },
+    apiKey: 'AQ.fake-vertex-key',
+    provider: 'vertex',
+    fetchImpl: mockFetch
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(seenCalls.length, 2);
+  assert.equal(seenCalls[0].url, 'https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.8-flash:generateContent');
+  assert.equal(seenCalls[0].url.includes('AQ.fake-vertex-key'), false);
+  assert.equal(seenCalls[0].apiKeyHeader, 'AQ.fake-vertex-key');
+  assert.equal(seenCalls[0].body.contents[0].role, 'user');
+  assert.equal(seenCalls[1].body.generationConfig?.thinkingConfig, undefined);
+});
+
+test('worker routes Clube CAMBLU users to CAMBLU_GEMINI_API_KEY on Vertex AI and keeps Stripe/Whitelist on AI Studio', async () => {
+  const keys = await createTestKeyMaterial('kid-camblu-routing');
+  const originalFetch = globalThis.fetch;
+  const aiCalls = [];
+  const cambluEmail = 'clube-raro@furb.br';
+  const fakeCambluKey = 'AQ.test-camblu-vertex-key';
+  const fakeDefaultKey = 'AIza-test-default-key';
+
+  globalThis.fetch = async (url, init = {}) => {
+    const urlStr = String(url);
+    if (urlStr.includes('securetoken@system.gserviceaccount.com')) {
+      return new Response(JSON.stringify({ keys: [keys.publicJwk] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' }
+      });
+    }
+    if (urlStr === 'https://oauth2.googleapis.com/token') {
+      return new Response(JSON.stringify({ access_token: 'admin-tok', expires_in: 3600 }), { status: 200 });
+    }
+    if (urlStr.includes('/documents/app_config/pro_whitelist')) {
+      return new Response(JSON.stringify({
+        fields: { emails: { arrayValue: { values: [{ stringValue: WHITELISTED_EMAIL }] } } }
+      }), { status: 200 });
+    }
+    if (urlStr.includes('/documents/users/uid-camblu-1') && (init.method || 'GET') === 'GET') {
+      return new Response(JSON.stringify({
+        fields: { email: { stringValue: cambluEmail } }
+      }), { status: 200 });
+    }
+    if (urlStr.includes('/documents/users/uid-vip-1') && (init.method || 'GET') === 'GET') {
+      return new Response(JSON.stringify({
+        fields: { email: { stringValue: WHITELISTED_EMAIL } }
+      }), { status: 200 });
+    }
+    if (urlStr.includes('/documents/users/') && init.method === 'PATCH') {
+      return new Response(JSON.stringify({}), { status: 200 });
+    }
+    if (urlStr.includes('/api/clube/status')) {
+      return new Response(JSON.stringify({
+        active: true,
+        tier: 'raro',
+        tierCode: 2,
+        validUntil: '2027-05-01T00:00:00.000Z'
+      }), { status: 200 });
+    }
+    if (urlStr.includes('identitytoolkit.googleapis.com')) {
+      return new Response(JSON.stringify({}), { status: 200 });
+    }
+    if (urlStr.includes('aiplatform.googleapis.com') || urlStr.includes('generativelanguage.googleapis.com')) {
+      aiCalls.push({
+        url: urlStr,
+        apiKey: init.headers['x-goog-api-key']
+      });
+      if (urlStr.includes('/decisions')) {
+        return new Response(JSON.stringify({ results: { accept: { probability: 0.9 } } }), { status: 200 });
+      }
+      if (urlStr.includes('streamGenerateContent')) {
+        const enc = new TextEncoder();
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(enc.encode('data: {"candidates":[{"content":{"parts":[{"text":"[{\\"type\\":\\"open\\",\\"description\\":\\"Q\\",\\"answer\\":\\"A\\"}]"}]}}]}\n\n'));
+            controller.enqueue(enc.encode('data: [DONE]\n\n'));
+            controller.close();
+          }
+        });
+        return new Response(stream, { status: 200 });
+      }
+      if (urlStr.includes('gemini-3.5-flash-lite') && aiCalls.length === 2) {
+        return new Response(JSON.stringify({
+          candidates: [{ content: { parts: [{ text: '{"sufficient":true,"missing_topics":[]}' }] } }]
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: 'ok' }] } }]
+      }), { status: 200 });
+    }
+    throw new Error(`Unexpected fetch: ${urlStr} (${init.method || 'GET'})`);
+  };
+
+  try {
+    const env = {
+      FIREBASE_PROJECT_ID: PROJECT_ID,
+      FIREBASE_SERVICE_ACCOUNT_OBJ: keys.serviceAccount,
+      GEMINI_API_KEY: fakeDefaultKey,
+      CAMBLU_GEMINI_API_KEY: fakeCambluKey
+    };
+
+    const cambluToken = await keys.signJwt(makeBaseClaims({
+      sub: 'uid-camblu-1',
+      email: cambluEmail,
+      pro: true
+    }));
+
+    // 1. CAMBLU user /api/ai/generate with coverage audit -> Phase 1 & Phase 2 both hit Vertex AI with CAMBLU key
+    const genRes = await worker.fetch(new Request('https://flashcards.camblu.org/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cambluToken}` },
+      body: JSON.stringify({
+        model: 'gemini-flash-latest',
+        isNewDeck: true,
+        stream: true,
+        enableCoverageAudit: true,
+        contents: [{ role: 'user', parts: [{ text: 'Prompt' }, { text: 'Material' }] }]
+      })
+    }), env, { waitUntil: () => {} });
+    assert.equal(genRes.status, 200);
+    await genRes.text();
+
+    // 2. CAMBLU user /api/ai/tutor -> Vertex AI with CAMBLU key
+    const tutorRes = await worker.fetch(new Request('https://flashcards.camblu.org/api/ai/tutor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cambluToken}` },
+      body: JSON.stringify({
+        model: 'gemini-flash-lite-latest',
+        contents: [{ role: 'user', parts: [{ text: 'Explique' }] }]
+      })
+    }), env, { waitUntil: () => {} });
+    assert.equal(tutorRes.status, 200);
+
+    // 3. CAMBLU user /api/ai/stats -> Vertex AI with CAMBLU key
+    const statsRes = await worker.fetch(new Request('https://flashcards.camblu.org/api/ai/stats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cambluToken}` },
+      body: JSON.stringify({
+        model: 'gemini-flash-lite-latest',
+        contents: [{ role: 'user', parts: [{ text: 'Categorize' }] }]
+      })
+    }), env, { waitUntil: () => {} });
+    assert.equal(statsRes.status, 200);
+
+    // 4. CAMBLU user /api/ai/decision -> stays on AI Studio with default key
+    const decRes = await worker.fetch(new Request('https://flashcards.camblu.org/api/ai/decision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cambluToken}` },
+      body: JSON.stringify({
+        input: 'Pergunta e resposta',
+        questions: { accept: { type: 'noul', description: 'Correto?' } }
+      })
+    }), env, { waitUntil: () => {} });
+    assert.equal(decRes.status, 200);
+
+    // 5. Whitelist user /api/ai/tutor -> stays on AI Studio with default key (never uses CAMBLU key)
+    const vipToken = await keys.signJwt(makeBaseClaims({
+      sub: 'uid-vip-1',
+      email: WHITELISTED_EMAIL,
+      pro: true
+    }));
+    const vipRes = await worker.fetch(new Request('https://flashcards.camblu.org/api/ai/tutor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${vipToken}` },
+      body: JSON.stringify({
+        model: 'gemini-flash-lite-latest',
+        contents: [{ role: 'user', parts: [{ text: 'Explique VIP' }] }]
+      })
+    }), env, { waitUntil: () => {} });
+    assert.equal(vipRes.status, 200);
+
+    assert.equal(aiCalls.length, 6);
+    // Calls 0..3: CAMBLU generate phase1, audit phase2, tutor, stats -> all Vertex AI + CAMBLU key + Gemini 3.x only
+    assert.equal(aiCalls[0].url, 'https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.8-flash:streamGenerateContent?alt=sse');
+    assert.equal(aiCalls[1].url, 'https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.5-flash-lite:generateContent');
+    assert.equal(aiCalls[2].url, 'https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.5-flash-lite:generateContent');
+    assert.equal(aiCalls[3].url, 'https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-3.5-flash-lite:generateContent');
+    for (let i = 0; i < 4; i++) {
+      assert.equal(aiCalls[i].apiKey, fakeCambluKey);
+      assert.equal(aiCalls[i].url.includes(fakeCambluKey), false);
+    }
+    // Call 4: CAMBLU decision -> AI Studio + default key
+    assert.ok(aiCalls[4].url.startsWith('https://generativelanguage.googleapis.com/v1beta/decisions'));
+    assert.equal(aiCalls[4].apiKey, fakeDefaultKey);
+    // Call 5: Whitelist tutor -> AI Studio + default key + gemini-3.5-flash-lite
+    assert.equal(aiCalls[5].url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent');
+    assert.equal(aiCalls[5].apiKey, fakeDefaultKey);
   } finally {
     globalThis.fetch = originalFetch;
   }

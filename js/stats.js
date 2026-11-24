@@ -12,6 +12,7 @@ import { initExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { syncSlotsToCloud } from './slot-manager.js';
 import { onAuthChange } from './firebase-client.js';
 import { t, getCurrentLanguage } from './i18n.js';
+import { appConfirm } from './dialogs.js';
 
 // DOM Elements
 const deckBadge = document.getElementById('deck-badge');
@@ -54,9 +55,6 @@ const strugglingBadgeCount = document.getElementById('struggling-badge-count');
 
 // Session Completed Celebration Banner
 const sessionCompletedBanner = document.getElementById('session-completed-banner');
-const bannerStatAcc = document.getElementById('banner-stat-acc');
-const bannerStatTime = document.getElementById('banner-stat-time');
-const bannerStatStreak = document.getElementById('banner-stat-streak');
 const bannerStatAi = document.getElementById('banner-stat-ai');
 
 // KPI Elements
@@ -91,8 +89,8 @@ const ankiPctEasy = document.getElementById('anki-pct-easy');
 const byTypeContainer = document.getElementById('by-type-container');
 const timelineStrip = document.getElementById('timeline-strip');
 const timelineCounterBadge = document.getElementById('timeline-counter-badge');
-const insightTitle = document.getElementById('insight-title');
-const insightText = document.getElementById('insight-text');
+const timelineDetailBar = document.getElementById('timeline-detail-bar');
+const accuracyChartDetailBar = document.getElementById('accuracy-chart-detail-bar');
 
 // Pace, Mastery & Highlights Elements
 const paceEstimateBadge = document.getElementById('pace-estimate-badge');
@@ -147,13 +145,11 @@ function showStatsPill(message, isSuccess = true) {
 
     const pill = document.createElement('div');
     pill.id = 'stats-floating-pill';
-    pill.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 rounded-full shadow-2xl backdrop-blur-xl border border-white/20 transition-all duration-300 transform translate-y-10 opacity-0 text-sm font-semibold flex items-center gap-2 ${
+    pill.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 rounded-full shadow-2xl border border-white/20 transition-all duration-300 transform translate-y-10 opacity-0 text-sm font-semibold flex items-center gap-2 ${
         isSuccess ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-white'
     }`;
     pill.innerHTML = `
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
+        <span class="material-symbols-rounded text-base leading-none select-none">check_circle</span>
         <span>${escapeHtml(message || '')}</span>
     `;
     document.body.appendChild(pill);
@@ -187,7 +183,7 @@ function switchTab(tabName) {
 
     const updateDOM = () => {
         [tabBtnCurrent, tabBtnHistory, tabBtnStruggling].forEach(btn => {
-            btn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+            btn.classList.remove('bg-white', 'text-[#3b82f7]', 'shadow-sm');
             btn.classList.add('text-gray-600');
             btn.removeAttribute('aria-selected');
         });
@@ -218,7 +214,7 @@ function switchTab(tabName) {
             }
         }
 
-        targetBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+        targetBtn.classList.add('bg-white', 'text-[#3b82f7]', 'shadow-sm');
         targetBtn.classList.remove('text-gray-600');
         targetBtn.setAttribute('aria-selected', 'true');
 
@@ -296,7 +292,7 @@ function renderCurrentSession(sess, gameState, history) {
     const duration = sess ? sess.durationSeconds || 0 : 0;
 
     const progressPct = totalCards > 0 ? (isCompleted ? 100 : Math.round((completedCards / totalCards) * 100)) : 0;
-    const accuracyPct = answered > 0 ? Math.round((correct / answered) * 100) : 100;
+    const accuracyPct = answered > 0 ? Math.round((correct / answered) * 100) : null;
     const accuracyRate = answered > 0 ? (correct / answered) : 1;
 
     // Disconsider cards taking longer than 90s to be answered (study break / tab left idle)
@@ -315,38 +311,10 @@ function renderCurrentSession(sess, gameState, history) {
         avgSeconds = (duration / answered).toFixed(1);
     }
 
-    // Session Completed Celebration Banner
+    // Session Completed Celebration Banner (no duplicate KPI chips — L233)
     if (sessionCompletedBanner) {
         if (isCompleted) {
             sessionCompletedBanner.classList.remove('hidden');
-            if (bannerStatAcc) {
-                bannerStatAcc.replaceChildren();
-                const icon = document.createElement('span');
-                icon.className = 'material-symbols-rounded text-sm';
-                icon.textContent = 'track_changes';
-                const text = document.createElement('span');
-                text.textContent = t('accuracy_stat_label', { accuracy: Number(accuracyPct) || 0 });
-                bannerStatAcc.append(icon, text);
-            }
-            if (bannerStatTime) {
-                bannerStatTime.replaceChildren();
-                const icon = document.createElement('span');
-                icon.className = 'material-symbols-rounded text-sm';
-                icon.textContent = 'timer';
-                const text = document.createElement('span');
-                text.textContent = ` ${formatSeconds(duration)}`;
-                bannerStatTime.append(icon, text);
-            }
-            const maxStreak = Number(sess ? (sess.bestStreak || sess.maxStreak || sess.currentStreak || 0) : 0) || 0;
-            if (bannerStatStreak) {
-                bannerStatStreak.replaceChildren();
-                const fire = document.createElement('span');
-                fire.className = 'material-symbols-rounded text-sm text-amber-500 select-none';
-                fire.textContent = 'local_fire_department';
-                const text = document.createElement('span');
-                text.textContent = ` ${maxStreak} ${t('in_a_row')}`;
-                bannerStatStreak.append(fire, text);
-            }
             const aiCount = Number(sess ? (sess.aiCorrectionsCount || (sess.answersLog || []).filter(e => e.rating === 'ai_corrected').length) : 0) || 0;
             if (bannerStatAi) {
                 if (aiCount > 0) {
@@ -372,12 +340,23 @@ function renderCurrentSession(sess, gameState, history) {
     kpiProgressRatio.textContent = t('kpi_progress_ratio', { completed: completedCards, total: totalCards });
     kpiProgressBar.style.width = `${progressPct}%`;
 
-    kpiAccuracyPercent.textContent = `${accuracyPct}%`;
-    kpiAccuracyPercent.className = `text-2xl sm:text-3xl font-extrabold ${
-        accuracyPct >= 80 ? 'text-emerald-600' :
-        accuracyPct >= 65 ? 'text-amber-500' : 'text-red-600'
-    }`;
-    kpiAccuracyFeedback.textContent = accuracyPct >= 85 ? t('excellent_mastery') : accuracyPct >= 70 ? t('good_pace') : t('needs_attention');
+    if (accuracyPct === null) {
+        kpiAccuracyPercent.textContent = '—';
+        kpiAccuracyPercent.className = 'text-2xl sm:text-3xl font-extrabold text-slate-400';
+        kpiAccuracyFeedback.textContent = t('waiting_for_data');
+        kpiAccuracyFeedback.className = 'text-xs font-medium text-slate-500';
+    } else {
+        kpiAccuracyPercent.textContent = `${accuracyPct}%`;
+        kpiAccuracyPercent.className = `text-2xl sm:text-3xl font-extrabold ${
+            accuracyPct >= 80 ? 'text-emerald-600' :
+            accuracyPct >= 65 ? 'text-amber-500' : 'text-red-600'
+        }`;
+        kpiAccuracyFeedback.textContent = accuracyPct >= 85 ? t('excellent_mastery') : accuracyPct >= 70 ? t('good_pace') : t('needs_attention');
+        kpiAccuracyFeedback.className = `text-xs font-medium ${
+            accuracyPct >= 80 ? 'text-emerald-700' :
+            accuracyPct >= 65 ? 'text-amber-600' : 'text-red-600'
+        }`;
+    }
     kpiCorrectCount.textContent = correct;
     kpiIncorrectCount.textContent = incorrect;
 
@@ -391,7 +370,7 @@ function renderCurrentSession(sess, gameState, history) {
     renderPaceAndEstimate(sess, gameState, parseFloat(avgSeconds), isCompleted ? 0 : poolRemaining, accuracyRate);
 
     // Sub-Card 2: Deck Mastery Level
-    renderDeckMastery(progressPct, accuracyPct, sess ? sess.currentStreak || 0 : 0, completedCards, totalCards);
+    renderDeckMastery(progressPct, accuracyPct, sess ? sess.currentStreak || 0 : 0, completedCards, totalCards, answered);
 
     // Sub-Card 3: Flashcard Text Highlights
     renderHighlightsStats(gameState);
@@ -426,9 +405,6 @@ function renderCurrentSession(sess, gameState, history) {
 
     // Timeline Flow (only last 10, newest on the left)
     renderTimelineFlow(sess);
-
-    // Pedagogical Insights
-    generatePedagogicalInsight(progressPct, accuracyPct, avgSeconds, anki, answered, history);
 }
 
 function renderPerformanceByType(sess) {
@@ -436,13 +412,14 @@ function renderPerformanceByType(sess) {
     const byType = sess && sess.byType ? sess.byType : {};
 
     const typeLabels = {
-        'multiple_choice': { name: t('card_type_mc'), icon: 'edit_note', color: 'bg-blue-500' },
-        'open': { name: t('card_type_open'), icon: 'keyboard', color: 'bg-emerald-500' },
-        'open_double': { name: t('card_type_open_double'), icon: 'bolt', color: 'bg-purple-500' },
+        'open': { name: t('card_type_open'), icon: 'keyboard', color: 'bg-[#3b82f7]' },
+        'open_double': { name: t('card_type_open_double'), icon: 'bolt', color: 'bg-amber-500' },
         'fill': { name: t('card_type_fill'), icon: 'draw', color: 'bg-teal-500' },
-        'flowchart': { name: t('card_type_flowchart'), icon: 'account_tree', color: 'bg-sky-500' },
+        'multiple_choice': { name: t('card_type_mc'), icon: 'checklist', color: 'bg-cyan-500' },
         'anki': { name: t('card_type_anki'), icon: 'psychology', color: 'bg-indigo-500' },
-        'voice': { name: t('card_type_voice'), icon: 'record_voice_over', color: 'bg-blue-600' }
+        'flowchart': { name: t('card_type_flowchart'), icon: 'account_tree', color: 'bg-sky-500' },
+        'image_arrows': { name: t('card_type_image_arrows'), icon: 'image', color: 'bg-emerald-500' },
+        'voice': { name: t('card_type_voice'), icon: 'record_voice_over', color: 'bg-purple-600' }
     };
 
     let hasAnyData = false;
@@ -589,17 +566,17 @@ function renderPaceAndEstimate(sess, gameState, avgSeconds, poolRemaining, accur
     }
 }
 
-function renderDeckMastery(progressPct, accuracyPct, currentStreak, completedCards, totalCards) {
+function renderDeckMastery(progressPct, accuracyPct, currentStreak, completedCards, totalCards, answered = 0) {
     if (!masteryScore) return;
 
-    if (totalCards === 0) {
+    if (totalCards === 0 || answered === 0 || accuracyPct === null) {
         masteryScore.textContent = '0 pts';
         if (masteryProgressBar) masteryProgressBar.style.width = '0%';
         if (masteryLevelBadge) {
-            masteryLevelBadge.textContent = t('no_data');
+            masteryLevelBadge.textContent = totalCards === 0 ? t('no_data') : t('waiting_for_data');
             masteryLevelBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600';
         }
-        if (masteryDescription) masteryDescription.textContent = t('no_cards_in_deck');
+        if (masteryDescription) masteryDescription.textContent = totalCards === 0 ? t('no_cards_in_deck') : t('pace_start_hint');
         return;
     }
 
@@ -617,7 +594,7 @@ function renderDeckMastery(progressPct, accuracyPct, currentStreak, completedCar
 
     if (score >= 85) {
         badgeText = t('mastery_master');
-        badgeClass = 'bg-purple-100 text-purple-700';
+        badgeClass = 'bg-emerald-100 text-emerald-800';
         desc = t('mastery_master_desc');
     } else if (score >= 65) {
         badgeText = t('mastery_advanced');
@@ -692,10 +669,15 @@ function renderTimelineFlow(sess) {
 
     if (log.length === 0) {
         timelineStrip.innerHTML = `<p class="text-xs text-gray-400 italic py-2">${t('no_cards_answered_session')}</p>`;
+        if (timelineDetailBar) timelineDetailBar.classList.add('hidden');
         if (timelineCounterBadge) {
             timelineCounterBadge.innerHTML = `<span>${t('timeline_most_recent_10')}</span>`;
         }
         return;
+    }
+    if (timelineDetailBar) {
+        timelineDetailBar.classList.remove('hidden');
+        timelineDetailBar.innerHTML = `<span class="text-gray-400">${t('timeline_inspect_hint')}</span>`;
     }
 
     const totalAnswered = log.length;
@@ -748,63 +730,35 @@ function renderTimelineFlow(sess) {
         const safeStatus = isAiCorrected ? t('ai_corrected') : safeRating;
         const recentLabel = isLatest ? t('timeline_last_answered') : t('timeline_nth_recent', { n: reverseIdx + 1 });
 
-        dot.className = `flex-shrink-0 w-8 h-8 rounded-xl ${badgeColor} ${ringEffect} flex items-center justify-center font-bold text-xs cursor-pointer shadow-sm hover:scale-110 transition-transform relative group`;
+        dot.setAttribute('role', 'button');
+        dot.setAttribute('tabindex', '0');
+        dot.setAttribute('aria-label', `#${originalCardIdx}: ${entry.question || ''}`);
+        dot.className = `flex-shrink-0 w-8 h-8 rounded-xl ${badgeColor} ${ringEffect} flex items-center justify-center font-bold text-xs cursor-pointer shadow-sm hover:scale-110 focus:outline-none focus:ring-2 focus:ring-[#3b82f7] transition-transform relative`;
         dot.innerHTML = `
             ${label}
-            ${isLatest ? `<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white animate-pulse" title="${escapeHtml(t('timeline_most_recent_10'))}"></span>` : ''}
-            <!-- Tooltip -->
-            <div class="hidden group-hover:block absolute bottom-full mb-2 z-30 p-2.5 bg-gray-900/95 text-white text-[11px] rounded-xl shadow-xl w-56 text-left backdrop-blur-sm pointer-events-none -left-20">
-                <div class="flex items-center justify-between mb-1 pb-1 border-b border-gray-700">
-                    <span class="font-bold text-gray-200">#${originalCardIdx}</span>
-                    <span class="text-[10px] font-semibold ${isLatest ? 'text-blue-400' : 'text-gray-400'}">
-                        ${recentLabel}
-                    </span>
-                </div>
-                <p class="text-gray-200 truncate mb-1" title="${safeQuestion}">${safeQuestion}</p>
-                <div class="flex items-center justify-between text-gray-400 text-[10px]">
-                    <span>${t('time_label')}: <b>${Number(entry.timeSeconds) || 0}s</b></span>
-                    <span>${t('status_label')}: <b>${safeStatus}</b></span>
-                </div>
-                ${safeUserAnswer ? `<p class="text-blue-300 text-[10px] truncate mt-1 pt-1 border-t border-gray-800">${t('typed_label')}: ${safeUserAnswer}</p>` : ''}
-                ${safeAiExplanation ? `<p class="text-amber-300 text-[10px] line-clamp-2 mt-1 pt-1 border-t border-gray-800" title="${safeAiExplanation}">IA: ${safeAiExplanation}</p>` : ''}
-            </div>
+            ${isLatest ? `<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#3b82f7] rounded-full border-2 border-white" title="${escapeHtml(t('timeline_most_recent_10'))}"></span>` : ''}
         `;
+
+        const showDotDetail = () => {
+            if (!timelineDetailBar) return;
+            timelineDetailBar.innerHTML = `
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <span class="font-bold text-gray-900 flex-shrink-0">#${originalCardIdx}</span>
+                    <span class="text-gray-700 truncate" title="${safeQuestion}">${safeQuestion || '—'}</span>
+                </div>
+                <div class="flex items-center gap-3 text-[11px] text-gray-500 flex-shrink-0 flex-wrap">
+                    <span>${t('time_label')}: <b class="text-gray-800">${Number(entry.timeSeconds) || 0}s</b></span>
+                    <span>${t('status_label')}: <b class="text-gray-800">${safeStatus}</b></span>
+                    ${safeUserAnswer ? `<span class="text-[#3b82f7] truncate max-w-[160px]" title="${safeUserAnswer}">${t('typed_label')}: ${safeUserAnswer}</span>` : ''}
+                    ${safeAiExplanation ? `<span class="text-purple-700 truncate max-w-[200px]" title="${safeAiExplanation}">IA: ${safeAiExplanation}</span>` : ''}
+                </div>
+            `;
+        };
+        dot.addEventListener('mouseenter', showDotDetail);
+        dot.addEventListener('focus', showDotDetail);
+        dot.addEventListener('click', showDotDetail);
         timelineStrip.appendChild(dot);
     });
-}
-
-function generatePedagogicalInsight(progressPct, accuracyPct, avgSeconds, anki, answered, history) {
-    if (!insightTitle || !insightText) return;
-    if (answered === 0) {
-        insightTitle.textContent = t('session_in_progress');
-        insightText.textContent = t('session_in_progress_desc');
-        return;
-    }
-
-    let comparisonText = '';
-    if (history && history.length > 0) {
-        const lastSess = history[0];
-        const lastAcc = lastSess.accuracy !== undefined ? lastSess.accuracy : 0;
-        const diff = accuracyPct - lastAcc;
-        if (diff > 0) {
-            comparisonText = t('comparison_performance_better', { diff, lastAcc });
-        } else if (diff < 0) {
-            comparisonText = t('comparison_lower', { diff: Math.abs(diff), lastAcc });
-        } else {
-            comparisonText = t('comparison_stable', { lastAcc });
-        }
-    }
-
-    if (accuracyPct >= 85) {
-        insightTitle.textContent = t('high_retention_title');
-        insightText.textContent = t('high_retention_desc', { accuracy: accuracyPct, avg: avgSeconds, comparison: comparisonText });
-    } else if (accuracyPct >= 70) {
-        insightTitle.textContent = t('good_progress_title');
-        insightText.textContent = t('good_progress_desc', { accuracy: accuracyPct, comparison: comparisonText });
-    } else {
-        insightTitle.textContent = t('spaced_rep_recommended_title');
-        insightText.textContent = t('spaced_rep_recommended_desc', { accuracy: accuracyPct, comparison: comparisonText });
-    }
 }
 
 // ==================== SEÇÃO DE INTELIGÊNCIA ARTIFICIAL ====================
@@ -876,9 +830,9 @@ function renderSubjectItem(s, idx, totalSubjects) {
     let barColor = 'bg-blue-500';
 
     if (idx === 0 && s.totalAnswered > 0) {
-        badgeClass = 'bg-purple-100 text-purple-700 border border-purple-200';
+        badgeClass = 'bg-emerald-100 text-emerald-800 border border-emerald-200';
         badgeText = t('best_subject');
-        barColor = 'bg-purple-600';
+        barColor = 'bg-emerald-500';
     } else if (idx === totalSubjects - 1 && totalSubjects > 1 && acc < 70 && s.totalAnswered > 0) {
         badgeClass = 'bg-amber-100 text-amber-800 border border-amber-200';
         badgeText = t('recommended_focus');
@@ -973,9 +927,7 @@ function renderAiDashboard(currentDeckTitle, subjectsStats, topicsStats, gameSta
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-transparent p-4 rounded-2xl border border-purple-200/70">
                 <div class="flex items-center gap-2.5">
                     <div class="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
+                        <span class="material-symbols-rounded text-lg leading-none select-none">auto_awesome</span>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
@@ -985,70 +937,53 @@ function renderAiDashboard(currentDeckTitle, subjectsStats, topicsStats, gameSta
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 self-end sm:self-auto">
-                    <button id="btn-refresh-ai-stats" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 transition shadow-xs flex items-center gap-1.5" title="${t('recalculate_ai_cat_tooltip')}">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
+                <div class="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+                    ${subjectsStats.length > 0 ? `
+                    <button type="button" id="btn-jump-history-subjects" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 transition shadow-2xs flex items-center gap-1 cursor-pointer">
+                        <span class="material-symbols-rounded text-sm leading-none select-none">menu_book</span>
+                        <span>${t('view_subjects_in_history')} (${subjectsStats.length})</span>
+                    </button>` : ''}
+                    <button id="btn-refresh-ai-stats" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 transition shadow-xs flex items-center gap-1.5 cursor-pointer" title="${t('recalculate_ai_cat_tooltip')}">
+                        <span class="material-symbols-rounded text-sm leading-none select-none">refresh</span>
                         <span>${t('recategorize_with_ai')}</span>
                     </button>
                 </div>
             </div>
 
-            <!-- 2-Column Responsive Panels -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                
-                <!-- Panel 1: Assuntos Dentro do Baralho Atual -->
-                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+            <!-- Current Deck Topics Panel (Global Subjects live in Tab 2 to avoid duplication — L233) -->
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100 flex-wrap gap-2">
                     <div>
-                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-                            <div>
-                                <h3 class="font-bold text-sm text-gray-900 flex items-center gap-1.5">
-                                    <span class="material-symbols-rounded text-base text-blue-600">topic</span> ${t('topics_of_this_deck')}
-                                </h3>
-                                <p class="text-[11px] text-gray-500 truncate max-w-[200px]" title="${safeDeckTitle}">
-                                    ${safeDeckTitle}
-                                </p>
-                            </div>
-                            <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded-md" title="${t('worst_to_best_tooltip')}">
-                                    ${t('worst_to_best_label')}
-                                </span>
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                                    ${topicsStats.length} ${topicsStats.length !== 1 ? t('topics_unit_plural') : t('topic_unit_singular')}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="space-y-2.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1" id="ai-topics-list">
-                            ${topicsHtml}
-                        </div>
+                        <h3 class="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+                            <span class="material-symbols-rounded text-base text-purple-600">topic</span> ${t('topics_of_this_deck')}
+                        </h3>
+                        <p class="text-[11px] text-gray-500 truncate max-w-[260px]" title="${safeDeckTitle}">
+                            ${safeDeckTitle}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <span class="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded-md" title="${t('worst_to_best_tooltip')}">
+                            ${t('worst_to_best_label')}
+                        </span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                            ${topicsStats.length} ${topicsStats.length !== 1 ? t('topics_unit_plural') : t('topic_unit_singular')}
+                        </span>
                     </div>
                 </div>
 
-                <!-- Panel 2: Matérias Globais (Visão de Todos os Baralhos) -->
-                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
-                            <div>
-                                <h3 class="font-bold text-sm text-gray-900 flex items-center gap-1.5">
-                                    <span class="material-symbols-rounded text-base text-purple-600">menu_book</span> ${t('performance_by_subject')}
-                                </h3>
-                            </div>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                                ${subjectsStats.length} ${subjectsStats.length !== 1 ? t('subjects_unit_plural') : t('subject_unit_singular')}
-                            </span>
-                        </div>
-
-                        <div class="space-y-2.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1" id="ai-subjects-list">
-                            ${subjectsHtml}
-                        </div>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1" id="ai-topics-list">
+                    ${topicsHtml}
                 </div>
-
             </div>
         </div>
     `;
+
+    document.getElementById('btn-jump-history-subjects')?.addEventListener('click', () => {
+        switchTab('history');
+        setTimeout(() => {
+            aiHistorySubjectsSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+    });
 
     document.getElementById('btn-refresh-ai-stats')?.addEventListener('click', () => {
         if (!isUserPro()) {
@@ -1092,21 +1027,21 @@ function renderAiSection(gameState, statsData, isLiveUpdate = false, sessionToUs
         return;
     }
 
-    // IF USER IS NOT PRO: Display Paywalled UI
+    // IF USER IS NOT PRO: Display Paywalled UI (CTA stays vibrant full-contrast outside .is-paywalled — L236)
     if (!isUserPro()) {
         aiStatsSection.innerHTML = `
-            <div id="paywalled-stats-ai-card" class="is-paywalled bg-gradient-to-b from-purple-500/5 via-blue-500/5 to-transparent p-5 sm:p-6 rounded-2xl border border-purple-200/80 shadow-sm relative overflow-hidden cursor-pointer group">
+            <div id="paywalled-stats-ai-card" class="bg-gradient-to-b from-purple-500/8 via-blue-500/5 to-white p-5 sm:p-6 rounded-2xl border border-purple-200/80 shadow-sm relative overflow-hidden cursor-pointer group">
                 <div class="paywall-badge-pill">
                     <img src="../assets/img/paywall.svg" alt="Pro"><span>PRO</span>
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div class="space-y-1">
+                    <div class="is-paywalled space-y-1 flex-1 min-w-0">
                         <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200/80">
-                                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                                Gemini Flash-Lite
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200/80">
+                                <span class="material-symbols-rounded text-xs leading-none">auto_awesome</span>
+                                ${t('ai_badge_short')}
                             </span>
-                            <span class="text-xs text-gray-400 font-medium">${t('semantic_categorization_badge')}</span>
+                            <span class="text-xs text-gray-500 font-medium">${t('semantic_categorization_badge')}</span>
                         </div>
                         <h2 class="text-base sm:text-lg font-bold text-gray-900">${t('subjects_and_topics_performance_ai')}</h2>
                         <p class="text-xs text-gray-600 max-w-xl leading-relaxed">
@@ -1114,9 +1049,9 @@ function renderAiSection(gameState, statsData, isLiveUpdate = false, sessionToUs
                         </p>
                     </div>
 
-                    <div class="flex items-center gap-2 flex-shrink-0">
-                        <button id="btn-paywall-stats-ai" class="m3-btn-expressive m3-btn-filled px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 whitespace-nowrap shadow-md">
-                            <img src="../assets/img/paywall.svg" class="w-3.5 h-3.5" alt="Pro">
+                    <div class="flex items-center gap-2 flex-shrink-0 relative z-10">
+                        <button id="btn-paywall-stats-ai" type="button" class="m3-btn-expressive m3-btn-filled px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 whitespace-nowrap shadow-md bg-[#3b82f7] hover:bg-blue-600 text-white cursor-pointer">
+                            <span class="material-symbols-rounded text-base leading-none">lock_open</span>
                             <span>${t('unlock_with_pro_btn')}</span>
                         </button>
                     </div>
@@ -1143,9 +1078,9 @@ function renderAiSection(gameState, statsData, isLiveUpdate = false, sessionToUs
         <div class="bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-transparent p-5 sm:p-6 rounded-2xl border border-purple-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="space-y-1">
                 <div class="flex items-center gap-2">
-                    <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                        <span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
-                        Gemini Flash-Lite
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        <span class="material-symbols-rounded text-xs leading-none">auto_awesome</span>
+                        ${t('ai_badge_short')}
                     </span>
                     <span class="text-xs text-gray-500 font-medium">${t('semantic_categorization_badge')}</span>
                 </div>
@@ -1157,9 +1092,7 @@ function renderAiSection(gameState, statsData, isLiveUpdate = false, sessionToUs
             <div class="flex items-center gap-2 flex-shrink-0">
                 <button id="btn-generate-ai-stats"
                     class="px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-purple-600 hover:bg-purple-700 active:scale-[0.98] transition shadow-md flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+                    <span class="material-symbols-rounded text-base leading-none select-none">auto_awesome</span>
                     <span>${t('categorize_with_ai_btn')}</span>
                 </button>
             </div>
@@ -1306,7 +1239,7 @@ function renderActivityHeatmap(statsData) {
         const isTodayGoalMet = goalMetDatesSet.has(getTodayDateString());
         if (streakFireIcon) {
             if (isTodayGoalMet) {
-                streakFireIcon.className = 'material-symbols-rounded text-sm text-purple-600 select-none';
+                streakFireIcon.className = 'material-symbols-rounded text-sm text-amber-600 select-none';
                 streakFireIcon.textContent = 'local_fire_department';
             } else {
                 streakFireIcon.className = 'material-symbols-rounded text-sm text-amber-500 select-none';
@@ -1446,8 +1379,8 @@ function renderActivityHeatmap(statsData) {
             let cellContent = '';
 
             if (day.isGoalMet) {
-                colorClasses = 'bg-purple-100 text-purple-700 border-2 border-purple-400 font-bold text-[8px] flex items-center justify-center';
-                cellContent = '<span class="material-symbols-rounded text-[11px] text-purple-600 select-none leading-none">local_fire_department</span>';
+                colorClasses = 'bg-amber-100 text-amber-800 border-2 border-amber-400 font-bold text-[8px] flex items-center justify-center';
+                cellContent = '<span class="material-symbols-rounded text-[11px] text-amber-600 select-none leading-none">local_fire_department</span>';
             } else if (day.isFrozen) {
                 colorClasses = 'bg-cyan-100 text-cyan-800 border-2 border-cyan-400 font-bold text-[8px] flex items-center justify-center';
                 cellContent = '<span class="material-symbols-rounded text-[10px] select-none leading-none">ac_unit</span>';
@@ -1506,7 +1439,7 @@ function renderActivityHeatmap(statsData) {
             const capFormatted = escapeHtml(formatted.charAt(0).toUpperCase() + formatted.slice(1));
 
             if (isGoalMet) {
-                heatmapHoverInfo.innerHTML = `<span class="text-purple-700 font-bold inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm select-none">local_fire_department</span> ${capFormatted}</span>: <span class="text-purple-900 font-extrabold">${count} ${count === 1 ? t('card_solved_singular') : t('cards_solved_plural')}</span> <span class="text-xs bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded">${t('heatmap_goal_met')}</span>${isToday ? ` <span class="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">${t('today_badge')}</span>` : ''}`;
+                heatmapHoverInfo.innerHTML = `<span class="text-amber-700 font-bold inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm select-none">local_fire_department</span> ${capFormatted}</span>: <span class="text-amber-950 font-extrabold">${count} ${count === 1 ? t('card_solved_singular') : t('cards_solved_plural')}</span> <span class="text-xs bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">${t('heatmap_goal_met')}</span>${isToday ? ` <span class="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">${t('today_badge')}</span>` : ''}`;
             } else if (isFrozen) {
                 heatmapHoverInfo.innerHTML = `<span class="text-cyan-700 font-bold inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm select-none">ac_unit</span> ${capFormatted}</span>: <span class="text-gray-700 font-medium">${t('streak_protected_by_freeze_hover')}</span>`;
             } else if (count > 0) {
@@ -1636,17 +1569,19 @@ function renderAccuracyChart(history) {
     if (!history || history.length === 0) {
         accuracyChartContainer.innerHTML = `<p class="text-xs text-gray-400 italic m-auto">${t('no_session_history_chart')}</p>`;
         chartTrendBadge.classList.add('hidden');
+        if (accuracyChartDetailBar) accuracyChartDetailBar.classList.add('hidden');
         return;
     }
 
-    // Sort from most recent to oldest (newest session first on the left, max 12)
+    // Chronological order: oldest (left) -> newest / Atual (right), max 12 sessions (L232)
     const chartData = [...history]
         .sort((a, b) => (b.startTime || b.endTime || 0) - (a.startTime || a.endTime || 0))
-        .slice(0, 12);
+        .slice(0, 12)
+        .reverse();
 
     if (chartData.length >= 2) {
-        const recent = chartData[0].accuracy || 0;
-        const older = chartData[chartData.length - 1].accuracy || 0;
+        const recent = chartData[chartData.length - 1].accuracy || 0;
+        const older = chartData[0].accuracy || 0;
         const diff = recent - older;
         const trendIcon = diff >= 0 ? 'trending_up' : 'trending_down';
         const trendPrefix = diff >= 0 ? '+' : '';
@@ -1659,45 +1594,66 @@ function renderAccuracyChart(history) {
         chartTrendBadge.classList.add('hidden');
     }
 
+    if (accuracyChartDetailBar) {
+        accuracyChartDetailBar.classList.remove('hidden');
+        accuracyChartDetailBar.innerHTML = `<span class="text-gray-400">${t('chart_inspect_hint')}</span>`;
+    }
+
+    const currentLang = getCurrentLanguage();
     chartData.forEach((item, index) => {
+        const isLatest = index === chartData.length - 1;
         const acc = item.accuracy !== undefined ? item.accuracy : 0;
         const heightPct = Math.max(8, Math.min(100, acc));
 
         const barColor = acc >= 80 ? 'bg-emerald-500 hover:bg-emerald-600' :
             acc >= 65 ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-500 hover:bg-red-600';
 
-        const label = index === 0 ? t('current_chart_label') : `S${index + 1}`;
+        const label = isLatest ? t('current_chart_label') : `S${index + 1}`;
 
         const safeAcc = Number(acc) || 0;
         const safeCards = Number(item.cardsAnswered) || 0;
         const safeDuration = escapeHtml(formatSeconds(item.durationSeconds));
         const safeLabel = escapeHtml(label);
+        const safeDeck = escapeHtml(item.deckTitle || 'Flashcards');
+        const safeDate = item.startTime ? escapeHtml(new Date(item.startTime).toLocaleDateString(currentLang, { day: '2-digit', month: 'short' })) : '';
 
         const col = document.createElement('div');
-        col.className = 'flex-1 flex flex-col items-center justify-end h-full group relative cursor-pointer min-w-[28px]';
-
-        const tooltip = document.createElement('div');
-        tooltip.className = 'hidden group-hover:block absolute bottom-full mb-2 z-30 p-2 bg-gray-900 text-white text-[10px] rounded-lg shadow-xl whitespace-nowrap';
-        const tSpan1 = document.createElement('span');
-        tSpan1.className = 'font-bold';
-        tSpan1.textContent = `${safeAcc}% ${t('accuracy_suffix')}`;
-        const tSpan2 = document.createElement('span');
-        tSpan2.textContent = `${safeCards} ${safeCards === 1 ? t('card_unit_singular') : t('cards_unit')} • ${safeDuration}`;
-        tooltip.append(tSpan1, document.createElement('br'), tSpan2);
+        col.setAttribute('role', 'button');
+        col.setAttribute('tabindex', '0');
+        col.className = 'flex-1 flex flex-col items-center justify-end h-full group relative cursor-pointer min-w-[28px] focus:outline-none';
 
         const accSpan = document.createElement('span');
-        accSpan.className = 'text-[10px] font-bold text-gray-600 mb-1 opacity-0 group-hover:opacity-100 transition-opacity';
+        accSpan.className = `text-[10px] font-bold mb-1 transition-opacity ${isLatest ? 'text-gray-800 opacity-100' : 'text-gray-600 opacity-70 group-hover:opacity-100 group-focus:opacity-100'}`;
         accSpan.textContent = `${safeAcc}%`;
 
         const bar = document.createElement('div');
-        bar.className = `w-full max-w-[36px] ${barColor} rounded-t-lg transition-all duration-500`;
+        bar.className = `w-full max-w-[36px] ${barColor} rounded-t-lg transition-all duration-500 ${isLatest ? 'ring-2 ring-[#3b82f7]/50 ring-offset-1' : ''}`;
         bar.style.height = `${heightPct}%`;
 
         const lblSpan = document.createElement('span');
-        lblSpan.className = 'text-[9px] text-gray-400 mt-1 font-mono';
+        lblSpan.className = `text-[9px] mt-1 font-mono ${isLatest ? 'text-[#3b82f7] font-bold' : 'text-gray-400'}`;
         lblSpan.textContent = safeLabel;
 
-        col.append(tooltip, accSpan, bar, lblSpan);
+        const showBarDetail = () => {
+            if (!accuracyChartDetailBar) return;
+            accuracyChartDetailBar.innerHTML = `
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="font-bold text-gray-900">${safeLabel}</span>
+                    <span class="text-gray-700 truncate">${safeDeck}</span>
+                    ${safeDate ? `<span class="text-gray-400">(${safeDate})</span>` : ''}
+                </div>
+                <div class="flex items-center gap-3 font-semibold text-gray-700 flex-shrink-0">
+                    <span class="text-emerald-700">${safeAcc}% ${t('accuracy_suffix')}</span>
+                    <span>${safeCards} ${safeCards === 1 ? t('card_unit_singular') : t('cards_unit')} • ${safeDuration}</span>
+                </div>
+            `;
+        };
+
+        col.addEventListener('mouseenter', showBarDetail);
+        col.addEventListener('focus', showBarDetail);
+        col.addEventListener('click', showBarDetail);
+
+        col.append(accSpan, bar, lblSpan);
         accuracyChartContainer.appendChild(col);
     });
 }
@@ -1888,12 +1844,12 @@ addAllToNotebookBtn?.addEventListener('click', () => {
         syncSlotsToCloud();
     }
 
-    showStatsPill(`${addedCount} cards adicionados ao Caderno!`, true);
+    showStatsPill(addedCount === 1 ? t('card_added_toast', { count: 1 }) : t('cards_added_toast', { count: addedCount }), true);
     renderStrugglingCards(statsData.currentSession);
 });
 
-clearStatsBtn?.addEventListener('click', () => {
-    if (confirm(t('clear_stats_confirm'))) {
+clearStatsBtn?.addEventListener('click', async () => {
+    if (await appConfirm(t('clear_stats_confirm'), { variant: 'danger' })) {
         resetAllStats();
         syncSlotsToCloud();
         showStatsPill(t('stats_reset_success'), true);

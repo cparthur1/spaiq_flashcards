@@ -27,6 +27,8 @@ let currentCancelCallback = null;
 let loadedImageNaturalWidth = 1;
 let loadedImageNaturalHeight = 1;
 let isPreviewActive = false;
+let currentShowNumbers = false;
+let selectedArrowIndex = -1;
 
 /**
  * Injects modal HTML into document if not already present.
@@ -37,7 +39,7 @@ function injectImageEditorModalHtml() {
     const modalWrapper = document.createElement('div');
     modalWrapper.id = 'image-editor-modal-wrapper';
     modalWrapper.innerHTML = `
-        <div id="image-editor-modal" class="hidden fixed inset-0 modal-overlay z-[120] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm select-none">
+        <div id="image-editor-modal" class="hidden fixed inset-0 modal-overlay z-[120] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm select-none" role="dialog" aria-modal="true" aria-labelledby="img-edit-modal-title">
             <div class="m3-dialog-card w-full max-w-4xl bg-[var(--md-sys-color-surface-container-lowest,#ffffff)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] overflow-hidden flex flex-col max-h-[94vh]">
                 
                 <!-- HEADER -->
@@ -45,7 +47,7 @@ function injectImageEditorModalHtml() {
                     <div class="flex items-center gap-2.5 min-w-0">
                         <span class="material-symbols-rounded text-2xl text-blue-600 flex-shrink-0">crop</span>
                         <div class="min-w-0">
-                            <h3 class="text-base sm:text-lg font-bold text-[var(--md-sys-color-on-surface,#0f172a)] truncate" data-i18n="adjust_image_title">
+                            <h3 id="img-edit-modal-title" class="text-base sm:text-lg font-bold text-[var(--md-sys-color-on-surface,#0f172a)] truncate" data-i18n="adjust_image_title">
                                 ${t('adjust_image_title')}
                             </h3>
                             <p class="text-xs text-[var(--md-sys-color-on-surface-variant,#475569)] truncate hidden sm:block" data-i18n="adjust_image_subtitle">
@@ -72,23 +74,27 @@ function injectImageEditorModalHtml() {
                         </button>
                     </div>
 
-                    <!-- Arrow Color Picker (shown when Arrow tool is active) -->
-                    <div id="img-arrow-color-bar" class="hidden items-center gap-1.5">
-                        <span class="text-xs text-[var(--md-sys-color-on-surface-variant,#475569)] font-medium mr-1">Cor:</span>
+                    <!-- Arrow Color Picker & Selected Arrow Action (shown when Arrow tool is active) -->
+                    <div id="img-arrow-color-bar" class="hidden items-center gap-2 flex-wrap">
+                        <span class="text-xs text-[var(--md-sys-color-on-surface-variant,#475569)] font-medium" data-i18n="color_label">${t('color_label')}</span>
                         <div class="flex items-center gap-1.5">
                             ${ARROW_COLORS.map(c => `
-                                <button type="button" class="img-color-chip w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center ${c.hex === '#3b82f7' ? 'border-[#3b82f7] ring-2 ring-blue-300' : 'border-gray-300'}" style="background-color: ${c.hex}" data-color="${c.hex}" title="${c.name}"></button>
+                                <button type="button" class="img-color-chip w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center cursor-pointer ${c.hex === '#3b82f7' ? 'border-white ring-2 ring-offset-2 ring-gray-900' : 'border-gray-300'}" style="background-color: ${c.hex}" data-color="${c.hex}" title="${c.name}"></button>
                             `).join('')}
                         </div>
+                        <button type="button" id="img-edit-delete-selected-arrow-btn" class="hidden ml-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold items-center gap-1 transition cursor-pointer" title="${t('delete_selected_arrow')}">
+                            <span class="material-symbols-rounded text-sm leading-none">delete</span>
+                            <span id="img-edit-selected-arrow-label">${t('delete_selected_arrow')}</span>
+                        </button>
                     </div>
 
                     <!-- Quick Action Buttons -->
                     <div class="flex items-center gap-1 sm:gap-2 ml-auto">
-                        <button type="button" id="img-edit-undo-arrow-btn" class="px-2.5 py-1.5 rounded-xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] hover:bg-[var(--md-sys-color-surface-container-low,#f1f5f9)] text-xs font-medium text-[var(--md-sys-color-on-surface,#0f172a)] flex items-center gap-1 transition-colors" title="${t('undo_arrow')}">
+                        <button type="button" id="img-edit-undo-arrow-btn" class="px-2.5 py-1.5 rounded-xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] hover:bg-[var(--md-sys-color-surface-container-low,#f1f5f9)] disabled:opacity-40 disabled:pointer-events-none text-xs font-medium text-[var(--md-sys-color-on-surface,#0f172a)] flex items-center gap-1 transition-colors cursor-pointer" title="${t('undo_arrow')}">
                             <span class="material-symbols-rounded text-base">undo</span>
                             <span class="hidden sm:inline" data-i18n="undo_arrow">${t('undo_arrow')}</span>
                         </button>
-                        <button type="button" id="img-edit-reset-crop-btn" class="px-2.5 py-1.5 rounded-xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] hover:bg-[var(--md-sys-color-surface-container-low,#f1f5f9)] text-xs font-medium text-[var(--md-sys-color-on-surface,#0f172a)] flex items-center gap-1 transition-colors" title="${t('reset_crop')}">
+                        <button type="button" id="img-edit-reset-crop-btn" class="px-2.5 py-1.5 rounded-xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] hover:bg-[var(--md-sys-color-surface-container-low,#f1f5f9)] disabled:opacity-40 disabled:pointer-events-none text-xs font-medium text-[var(--md-sys-color-on-surface,#0f172a)] flex items-center gap-1 transition-colors cursor-pointer" title="${t('reset_crop')}">
                             <span class="material-symbols-rounded text-base">crop_free</span>
                             <span class="hidden sm:inline" data-i18n="reset_crop">${t('reset_crop')}</span>
                         </button>
@@ -141,18 +147,18 @@ function injectImageEditorModalHtml() {
 
                 <!-- FOOTER -->
                 <div class="px-5 py-3.5 sm:px-6 sm:py-4 bg-[var(--md-sys-color-surface-container-low,#f1f5f9)] border-t border-[var(--md-sys-color-outline-variant,#e2e8f0)] flex items-center justify-between">
-                    <button type="button" id="img-edit-clear-arrows-btn" class="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1">
+                    <button type="button" id="img-edit-clear-arrows-btn" class="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 cursor-pointer">
                         <span class="material-symbols-rounded text-base">delete</span>
                         <span data-i18n="clear_arrows">${t('clear_arrows')}</span>
                     </button>
                     
                     <div class="flex items-center gap-2.5">
-                        <button type="button" id="img-edit-cancel-btn" class="m3-btn-expressive m3-btn-text text-xs sm:text-sm font-semibold px-4 py-2" data-i18n="cancel">
+                        <button type="button" id="img-edit-cancel-btn" class="m3-btn-expressive m3-btn-text text-xs sm:text-sm font-semibold px-4 py-2 cursor-pointer" data-i18n="cancel">
                             ${t('cancel')}
                         </button>
-                        <button type="button" id="img-edit-save-btn" class="m3-btn-expressive m3-btn-filled text-xs sm:text-sm font-bold bg-[#3b82f7] hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-1.5" data-i18n="apply_adjustments">
+                        <button type="button" id="img-edit-save-btn" class="m3-btn-expressive m3-btn-filled text-xs sm:text-sm font-bold bg-[#3b82f7] hover:bg-blue-600 text-white px-5 py-2 rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer">
                             <span class="material-symbols-rounded text-base">check</span>
-                            <span>${t('apply_adjustments')}</span>
+                            <span data-i18n="apply_adjustments">${t('apply_adjustments')}</span>
                         </button>
                     </div>
                 </div>
@@ -262,9 +268,38 @@ function renderEditorSvg() {
     if (activeArrow) {
         allArrows.push(activeArrow);
     }
-    markup += buildArrowsSvgContent(allArrows, natW, natH, { showNumbers: true });
+    markup += buildArrowsSvgContent(allArrows, natW, natH, {
+        showNumbers: currentShowNumbers,
+        interactive: activeTool === 'arrow',
+        selectedIndex: activeTool === 'arrow' ? selectedArrowIndex : -1
+    });
 
     svg.innerHTML = markup;
+    syncToolbarButtonsState();
+}
+
+function syncToolbarButtonsState() {
+    const undoBtn = document.getElementById('img-edit-undo-arrow-btn');
+    const clearBtn = document.getElementById('img-edit-clear-arrows-btn');
+    const resetCropBtn = document.getElementById('img-edit-reset-crop-btn');
+    const delSelectedBtn = document.getElementById('img-edit-delete-selected-arrow-btn');
+    const delSelectedLabel = document.getElementById('img-edit-selected-arrow-label');
+
+    const hasArrows = currentArrows.length > 0;
+    const hasCrop = Boolean(currentCrop && (currentCrop.x > 0.5 || currentCrop.y > 0.5 || currentCrop.width < 99.5 || currentCrop.height < 99.5));
+
+    if (undoBtn) undoBtn.disabled = !hasArrows;
+    if (clearBtn) clearBtn.disabled = !hasArrows;
+    if (resetCropBtn) resetCropBtn.disabled = !hasCrop;
+
+    const hasSelection = activeTool === 'arrow' && selectedArrowIndex >= 0 && selectedArrowIndex < currentArrows.length;
+    if (delSelectedBtn) {
+        delSelectedBtn.classList.toggle('hidden', !hasSelection);
+        delSelectedBtn.classList.toggle('inline-flex', hasSelection);
+        if (hasSelection && delSelectedLabel) {
+            delSelectedLabel.textContent = `${t('delete_selected_arrow')} #${selectedArrowIndex + 1}`;
+        }
+    }
 }
 
 /**
@@ -282,6 +317,7 @@ function updatePreviewBox() {
         imageUrl: sourceImg.src,
         crop: crop,
         arrows: currentArrows,
+        showNumbers: currentShowNumbers,
         maxHClass: 'max-h-[50vh] sm:max-h-[58vh]',
         zoomable: false
     });
@@ -304,7 +340,8 @@ function attachModalEvents() {
     const hintText = document.getElementById('img-edit-hint-text');
     const svg = document.getElementById('img-edit-svg');
 
-    // Close / Cancel
+    // Close / Cancel + Backdrop click + Escape key (L201)
+    const modal = document.getElementById('image-editor-modal');
     const handleClose = () => {
         closeImageEditorModal();
         if (typeof currentCancelCallback === 'function') {
@@ -313,6 +350,14 @@ function attachModalEvents() {
     };
     closeBtn?.addEventListener('click', handleClose);
     cancelBtn?.addEventListener('click', handleClose);
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) handleClose();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+            handleClose();
+        }
+    });
 
     // Save Adjustments
     saveBtn?.addEventListener('click', () => {
@@ -348,9 +393,36 @@ function attachModalEvents() {
         closeImageEditorModal();
     });
 
-    // Tool switching: Crop vs Arrow
+    const setPreviewMode = (active) => {
+        isPreviewActive = Boolean(active);
+        const stage = document.getElementById('img-edit-stage');
+        const previewStage = document.getElementById('img-edit-preview-stage');
+        const label = document.getElementById('img-edit-preview-label');
+
+        if (isPreviewActive) {
+            stage?.classList.add('hidden');
+            previewStage?.classList.remove('hidden');
+            previewStage?.classList.add('flex');
+            if (label) label.textContent = t('edit_mode');
+            togglePreviewBtn?.classList.add('bg-blue-100', 'border-blue-400', 'text-blue-700');
+            updatePreviewBox();
+        } else {
+            previewStage?.classList.add('hidden');
+            previewStage?.classList.remove('flex');
+            stage?.classList.remove('hidden');
+            if (label) label.textContent = t('preview_mode');
+            togglePreviewBtn?.classList.remove('bg-blue-100', 'border-blue-400', 'text-blue-700');
+            renderEditorSvg();
+        }
+    };
+
+    // Tool switching: Crop vs Arrow (automatically exits Preview Mode — L200)
     const switchTool = (tool) => {
         activeTool = tool;
+        selectedArrowIndex = -1;
+        if (isPreviewActive) {
+            setPreviewMode(false);
+        }
         if (tool === 'crop') {
             toolCropBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all bg-[#3b82f7] text-white shadow-xs";
             toolArrowBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-[var(--md-sys-color-on-surface-variant,#475569)] hover:text-black";
@@ -370,24 +442,42 @@ function attachModalEvents() {
     toolCropBtn?.addEventListener('click', () => switchTool('crop'));
     toolArrowBtn?.addEventListener('click', () => switchTool('arrow'));
 
-    // Color chips
+    // Color chips (high-contrast ring on every swatch + recolors selected arrow — L199, L201)
     const colorChips = document.querySelectorAll('.img-color-chip');
     colorChips.forEach(chip => {
         chip.addEventListener('click', () => {
             activeArrowColor = chip.dataset.color || '#3b82f7';
             colorChips.forEach(c => {
-                c.classList.remove('ring-2', 'ring-blue-300', 'border-[#3b82f7]');
+                c.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-900', 'border-white');
                 c.classList.add('border-gray-300');
             });
             chip.classList.remove('border-gray-300');
-            chip.classList.add('ring-2', 'ring-blue-300', 'border-[#3b82f7]');
+            chip.classList.add('ring-2', 'ring-offset-2', 'ring-gray-900', 'border-white');
+
+            if (selectedArrowIndex >= 0 && currentArrows[selectedArrowIndex]) {
+                currentArrows[selectedArrowIndex].color = activeArrowColor;
+                renderEditorSvg();
+                if (isPreviewActive) updatePreviewBox();
+            }
         });
+    });
+
+    // Delete specific selected arrow (L199)
+    const delSelectedBtn = document.getElementById('img-edit-delete-selected-arrow-btn');
+    delSelectedBtn?.addEventListener('click', () => {
+        if (selectedArrowIndex >= 0 && selectedArrowIndex < currentArrows.length) {
+            currentArrows.splice(selectedArrowIndex, 1);
+            selectedArrowIndex = -1;
+            renderEditorSvg();
+            if (isPreviewActive) updatePreviewBox();
+        }
     });
 
     // Undo arrow
     undoArrowBtn?.addEventListener('click', () => {
         if (currentArrows.length > 0) {
             currentArrows.pop();
+            if (selectedArrowIndex >= currentArrows.length) selectedArrowIndex = -1;
             renderEditorSvg();
             if (isPreviewActive) updatePreviewBox();
         }
@@ -404,32 +494,14 @@ function attachModalEvents() {
     clearArrowsBtn?.addEventListener('click', () => {
         currentArrows = [];
         activeArrow = null;
+        selectedArrowIndex = -1;
         renderEditorSvg();
         if (isPreviewActive) updatePreviewBox();
     });
 
     // Toggle Preview
     togglePreviewBtn?.addEventListener('click', () => {
-        isPreviewActive = !isPreviewActive;
-        const stage = document.getElementById('img-edit-stage');
-        const previewStage = document.getElementById('img-edit-preview-stage');
-        const label = document.getElementById('img-edit-preview-label');
-
-        if (isPreviewActive) {
-            stage.classList.add('hidden');
-            previewStage.classList.remove('hidden');
-            previewStage.classList.add('flex');
-            label.textContent = t('edit_mode');
-            togglePreviewBtn.classList.add('bg-blue-100', 'border-blue-400', 'text-blue-700');
-            updatePreviewBox();
-        } else {
-            previewStage.classList.add('hidden');
-            previewStage.classList.remove('flex');
-            stage.classList.remove('hidden');
-            label.textContent = t('preview_mode');
-            togglePreviewBtn.classList.remove('bg-blue-100', 'border-blue-400', 'text-blue-700');
-            renderEditorSvg();
-        }
+        setPreviewMode(!isPreviewActive);
     });
 
     // Pointer events on SVG stage
@@ -455,6 +527,17 @@ function attachModalEvents() {
                     e.preventDefault();
                 }
             } else if (activeTool === 'arrow') {
+                const clickedArrowGroup = e.target?.closest?.('.arrow-group');
+                if (clickedArrowGroup) {
+                    const idx = parseInt(clickedArrowGroup.dataset.arrowIndex, 10);
+                    if (!isNaN(idx) && currentArrows[idx]) {
+                        selectedArrowIndex = (selectedArrowIndex === idx) ? -1 : idx;
+                        renderEditorSvg();
+                        e.preventDefault();
+                        return;
+                    }
+                }
+                selectedArrowIndex = -1;
                 isDrawingArrow = true;
                 activeArrow = {
                     startX: coords.x,
@@ -559,6 +642,7 @@ export function openImageEditorModal({
     crop = null,
     arrows = [],
     defaultTool = 'crop',
+    showNumbers = undefined,
     onSave = null,
     onCancel = null
 }) {
@@ -572,6 +656,8 @@ export function openImageEditorModal({
     currentCrop = crop ? { ...crop } : { x: 0, y: 0, width: 100, height: 100 };
     currentArrows = Array.isArray(arrows) ? JSON.parse(JSON.stringify(arrows)) : [];
     activeTool = defaultTool === 'arrow' ? 'arrow' : 'crop';
+    currentShowNumbers = typeof showNumbers === 'boolean' ? showNumbers : (defaultTool === 'arrow');
+    selectedArrowIndex = -1;
     activeArrow = null;
     isDrawingArrow = false;
     isPreviewActive = false;

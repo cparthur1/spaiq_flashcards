@@ -23,6 +23,7 @@ import { getUserStatus, verifyPaymentStatus, createExtraDeckCheckoutSession, BAC
 import { triggerProUnlockCelebration } from './engine/pro-unlock-celebration.js';
 import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl, encodeStoragePayload, openModalWithMotion, closeModalWithMotion } from './utils.js';
 import { t, applyTranslations } from './i18n.js';
+import { appAlert, appConfirm } from './dialogs.js';
 
 let modalInitialized = false;
 let currentUser = null;
@@ -203,7 +204,7 @@ export function initExploreModal() {
 
           const isGeneratePage = typeof window !== 'undefined' && window.location.pathname.includes('generate');
           if (!isGeneratePage) {
-            alert(t('extra_deck_payment_success'));
+            await appAlert(t('extra_deck_payment_success'), { variant: 'success' });
             // If on another page, redirect to generate page and open AI modal automatically
             window.location.href = '/pages/generate.html?open_ai_modal=true';
           }
@@ -216,7 +217,7 @@ export function initExploreModal() {
               window.dispatchEvent(new CustomEvent('flashcards:extra-deck-paid', { detail: { verifyResult } }));
             } catch (e) {}
           } else {
-            alert(t('payment_identified_login_pro'));
+            await appAlert(t('payment_identified_login_pro'), { variant: 'info' });
             if (typeof window.flashcardsOpenAccountModal === 'function') {
               window.flashcardsOpenAccountModal();
             }
@@ -362,8 +363,8 @@ function injectModalHtml() {
   container.id = 'explore-modal-wrapper';
   container.innerHTML = `
     <!-- EXPLORAR ARQUIVOS MODAL -->
-    <div id="explore-modal" class="hidden fixed inset-0 modal-overlay z-[100] items-center justify-center p-3 sm:p-4 bg-black/50">
-      <div class="m3-dialog-card w-full max-w-2xl bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] overflow-hidden flex flex-col max-h-[92vh] animate-fadeIn">
+    <div id="explore-modal" class="hidden fixed inset-0 modal-overlay z-[100] items-center justify-center p-3 sm:p-4 bg-black/50" role="dialog" aria-modal="true" aria-label="Explorar arquivos">
+      <div class="m3-dialog-card w-full max-w-2xl bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] overflow-hidden flex flex-col max-h-[92vh]">
         
         <!-- HEADER (Matches Mockup) -->
         <div class="p-4 sm:p-5 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex items-center justify-between">
@@ -400,19 +401,24 @@ function injectModalHtml() {
             </div>
           </div>
 
-          <!-- EXTRA ACTIONS: UPLOAD & EXAM WEEK -->
-          <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex flex-wrap gap-2.5">
-            <button id="modal-upload-btn" class="m3-btn-expressive m3-btn-tonal text-xs py-2.5 px-4 font-bold flex items-center gap-2">
-              <span class="material-symbols-rounded text-lg">upload_file</span>
-              <span data-i18n="load_json_file">Carregar Arquivo (.json)</span>
-            </button>
+          <!-- EXTRA ACTIONS: M3 EXPRESSIVE CONNECTED BUTTON GROUP (Load / Mix / Create) -->
+          <div class="pt-3 border-t border-[var(--md-sys-color-outline-variant)]">
             <input type="file" id="modal-hidden-file-input" accept=".json" class="hidden" />
             <input type="file" id="modal-hidden-notebook-file-input" accept=".json" class="hidden" />
-
-            <button id="modal-exam-btn" class="m3-btn-expressive m3-btn-outlined text-xs py-2.5 px-4 font-bold flex items-center gap-2 text-purple-700 border-purple-300 hover:bg-purple-50">
-              <span class="material-symbols-rounded text-lg text-purple-600">bolt</span>
-              <span data-i18n="exam_week_mix">Semana de Provas (Misturar)</span>
-            </button>
+            <div class="m3-btn-group m3-btn-group-full" role="group" aria-label="Ações de baralho">
+              <button type="button" id="modal-upload-btn" class="m3-btn-group-item py-2.5 px-2.5 sm:px-3.5 text-xs font-bold bg-[#0ea5e9] hover:bg-[#0284c7] text-white" title="${t('load_json_file')}" data-i18n-title="load_json_file">
+                <span class="material-symbols-rounded text-[17px] leading-none shrink-0" aria-hidden="true">upload_file</span>
+                <span class="truncate" data-i18n="explore_load_deck_short">${t('explore_load_deck_short')}</span>
+              </button>
+              <button type="button" id="modal-exam-btn" class="m3-btn-group-item py-2.5 px-2.5 sm:px-3.5 text-xs font-bold bg-[#f97316] hover:bg-[#ea580c] text-white" title="${t('exam_week_mix')}" data-i18n-title="exam_week_mix">
+                <span class="material-symbols-rounded text-[17px] leading-none shrink-0" aria-hidden="true">layers</span>
+                <span class="truncate" data-i18n="explore_mix_decks_short">${t('explore_mix_decks_short')}</span>
+              </button>
+              <button type="button" id="modal-create-deck-btn" class="m3-btn-group-item py-2.5 px-2.5 sm:px-3.5 text-xs font-bold bg-[#3b82f7] hover:bg-[#2563eb] text-white" title="${t('create_deck')}" data-i18n-title="create_deck">
+                <span class="material-symbols-rounded text-[17px] leading-none shrink-0" aria-hidden="true">add_circle</span>
+                <span class="truncate" data-i18n="explore_create_deck_short">${t('explore_create_deck_short')}</span>
+              </button>
+            </div>
           </div>
 
         </div>
@@ -420,89 +426,103 @@ function injectModalHtml() {
       </div>
     </div>
 
-    <!-- PRO SUBSCRIPTION MODAL (R$ 4,99/MÊS) -->
-    <div id="pro-subscription-modal" class="hidden fixed inset-0 modal-overlay z-[110] items-center justify-center p-3 sm:p-4 bg-black/60">
-      <div class="m3-dialog-card w-full max-w-md bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] p-6 text-center animate-fadeIn max-h-[92vh] overflow-y-auto custom-scrollbar">
-        <div class="w-12 h-12 rounded-2xl bg-blue-100 text-[var(--md-sys-color-primary)] flex items-center justify-center mx-auto mb-3">
-          <span class="material-symbols-rounded text-2xl">workspace_premium</span>
-        </div>
-        <h2 class="text-xl font-bold text-[var(--md-sys-color-on-surface)] mb-1" data-i18n="flashcards_pro_title">Flashcards Pro</h2>
-        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4" data-i18n="flashcards_pro_subtitle">Sincronização em nuvem e recursos de Inteligência Artificial sem chave de API.</p>
-
-        <div class="bg-[var(--md-sys-color-surface-container-low)] p-4 rounded-2xl text-left space-y-2 mb-4 text-xs">
-          <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
-            <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span data-i18n="pro_feat_ai_gen"><strong>Gerar flashcards com IA</strong> usando seus materiais</span>
-          </div>
-          <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
-            <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span data-i18n="pro_feat_semantic"><strong>Tutor de IA</strong> que explica seu card</span>
-          </div>
-          <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
-            <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span data-i18n="pro_feat_cloud_sync"><strong>Sincronização</strong> entre dispositivos</span>
-          </div>
-          <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
-            <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span data-i18n="pro_feat_unlimited">Estude em qualquer lugar sem limites</span>
-          </div>
-          <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
-            <span class="material-symbols-rounded text-base text-green-600">check_circle</span>
-            <span data-i18n="pro_feat_gorit_pro">${t('pro_feat_gorit_pro')}</span>
-          </div>
-        </div>
-
-        <!-- Gorit PRO Included Bonus Banner -->
-        <div class="p-3 bg-purple-50/90 border border-purple-200/90 rounded-2xl flex items-center gap-3 text-left mb-3 shadow-2xs">
-          <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-rounded text-lg text-purple-600">stars</span>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <p class="text-xs font-bold text-purple-900" data-i18n="pro_gorit_bonus_title">${t('pro_gorit_bonus_title')}</p>
-              <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-200/80 text-purple-800" data-i18n="pro_included_badge">${t('pro_included_badge')}</span>
-            </div>
-            <p class="text-[11px] text-purple-700 leading-tight mt-0.5" data-i18n="pro_gorit_bonus_desc">${t('pro_gorit_bonus_desc')}</p>
-          </div>
-        </div>
-
-        <!-- Clube CAMBLU Partner Banner -->
-        <div id="pro-camblu-clube-banner" class="p-3 bg-blue-50/80 border border-blue-200/90 rounded-2xl flex items-start gap-3 text-left mb-4 shadow-2xs">
-          <div class="w-8 h-8 rounded-xl bg-blue-100 text-[#3b82f7] flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span class="material-symbols-rounded text-lg text-[#3b82f7]">card_membership</span>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p id="pro-camblu-clube-hint" class="text-[11px] text-blue-900 font-semibold leading-snug" data-i18n="camblu_clube_pro_perk_hint">${t('camblu_clube_pro_perk_hint')}</p>
-            <p class="text-[10px] text-blue-700 leading-tight mt-1" data-i18n="camblu_clube_tiers_quota_info">${t('camblu_clube_tiers_quota_info')}</p>
-          </div>
-        </div>
-
-        <div class="mb-5">
-          <span class="text-3xl font-extrabold text-[var(--md-sys-color-primary)]">R$ 4,99</span>
-          <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="per_month">${t('per_month')}</span>
-        </div>
-
-        <!-- Checkout View -->
-        <div id="pro-checkout-container" class="space-y-3">
-          <div id="checkout-form"></div>
-        </div>
-
-        <div class="mt-4 pt-3 border-t border-[var(--md-sys-color-outline-variant)] text-center text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1">
-          <div><span data-i18n="prefer_single_deck">${t('prefer_single_deck')}</span></div>
-          <button type="button" id="switch-to-extra-from-pro-btn" class="font-bold text-amber-700 hover:underline cursor-pointer">
-            ${t('buy_single_deck_btn')}
-          </button>
-        </div>
-
-        <button id="close-pro-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto" data-i18n="back">
-          ${t('back')}
+    <!-- PRO SUBSCRIPTION MODAL (R$ 4,99/MÊS) — Checkout Highlighted + Full Benefits Showcase (L217) -->
+    <div id="pro-subscription-modal" class="hidden fixed inset-0 modal-overlay z-[110] items-center justify-center p-3 sm:p-4 bg-black/60" role="dialog" aria-modal="true" aria-labelledby="pro-modal-title">
+      <div class="m3-dialog-card relative w-full max-w-md md:max-w-3xl bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] p-5 sm:p-6 max-h-[92vh] overflow-y-auto custom-scrollbar">
+        <button id="close-pro-modal-x-btn" type="button" class="absolute top-4 right-4 p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition-colors cursor-pointer flex items-center justify-center" title="${t('close')}" aria-label="${t('close')}">
+          <span class="material-symbols-rounded text-xl leading-none">close</span>
         </button>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6 items-start">
+          <!-- PROMINENT CHECKOUT COLUMN (First on mobile & right-prominent on desktop) -->
+          <div class="md:col-span-6 md:order-2 p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-blue-50/75 to-white border-2 border-[#3b82f7]/35 shadow-sm text-center space-y-4">
+            <div>
+              <div class="w-11 h-11 rounded-2xl bg-blue-100 text-[#3b82f7] flex items-center justify-center mx-auto mb-2.5">
+                <span class="material-symbols-rounded text-2xl">workspace_premium</span>
+              </div>
+              <h2 id="pro-modal-title" class="text-xl font-bold text-[var(--md-sys-color-on-surface)]" data-i18n="flashcards_pro_title">Flashcards Pro</h2>
+              <div class="mt-2">
+                <span class="text-3xl font-extrabold text-[#3b82f7]">R$ 4,99</span>
+                <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="per_month">${t('per_month')}</span>
+              </div>
+            </div>
+
+            <!-- Checkout View -->
+            <div id="pro-checkout-container" class="space-y-3 text-left">
+              <div id="checkout-form"></div>
+            </div>
+
+            <div class="pt-3 border-t border-blue-200/70 text-center text-xs text-[var(--md-sys-color-on-surface-variant)] space-y-1">
+              <div><span data-i18n="prefer_single_deck">${t('prefer_single_deck')}</span></div>
+              <button type="button" id="switch-to-extra-from-pro-btn" class="font-bold text-amber-700 hover:underline cursor-pointer">
+                ${t('buy_single_deck_btn')}
+              </button>
+            </div>
+          </div>
+
+          <!-- ALL BENEFITS COLUMN -->
+          <div class="md:col-span-6 md:order-1 space-y-3.5 text-left md:pt-1">
+            <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed pr-6" data-i18n="flashcards_pro_subtitle">Sincronização em nuvem e recursos de Inteligência Artificial sem chave de API.</p>
+
+            <div class="bg-[var(--md-sys-color-surface-container-low)] p-4 rounded-2xl space-y-2.5 text-xs">
+              <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
+                <span class="material-symbols-rounded text-base text-emerald-600 flex-shrink-0">check_circle</span>
+                <span data-i18n="pro_feat_ai_gen"><strong>Gerar flashcards com IA</strong> usando seus materiais</span>
+              </div>
+              <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
+                <span class="material-symbols-rounded text-base text-emerald-600 flex-shrink-0">check_circle</span>
+                <span data-i18n="pro_feat_semantic"><strong>Tutor de IA</strong> que explica seu card</span>
+              </div>
+              <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
+                <span class="material-symbols-rounded text-base text-emerald-600 flex-shrink-0">check_circle</span>
+                <span data-i18n="pro_feat_cloud_sync"><strong>Sincronização</strong> entre dispositivos</span>
+              </div>
+              <div class="flex items-center gap-2 text-[var(--md-sys-color-on-surface)]">
+                <span class="material-symbols-rounded text-base text-emerald-600 flex-shrink-0">check_circle</span>
+                <span data-i18n="pro_feat_unlimited">Estude em qualquer lugar sem limites</span>
+              </div>
+            </div>
+
+            <!-- Gorit PRO Included Bonus Banner -->
+            <div class="p-3 bg-amber-50/90 border border-amber-200/90 rounded-2xl flex items-center gap-3 text-left shadow-2xs">
+              <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-rounded text-lg text-amber-600">stars</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <p class="text-xs font-bold text-amber-950" data-i18n="pro_gorit_bonus_title">${t('pro_gorit_bonus_title')}</p>
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900" data-i18n="pro_included_badge">${t('pro_included_badge')}</span>
+                </div>
+                <p class="text-[11px] text-amber-800 leading-tight mt-0.5" data-i18n="pro_gorit_bonus_desc">${t('pro_gorit_bonus_desc')}</p>
+              </div>
+            </div>
+
+            <!-- Clube CAMBLU Partner Banner -->
+            <div id="pro-camblu-clube-banner" class="p-3 bg-blue-50/80 border border-blue-200/90 rounded-2xl flex items-start gap-3 text-left shadow-2xs">
+              <div class="w-8 h-8 rounded-xl bg-blue-100 text-[#3b82f7] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="material-symbols-rounded text-lg text-[#3b82f7]">card_membership</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p id="pro-camblu-clube-hint" class="text-[11px] text-blue-900 font-semibold leading-snug" data-i18n="camblu_clube_pro_perk_hint">${t('camblu_clube_pro_perk_hint')}</p>
+                <p class="text-[10px] text-blue-700 leading-tight mt-1" data-i18n="camblu_clube_tiers_quota_info">${t('camblu_clube_tiers_quota_info')}</p>
+              </div>
+            </div>
+
+            <button id="close-pro-modal-btn" class="text-xs text-gray-500 hover:text-gray-700 underline block mx-auto md:mx-0 pt-1 cursor-pointer" data-i18n="back">
+              ${t('back')}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- EXTRA DECK PURCHASE MODAL (R$ 1,49) -->
-    <div id="extra-deck-modal" class="hidden fixed inset-0 modal-overlay z-[120] items-center justify-center p-3 sm:p-4 bg-black/60">
-      <div class="m3-dialog-card w-full max-w-md bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] p-6 text-center animate-fadeIn max-h-[92vh] overflow-y-auto custom-scrollbar">
+    <div id="extra-deck-modal" class="hidden fixed inset-0 modal-overlay z-[120] items-center justify-center p-3 sm:p-4 bg-black/60" role="dialog" aria-modal="true" aria-labelledby="extra-deck-modal-title">
+      <div class="m3-dialog-card relative w-full max-w-md bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] p-6 text-center max-h-[92vh] overflow-y-auto custom-scrollbar">
+        <button id="close-extra-deck-modal-x-btn" type="button" class="absolute top-4 right-4 p-2 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition-colors cursor-pointer flex items-center justify-center" title="${t('close')}" aria-label="${t('close')}">
+          <span class="material-symbols-rounded text-xl leading-none">close</span>
+        </button>
+
         <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
           <span class="material-symbols-rounded text-2xl">add_circle</span>
         </div>
@@ -510,7 +530,7 @@ function injectModalHtml() {
         <p id="extra-deck-modal-subtitle" class="text-xs text-[var(--md-sys-color-on-surface-variant)] mb-4" data-i18n="extra_deck_subtitle">${t('extra_deck_subtitle')}</p>
 
         <div class="mb-4">
-          <span id="extra-deck-modal-price" class="text-3xl font-extrabold text-[var(--md-sys-color-primary)]">R$ 1,49</span>
+          <span id="extra-deck-modal-price" class="text-3xl font-extrabold text-[#3b82f7]">R$ 1,49</span>
           <span class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="per_deck">${t('per_deck')}</span>
         </div>
 
@@ -530,22 +550,21 @@ function injectModalHtml() {
           </div>
         </div>
 
-        <!-- When non-pro user: below this increase size of "Want 4 decks per month, AI tutor and save sync? [...]" text and move the Login with google button there -->
         <div id="extra-deck-switch-pro-container" class="mt-4 pt-4 border-t border-[var(--md-sys-color-outline-variant)] text-center space-y-3">
           <div>
             <p class="text-sm sm:text-base font-bold text-[var(--md-sys-color-on-surface)] leading-snug">
               <span data-i18n="prefer_pro_plan">${t('prefer_pro_plan')}</span>
             </p>
           </div>
-          <button type="button" id="switch-to-pro-from-extra-btn" class="w-full py-2.5 px-4 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs border border-purple-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-            <span class="material-symbols-rounded text-base text-purple-600">workspace_premium</span>
+          <button type="button" id="switch-to-pro-from-extra-btn" class="w-full py-2.5 px-4 rounded-2xl bg-blue-50 hover:bg-blue-100 text-[#3b82f7] font-bold text-xs border border-blue-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
+            <span class="material-symbols-rounded text-base text-[#3b82f7]">workspace_premium</span>
             <span data-i18n="flashcards_pro_monthly_btn">${t('flashcards_pro_monthly_btn')}</span>
           </button>
-          <p class="text-[11px] text-purple-700 font-semibold text-center" data-i18n="extra_deck_gorit_bonus">${t('extra_deck_gorit_bonus')}</p>
+          <p class="text-[11px] text-amber-800 font-semibold text-center" data-i18n="extra_deck_gorit_bonus">${t('extra_deck_gorit_bonus')}</p>
           <div id="extra-deck-google-login-wrapper"></div>
         </div>
 
-        <button id="close-extra-deck-modal-btn" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline block mx-auto cursor-pointer" data-i18n="cancel">
+        <button id="close-extra-deck-modal-btn" class="mt-4 text-xs text-gray-500 hover:text-gray-700 underline block mx-auto cursor-pointer" data-i18n="cancel">
           ${t('cancel')}
         </button>
       </div>
@@ -561,7 +580,28 @@ function injectModalHtml() {
 function attachModalEventListeners() {
   document.getElementById('close-explore-modal-btn')?.addEventListener('click', closeExploreModal);
   document.getElementById('close-pro-modal-btn')?.addEventListener('click', closeProModal);
+  document.getElementById('close-pro-modal-x-btn')?.addEventListener('click', closeProModal);
   document.getElementById('close-extra-deck-modal-btn')?.addEventListener('click', closeExtraDeckModal);
+  document.getElementById('close-extra-deck-modal-x-btn')?.addEventListener('click', closeExtraDeckModal);
+
+  const exploreModalEl = document.getElementById('explore-modal');
+  const proModalEl = document.getElementById('pro-subscription-modal');
+  const extraModalEl = document.getElementById('extra-deck-modal');
+
+  exploreModalEl?.addEventListener('click', (e) => { if (e.target === exploreModalEl) closeExploreModal(); });
+  proModalEl?.addEventListener('click', (e) => { if (e.target === proModalEl) closeProModal(); });
+  extraModalEl?.addEventListener('click', (e) => { if (e.target === extraModalEl) closeExtraDeckModal(); });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (extraModalEl && !extraModalEl.classList.contains('hidden')) {
+      closeExtraDeckModal();
+    } else if (proModalEl && !proModalEl.classList.contains('hidden')) {
+      closeProModal();
+    } else if (exploreModalEl && !exploreModalEl.classList.contains('hidden')) {
+      closeExploreModal();
+    }
+  });
 
   document.getElementById('switch-to-extra-from-pro-btn')?.addEventListener('click', () => {
     closeProModal();
@@ -595,12 +635,12 @@ function attachModalEventListeners() {
       const parsed = JSON.parse(text);
 
       if (parsed && parsed.__flashcards_watermark__ === "notebook_backup_v1") {
-        const importAsNotebook = confirm(t('confirm_restore_notebook_backup'));
+        const importAsNotebook = await appConfirm(t('confirm_restore_notebook_backup'));
         if (importAsNotebook) {
           const importedCount = importNotebookBackupData(parsed);
           renderNotebookSlot();
           hiddenInput.value = '';
-          alert(t('notebook_backup_restored_success', { count: importedCount }));
+          await appAlert(t('notebook_backup_restored_success', { count: importedCount }), { variant: 'success' });
           return;
         }
       }
@@ -636,12 +676,12 @@ function attachModalEventListeners() {
         cards = parsed.cards;
         deckTitle = parsed.deckTitle || deckName;
       } else {
-        alert(t('invalid_json_deck'));
+        await appAlert(t('invalid_json_deck'), { variant: 'warning' });
         return;
       }
 
       if (cards.length === 0) {
-        alert(t('json_empty_cards'));
+        await appAlert(t('json_empty_cards'), { variant: 'warning' });
         return;
       }
 
@@ -662,7 +702,7 @@ function attachModalEventListeners() {
       // Redirect to game
       window.location.href = ROUTES.GAME;
     } catch (err) {
-      alert(t('error_reading_json_file', { error: err.message || t('invalid_format') }));
+      await appAlert(t('error_reading_json_file', { error: err.message || t('invalid_format') }), { variant: 'warning' });
     }
   });
 
@@ -687,9 +727,9 @@ function attachModalEventListeners() {
       }
 
       renderNotebookSlot();
-      alert(t('notebook_backup_imported_success', { count: importedCount }));
+      await appAlert(t('notebook_backup_imported_success', { count: importedCount }), { variant: 'success' });
     } catch (err) {
-      alert(t('error_importing_notebook_backup', { error: err.message || t('invalid_format') }));
+      await appAlert(t('error_importing_notebook_backup', { error: err.message || t('invalid_format') }), { variant: 'warning' });
     } finally {
       if (hiddenNotebookInput) hiddenNotebookInput.value = '';
     }
@@ -704,6 +744,12 @@ function attachModalEventListeners() {
     } else {
       window.location.href = `${ROUTES.HOME}?openExam=1`;
     }
+  });
+
+  // Create Deck button inside M3 Connected Button Group
+  document.getElementById('modal-create-deck-btn')?.addEventListener('click', () => {
+    closeExploreModal();
+    window.location.href = ROUTES.GENERATE;
   });
 }
 
@@ -767,7 +813,7 @@ async function mountStripeEmbeddedForm() {
       "labels": "auto",
       "inputs": "spaced",
       "variables": {
-        "borderRadius": "4px",
+        "borderRadius": "12px",
         "colorBackground": "#ffffff",
         "colorDanger": "#df1b41",
         "colorPrimary": "#3b82f7",
@@ -858,8 +904,6 @@ export function renderProModalContent() {
   const container = document.getElementById('pro-checkout-container');
   if (!container) return;
 
-  const pixResult = document.getElementById('pro-pix-result');
-  if (pixResult) pixResult.classList.add('hidden');
   container.classList.remove('hidden');
 
   const status = getUserProStatus(currentUser);
@@ -900,7 +944,7 @@ export function renderProModalContent() {
 
     container.innerHTML = `
       <div class="space-y-3">
-        <button id="pro-google-login-btn" class="m3-btn-expressive m3-btn-filled w-full py-3.5 px-4 font-bold text-sm flex items-center justify-center gap-2.5 shadow bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition">
+        <button id="pro-google-login-btn" class="m3-btn-expressive m3-btn-filled w-full py-3.5 px-4 font-bold text-sm flex items-center justify-center gap-2.5 shadow bg-[#3b82f7] hover:bg-blue-600 text-white cursor-pointer transition">
           <img src="${googleLogoSrc}" alt="Google" class="w-4 h-4 flex-shrink-0 brightness-0 invert" style="filter: brightness(0) invert(1);">
           <span data-i18n="login_with_google">${t('login_with_google')}</span>
         </button>
@@ -916,7 +960,7 @@ export function renderProModalContent() {
           renderModalContent();
         }
       } catch (e) {
-        alert(t('error_authenticating_google'));
+        await appAlert(t('error_authenticating_google'), { variant: 'warning' });
       }
     });
     return;
@@ -961,9 +1005,11 @@ export function renderExtraDeckModalContent() {
   // Move Login with Google button below the Pro teaser for non-pro users who are not logged in
   if (loginWrapper) {
     if (!pro && !currentUser) {
+      const isSubpage = typeof window !== 'undefined' && window.location.pathname.includes('/pages/');
+      const googleLogoSrc = isSubpage ? '../assets/img/google_g_logo.svg' : 'assets/img/google_g_logo.svg';
       loginWrapper.innerHTML = `
         <button type="button" id="extra-google-login-btn" class="w-full py-2.5 px-4 rounded-2xl border border-[var(--md-sys-color-outline-variant,#e2e8f0)] hover:bg-[var(--md-sys-color-surface-container-high,#f1f5f9)] text-[var(--md-sys-color-on-surface,#0f172a)] font-semibold text-xs flex items-center justify-center gap-2.5 shadow-2xs transition-colors cursor-pointer bg-white">
-          <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+          <img src="${googleLogoSrc}" alt="Google" class="w-4 h-4 flex-shrink-0">
           <span data-i18n="login_with_google">${t('login_with_google')}</span>
         </button>
       `;
@@ -974,7 +1020,7 @@ export function renderExtraDeckModalContent() {
             renderExtraDeckModalContent();
           }
         } catch (e) {
-          alert(t('error_authenticating_google'));
+          await appAlert(t('error_authenticating_google'), { variant: 'warning' });
         }
       });
     } else {
@@ -1014,7 +1060,7 @@ export function renderExtraDeckModalContent() {
         }
       } catch (err) {
         console.error('[Stripe Checkout Error]:', err);
-        alert(err.message || t('checkout_init_error'));
+        await appAlert(err.message || t('checkout_init_error'), { variant: 'warning' });
         newPayBtn.disabled = false;
         newPayBtn.classList.remove('opacity-50', 'pointer-events-none');
         if (loadingIndicator) loadingIndicator.classList.add('hidden');
@@ -1051,32 +1097,30 @@ function renderAuthHeader() {
       : (isCamblu ? escapeHtml(t('camblu_clube_badge', { tier: getCambluTierLabel(status?.cambluClube?.tier || status?.subscription?.tier).toUpperCase() })) : 'PRO');
 
     container.innerHTML = `
-      <div class="relative">
-        ${photo ? `<img src="${photo}" referrerpolicy="no-referrer" class="w-10 h-10 rounded-full border border-blue-200 object-cover" alt="Avatar">`
-                : `<span class="material-symbols-rounded text-4xl text-blue-600">account_circle</span>`}
-        ${isPro ? `<span class="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 text-[10px]" title="${t('pro_subscriber_title')}"><span class="material-symbols-rounded text-xs block">star</span></span>` : ''}
-      </div>
-      <div class="text-left min-w-0">
-        <div class="flex items-center gap-1.5">
-          <p class="font-bold text-sm text-[var(--md-sys-color-on-surface)] truncate max-w-[140px] sm:max-w-[200px]">${name}</p>
-          ${isPro ? `<span class="text-[10px] ${isCamblu ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-amber-100 text-amber-800 border-amber-300'} font-bold px-1.5 py-0.2 rounded-full border">${headerProBadgeText}</span>` : ''}
-        </div>
-        <div class="flex items-center gap-3">
-          <button id="modal-logout-btn" class="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer">
-            <span class="material-symbols-rounded text-sm">logout</span> ${t('logout')}
-          </button>
-          ${isPro 
-            ? `<button id="modal-manage-account-btn" class="text-xs text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer">${t('manage_subscription')}</button>` 
-            : `<button id="modal-upgrade-pro-btn" class="text-xs text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer">${t('subscribe_pro')}</button>`}
-        </div>
+      <div class="flex items-center gap-2 min-w-0 flex-wrap">
+        <button type="button" id="modal-open-account-chip" class="group flex items-center gap-2 pr-2.5 pl-1 py-1 rounded-full bg-white hover:bg-blue-50/70 border border-[var(--md-sys-color-outline-variant)] hover:border-blue-300 shadow-2xs transition cursor-pointer min-w-0 max-w-full" title="${t('account_subscription_title')}">
+          <div class="relative w-8 h-8 flex-shrink-0 flex items-center justify-center">
+            ${photo ? `<img src="${photo}" referrerpolicy="no-referrer" class="w-8 h-8 rounded-full border border-blue-200 object-cover" alt="Avatar">`
+                    : `<span class="material-symbols-rounded text-[30px] leading-none text-[#3b82f7]">account_circle</span>`}
+            ${isPro ? `<span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-amber-500 text-white ring-2 ring-white flex items-center justify-center shadow-2xs" title="${t('pro_subscriber_title')}"><span class="material-symbols-rounded block leading-none" style="font-size: 9px;">star</span></span>` : ''}
+          </div>
+          <div class="text-left min-w-0">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <p class="font-bold text-xs text-[var(--md-sys-color-on-surface)] truncate max-w-[115px] sm:max-w-[165px] leading-tight">${name}</p>
+              ${isPro ? `<span class="inline-flex items-center text-[9px] tracking-wide ${isCamblu ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-amber-100 text-amber-800 border-amber-200'} font-extrabold px-1.5 py-[2px] rounded-full border leading-none whitespace-nowrap shrink-0 max-w-[92px] truncate">${headerProBadgeText}</span>` : ''}
+            </div>
+            <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] group-hover:text-[#3b82f7] font-medium flex items-center gap-0.5 leading-tight mt-0.5">
+              <span class="truncate">${t('account_chip_label')}</span>
+              <span class="material-symbols-rounded text-xs leading-none shrink-0">chevron_right</span>
+            </p>
+          </div>
+        </button>
+        ${!isPro ? `<button type="button" id="modal-upgrade-pro-btn" class="px-3 py-1.5 rounded-full bg-[#3b82f7] hover:bg-blue-600 text-white text-xs font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"><span class="material-symbols-rounded text-sm leading-none">workspace_premium</span><span>${t('subscribe_pro')}</span></button>` : ''}
       </div>
     `;
 
-    document.getElementById('modal-logout-btn')?.addEventListener('click', async () => {
-      await signOutUser();
-    });
     document.getElementById('modal-upgrade-pro-btn')?.addEventListener('click', openProModal);
-    document.getElementById('modal-manage-account-btn')?.addEventListener('click', () => {
+    document.getElementById('modal-open-account-chip')?.addEventListener('click', () => {
       if (typeof window !== 'undefined' && window.flashcardsOpenAccountModal) {
         window.flashcardsOpenAccountModal();
       } else {
@@ -1085,10 +1129,12 @@ function renderAuthHeader() {
     });
 
   } else {
+    const isSubpage = typeof window !== 'undefined' && window.location.pathname.includes('/pages/');
+    const googleLogoSrc = isSubpage ? '../assets/img/google_g_logo.svg' : 'assets/img/google_g_logo.svg';
     container.innerHTML = `
       <div>
-        <button id="modal-login-btn" class="flex items-center gap-2.5 px-4 py-2 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-300 rounded-full shadow-sm text-xs sm:text-sm font-semibold text-gray-700 transition">
-          <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        <button id="modal-login-btn" class="flex items-center gap-2.5 px-4 py-2 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-300 rounded-full shadow-sm text-xs sm:text-sm font-semibold text-gray-700 transition cursor-pointer">
+          <img src="${googleLogoSrc}" alt="Google" class="w-4 h-4 flex-shrink-0">
           <span>${t('sign_in_google')}</span>
         </button>
         <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] mt-1 text-left font-medium" data-i18n="save_decks_cloud_hint">${t('save_decks_cloud_hint')}</p>
@@ -1102,7 +1148,7 @@ function renderAuthHeader() {
           renderModalContent();
         }
       } catch (err) {
-        alert(t('error_authenticating_google'));
+        await appAlert(t('error_authenticating_google'), { variant: 'warning' });
       }
     });
   }
@@ -1137,37 +1183,37 @@ function renderDeckSlots() {
     const safeTitle = escapeHtml(slot.title || 'Baralho');
 
     return `
-      <div class="slot-card relative bg-white border ${isCurrent ? (isExam ? 'border-purple-500 shadow-md ring-2 ring-purple-100' : 'border-blue-500 shadow-md ring-2 ring-blue-100') : (isExam ? 'border-purple-200 hover:border-purple-300' : 'border-gray-200')} rounded-2xl p-3 flex flex-col justify-between min-h-[140px] transition-all hover:shadow-lg">
+      <div class="slot-card relative bg-white border ${isCurrent ? (isExam ? 'border-amber-500 shadow-md ring-2 ring-amber-100' : 'border-[#3b82f7] shadow-md ring-2 ring-blue-100') : (isExam ? 'border-amber-200 hover:border-amber-300' : 'border-gray-200')} rounded-2xl p-3 flex flex-col justify-between min-h-[140px] transition-all hover:shadow-lg">
         
         <!-- Top Status Indicators -->
         <div class="flex items-center justify-between gap-1 mb-2">
           ${isCurrent 
-            ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isExam ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">${t('open_now')}</span>` 
-            : `<span class="text-[10px] ${isExam ? 'text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-full' : 'text-gray-400 font-semibold'}">Slot ${idx + 1}${isExam ? ` • ${t('mix_label')}` : ''}</span>`
+            ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isExam ? 'bg-amber-100 text-amber-900' : 'bg-blue-100 text-blue-800'}">${t('open_now')}</span>` 
+            : `<span class="text-[10px] ${isExam ? 'text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded-full' : 'text-gray-400 font-semibold'}">Slot ${idx + 1}${isExam ? ` • ${t('mix_label')}` : ''}</span>`
           }
           <div class="flex items-center gap-1">
-            ${isExam ? `<span class="material-symbols-rounded text-sm text-purple-600" title="${t('exam_week_mix')}">bolt</span>` : ''}
-            ${isFixed ? `<span class="material-symbols-rounded text-sm ${isExam ? 'text-purple-600' : 'text-blue-600'}" title="${t('fixed_protected_hint')}">lock</span>` : `<span class="text-[10px] text-gray-400" title="${t('overwritable_hint')}">${t('overwritable')}</span>`}
+            ${isExam ? `<span class="material-symbols-rounded text-sm text-amber-600" title="${t('exam_week_mix')}">bolt</span>` : ''}
+            ${isFixed ? `<span class="material-symbols-rounded text-sm ${isExam ? 'text-amber-600' : 'text-[#3b82f7]'}" title="${t('fixed_protected_hint')}">lock</span>` : `<span class="text-[10px] text-gray-400" title="${t('overwritable_hint')}">${t('overwritable')}</span>`}
           </div>
         </div>
 
         <!-- Deck Content / Title -->
         <div class="cursor-pointer flex-1 my-1" onclick="window.flashcardsOpenSlot(${idx})">
           <h4 class="text-sm font-bold text-gray-900 line-clamp-2 leading-tight" title="${deckNames ? `Mistura: ${deckNames}` : safeTitle}">${safeTitle}</h4>
-          <p class="text-xs ${isExam ? 'text-purple-700 font-medium' : 'text-gray-500'} mt-1">${Number(slot.cardCount) || 0} cards${isExam && deckCount > 0 ? ` • ${deckCount} ${t('nav_decks').toLowerCase()}` : ''}</p>
+          <p class="text-xs ${isExam ? 'text-amber-800 font-medium' : 'text-gray-500'} mt-1">${Number(slot.cardCount) || 0} cards${isExam && deckCount > 0 ? ` • ${deckCount} ${t('nav_decks').toLowerCase()}` : ''}</p>
         </div>
 
         <!-- Action Bar: Edit, Delete & Share -->
         <div class="pt-2 mt-1 border-t border-gray-100 flex items-center justify-between">
           <div class="flex items-center gap-1">
-            <button class="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="${t('edit_deck_title')}" onclick="window.flashcardsEditSlot(${idx})">
+            <button class="p-1.5 rounded-lg text-[#3b82f7] hover:bg-blue-50 active:bg-blue-100 transition cursor-pointer" title="${t('edit_deck_title')}" onclick="window.flashcardsEditSlot(${idx})">
               <span class="material-symbols-rounded text-lg">edit</span>
             </button>
             <button class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 active:bg-red-100 transition cursor-pointer" title="${t('delete_from_slot_title')}" onclick="window.flashcardsDeleteSlot(${idx})">
               <span class="material-symbols-rounded text-lg">delete</span>
             </button>
           </div>
-          <button class="p-1.5 rounded-lg ${isExam ? 'text-purple-600 hover:bg-purple-50 active:bg-purple-100' : 'text-blue-600 hover:bg-blue-50 active:bg-blue-100'} transition cursor-pointer" title="${t('share_and_pin_title')}" onclick="window.flashcardsShareSlot(${idx})">
+          <button class="p-1.5 rounded-lg ${isExam ? 'text-amber-700 hover:bg-amber-50 active:bg-amber-100' : 'text-[#3b82f7] hover:bg-blue-50 active:bg-blue-100'} transition cursor-pointer" title="${t('share_and_pin_title')}" onclick="window.flashcardsShareSlot(${idx})">
             <span class="material-symbols-rounded text-lg">share</span>
           </button>
         </div>
@@ -1306,8 +1352,8 @@ window.flashcardsEditSlot = function(slotIdx) {
   window.location.href = ROUTES.GENERATE;
 };
 
-window.flashcardsDeleteSlot = function(slotIdx) {
-  if (confirm(t('confirm_remove_deck_from_slot'))) {
+window.flashcardsDeleteSlot = async function(slotIdx) {
+  if (await appConfirm(t('confirm_remove_deck_from_slot'), { variant: 'danger' })) {
     deleteSlot(slotIdx);
     renderDeckSlots();
   }
@@ -1325,7 +1371,7 @@ window.flashcardsShareSlot = async function(slotIdx) {
     showShareSuccessDialog({ shareUrl, title: slot.title, isNotebook: false });
   } catch (err) {
     if (err.name === 'AbortError') return;
-    alert(t('error_sharing_deck'));
+    await appAlert(t('error_sharing_deck'), { variant: 'warning' });
   }
 };
 
@@ -1335,8 +1381,8 @@ window.flashcardsOpenNotebook = function() {
   window.location.href = ROUTES.GAME;
 };
 
-window.flashcardsClearNotebook = function() {
-  if (confirm(t('confirm_clear_notebook_cards'))) {
+window.flashcardsClearNotebook = async function() {
+  if (await appConfirm(t('confirm_clear_notebook_cards'), { variant: 'danger' })) {
     clearNotebookSlot();
     renderNotebookSlot();
   }
@@ -1353,6 +1399,6 @@ window.flashcardsShareNotebook = async function() {
     const { shareUrl } = await shareDeckToCloud(notebook.deckData, 'Caderno', null);
     showShareSuccessDialog({ shareUrl, title: t('notebook'), isNotebook: true });
   } catch (e) {
-    alert(t('error_sharing_notebook'));
+    await appAlert(t('error_sharing_notebook'), { variant: 'warning' });
   }
 };

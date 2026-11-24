@@ -52,7 +52,7 @@ test('callGeminiWithCoverageAudit audits with flash-lite and complements in same
     calls.push({ url, body });
 
     if (calls.length === 1) {
-      assert.ok(url.includes('/models/gemini-flash-latest:streamGenerateContent'));
+      assert.ok(url.includes('/models/gemini-3.8-flash:streamGenerateContent'));
       return new Response(createSseStream([
         makeGeminiTextChunk(JSON.stringify(initialCards)),
         '[DONE]'
@@ -60,7 +60,7 @@ test('callGeminiWithCoverageAudit audits with flash-lite and complements in same
     }
 
     if (calls.length === 2) {
-      assert.ok(url.includes('/models/gemini-flash-lite-latest:generateContent'));
+      assert.ok(url.includes('/models/gemini-3.5-flash-lite:generateContent'));
       // Verify material part was forwarded to flash-lite audit alongside summary
       const parts = body.contents[0].parts;
       assert.equal(parts[0].text, 'Material sobre SRAA e nefrologia');
@@ -75,7 +75,7 @@ test('callGeminiWithCoverageAudit audits with flash-lite and complements in same
     }
 
     if (calls.length === 3) {
-      assert.ok(url.includes('/models/gemini-flash-latest:streamGenerateContent'));
+      assert.ok(url.includes('/models/gemini-3.8-flash:streamGenerateContent'));
       // Verify continuation in same chat history: user(materials), model(initialJson), user(complementPrompt)
       assert.equal(body.contents.length, 3);
       assert.equal(body.contents[0].role, 'user');

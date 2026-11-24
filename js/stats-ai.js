@@ -11,8 +11,8 @@ import { getCurrentUserToken } from './firebase-client.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
 
 const AI_CATEGORIES_KEY = 'flashcards_ai_categories';
-const DEFAULT_MODEL = 'gemini-flash-lite-latest';
-const FALLBACK_MODEL = 'gemini-flash-latest';
+const DEFAULT_MODEL = 'flash-lite';
+const FALLBACK_MODEL = 'flash';
 
 // Gemini Function Calling Schema
 export const categorizeTool = {
@@ -319,7 +319,7 @@ REGRAS CRÍTICAS E OBRIGATÓRIAS:
         }
     }
 
-    throw lastError || new Error("Falha ao categorizar com Gemini Flash-Lite.");
+    throw lastError || new Error("Falha ao categorizar com IA.");
 }
 
 /**

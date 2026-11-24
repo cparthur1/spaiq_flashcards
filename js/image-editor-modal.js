@@ -137,7 +137,7 @@ function calculateArrowSvgParts(arrow, naturalWidth, naturalHeight) {
 /**
  * Generates SVG markup for all arrows given natural pixel dimensions.
  */
-export function buildArrowsSvgContent(arrows, naturalWidth, naturalHeight, { showNumbers = false } = {}) {
+export function buildArrowsSvgContent(arrows, naturalWidth, naturalHeight, { showNumbers = false, interactive = false, selectedIndex = -1 } = {}) {
     if (!Array.isArray(arrows) || arrows.length === 0) return '';
 
     const minDim = Math.min(naturalWidth, naturalHeight);
@@ -163,8 +163,13 @@ export function buildArrowsSvgContent(arrows, naturalWidth, naturalHeight, { sho
             </g>
         ` : '';
 
+        const isInteractive = Boolean(interactive);
+        const isSelected = selectedIndex === idx;
+        const hitStrokeWidth = Math.max(parts.shaftWidth * 3.2, 18);
         return `
-            <g class="arrow-group ${showNumbers ? 'cursor-pointer hover:opacity-95' : ''}" data-arrow-index="${idx}" style="${showNumbers ? 'cursor: pointer;' : ''}">
+            <g class="arrow-group ${isInteractive ? 'cursor-pointer hover:opacity-95' : ''}" data-arrow-index="${idx}" style="${isInteractive ? 'cursor: pointer;' : ''}">
+                ${isSelected ? `<line x1="${parts.x1}" y1="${parts.y1}" x2="${parts.x2}" y2="${parts.y2}" stroke="#3b82f7" stroke-width="${parts.shaftWidth + 10}" stroke-linecap="round" opacity="0.45" />` : ''}
+                ${isInteractive ? `<line x1="${parts.x1}" y1="${parts.y1}" x2="${parts.x2}" y2="${parts.y2}" stroke="transparent" stroke-width="${hitStrokeWidth}" stroke-linecap="round" />` : ''}
                 <defs>
                     <filter id="${filterId}" x="-20%" y="-20%" width="140%" height="140%">
                         <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.75" />
@@ -243,9 +248,9 @@ export function renderAnnotatedImage({
             let notFound = container.querySelector('.image-not-found-placeholder');
             if (!notFound) {
                 notFound = document.createElement('div');
-                notFound.className = `image-not-found-placeholder w-full max-w-sm sm:max-w-md ${maxHClass} rounded-2xl border border-dashed border-[var(--md-sys-color-outline-variant,#cbd5e1)] bg-[var(--md-sys-color-surface-container-low,#f8fafc)] flex flex-col items-center justify-center p-4 text-center select-none shadow-xs space-y-1.5 animate-fadeIn`;
+                notFound.className = `image-not-found-placeholder w-full max-w-sm sm:max-w-md ${maxHClass} rounded-2xl border border-dashed border-[var(--md-sys-color-outline-variant,#cbd5e1)] bg-[var(--md-sys-color-surface-container-low,#f8fafc)] flex flex-col items-center justify-center p-4 text-center select-none shadow-xs space-y-1.5`;
                 notFound.innerHTML = `
-                    <span class="material-symbols-rounded text-3xl sm:text-4xl text-[#3b82f7]">broken_image</span>
+                    <span class="material-symbols-rounded text-3xl sm:text-4xl text-red-500">broken_image</span>
                     <p class="text-xs sm:text-sm font-bold text-[var(--md-sys-color-on-surface,#0f172a)]">${t('image_not_found') || 'Imagem não encontrada'}</p>
                     <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant,#64748b)] max-w-xs leading-normal">${t('image_not_found_desc') || 'O link da imagem está quebrado ou inacessível.'}</p>
                 `;
@@ -447,7 +452,7 @@ export function renderAnnotatedImage({
         svg.setAttribute('class', `absolute inset-0 w-full h-full select-none ${onArrowClick ? 'pointer-events-auto' : 'pointer-events-none'}`);
         svg.setAttribute('viewBox', `${cropPixX} ${cropPixY} ${cropPixW} ${cropPixH}`);
         svg.setAttribute('preserveAspectRatio', 'none');
-        svg.innerHTML = buildArrowsSvgContent(arrows, natW, natH, { showNumbers });
+        svg.innerHTML = buildArrowsSvgContent(arrows, natW, natH, { showNumbers, interactive: Boolean(onArrowClick) });
 
         if (onArrowClick) {
             svg.addEventListener('click', (e) => {

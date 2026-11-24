@@ -1,0 +1,30 @@
+{
+  "models": {
+    "flash": "gemini-3.8-flash",
+    "flashLite": "gemini-3.5-flash-lite",
+    "decision": "gemini-decision-1"
+  },
+  "aliases": {
+    "flash": "flash",
+    "flash-lite": "flashLite",
+    "flashLite": "flashLite",
+    "gemini-flash-latest": "flash",
+    "gemini-flash-lite-latest": "flashLite",
+    "decision": "decision"
+  },
+  "fallbacks": {
+    "flash": [
+      "gemini-3.8-flash",
+      "gemini-3.5-flash-lite"
+    ],
+    "flashLite": [
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash"
+    ]
+  },
+  "providers": {
+    "aistudioBaseUrl": "https://generativelanguage.googleapis.com/v1beta",
+    "vertexExpressBaseUrl": "https://aiplatform.googleapis.com/v1/publishers/google",
+    "decisionSupportsVertex": false
+  }
+}

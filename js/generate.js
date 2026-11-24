@@ -5,6 +5,7 @@ import { BACKEND_URL } from './backend-api.js';
 import { openDeckInSlots, syncSlotsToCloud, debouncedSyncSlotsToCloud, getLocalSlots, saveLocalSlots } from './slot-manager.js';
 import { syncSharedDeckToFirestore, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { t, getCurrentLanguage } from './i18n.js';
+import { appAlert, appConfirm, appPrompt } from './dialogs.js';
 import { savePendingGeneration, getPendingGeneration, clearPendingGeneration } from './pending-generation.js';
 import { openImageEditorModal, renderAnnotatedImage, getArrowColorTheme } from './image-editor-modal.js';
 import { importApkgFile } from './engine/apkg-importer.js';
@@ -68,6 +69,8 @@ const modal21Files = document.getElementById('modal-2-1-files');
 const modal21FilesText = document.getElementById('modal-2-1-files-text');
 const modal21FilesCount = document.getElementById('modal-2-1-files-count');
 const modal21IconsContainer = document.getElementById('modal-2-1-icons-container');
+const modal21FileChips = document.getElementById('modal-2-1-file-chips');
+let modal21SelectedFiles = [];
 const modal21Prompt = document.getElementById('modal-2-1-prompt');
 const modal21Error = document.getElementById('modal-2-1-error');
 const modal21LoadingMsg = document.getElementById('modal-2-1-loading-msg');
@@ -131,7 +134,12 @@ if (modal21LangChips) {
 window.addEventListener('storage', (e) => {
     if (e.key === 'flashcards_language' || e.key === 'flashcards_settings_updated_at') {
         updateModal21LanguageUI();
+        if (creatorCardType) selectCardType(creatorCardType.value, false);
     }
+});
+window.addEventListener('flashcards:language-change', () => {
+    updateModal21LanguageUI();
+    if (creatorCardType) selectCardType(creatorCardType.value, false);
 });
 
 // Modal 2.2 Elements (AI Enhance Doc)
@@ -142,6 +150,7 @@ const submitModal22Btn = document.getElementById('submit-modal-2-2-btn');
 const modal22File = document.getElementById('modal-2-2-file');
 const modal22FileName = document.getElementById('modal-2-2-file-name');
 const modal22Error = document.getElementById('modal-2-2-error');
+const modal22Status = document.getElementById('modal-2-2-status');
 const modal22LoadingMsg = document.getElementById('modal-2-2-loading-msg');
 const modal22Spinner = document.getElementById('modal-2-2-spinner');
 
@@ -207,9 +216,6 @@ const creatorFlowchartCountBadge = document.getElementById('creator-flowchart-co
 const creatorFlowchartStepsList = document.getElementById('creator-flowchart-steps-list');
 const creatorAddFlowchartStepBtn = document.getElementById('creator-add-flowchart-step-btn');
 
-const creatorGroupVoice = document.getElementById('creator-group-voice');
-const creatorAnsVoice = document.getElementById('creator-ans-voice');
-
 const creatorFeedback = document.getElementById('creator-feedback');
 const creatorSubmitCardBtn = document.getElementById('creator-submit-card-btn');
 
@@ -227,6 +233,7 @@ const downloadDeckBtn = document.getElementById('download-deck-btn');
 const shareDeckBtn = document.getElementById('share-deck-btn');
 const playDeckBtn = document.getElementById('play-deck-btn');
 const addCardBtn = document.getElementById('add-card-btn');
+const editorBackBtn = document.getElementById('editor-back-btn');
 
 // Inline Edit Modal
 const inlineEditModal = document.getElementById('inline-edit-modal');
@@ -425,7 +432,7 @@ let lastFailedSourceType = null;
 let lastFailedLocalCards = null;
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-const FILES_DEFAULT_SVG = '<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>';
+const FILES_DEFAULT_SVG = '<div class="w-10 h-10 rounded-xl bg-purple-100/80 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform"><span class="material-symbols-rounded text-2xl select-none">upload_file</span></div>';
 
 const systemInstruction = "Sua função é gerenciar um baralho de flashcards para um estudante universitário no Spaiq. Você pode adicionar, editar ou remover cards usando as ferramentas fornecidas. TODOS os modos suportados pela plataforma: 'open' (conceito aberto), 'open_double' (dupla resposta), 'multiple_choice' (múltipla escolha com 2 a 6 opções), 'fill' (preencher lacunas marcadas por '_' em frases, listas ou tabelas Markdown), 'anki' (conceito/pergunta e explicação detalhada para repetição espaçada, com opção de resposta por voz via 'defaultResponse': 'voice' quando solicitado), 'flowchart' (fluxograma interativo com etapas embaralhadas para interligar em ordem linear ou ramificada/convergente e lacunas opcionais {termo}/'_' em cada etapa — excelente para cascatas e fisiopatologias), e 'divisor' (separador/título de seção).\n\n" +
     "REGRAS MANDATÓRIAS DE RESPOSTA E FORMATAÇÃO:\n" +
@@ -830,21 +837,78 @@ function getFileExtension(filename) {
     return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
 }
 
-function renderFileIcons(files, container, defaultSvg) {
-    container.innerHTML = '';
+function formatFileSizeShort(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileMaterialIcon(ext) {
+    if (ext === 'pdf') return 'picture_as_pdf';
+    if (ext === 'ppt' || ext === 'pptx') return 'slideshow';
+    if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic'].includes(ext)) return 'image';
+    return 'description';
+}
+
+function renderModal21FilesUI() {
+    if (!modal21IconsContainer) return;
+    const files = modal21SelectedFiles;
+
     if (files.length === 0) {
-        container.innerHTML = defaultSvg;
+        modal21IconsContainer.innerHTML = FILES_DEFAULT_SVG;
+        if (modal21FilesCount) modal21FilesCount.textContent = t('no_file_selected');
+        if (modal21FilesText) modal21FilesText.classList.remove('hidden');
+        if (modal21FileChips) {
+            modal21FileChips.innerHTML = '';
+            modal21FileChips.classList.add('hidden');
+        }
         return;
     }
 
-    Array.from(files).forEach(file => {
-        const ext = getFileExtension(file.name) || '???';
-        const icon = document.createElement('div');
-        icon.className = 'squircle';
-        icon.textContent = ext.substring(0, 4);
-        icon.title = file.name;
-        container.appendChild(icon);
-    });
+    modal21IconsContainer.innerHTML = '<div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center"><span class="material-symbols-rounded text-xl select-none">add_circle</span></div>';
+    if (modal21FilesCount) modal21FilesCount.textContent = t('files_selected_count', { count: files.length });
+    if (modal21FilesText) modal21FilesText.classList.add('hidden');
+
+    if (modal21FileChips) {
+        modal21FileChips.innerHTML = '';
+        modal21FileChips.classList.remove('hidden');
+        files.forEach((file, idx) => {
+            const ext = getFileExtension(file.name);
+            const chip = document.createElement('div');
+            chip.className = 'inline-flex items-center gap-2 max-w-full bg-purple-50 border border-purple-200/90 text-purple-950 rounded-xl pl-2.5 pr-1.5 py-1.5 text-xs shadow-2xs';
+
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'material-symbols-rounded text-base text-purple-600 flex-shrink-0 select-none';
+            iconSpan.textContent = getFileMaterialIcon(ext);
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'font-semibold truncate max-w-[165px] sm:max-w-[210px]';
+            nameSpan.textContent = file.name;
+            nameSpan.title = file.name;
+
+            const sizeSpan = document.createElement('span');
+            sizeSpan.className = 'text-[10px] font-medium text-purple-600/90 flex-shrink-0';
+            sizeSpan.textContent = formatFileSizeShort(file.size);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'p-0.5 rounded-lg text-purple-500 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center cursor-pointer flex-shrink-0';
+            removeBtn.setAttribute('aria-label', t('remove_image') || 'Remover');
+            removeBtn.title = t('remove_image') || 'Remover';
+            removeBtn.innerHTML = '<span class="material-symbols-rounded text-sm leading-none select-none">close</span>';
+            removeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modal21SelectedFiles.splice(idx, 1);
+                if (modal21Error) modal21Error.textContent = '';
+                renderModal21FilesUI();
+            });
+
+            chip.append(iconSpan, nameSpan, sizeSpan, removeBtn);
+            modal21FileChips.appendChild(chip);
+        });
+    }
 }
 
 /**
@@ -1387,18 +1451,18 @@ function removeAiChatGeneratingBubble() {
 }
 
 function showChatTypingIndicator() {
-    hideChatTypingIndicator();
-    const indicator = document.createElement('div');
-    indicator.id = 'chat-typing-indicator';
-    indicator.className = 'typing-indicator my-1';
-    indicator.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
-    chatHistory.appendChild(indicator);
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    if (aiEditorChatPanel) {
+        aiEditorChatPanel.classList.add('gemini-thinking');
+    }
+    if (chatHistory) {
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
 }
 
 function hideChatTypingIndicator() {
-    const indicator = document.getElementById('chat-typing-indicator');
-    if (indicator) indicator.remove();
+    if (aiEditorChatPanel) {
+        aiEditorChatPanel.classList.remove('gemini-thinking');
+    }
 }
 
 async function fileToGenerativePart(file) {
@@ -1899,6 +1963,37 @@ function parseTxtToJSONWithPlaceholders(text) {
 }
 
 // Transition from Dashboard to Editor (M3 Fade Through Motion)
+async function returnToDashboardView() {
+    if (isGeneratingCards) {
+        const confirmLeave = await appConfirm(t('confirm_leave_generating') || 'A geração por IA ainda está em andamento. Deseja voltar aos modos de criação?', { variant: 'warning' });
+        if (!confirmLeave) return;
+    }
+    const updateDOM = () => {
+        editorView.classList.add('hidden');
+        editorView.classList.remove('flex', 'm3-fade-through-enter');
+        dashboardView.classList.remove('hidden');
+        dashboardView.classList.add('m3-fade-through-enter');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+
+    if (typeof document.startViewTransition === 'function') {
+        try {
+            const vt = document.startViewTransition(updateDOM);
+            if (vt) {
+                if (vt.ready) vt.ready.catch(() => {});
+                if (vt.finished) vt.finished.catch(() => {});
+                if (vt.updateCallbackDone) vt.updateCallbackDone.catch(() => {});
+            }
+        } catch (e) {
+            updateDOM();
+        }
+    } else {
+        updateDOM();
+    }
+}
+
+editorBackBtn?.addEventListener('click', returnToDashboardView);
+
 function openEditorView(initialTab = 'creator') {
     const updateDOM = () => {
         dashboardView.classList.add('hidden');
@@ -1970,7 +2065,7 @@ function switchSidebarTab(tab, force = false) {
         aiEditorChatPanel.classList.remove('m3-tab-panel-enter-forward', 'm3-tab-panel-enter-backward');
 
         if (tab === 'creator') {
-            tabCreatorBtn.className = "flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition bg-blue-600 text-white shadow-sm";
+            tabCreatorBtn.className = "flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition bg-[#3b82f7] text-white shadow-sm cursor-pointer";
             tabAiChatBtn.className = "flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition text-gray-600 hover:bg-gray-200";
             tabCreatorBtn.setAttribute('aria-selected', 'true');
             tabAiChatBtn.setAttribute('aria-selected', 'false');
@@ -2089,31 +2184,31 @@ function updateProPaywalledUI() {
     const modal22Badge = document.getElementById('modal-2-2-badge-container');
     if (!isPro && !usedTrial) {
         if (modal21Badge) {
-            modal21Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal21Badge.className = 'p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between';
             modal21Badge.innerHTML = `
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">${t('free_trial_title')}</span>
-                        <span class="text-[11px] text-blue-700">${t('free_trial_desc_generate')}</span>
+                        <span class="text-xs font-bold text-purple-900 block">${t('free_trial_title')}</span>
+                        <span class="text-[11px] text-purple-700">${t('free_trial_desc_generate')}</span>
                     </div>
                 </div>
-                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
                     ${t('one_free_badge')}
                 </span>
             `;
         }
         if (modal22Badge) {
-            modal22Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal22Badge.className = 'p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between';
             modal22Badge.innerHTML = `
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/PRO.svg" class="w-5 h-5 flex-shrink-0" alt="Pro">
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">${t('free_trial_title')}</span>
-                        <span class="text-[11px] text-blue-700">${t('free_trial_desc_enhance')}</span>
+                        <span class="text-xs font-bold text-purple-900 block">${t('free_trial_title')}</span>
+                        <span class="text-[11px] text-purple-700">${t('free_trial_desc_enhance')}</span>
                     </div>
                 </div>
-                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
                     ${t('one_free_badge')}
                 </span>
             `;
@@ -2121,31 +2216,31 @@ function updateProPaywalledUI() {
     } else if (!isPro && usedTrial && hasExtra) {
         const extraLabel = `${extraGens} ${extraGens === 1 ? t('credit_singular') : t('credits_plural')}`;
         if (modal21Badge) {
-            modal21Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal21Badge.className = 'p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between';
             modal21Badge.innerHTML = `
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/ai.svg" class="w-5 h-5 flex-shrink-0" alt="IA">
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">${t('single_ai_generation_title')}</span>
-                        <span class="text-[11px] text-blue-700">${t('single_ai_generation_desc', { count: extraGens })}</span>
+                        <span class="text-xs font-bold text-purple-900 block">${t('single_ai_generation_title')}</span>
+                        <span class="text-[11px] text-purple-700">${t('single_ai_generation_desc', { count: extraGens })}</span>
                     </div>
                 </div>
-                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
                     ${extraLabel}
                 </span>
             `;
         }
         if (modal22Badge) {
-            modal22Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal22Badge.className = 'p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between';
             modal22Badge.innerHTML = `
                 <div class="flex items-center gap-2.5">
                     <img src="../assets/img/ai.svg" class="w-5 h-5 flex-shrink-0" alt="IA">
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">${t('single_ai_generation_title')}</span>
-                        <span class="text-[11px] text-blue-700">${t('single_ai_generation_desc', { count: extraGens })}</span>
+                        <span class="text-xs font-bold text-purple-900 block">${t('single_ai_generation_title')}</span>
+                        <span class="text-[11px] text-purple-700">${t('single_ai_generation_desc', { count: extraGens })}</span>
                     </div>
                 </div>
-                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">
                     ${extraLabel}
                 </span>
             `;
@@ -2183,31 +2278,31 @@ function updateProPaywalledUI() {
         }
     } else if (!isPro && usedTrial && !hasExtra) {
         if (modal21Badge) {
-            modal21Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal21Badge.className = 'p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between';
             modal21Badge.innerHTML = `
                 <div class="flex items-center gap-2.5">
-                    <span class="material-symbols-rounded text-[#3b82f7] text-xl">auto_awesome</span>
+                    <span class="material-symbols-rounded text-purple-600 text-xl">auto_awesome</span>
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">${t('single_deck_price_title')}</span>
-                        <span class="text-[11px] text-blue-700">${t('single_deck_pay_on_generate')}</span>
+                        <span class="text-xs font-bold text-purple-900 block">${t('single_deck_price_title')}</span>
+                        <span class="text-[11px] text-purple-700">${t('single_deck_pay_on_generate')}</span>
                     </div>
                 </div>
-                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-[#3b82f7] bg-blue-100 px-2.5 py-1 rounded-full border border-blue-200">
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-full border border-purple-200">
                     R$ 1,49
                 </span>
             `;
         }
         if (modal22Badge) {
-            modal22Badge.className = 'p-3.5 bg-blue-50 rounded-xl border border-blue-200 flex items-center justify-between';
+            modal22Badge.className = 'p-3.5 bg-purple-50 rounded-xl border border-purple-200 flex items-center justify-between';
             modal22Badge.innerHTML = `
                 <div class="flex items-center gap-2.5">
-                    <span class="material-symbols-rounded text-[#3b82f7] text-xl">auto_awesome</span>
+                    <span class="material-symbols-rounded text-purple-600 text-xl">auto_awesome</span>
                     <div>
-                        <span class="text-xs font-bold text-blue-900 block">${t('single_deck_price_title')}</span>
-                        <span class="text-[11px] text-blue-700">${t('single_deck_pay_on_generate')}</span>
+                        <span class="text-xs font-bold text-purple-900 block">${t('single_deck_price_title')}</span>
+                        <span class="text-[11px] text-purple-700">${t('single_deck_pay_on_generate')}</span>
                     </div>
                 </div>
-                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-[#3b82f7] bg-blue-100 px-2.5 py-1 rounded-full border border-blue-200">
+                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-full border border-purple-200">
                     R$ 1,49
                 </span>
             `;
@@ -2351,33 +2446,33 @@ function renderModal12LivePreview(cards) {
                 </div>
             `;
         } else if (c.type === 'fill') {
-            cardEl.className += ' border-emerald-100';
-            const answersBadges = (c.answers || []).map(a => `<span class="px-2 py-0.5 bg-white border border-emerald-200 rounded font-bold text-[11px] text-emerald-900">${escapeHtml(a)}</span>`).join(' ');
+            cardEl.className += ' border-teal-100';
+            const answersBadges = (c.answers || []).map(a => `<span class="px-2 py-0.5 bg-white border border-teal-200 rounded font-bold text-[11px] text-teal-900">${escapeHtml(a)}</span>`).join(' ');
             cardEl.innerHTML = `
                 <div class="flex items-center justify-between gap-2">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 font-sans">(fill) Preenchimento</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-100 text-teal-800 font-sans">(fill) Preenchimento</span>
                     <span class="text-[11px] text-gray-400 font-sans">${(c.answers || []).length} lacuna(s)</span>
                 </div>
                 <div class="text-xs text-gray-900 leading-relaxed font-sans">
                     <span class="font-bold text-gray-500">Frase:</span> ${escapeHtml(c.description || '')}
                 </div>
-                <div class="text-xs text-emerald-900 bg-emerald-50/70 border border-emerald-100 p-2 rounded-lg font-sans flex items-center gap-1.5 flex-wrap">
-                    <span class="font-bold text-emerald-950">Lacunas:</span> ${answersBadges || escapeHtml(c.answer || '')}
+                <div class="text-xs text-teal-900 bg-teal-50/70 border border-teal-100 p-2 rounded-lg font-sans flex items-center gap-1.5 flex-wrap">
+                    <span class="font-bold text-teal-950">Lacunas:</span> ${answersBadges || escapeHtml(c.answer || '')}
                 </div>
             `;
         } else if (c.type === 'open_double') {
-            cardEl.className += ' border-teal-100';
+            cardEl.className += ' border-amber-100';
             cardEl.innerHTML = `
                 <div class="flex items-center justify-between gap-2">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-100 text-teal-800 font-sans">(open_double) Resposta Dupla</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 font-sans">(open_double) Resposta Dupla</span>
                     <span class="text-[11px] text-gray-400 font-sans">2 respostas</span>
                 </div>
                 <div class="text-xs text-gray-900 leading-relaxed font-sans">
                     <span class="font-bold text-gray-500">Pergunta:</span> ${escapeHtml(c.description || '')}
                 </div>
-                <div class="text-xs text-teal-900 bg-teal-50/70 border border-teal-100 p-2 rounded-lg font-sans grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div><span class="font-bold text-teal-950">Resp 1:</span> ${escapeHtml(c.answer || '')}</div>
-                    <div><span class="font-bold text-teal-950">Resp 2:</span> ${escapeHtml(c.answer2 || '')}</div>
+                <div class="text-xs text-amber-900 bg-amber-50/70 border border-amber-100 p-2 rounded-lg font-sans grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div><span class="font-bold text-amber-950">Resp 1:</span> ${escapeHtml(c.answer || '')}</div>
+                    <div><span class="font-bold text-amber-950">Resp 2:</span> ${escapeHtml(c.answer2 || '')}</div>
                 </div>
             `;
         } else if (c.type === 'flowchart') {
@@ -2397,17 +2492,17 @@ function renderModal12LivePreview(cards) {
                 </div>
             `;
         } else if (c.type === 'multiple_choice') {
-            cardEl.className += ' border-purple-100';
+            cardEl.className += ' border-cyan-100';
             cardEl.innerHTML = `
                 <div class="flex items-center justify-between gap-2">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-800 font-sans">(multiple_choice) Múltipla Escolha</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-100 text-cyan-800 font-sans">(multiple_choice) Múltipla Escolha</span>
                     <span class="text-[11px] text-gray-400 font-sans">Gabarito</span>
                 </div>
                 <div class="text-xs text-gray-900 leading-relaxed font-sans">
                     <span class="font-bold text-gray-500">Pergunta:</span> ${escapeHtml(c.description || '')}
                 </div>
-                <div class="text-xs text-purple-900 bg-purple-50/70 border border-purple-100 p-2 rounded-lg font-sans">
-                    <span class="font-bold text-purple-950">Gabarito correto:</span> ${escapeHtml(c.answer || '')}
+                <div class="text-xs text-cyan-900 bg-cyan-50/70 border border-cyan-100 p-2 rounded-lg font-sans">
+                    <span class="font-bold text-cyan-950">Gabarito correto:</span> ${escapeHtml(c.answer || '')}
                 </div>
             `;
         } else {
@@ -2496,6 +2591,7 @@ modal12UseSandboxBtn?.addEventListener('click', () => {
     const playableCards = cards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
     if (playableCards.length === 0) {
         modal12Error.textContent = t('no_valid_cards_colon_error');
+        modal12Error.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
 
@@ -2513,6 +2609,7 @@ submitModal12Btn.addEventListener('click', async () => {
     }
     if (!modal12File.files || modal12File.files.length === 0) {
         modal12Error.textContent = t('select_txt_doc_error');
+        modal12Error.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
 
@@ -2582,9 +2679,8 @@ submitModal12Btn.addEventListener('click', async () => {
 cardMode21.addEventListener('click', () => {
     modal21Error.textContent = '';
     modal21Files.value = '';
-    modal21FilesCount.textContent = t('no_file_selected');
-    modal21FilesText.classList.remove('hidden');
-    renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
+    modal21SelectedFiles = [];
+    renderModal21FilesUI();
     updateModal21LanguageUI();
     resetModal21LanguageSelection();
     openModalWithMotion(modal21);
@@ -2595,34 +2691,27 @@ cancelModal21Btn.addEventListener('click', () => closeModalWithMotion(modal21));
 
 modal21Files.addEventListener('change', () => {
     modal21Error.textContent = '';
-    const files = Array.from(modal21Files.files);
+    const newlyPicked = Array.from(modal21Files.files || []);
+    modal21Files.value = '';
+    if (newlyPicked.length === 0) return;
 
-    if (files.length > 10) {
+    const merged = [...modal21SelectedFiles];
+    for (const f of newlyPicked) {
+        if (f.size > MAX_FILE_SIZE) {
+            modal21Error.textContent = t('file_exceeds_100mb', { name: f.name });
+            return;
+        }
+        const isDuplicate = merged.some(existing => existing.name === f.name && existing.size === f.size);
+        if (!isDuplicate) merged.push(f);
+    }
+
+    if (merged.length > 10) {
         modal21Error.textContent = t('file_limit_10_error');
-        modal21Files.value = '';
-        modal21FilesCount.textContent = t('no_file_selected');
-        renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
         return;
     }
 
-    for (let f of files) {
-        if (f.size > MAX_FILE_SIZE) {
-            modal21Error.textContent = t('file_exceeds_100mb', { name: f.name });
-            modal21Files.value = '';
-            modal21FilesCount.textContent = t('no_file_selected');
-            renderFileIcons([], modal21IconsContainer, FILES_DEFAULT_SVG);
-            return;
-        }
-    }
-
-    if (files.length > 0) {
-        modal21FilesCount.textContent = t('files_selected_count', { count: files.length });
-        modal21FilesText.classList.add('hidden');
-    } else {
-        modal21FilesCount.textContent = t('no_file_selected');
-        modal21FilesText.classList.remove('hidden');
-    }
-    renderFileIcons(files, modal21IconsContainer, FILES_DEFAULT_SVG);
+    modal21SelectedFiles = merged;
+    renderModal21FilesUI();
 });
 
 /**
@@ -2749,8 +2838,6 @@ async function executeAiGenerationFromMaterials(files, customInstructions = '', 
     addAiChatGeneratingBubble(t('gemini_analyzing_materials_bubble'));
 
     submitModal21Btn.disabled = true;
-    modal21Spinner.classList.remove('hidden');
-    modal21LoadingMsg.classList.remove('hidden');
 
     try {
         let userTaskPrompt = `Com base nos arquivos enviados, o objetivo é processar todo o conteúdo e gerar uma lista extensa e didática de flashcards cobrindo termos técnicos, tabelas comparativas, fórmulas, casos aplicados, cascatas/fisiopatologias e conceitos essenciais.
@@ -2841,7 +2928,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             method: 'POST',
             headers: reqHeaders,
             body: JSON.stringify({
-                model: "gemini-flash-latest",
+                model: "flash",
                 contents: [{ role: 'user', parts }],
                 systemInstruction: { parts: [{ text: generationSystemInstruction }] },
                 generationConfig: {
@@ -2862,7 +2949,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
             if (errData.error === 'quota_exceeded') {
                 const limitCount = Number(errData.limit) || Number(getUserProStatus()?.monthlyIncluded) || 4;
                 const promptMsg = isUserPro() ? t('alert_pro_monthly_limit', { limit: limitCount }) : t('alert_non_pro_limit');
-                if (confirm(promptMsg)) {
+                if (await appConfirm(promptMsg)) {
                     if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
                         window.flashcardsOpenExtraDeckModal();
                     }
@@ -2928,7 +3015,7 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
 
 submitModal21Btn.addEventListener('click', async () => {
     modal21Error.textContent = '';
-    const files = Array.from(modal21Files.files);
+    const files = [...modal21SelectedFiles];
     if (files.length === 0) {
         modal21Error.textContent = t('select_at_least_one_file');
         return;
@@ -2958,11 +3045,15 @@ submitModal21Btn.addEventListener('click', async () => {
     );
 });
 
-// 2.2 Aprimore um doc — A partir de um txt ou word, aprimore cartões
+// 2.2 Aprimore um doc — A partir de um txt, word ou .apkg, aprimore cartões
 cardMode22.addEventListener('click', () => {
     modal22Error.textContent = '';
+    if (modal22Status) {
+        modal22Status.textContent = '';
+        modal22Status.classList.add('hidden');
+    }
     modal22File.value = '';
-    modal22FileName.textContent = t('click_or_drag_txt_word');
+    modal22FileName.textContent = t('drop_file_here');
     openModalWithMotion(modal22);
 });
 
@@ -2970,37 +3061,68 @@ closeModal22Btn.addEventListener('click', () => closeModalWithMotion(modal22));
 cancelModal22Btn.addEventListener('click', () => closeModalWithMotion(modal22));
 
 modal22File.addEventListener('change', () => {
+    modal22Error.textContent = '';
+    if (modal22Status) {
+        modal22Status.textContent = '';
+        modal22Status.classList.add('hidden');
+    }
     if (modal22File.files.length > 0) {
         modal22FileName.textContent = modal22File.files[0].name;
     }
 });
 
 /**
- * Executes AI enhancement from txt/docx document (Mode 2.2)
+ * Executes AI enhancement from txt/docx/apkg document (Mode 2.2)
  * @param {File} file
  */
 async function executeAiEnhanceFromDoc(file) {
     if (!file) return;
 
-    closeModalWithMotion(modal22);
+    modal22Error.textContent = '';
     submitModal22Btn.disabled = true;
-    modal22Spinner.classList.remove('hidden');
-    modal22LoadingMsg.classList.remove('hidden');
+    modal22Spinner?.classList.remove('hidden');
+    modal22LoadingMsg?.classList.remove('hidden');
 
     let localCards = [];
+    let resolvedDeckTitle = file.name.replace(/\.[^/.]+$/, "");
+    let modalClosed = false;
+
     try {
-        const textContent = await extractTextFromFile(file);
-        localCards = parseTxtToJSONWithPlaceholders(textContent);
+        const ext = getFileExtension(file.name);
+        if (ext === 'apkg') {
+            if (modal22Status) {
+                modal22Status.textContent = t('apkg_importing_status');
+                modal22Status.classList.remove('hidden');
+            }
+            const result = await importApkgFile(file, {
+                conversionMode: 'auto',
+                translate: t,
+                onProgress: (msg) => {
+                    if (modal22Status && msg) {
+                        modal22Status.textContent = msg;
+                        modal22Status.classList.remove('hidden');
+                    }
+                }
+            });
+            localCards = Array.isArray(result.cards) ? result.cards : [];
+            if (result.deckTitle) resolvedDeckTitle = result.deckTitle;
+        } else {
+            const textContent = await extractTextFromFile(file);
+            localCards = parseTxtToJSONWithPlaceholders(textContent);
+        }
 
         const playableCards = localCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
         if (playableCards.length === 0) {
-            modal22Error.textContent = t('no_valid_cards_syntax_error');
+            modal22Error.textContent = ext === 'apkg' ? t('apkg_no_valid_cards_error') : t('no_valid_cards_syntax_error');
+            modal22Error.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
 
+        closeModalWithMotion(modal22);
+        modalClosed = true;
         openEditorView('ai');
 
-        deckTitleDisplay.value = file.name.replace(/\.[^/.]+$/, "");
+        deckTitleDisplay.value = resolvedDeckTitle;
         deckCards = [...localCards];
         renderCardsList(true);
 
@@ -3111,7 +3233,7 @@ async function executeAiEnhanceFromDoc(file) {
                 method: 'POST',
                 headers: reqHeaders,
                 body: JSON.stringify({
-                    model: "gemini-flash-latest",
+                    model: "flash",
                     contents: [{ role: 'user', parts: [{ text: fillPrompt }] }],
                     systemInstruction: { parts: [{ text: enhanceSystemInstruction }] },
                     generationConfig: { temperature: 0.5, responseMimeType: "application/json" },
@@ -3125,7 +3247,7 @@ async function executeAiEnhanceFromDoc(file) {
                 if (errData.error === 'quota_exceeded') {
                     const limitCount = Number(errData.limit) || Number(getUserProStatus()?.monthlyIncluded) || 4;
                     const promptMsg = isUserPro() ? t('alert_pro_monthly_limit', { limit: limitCount }) : t('alert_non_pro_limit');
-                    if (confirm(promptMsg)) {
+                    if (await appConfirm(promptMsg)) {
                         if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
                             window.flashcardsOpenExtraDeckModal();
                         }
@@ -3205,14 +3327,20 @@ async function executeAiEnhanceFromDoc(file) {
 
     } catch (err) {
         console.error("Erro na aprimoração 2.2:", err);
-        finishGeneratingAnimation(false, 0);
-        removeAiChatGeneratingBubble();
-        addChatMessage('error', t('enhance_error_chat_msg', { error: err.message }));
-        showGeminiDownModal(err.message, 'txt', localCards);
+        if (!modalClosed) {
+            modal22Error.textContent = t('error_reading_doc', { error: err.message });
+            modal22Error.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            finishGeneratingAnimation(false, 0);
+            removeAiChatGeneratingBubble();
+            addChatMessage('error', t('enhance_error_chat_msg', { error: err.message }));
+            showGeminiDownModal(err.message, 'txt', localCards);
+        }
     } finally {
         submitModal22Btn.disabled = false;
-        modal22Spinner.classList.add('hidden');
-        modal22LoadingMsg.classList.add('hidden');
+        modal22Spinner?.classList.add('hidden');
+        modal22LoadingMsg?.classList.add('hidden');
+        if (modal22Status) modal22Status.classList.add('hidden');
     }
 }
 
@@ -3242,10 +3370,10 @@ if (typeof window !== 'undefined') {
     window.__saveCurrentGenerationDraft = async () => {
         try {
             // Mode 2.1
-            if (modal21Files && modal21Files.files && modal21Files.files.length > 0) {
+            if (modal21SelectedFiles.length > 0) {
                 await savePendingGeneration({
                     mode: '2.1',
-                    files: Array.from(modal21Files.files),
+                    files: [...modal21SelectedFiles],
                     prompt: modal21Prompt ? modal21Prompt.value.trim() : '',
                     language: modal21SelectedLanguage || 'Inglês',
                     customLanguage: modal21CustomLangInput ? modal21CustomLangInput.value.trim() : ''
@@ -3293,10 +3421,10 @@ async function handlePostPaymentGeneration() {
         if (modal21) {
             modal21Error.textContent = '';
             modal21Files.value = '';
-            modal21FilesCount.textContent = t('no_file_selected');
-            if (modal21IconsContainer) modal21IconsContainer.innerHTML = FILES_DEFAULT_SVG;
+            modal21SelectedFiles = [];
+            renderModal21FilesUI();
             updateProPaywalledUI();
-            modal21.classList.remove('hidden');
+            openModalWithMotion(modal21);
         }
     } catch (err) {
         console.error('[PostPayment] Erro ao retomar geração pós-pagamento:', err);
@@ -3411,10 +3539,11 @@ function selectCardType(type, triggerChange = true) {
     if (matchedItem) {
         const labelEl = document.getElementById('creator-type-selected-label');
         const iconEl = document.getElementById('creator-type-selected-icon');
-        if (labelEl) labelEl.textContent = matchedItem.dataset.label;
+        const localizedLabel = matchedItem.querySelector('[data-i18n]')?.textContent?.trim() || matchedItem.dataset.label || '';
+        if (labelEl) labelEl.textContent = localizedLabel;
         if (iconEl) {
             iconEl.src = sanitizeImageUrl(matchedItem.dataset.icon || '');
-            iconEl.alt = matchedItem.dataset.label;
+            iconEl.alt = localizedLabel;
         }
     }
 
@@ -3777,9 +3906,6 @@ creatorCardType.addEventListener('change', () => {
     creatorGroupMc.classList.toggle('hidden', tVal !== 'multiple_choice');
     if (creatorGroupImageArrows) creatorGroupImageArrows.classList.toggle('hidden', tVal !== 'image_arrows');
     if (creatorGroupFlowchart) creatorGroupFlowchart.classList.toggle('hidden', tVal !== 'flowchart');
-    if (creatorGroupVoice) {
-        creatorGroupVoice.classList.toggle('hidden', tVal !== 'voice');
-    }
 
     const qImgContainer = creatorQImgUrl?.parentElement?.parentElement;
     if (qImgContainer) {
@@ -3801,9 +3927,6 @@ creatorCardType.addEventListener('change', () => {
     } else if (tVal === 'flowchart') {
         creatorQuestionLabel.textContent = t('question_concept_label');
         creatorQuestion.placeholder = t('question_placeholder');
-    } else if (tVal === 'voice') {
-        creatorQuestionLabel.textContent = t('question_concept_label');
-        creatorQuestion.placeholder = 'Ex: Explique o conceito de...';
     } else {
         creatorQuestionLabel.textContent = t('question_desc_label');
         creatorQuestion.placeholder = t('question_placeholder');
@@ -3910,7 +4033,7 @@ function renderCreatorMcOptions(options = ["", "", "", ""], selectedIdx = 0) {
         removeBtn.addEventListener('click', () => {
             const currentVals = Array.from(document.querySelectorAll('.creator-mc-opt-val')).map(inp => inp.value);
             if (currentVals.length <= 2) {
-                alert(t('alert_mc_min_options'));
+                appAlert(t('alert_mc_min_options'), { variant: 'warning' });
                 return;
             }
             currentVals.splice(i, 1);
@@ -4077,14 +4200,14 @@ if (creatorEditAnsImg) {
 }
 
 // Submit New Card
-creatorSubmitCardBtn.addEventListener('click', () => {
+creatorSubmitCardBtn.addEventListener('click', async () => {
     creatorFeedback.classList.add('hidden');
     const type = creatorCardType.value;
     const desc = creatorQuestion.value.trim();
 
     if (type === 'divisor') {
         if (!desc) {
-            alert(t('alert_comment_empty'));
+            await appAlert(t('alert_comment_empty'), { variant: 'warning' });
             creatorQuestion.focus();
             return;
         }
@@ -4099,7 +4222,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     }
 
     if (!desc && !pendingCreatorQImage) {
-        alert(t('alert_question_empty'));
+        await appAlert(t('alert_question_empty'), { variant: 'warning' });
         creatorQuestion.focus();
         return;
     }
@@ -4118,7 +4241,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     if (type === 'open') {
         const ans = creatorAnsOpen.value.trim();
         if (!ans) {
-            alert(t('alert_main_ans_empty'));
+            await appAlert(t('alert_main_ans_empty'), { variant: 'warning' });
             creatorAnsOpen.focus();
             return;
         }
@@ -4127,7 +4250,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         const a1 = creatorAnsDouble1.value.trim();
         const a2 = creatorAnsDouble2.value.trim();
         if (!a1 || !a2) {
-            alert(t('alert_both_ans_empty'));
+            await appAlert(t('alert_both_ans_empty'), { variant: 'warning' });
             return;
         }
         newCard.answer = a1;
@@ -4137,7 +4260,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     } else if (type === 'anki') {
         const ans = creatorAnsAnki.value.trim();
         if (!ans && !pendingCreatorAnsImage) {
-            alert(t('alert_anki_ans_empty'));
+            await appAlert(t('alert_anki_ans_empty'), { variant: 'warning' });
             creatorAnsAnki.focus();
             return;
         }
@@ -4152,26 +4275,26 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         const optInputs = Array.from(document.querySelectorAll('.creator-mc-opt-val'));
         const options = optInputs.map(inp => inp.value.trim()).filter(Boolean);
         if (options.length < 2 || options.length > 6) {
-            alert(t('alert_mc_valid_range'));
+            await appAlert(t('alert_mc_valid_range'), { variant: 'warning' });
             return;
         }
         const checkedRadio = document.querySelector('input[name="creator-mc-correct"]:checked');
         const correctIdx = checkedRadio ? parseInt(checkedRadio.value) : 0;
         const correctText = optInputs[correctIdx]?.value.trim();
         if (!correctText) {
-            alert(t('alert_mc_correct_empty'));
+            await appAlert(t('alert_mc_correct_empty'), { variant: 'warning' });
             return;
         }
         newCard.answer = correctText;
         newCard.options = options;
     } else if (type === 'image_arrows') {
         if (!pendingCreatorQImage) {
-            alert(t('alert_image_arrows_need_image'));
+            await appAlert(t('alert_image_arrows_need_image'), { variant: 'warning' });
             creatorQImgUrl.focus();
             return;
         }
         if (!pendingCreatorQImageArrows || pendingCreatorQImageArrows.length === 0) {
-            alert(t('alert_image_arrows_need_arrows'));
+            await appAlert(t('alert_image_arrows_need_arrows'), { variant: 'warning' });
             if (creatorEditQImg) creatorEditQImg.click();
             return;
         }
@@ -4183,7 +4306,7 @@ creatorSubmitCardBtn.addEventListener('click', () => {
         });
         const hasAtLeastOneLabel = pendingCreatorQImageArrows.some(a => (a.label || '').trim());
         if (!hasAtLeastOneLabel) {
-            alert(t('alert_image_arrows_need_labels'));
+            await appAlert(t('alert_image_arrows_need_labels'), { variant: 'warning' });
             arrowInputs[0]?.focus();
             return;
         }
@@ -4209,14 +4332,14 @@ creatorSubmitCardBtn.addEventListener('click', () => {
             const blankRegex = /(?:\[\s*_{1,}\s*\]|(?<![a-zA-Z0-9\u00C0-\u017F])_{1,}(?![a-zA-Z0-9\u00C0-\u017F]))/g;
             const blanksCount = (desc.match(blankRegex) || []).length;
             if (blanksCount === 0) {
-                alert(t('alert_fill_missing_blank'));
+                await appAlert(t('alert_fill_missing_blank'), { variant: 'warning' });
                 creatorQuestion.focus();
                 return;
             }
             const ansRaw = creatorAnsFill ? creatorAnsFill.value.trim() : '';
             const answers = ansRaw.split(';').map(a => a.trim()).filter(Boolean);
             if (answers.length === 0) {
-                alert(t('alert_fill_missing_answers'));
+                await appAlert(t('alert_fill_missing_answers'), { variant: 'warning' });
                 if (creatorAnsFill) creatorAnsFill.focus();
                 return;
             }
@@ -4226,29 +4349,17 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     } else if (type === 'flowchart') {
         const { nodes, summary } = creatorFlowchartEditor.getNormalizedResult();
         if (nodes.length < 2) {
-            alert(t('flowchart_alert_min_steps'));
+            await appAlert(t('flowchart_alert_min_steps'), { variant: 'warning' });
             return;
         }
         const hasAnyEdge = nodes.some(n => Array.isArray(n.next) && n.next.length > 0);
         if (!hasAnyEdge) {
-            alert(t('flowchart_alert_need_connection'));
+            await appAlert(t('flowchart_alert_need_connection'), { variant: 'warning' });
             return;
         }
         newCard.description = desc || t('card_type_flowchart');
         newCard.nodes = nodes;
         newCard.answer = summary;
-    } else if (type === 'voice') {
-        if (!isUserPro()) {
-            openProModal();
-            return;
-        }
-        const ans = creatorAnsVoice ? creatorAnsVoice.value.trim() : '';
-        if (!ans) {
-            alert(t('alert_voice_desc_empty') || 'Preencha a explicação de referência para o Gemini avaliar.');
-            creatorAnsVoice?.focus();
-            return;
-        }
-        newCard.answer = ans;
     }
 
     appendNewCardWithElasticCollision(newCard);
@@ -4260,7 +4371,6 @@ creatorSubmitCardBtn.addEventListener('click', () => {
     creatorAnsDouble2.value = '';
     creatorAnsAnki.value = '';
     setCreatorAnkiDefaultResponse('traditional');
-    if (creatorAnsVoice) creatorAnsVoice.value = '';
     if (creatorAnsFill) creatorAnsFill.value = '';
     creatorRemoveQImg.click();
     creatorRemoveAnsImg.click();
@@ -4299,7 +4409,6 @@ function showGeneratingAnimation(initialMessage = null) {
     const bannerContainer = document.getElementById('generation-banner-container');
     const statusText = document.getElementById('generation-status-text');
     const counterNum = document.getElementById('generation-counter-num');
-    const badgeStatus = document.getElementById('generation-badge-status');
     const titleText = document.getElementById('generation-title-text');
     const progressBar = document.getElementById('generation-progress-bar-container');
 
@@ -4308,14 +4417,8 @@ function showGeneratingAnimation(initialMessage = null) {
     }
     if (statusText) statusText.textContent = initialMessage || t('gen_phrase_1');
     if (counterNum) counterNum.textContent = '0';
-    if (badgeStatus) {
-        badgeStatus.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-purple-50 to-purple-100 text-purple-700 border border-purple-200/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
-        badgeStatus.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse"></span> ${t('live_badge')}`;
-    }
     if (titleText) titleText.textContent = t('gemini_generating_deck_title');
     if (progressBar) progressBar.classList.remove('hidden');
-
-    deckSizeBadge.classList.add('badge-generating-pulse');
 
     // Cycle status phrases periodically while waiting for cards
     let phraseIdx = 0;
@@ -4358,7 +4461,7 @@ function finishGeneratingAnimation(success = true, count = 0) {
         clearInterval(generationStatusInterval);
         generationStatusInterval = null;
     }
-    deckSizeBadge.classList.remove('badge-generating-pulse');
+    // Deck count badge stays steady without pulsing (L165)
 
     if (success && count > 0) {
         syncCurrentDeckToSlotAndCloud();
@@ -4370,7 +4473,6 @@ function finishGeneratingAnimation(success = true, count = 0) {
     const bannerContainer = document.getElementById('generation-banner-container');
     const titleText = document.getElementById('generation-title-text');
     const statusText = document.getElementById('generation-status-text');
-    const badgeStatus = document.getElementById('generation-badge-status');
     const counterBadge = document.getElementById('generation-counter-badge');
     const progressBar = document.getElementById('generation-progress-bar-container');
 
@@ -4379,10 +4481,6 @@ function finishGeneratingAnimation(success = true, count = 0) {
     if (success && count > 0) {
         if (titleText) titleText.textContent = t('flashcards_generated_success');
         if (statusText) statusText.textContent = t('cards_ready_status', { count });
-        if (badgeStatus) {
-            badgeStatus.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-green-50 to-green-100/90 text-green-700 border border-green-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
-            badgeStatus.innerHTML = `✓ ${t('done')}`;
-        }
         if (counterBadge) {
             counterBadge.className = "text-xs font-semibold text-green-700 bg-gradient-to-b from-green-50 to-green-100/80 px-3 py-1 rounded-full border border-green-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
             counterBadge.textContent = `${count} ${count === 1 ? t('card_unit_singular') : t('cards_unit')}`;
@@ -4400,10 +4498,6 @@ function finishGeneratingAnimation(success = true, count = 0) {
     } else {
         if (titleText) titleText.textContent = t('generation_incomplete_title');
         if (statusText) statusText.textContent = t('generation_failed_desc');
-        if (badgeStatus) {
-            badgeStatus.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-b from-red-50 to-red-100/90 text-red-700 border border-red-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]";
-            badgeStatus.innerHTML = `<span class="material-symbols-rounded text-xs align-middle">warning</span> ${t('attention_tag')}`;
-        }
     }
 }
 
@@ -4444,19 +4538,12 @@ function updateCardsBorderRadius() {
     applyGroupRadii(currentGroup);
 }
 
-function updateVoiceLimitBadge() {
-    const badge = document.getElementById('voice-deck-limit-badge');
-    if (!badge) return;
-    badge.classList.add('hidden');
-}
-
 // --- APPEND NEW CARD WITH PHYSICAL ELASTIC COLLISION & AUTO-SCROLL ---
 // Card enters from below, strikes previous card with elastic shock and damping, view scrolls down
 function appendNewCardWithElasticCollision(cardItem) {
     deckCards.push(cardItem);
     const playableCount = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note').length;
     deckSizeBadge.textContent = playableCount;
-    updateVoiceLimitBadge();
 
     // Clean up skeleton or empty state if present
     const skeleton = document.getElementById('cards-skeleton-loader');
@@ -4520,7 +4607,6 @@ function appendNewCardWithElasticCollision(cardItem) {
 function renderCardsList(fullReRender = false, preserveScroll = true) {
     const playableCount = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note').length;
     deckSizeBadge.textContent = playableCount;
-    updateVoiceLimitBadge();
 
     if (deckCards.length === 0) {
         if (isGeneratingCards) {
@@ -4654,7 +4740,6 @@ function removeDeckItemInPlace(itemEl) {
 
     const playableCount = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note').length;
     deckSizeBadge.textContent = playableCount;
-    updateVoiceLimitBadge();
 
     const children = Array.from(cardsList.children);
     for (let i = idx; i < children.length; i++) {
@@ -4713,7 +4798,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
     editBtn.className = "p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition";
     editBtn.title = t('edit_comment_title');
     editBtn.innerHTML = `<img src="../assets/img/edit.svg" class="w-3.5 h-3.5" alt="${t('edit')}">`;
-    editBtn.onclick = (e) => {
+    editBtn.onclick = async (e) => {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -4721,7 +4806,7 @@ function createDivisorElement(divisor, index, withAnimation = true) {
         const currentScroll = cardsList ? cardsList.scrollTop : 0;
         const currentWindowY = window.scrollY || document.documentElement.scrollTop || 0;
         const currentText = divisor.text || divisor.description || '';
-        const newText = prompt(t('edit_comment_prompt'), currentText);
+        const newText = await appPrompt(t('edit_comment_prompt'), currentText);
         if (newText !== null && newText.trim() !== '') {
             if (document.activeElement && typeof document.activeElement.blur === 'function') {
                 document.activeElement.blur();
@@ -4783,7 +4868,7 @@ function createCardElement(card, index, withAnimation = true) {
         typeBadge.className += " bg-indigo-100 text-indigo-800";
         typeBadge.textContent = t('card_type_anki');
     } else if (card.type === 'multiple_choice') {
-        typeBadge.className += " bg-purple-100 text-purple-800";
+        typeBadge.className += " bg-cyan-100 text-cyan-800";
         typeBadge.textContent = t('card_type_mc');
     } else if (card.type === 'open_double') {
         typeBadge.className += " bg-amber-100 text-amber-800";
@@ -4793,18 +4878,18 @@ function createCardElement(card, index, withAnimation = true) {
         const count = Array.isArray(card.answers) && card.answers.length > 0 ? card.answers.length : (card.answer ? card.answer.split(';').length : 1);
         typeBadge.textContent = `${t('card_type_fill')} (${count})`;
     } else if (card.type === 'image_arrows') {
-        typeBadge.className += " bg-blue-100 text-blue-800";
+        typeBadge.className += " bg-emerald-100 text-emerald-800";
         const count = Array.isArray(card.imageArrows) ? card.imageArrows.length : 0;
         typeBadge.textContent = `${t('card_type_image_arrows')} (${count})`;
     } else if (card.type === 'flowchart') {
         typeBadge.className += " bg-sky-100 text-sky-800 flex items-center gap-1";
         const count = Array.isArray(card.nodes) ? card.nodes.length : 0;
-        typeBadge.innerHTML = `<span class="material-symbols-rounded text-xs text-[#3b82f7]">account_tree</span> <span>${t('card_type_flowchart')} (${count})</span>`;
+        typeBadge.innerHTML = `<span class="material-symbols-rounded text-xs text-sky-700">account_tree</span> <span>${t('card_type_flowchart')} (${count})</span>`;
     } else if (card.type === 'voice') {
-        typeBadge.className += " bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1";
-        typeBadge.innerHTML = `<span class="material-symbols-rounded text-xs text-[#3b82f7]">record_voice_over</span> <span>${t('card_type_voice')}</span>`;
+        typeBadge.className += " bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1";
+        typeBadge.innerHTML = `<span class="material-symbols-rounded text-xs text-purple-700">record_voice_over</span> <span>${t('card_type_voice')}</span>`;
     } else {
-        typeBadge.className += " bg-gray-100 text-gray-700";
+        typeBadge.className += " bg-blue-100 text-blue-800";
         typeBadge.textContent = t('card_type_open');
     }
     topRightMeta.appendChild(typeBadge);
@@ -4923,8 +5008,9 @@ function createCardElement(card, index, withAnimation = true) {
 
     const editBtn = document.createElement('button');
     editBtn.type = "button";
-    editBtn.className = "p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg";
-    editBtn.innerHTML = `<img src="../assets/img/edit_flat.svg" class="w-4 h-4" alt="${t('edit')}">`;
+    editBtn.className = "p-1.5 bg-blue-100 hover:bg-blue-200 text-[#3b82f7] rounded-lg flex items-center justify-center cursor-pointer transition";
+    editBtn.title = t('edit');
+    editBtn.innerHTML = `<span class="material-symbols-rounded text-base leading-none select-none">edit</span>`;
     editBtn.onclick = (e) => {
         if (e) {
             e.preventDefault();
@@ -4938,14 +5024,15 @@ function createCardElement(card, index, withAnimation = true) {
 
     const delBtn = document.createElement('button');
     delBtn.type = "button";
-    delBtn.className = "p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg";
-    delBtn.innerHTML = `<img src="../assets/img/delete.svg" class="w-4 h-4" alt="${t('delete')}">`;
-    delBtn.onclick = (e) => {
+    delBtn.className = "p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg flex items-center justify-center cursor-pointer transition";
+    delBtn.title = t('delete');
+    delBtn.innerHTML = `<span class="material-symbols-rounded text-base leading-none select-none">delete</span>`;
+    delBtn.onclick = async (e) => {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
         }
-        if (confirm(t('confirm_delete_card'))) {
+        if (await appConfirm(t('confirm_delete_card'), { variant: 'danger' })) {
             removeDeckItemInPlace(cardEl);
         }
     };
@@ -4963,20 +5050,7 @@ addCardBtn.addEventListener('click', () => {
 });
 
 // --- INLINE EDIT MODAL (FOR ALL TYPES) ---
-function openInlineEditModal(index) {
-    const card = deckCards[index];
-    if (!card) return;
-
-    // Save scroll state before opening modal
-    inlineEditSavedScrollTop = cardsList ? cardsList.scrollTop : 0;
-    inlineEditSavedWindowY = window.scrollY || document.documentElement.scrollTop || 0;
-
-    editCardIndex.value = index;
-    editCardType.value = card.type || 'open';
-    editCardDesc.value = card.description || '';
-
-    // Show/hide groups based on type
-    const cardType = card.type || 'open';
+function applyInlineEditTypeVisibility(cardType, card = null) {
     editCardAns1Group.classList.toggle('hidden', cardType === 'anki' || cardType === 'multiple_choice' || cardType === 'fill' || cardType === 'image_arrows' || cardType === 'voice' || cardType === 'flowchart');
     editCardAns2Group.classList.toggle('hidden', cardType !== 'open_double');
     if (editCardFillGroup) editCardFillGroup.classList.toggle('hidden', cardType !== 'fill');
@@ -4989,30 +5063,64 @@ function openInlineEditModal(index) {
 
     if (cardType === 'open') {
         editCardAns1Label.textContent = t('main_answer_label');
-        editCardAns1.value = card.answer || '';
+        if (card) editCardAns1.value = card.answer || '';
     } else if (cardType === 'open_double') {
         editCardAns1Label.textContent = t('answer_1_label');
-        editCardAns1.value = card.answer || '';
-        editCardAns2.value = card.answer2 || '';
+        if (card) {
+            editCardAns1.value = card.answer || '';
+            editCardAns2.value = card.answer2 || '';
+        }
     } else if (cardType === 'anki') {
-        editCardAnkiAnswer.value = card.answer || '';
-        setEditCardAnkiDefaultResponse(card.defaultResponse || 'traditional');
+        if (card) {
+            editCardAnkiAnswer.value = card.answer || '';
+            setEditCardAnkiDefaultResponse(card.defaultResponse || 'traditional');
+        }
     } else if (cardType === 'voice') {
-        if (editCardVoiceAnswer) editCardVoiceAnswer.value = card.answer || '';
+        if (card && editCardVoiceAnswer) editCardVoiceAnswer.value = card.answer || '';
     } else if (cardType === 'multiple_choice') {
-        renderInlineEditMcOptions(card.options || ["", "", "", ""], card.answer);
+        const existingOpts = card && Array.isArray(card.options) && card.options.length >= 2
+            ? card.options
+            : [editCardAns1.value.trim() || card?.answer || '', '', '', ''];
+        renderInlineEditMcOptions(existingOpts, card?.answer || existingOpts[0] || '');
     } else if (cardType === 'fill') {
         if (editCardFillAnswer) {
-            const answers = Array.isArray(card.answers) && card.answers.length > 0 
-                ? card.answers.join('; ') 
-                : (card.answer || '');
+            const answers = card && Array.isArray(card.answers) && card.answers.length > 0
+                ? card.answers.join('; ')
+                : (card?.answer || editCardAns1.value.trim() || '');
             editCardFillAnswer.value = answers;
         }
     } else if (cardType === 'image_arrows') {
-        renderInlineEditArrowsInputs(card.imageArrows || []);
+        renderInlineEditArrowsInputs(card ? (card.imageArrows || []) : pendingInlineEditQImageArrows);
     } else if (cardType === 'flowchart') {
-        inlineEditFlowchartEditor.setNodes(card.nodes || []);
+        inlineEditFlowchartEditor.setNodes(card && Array.isArray(card.nodes) ? card.nodes : []);
     }
+}
+
+editCardType?.addEventListener('change', () => {
+    const idx = parseInt(editCardIndex.value, 10);
+    const card = Number.isInteger(idx) ? deckCards[idx] : null;
+    applyInlineEditTypeVisibility(editCardType.value, card);
+    updateInlineEditQImagePreviewUI();
+});
+
+function openInlineEditModal(index) {
+    const card = deckCards[index];
+    if (!card) return;
+
+    // Save scroll state before opening modal
+    inlineEditSavedScrollTop = cardsList ? cardsList.scrollTop : 0;
+    inlineEditSavedWindowY = window.scrollY || document.documentElement.scrollTop || 0;
+
+    editCardIndex.value = index;
+    const cardType = card.type || 'open';
+    const voiceOpt = editCardType?.querySelector('option[value="voice"]');
+    if (voiceOpt) voiceOpt.hidden = (cardType !== 'voice');
+    editCardType.value = cardType;
+    editCardDesc.value = card.description || '';
+
+    applyInlineEditTypeVisibility(cardType, card);
+
+    // Field values populated by applyInlineEditTypeVisibility(cardType, card)
 
     pendingInlineEditQImage = sanitizeImageUrl(card.image || '');
     pendingInlineEditQImageCrop = card.imageCrop ? { ...card.imageCrop } : null;
@@ -5056,7 +5164,7 @@ function renderInlineEditMcOptions(options, correctAnswer) {
         removeBtn.addEventListener('click', () => {
             const currentVals = Array.from(document.querySelectorAll('.inline-edit-mc-opt-val')).map(inp => inp.value);
             if (currentVals.length <= 2) {
-                alert(t('alert_mc_min_options'));
+                appAlert(t('alert_mc_min_options'), { variant: 'warning' });
                 return;
             }
             currentVals.splice(i, 1);
@@ -5076,6 +5184,7 @@ editCardAddMcOptBtn.addEventListener('click', () => {
     const checkedRadio = document.querySelector('input[name="inline-edit-mc-correct"]:checked');
     const correctIdx = checkedRadio ? parseInt(checkedRadio.value, 10) : 0;
     const curCorrect = currentVals[correctIdx] || "";
+    currentVals.push("");
     renderInlineEditMcOptions(currentVals, curCorrect);
 });
 
@@ -5278,6 +5387,20 @@ saveInlineEditBtn.addEventListener('click', (e) => {
     }
 
     const card = deckCards[idx];
+    const nextType = editCardType?.value || card.type || 'open';
+    if (nextType !== card.type) {
+        card.type = nextType;
+        if (nextType !== 'open_double') delete card.answer2;
+        if (nextType !== 'multiple_choice') delete card.options;
+        if (nextType !== 'fill') delete card.answers;
+        if (nextType !== 'flowchart') delete card.nodes;
+        if (nextType !== 'anki') {
+            delete card.defaultResponse;
+            delete card.answerImage;
+            delete card.answerImageCrop;
+            delete card.answerImageArrows;
+        }
+    }
     card.description = editCardDesc.value.trim();
 
     if (pendingInlineEditQImage) {
@@ -5337,19 +5460,19 @@ saveInlineEditBtn.addEventListener('click', (e) => {
     } else if (card.type === 'flowchart') {
         const { nodes, summary } = inlineEditFlowchartEditor.getNormalizedResult();
         if (nodes.length < 2) {
-            alert(t('flowchart_alert_min_steps'));
+            appAlert(t('flowchart_alert_min_steps'), { variant: 'warning' });
             return;
         }
         const hasAnyEdge = nodes.some(n => Array.isArray(n.next) && n.next.length > 0);
         if (!hasAnyEdge) {
-            alert(t('flowchart_alert_need_connection'));
+            appAlert(t('flowchart_alert_need_connection'), { variant: 'warning' });
             return;
         }
         card.nodes = nodes;
         card.answer = summary;
     }
 
-    inlineEditModal.classList.add('hidden');
+    closeInlineEditModal();
 
     // In-place update of edited card to prevent entire list layout thrashing & scroll collapsing
     const targetCardEl = cardsList ? cardsList.querySelector(`[data-index="${idx}"]`) : null;
@@ -5372,18 +5495,18 @@ saveInlineEditBtn.addEventListener('click', (e) => {
     });
 });
 
-// --- AI CHAT INTEGRATION ---
+// --- AI CHAT INTEGRATION (Unified with Game AI Tutor Design) ---
 function addChatMessage(role, text) {
     const msg = document.createElement('div');
     const safeText = String(text || '');
     if (role === 'user') {
-        msg.className = 'py-2 px-4 rounded-xl max-w-[85%] text-sm self-end bg-purple-600 text-white rounded-tr-sm break-words';
+        msg.className = 'chat-message-user';
         msg.textContent = safeText;
     } else if (role === 'error') {
-        msg.className = 'py-2.5 px-4 rounded-xl max-w-[88%] text-sm self-start bg-red-100 text-red-800 rounded-tl-sm break-words shadow-sm';
+        msg.className = 'self-start bg-red-50 text-red-800 border border-red-200/80 py-2.5 px-4 rounded-[1.25rem] rounded-bl-sm max-w-[88%] text-sm break-words shadow-xs';
         msg.textContent = safeText;
     } else {
-        msg.className = 'py-2.5 px-4 rounded-xl max-w-[88%] text-sm self-start bg-gray-200 text-gray-800 rounded-tl-sm chat-markdown-content break-words shadow-sm';
+        msg.className = 'chat-message-ai chat-markdown-content';
         try {
             msg.innerHTML = renderMathAndMarkdown(safeText);
         } catch (err) {
@@ -5455,7 +5578,7 @@ async function analyzePromptCapability(userPrompt) {
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                model: "gemini-flash-lite-latest",
+                model: "flash-lite",
                 systemInstruction: { parts: [{ text: triageSystemInstruction }] },
                 contents: [{ role: 'user', parts: [{ text: `${deckBrief}\nComando do usuário: "${userPrompt}"` }] }],
                 tools: handoffTools,
@@ -5508,7 +5631,7 @@ async function checkEditAgentLoopWithFlashLite(token, userPrompt, recentToolTrac
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                model: "gemini-flash-lite-latest",
+                model: "flash-lite",
                 systemInstruction: { parts: [{ text: "Você é um detector objetivo de loops para um agente editor de flashcards. Responda somente JSON válido com as chaves boolean in_loop e string reason." }] },
                 contents: [{ role: 'user', parts: [{ text: loopPrompt }] }],
                 generationConfig: {
@@ -5549,7 +5672,7 @@ async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
     sanitizeChatHistory(history);
     const historyBeforeTurn = JSON.parse(JSON.stringify(history));
 
-    const toolsForModel = (!forceLite && modelName === "gemini-flash-lite-latest")
+    const toolsForModel = (!forceLite && modelName === "flash-lite")
         ? deckToolsWithHandoff
         : deckTools;
 
@@ -5601,12 +5724,12 @@ async function executeAgentChatTurn(modelName, userPrompt, forceLite = false) {
             if (calls.length === 0) break;
 
             const midHandoff = calls.find(c => c.functionCall.name === 'handoff_to_gemini_flash');
-            if (midHandoff && modelName === "gemini-flash-lite-latest" && !forceLite) {
+            if (midHandoff && modelName === "flash-lite" && !forceLite) {
                 const reason = midHandoff.functionCall.args?.reason || 'Handoff solicitado durante turn';
                 console.log('[AI Agent Execution] Lite model acionou handoff_to_gemini_flash durante a execução. Motivo:', reason);
-                console.log('[AI Agent Execution] Transferindo execução para gemini-flash-latest...');
+                console.log('[AI Agent Execution] Transferindo execução para modelo avançado (flash)...');
                 if (geminiChatSession) geminiChatSession._history = historyBeforeTurn;
-                return await executeAgentChatTurn("gemini-flash-latest", userPrompt, false);
+                return await executeAgentChatTurn("flash", userPrompt, false);
             }
 
             if (candidate?.content) {
@@ -5691,22 +5814,22 @@ async function executePromptWithAnalysisAndFallback(userPrompt) {
     const analysis = await analyzePromptCapability(userPrompt);
 
     if (analysis.handoff) {
-        console.log('[AI Agent Execution] Executando comando com modelo avançado: gemini-flash-latest');
+        console.log('[AI Agent Execution] Executando comando com modelo avançado (flash)');
         try {
-            const output = await executeAgentChatTurn("gemini-flash-latest", userPrompt, false);
-            console.log('[AI Agent Execution] gemini-flash-latest completou a tarefa com sucesso.');
+            const output = await executeAgentChatTurn("flash", userPrompt, false);
+            console.log('[AI Agent Execution] Modelo avançado (flash) completou a tarefa com sucesso.');
             return output;
         } catch (flashErr) {
-            console.warn('[AI Agent Fallback] gemini-flash-latest falhou com erro:', flashErr?.message || flashErr);
-            console.log('[AI Agent Fallback] Retornando e forçando gemini-flash-lite-latest a executar o trabalho como puder...');
-            const fallbackOutput = await executeAgentChatTurn("gemini-flash-lite-latest", userPrompt, true /* forceLite */);
-            console.log('[AI Agent Fallback] gemini-flash-lite-latest concluiu com sucesso a execução forçada.');
+            console.warn('[AI Agent Fallback] Modelo avançado (flash) falhou com erro:', flashErr?.message || flashErr);
+            console.log('[AI Agent Fallback] Retornando e forçando modelo leve (flash-lite) a executar o trabalho como puder...');
+            const fallbackOutput = await executeAgentChatTurn("flash-lite", userPrompt, true /* forceLite */);
+            console.log('[AI Agent Fallback] Modelo leve (flash-lite) concluiu com sucesso a execução forçada.');
             return fallbackOutput;
         }
     } else {
-        console.log('[AI Agent Execution] Executando comando com modelo padrão: gemini-flash-lite-latest');
-        const output = await executeAgentChatTurn("gemini-flash-lite-latest", userPrompt, false);
-        console.log('[AI Agent Execution] gemini-flash-lite-latest completou a tarefa com sucesso.');
+        console.log('[AI Agent Execution] Executando comando com modelo padrão (flash-lite)');
+        const output = await executeAgentChatTurn("flash-lite", userPrompt, false);
+        console.log('[AI Agent Execution] Modelo padrão (flash-lite) completou a tarefa com sucesso.');
         return output;
     }
 }
@@ -5782,6 +5905,17 @@ chatInput.addEventListener('keyup', (e) => {
     if (e.key === 'Enter') chatSendBtn.click();
 });
 
+// Quick Action Prompt Chips (Gemini Context Starters — mirrors Game AI Tutor)
+document.querySelectorAll('.editor-gemini-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+        const promptKey = chip.getAttribute('data-prompt-key');
+        const promptText = promptKey ? t(promptKey) : '';
+        if (!promptText || !chatInput) return;
+        chatInput.value = promptText;
+        chatSendBtn.click();
+    });
+});
+
 // --- SAVE & PLAY DECK ---
 deckTitleDisplay.addEventListener('input', () => {
     document.title = `${deckTitleDisplay.value.trim() || 'Flashcards'} | Editor`;
@@ -5791,7 +5925,7 @@ deckTitleDisplay.addEventListener('input', () => {
 if (shareDeckBtn) {
     shareDeckBtn.addEventListener('click', async () => {
         if (deckCards.length === 0) {
-            alert(t('alert_add_card_before_play'));
+            await appAlert(t('alert_add_card_before_play'), { variant: 'warning' });
             return;
         }
         syncCurrentDeckToSlotAndCloud();
@@ -5816,12 +5950,12 @@ if (shareDeckBtn) {
                 return; // User cancelled the slot replacement dialog cleanly
             }
             console.error('[Share] Erro ao compartilhar baralho:', err);
-            alert(t('error_sharing_deck'));
+            await appAlert(t('error_sharing_deck'), { variant: 'warning' });
         }
     });
 }
 
-downloadDeckBtn.addEventListener('click', () => {
+downloadDeckBtn.addEventListener('click', async () => {
     if (deckCards.length === 0) return;
     const isFreeTrial = Boolean(
         window.currentDeckIsFreeAiTrial || 
@@ -5829,7 +5963,7 @@ downloadDeckBtn.addEventListener('click', () => {
         localStorage.getItem('editing_deck_is_free_trial') === 'true'
     );
     if (!isUserPro() && isFreeTrial) {
-        alert(t('alert_free_trial_no_export'));
+        await appAlert(t('alert_free_trial_no_export'), { variant: 'info' });
         openProModal();
         return;
     }
@@ -5850,7 +5984,7 @@ downloadDeckBtn.addEventListener('click', () => {
 playDeckBtn.addEventListener('click', async () => {
     const playableCards = deckCards.filter(c => c.type !== 'divisor' && c.type !== 'divider' && c.type !== 'note');
     if (playableCards.length === 0) {
-        alert(t('alert_add_card_before_play'));
+        await appAlert(t('alert_add_card_before_play'), { variant: 'warning' });
         return;
     }
 
@@ -5914,9 +6048,9 @@ playDeckBtn.addEventListener('click', async () => {
         window.location.href = 'game.html';
     } catch (err) {
         if (err.name === 'QuotaExceededError') {
-            alert(t('alert_storage_quota_exceeded'));
+            await appAlert(t('alert_storage_quota_exceeded'), { variant: 'warning' });
         } else {
-            alert(t('exam_error_start', { message: err.message }));
+            await appAlert(t('exam_error_start', { message: err.message }), { variant: 'warning' });
         }
     }
 });

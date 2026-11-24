@@ -20,11 +20,11 @@ import { isDeckCategorized, callGeminiFlashLiteCategorization, getStoredAiCatego
 import { initStatsSession, recordStatsAnswer, recordStatsAiCorrection, archiveCurrentSession, completeCurrentSession, getCurrentSessionMetrics, getCardsAnsweredForDate } from './stats-tracker.js';
 import { initExploreModal, openExploreModal, openProModal, isUserPro } from './explore-modal.js';
 import { openAccountModal } from './account-modal.js';
+import { appAlert, appConfirm } from './dialogs.js';
 import { getUserApiKey, generateUserApiKey, revokeUserApiKey, testStatsApi, getUserWebhook, saveUserWebhook, testUserWebhook, triggerDailyGoalWebhook, BACKEND_URL } from './backend-api.js';
 import { onAuthChange, auth, getCurrentUserToken } from './firebase-client.js';
 import { checkAndLoadSharedDeck, checkAndUpdateSharedSlots, subscribeToAllSharedSlots, shareDeckToCloud, showShareSuccessDialog } from './share-manager.js';
 import { debouncedSyncSlotsToCloud, syncSlotsToCloud, syncActiveSlotState, initRealtimeCloudSync, openDeckInSlots, getLocalSlots, saveLocalSlots } from './slot-manager.js';
-import { initPwaInstallBanner } from './engine/pwa-install.js';
 import { t, setLanguage, getLanguagePreference, applyTranslations } from './i18n.js';
 import { openImageEditorModal, renderAnnotatedImage, getArrowColorTheme } from './image-editor-modal.js';
 
@@ -442,8 +442,9 @@ function showNotificationPill(message, iconName, isWarning = false) {
     // Samsung One UI style: pill-shaped, superior, blurred, centered
     pill.className = `fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-2.5 rounded-full shadow-2xl backdrop-blur-xl border border-white/20 transition-all duration-500 transform -translate-y-20 opacity-0 ${isWarning ? 'bg-yellow-100/90' : 'bg-white/90'}`;
 
+    const normalizedIcon = String(iconName || 'check.svg').endsWith('.svg') ? String(iconName) : `${iconName}.svg`;
     const iconImg = document.createElement('img');
-    iconImg.src = `../assets/img/${encodeURIComponent(iconName)}`;
+    iconImg.src = `../assets/img/${encodeURIComponent(normalizedIcon)}`;
     iconImg.className = 'w-5 h-5';
     iconImg.alt = 'icon';
 
@@ -854,7 +855,8 @@ function animateCardToHeader(callback) {
 }
 
 function animateCardsFromHeaderToDeck(callback) {
-    if (isAnimating) {
+    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (isAnimating || !isAnimationsEnabled() || prefersReducedMotion) {
         if (callback) callback();
         return;
     }
@@ -1969,6 +1971,47 @@ function renderFlowchartUI() {
         flowchartTrayList.appendChild(card);
     });
 
+    const solutionContainer = document.getElementById('flowchart-solution-container');
+    if (solutionContainer) {
+        if (flowchartState.evaluation && !flowchartState.evaluation.isCorrect && Array.isArray(flowchartState.nodes) && flowchartState.nodes.length > 0) {
+            const nodeMap = new Map(flowchartState.nodes.map((n, i) => [n.id, { node: n, num: i + 1 }]));
+            const formatFilledText = (node) => {
+                let bIdx = 0;
+                const blanks = Array.isArray(node.blanks) ? node.blanks : [];
+                return escapeHtml(String(node.text || '')).replace(/_/g, () => {
+                    const raw = blanks[bIdx++] || '_';
+                    const primary = String(raw).split('/')[0].trim() || raw;
+                    return `<strong class="text-emerald-700 bg-emerald-50 px-1 rounded">${escapeHtml(primary)}</strong>`;
+                });
+            };
+            const rowsHtml = flowchartState.nodes.map((n, idx) => {
+                const nextTargets = (Array.isArray(n.next) ? n.next : [])
+                    .map(tid => nodeMap.get(tid))
+                    .filter(Boolean)
+                    .map(tEntry => `<span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-100 text-[#1e3a8a] text-[10px] font-bold">${tEntry.num}</span>`)
+                    .join(' ');
+                const arrowPart = nextTargets
+                    ? `<span class="inline-flex items-center gap-1 ml-1.5 text-[11px] font-semibold text-[#3b82f7]">→ ${nextTargets}</span>`
+                    : `<span class="ml-1.5 text-[10px] italic text-[var(--md-sys-color-on-surface-variant)]">(${escapeHtml(t('flowchart_end_label') || 'Fim')})</span>`;
+                return `<div class="flex items-start gap-2 text-xs leading-relaxed">
+                    <span class="w-5 h-5 rounded-full bg-[#3b82f7] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">${idx + 1}</span>
+                    <div class="min-w-0 flex-1 text-[var(--md-sys-color-on-surface)]">${formatFilledText(n)}${arrowPart}</div>
+                </div>`;
+            }).join('');
+            solutionContainer.innerHTML = `
+                <div class="flex items-center gap-1.5 text-xs font-bold text-[#1e3a8a]">
+                    <span class="material-symbols-rounded text-base text-[#3b82f7]">account_tree</span>
+                    <span>${escapeHtml(t('flowchart_correct_sequence_title') || 'Sequência correta do fluxograma')}</span>
+                </div>
+                <div class="space-y-1.5 pt-1">${rowsHtml}</div>
+            `;
+            solutionContainer.classList.remove('hidden');
+        } else {
+            solutionContainer.classList.add('hidden');
+            solutionContainer.innerHTML = '';
+        }
+    }
+
     if (activeNodeId && activeBlankIdx !== null) {
         const restoreEl = flowchartLevelsContainer.querySelector(`.flowchart-blank-input[data-node-id="${CSS.escape(activeNodeId)}"][data-blank-index="${CSS.escape(activeBlankIdx)}"]`);
         if (restoreEl) restoreEl.focus();
@@ -2302,7 +2345,9 @@ function handleFlowchartSubmit() {
             triggerHaptic('shake');
             showFeedback(false);
 
-            // Phase 2 (~550ms): wrong blank inputs pop yellow with the right answer just like (fill)
+            // Phase 2 (~550ms, instant when animations disabled): wrong blank inputs pop yellow with the right answer
+            const flowPhase2Delay = isAnimationsEnabled() ? 550 : 0;
+            const flowUnlockDelay = isAnimationsEnabled() ? 650 : 0;
             setTimeout(() => {
                 if (!flowchartState.evaluation) {
                     isAnimating = false;
@@ -2335,8 +2380,8 @@ function handleFlowchartSubmit() {
 
                 setTimeout(() => {
                     isAnimating = false;
-                }, 650);
-            }, 550);
+                }, flowUnlockDelay);
+            }, flowPhase2Delay);
         } else {
             showFeedback(isCorrect);
         }
@@ -2464,7 +2509,7 @@ function collectGameEditFlowchartNodes() {
     }).filter(n => n.text);
 
     if (built.length < 2) {
-        alert(t('flowchart_alert_min_steps'));
+        appAlert(t('flowchart_alert_min_steps'), { variant: 'warning' });
         return null;
     }
     const normalized = normalizeGameFlowchartNodes(built);
@@ -3372,7 +3417,7 @@ function loadQuestion() {
             submitBtn?.classList.add('hidden');
             nextQuestionBtn?.classList.add('hidden');
             correctionOptions?.classList.add('hidden');
-            ankiControls?.classList.add('hidden');
+            ankiControlsArea?.classList.add('hidden');
             mcAnswerArea?.classList.add('hidden');
             openAnswerArea?.classList.add('hidden');
             return;
@@ -3397,7 +3442,7 @@ function loadQuestion() {
 
                 const emptyHtml = `
                     <div class="py-6 flex flex-col items-center justify-center text-center gap-3 select-none">
-                        <div class="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-xs">
+                        <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
                             <span class="material-symbols-rounded text-3xl">layers_clear</span>
                         </div>
                         <h3 class="text-lg font-bold text-gray-800">${t('exam_all_decks_disabled_title')}</h3>
@@ -3414,7 +3459,7 @@ function loadQuestion() {
                 submitBtn?.classList.add('hidden');
                 nextQuestionBtn?.classList.add('hidden');
                 correctionOptions?.classList.add('hidden');
-                ankiControls?.classList.add('hidden');
+                ankiControlsArea?.classList.add('hidden');
                 mcAnswerArea?.classList.add('hidden');
                 openAnswerArea?.classList.add('hidden');
                 return;
@@ -3577,6 +3622,7 @@ function loadQuestion() {
     if (voiceAnswerContainer) voiceAnswerContainer.classList.add('hidden');
     if (voiceEvaluatedControls) voiceEvaluatedControls.classList.add('hidden');
     resetVoiceUIState();
+    if (questionCard) questionCard.classList.remove('anki-flippable-card');
     if (flowchartAnswerArea) flowchartAnswerArea.classList.add('hidden');
     flowchartState.locked = false;
     if (imageArrowsAnswerArea) imageArrowsAnswerArea.classList.add('hidden');
@@ -3743,6 +3789,25 @@ function updateAnkiSplitButtonUI() {
             ankiSplitSecondaryBtn.setAttribute('aria-label', t('explain_btn_label') || 'Explicar');
         }
     }
+
+    // Signal PRO lock + desaturation on Voice secondary button for free users (L138)
+    const secondaryLockEl = document.getElementById('anki-split-secondary-lock');
+    const isSecondaryVoiceLocked = (effectiveMain !== 'voice') && !isUserPro();
+    if (ankiSplitSecondaryBtn) {
+        ankiSplitSecondaryBtn.classList.toggle('is-pro-locked', isSecondaryVoiceLocked);
+        if (isSecondaryVoiceLocked) {
+            ankiSplitSecondaryBtn.setAttribute('title', `${t('explain_btn_label') || 'Explicar'} (PRO)`);
+        }
+    }
+    if (secondaryLockEl) {
+        secondaryLockEl.classList.toggle('hidden', !isSecondaryVoiceLocked);
+    }
+
+    // Update flippable 3D tilt hover cue on #question-card (L123)
+    if (questionCard) {
+        const canClickFlip = Boolean(currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice') && !isAnkiFlipped);
+        questionCard.classList.toggle('anki-flippable-card', canClickFlip);
+    }
 }
 
 function triggerAnkiVoiceResponse() {
@@ -3751,6 +3816,7 @@ function triggerAnkiVoiceResponse() {
         return;
     }
     // Transiciona para a interface de gravação e avaliação do Gemini
+    if (questionCard) questionCard.classList.remove('anki-flippable-card');
     if (ankiControlsArea) ankiControlsArea.classList.add('hidden');
     if (voiceControlsArea) {
         voiceControlsArea.classList.remove('hidden');
@@ -3824,6 +3890,7 @@ function flipAnkiCard() {
     const isAnkiLike = currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice');
     if (!isAnkiLike || isAnkiFlipped) return;
     isAnkiFlipped = true;
+    if (questionCard) questionCard.classList.remove('anki-flippable-card');
 
     triggerHaptic('cardFlip');
     playFeedbackSound('flip');
@@ -4161,7 +4228,7 @@ async function startVoiceRecording() {
     }
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
-        alert(t('voice_not_supported') || 'Gravação de voz não suportada neste navegador.');
+        await appAlert(t('voice_not_supported') || 'Gravação de voz não suportada neste navegador.', { variant: 'warning' });
         return;
     }
 
@@ -4265,7 +4332,7 @@ async function startVoiceRecording() {
 
     } catch (err) {
         console.error('[Voice] Falha ao acessar microfone:', err);
-        alert(t('voice_mic_permission_denied') || 'Permissão do microfone negada.');
+        await appAlert(t('voice_mic_permission_denied') || 'Permissão do microfone negada.', { variant: 'warning' });
         resetVoiceUIState();
     }
 }
@@ -4319,8 +4386,10 @@ async function finishVoiceRecordingAndSend() {
     if (voiceMicBtn) voiceMicBtn.classList.add('voice-button-collapsing');
     if (voiceCantSpeakBtn) voiceCantSpeakBtn.classList.add('hidden');
 
-    // Collapse transition duration
-    await new Promise(r => setTimeout(r, 400));
+    // Collapse transition duration (instant when animations disabled)
+    if (isAnimationsEnabled()) {
+        await new Promise(r => setTimeout(r, 400));
+    }
 
     // Tutor thinking state: button hidden, stage enters thinking mode,
     // exact same gemini glow continues floating smoothly at scale(1)
@@ -4362,9 +4431,9 @@ async function finishVoiceRecordingAndSend() {
             setTimeout(() => questionCard?.classList.remove('voice-border-pulse'), 1300);
         }
 
-        // Apply classification via function-call
-        const rating = evaluation.rating || 'good';
-        applyVoiceCardSchedule(rating);
+        // Pre-select AI rating; schedule commits ONCE on "Continuar" or rating override (prevents double-counting)
+        lastVoiceRating = evaluation.rating || 'good';
+        voiceCardScheduledThisTurn = false;
 
     } catch (err) {
         console.error('[Voice] Erro durante avaliação do áudio:', err);
@@ -4379,13 +4448,14 @@ async function finishVoiceRecordingAndSend() {
             key_points_missed: []
         }, '(Áudio gravado)');
 
-        if (questionCard) {
+        if (questionCard && isAnimationsEnabled()) {
             questionCard.classList.remove('voice-border-pulse');
             void questionCard.offsetWidth;
             questionCard.classList.add('voice-border-pulse');
             setTimeout(() => questionCard?.classList.remove('voice-border-pulse'), 1300);
         }
-        applyVoiceCardSchedule('good');
+        lastVoiceRating = 'good';
+        voiceCardScheduledThisTurn = false;
     } finally {
         isVoiceSubmitting = false;
     }
@@ -4476,7 +4546,7 @@ DIRETRIZES DE AVALIAÇÃO:
             'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-            model: 'gemini-flash-lite-latest',
+            model: 'flash-lite',
             contents: [{ role: 'user', parts }],
             tools: [classifyVoiceTool],
             toolConfig: {
@@ -4616,8 +4686,12 @@ function highlightVoiceRatingButton(rating) {
     });
 }
 
+let voiceCardScheduledThisTurn = false;
+
 function applyVoiceCardSchedule(rating) {
-    if (!currentQuestion || currentQuestion.type !== 'voice') return;
+    if (!currentQuestion || (currentQuestion.type !== 'voice' && currentQuestion.type !== 'anki')) return;
+    if (voiceCardScheduledThisTurn) return;
+    voiceCardScheduledThisTurn = true;
     lastVoiceRating = rating;
 
     handleDailyStreakOnCardAnswered();
@@ -4714,7 +4788,7 @@ function applyVoiceCardSchedule(rating) {
 }
 
 function handleVoiceRating(rating, autoAdvance = true) {
-    if (!currentQuestion || currentQuestion.type !== 'voice') return;
+    if (!currentQuestion || (currentQuestion.type !== 'voice' && currentQuestion.type !== 'anki')) return;
     highlightVoiceRatingButton(rating);
     applyVoiceCardSchedule(rating);
     if (autoAdvance) {
@@ -4724,6 +4798,9 @@ function handleVoiceRating(rating, autoAdvance = true) {
 
 function advanceFromVoiceCard() {
     if (isAnimating) return;
+    if (!voiceCardScheduledThisTurn && currentQuestion && (currentQuestion.type === 'voice' || currentQuestion.type === 'anki')) {
+        applyVoiceCardSchedule(lastVoiceRating || 'good');
+    }
     if (questionsPool.length === 0) {
         clearBalls();
         updateScoreDisplay();
@@ -4935,7 +5012,9 @@ function handleFillSubmit() {
             triggerHaptic('shake');
             showFeedback(false);
 
-            // Phase 2: At ~550ms, wrong boxes pop yellow with the right answer so user knows where to focus (total duration ~1.2s)
+            // Phase 2: At ~550ms (instant when animations disabled), wrong boxes pop yellow with the right answer
+            const fillPhase2Delay = isAnimationsEnabled() ? 550 : 0;
+            const fillUnlockDelay = isAnimationsEnabled() ? 650 : 0;
             setTimeout(() => {
                 let anyPopped = false;
                 blankResults.forEach(({ input, synonyms, expectedVal, isCorrect }) => {
@@ -4959,11 +5038,11 @@ function handleFillSubmit() {
                     triggerHaptic('fillPop');
                 }
 
-                // Unlock next navigation once the 1.2s correction animation completes
+                // Unlock next navigation once the correction animation completes
                 setTimeout(() => {
                     isAnimating = false;
-                }, 650);
-            }, 550);
+                }, fillUnlockDelay);
+            }, fillPhase2Delay);
         }
     } catch (err) {
         console.error("[Game] Erro durante handleFillSubmit:", err);
@@ -5443,7 +5522,7 @@ function showFeedback(isCorrect, element) {
                         updateScoreDisplay();
                         loadQuestion();
                     });
-                }, 400);
+                }, isAnimationsEnabled() ? 400 : 0);
             } else {
                 // Card mantido para consolidação proporcional ao tamanho do deck
                 const reinforcGap = calculateProportionalStepGap({
@@ -5460,7 +5539,7 @@ function showFeedback(isCorrect, element) {
                     animateCardToBack(() => {
                         loadQuestion();
                     });
-                }, 400);
+                }, isAnimationsEnabled() ? 400 : 0);
             }
         }
     } catch (err) {
@@ -6047,12 +6126,7 @@ function renderHeaderPinnedStats(forceRerender = false) {
                         ${statDef.getValue()}
                     </p>
                 `;
-                statWrapper.addEventListener('click', (e) => {
-                    if (activeMode === 'notebook') {
-                        e.stopPropagation();
-                        openDailyGoalModal();
-                    }
-                });
+
             } else if (statId === 'score') {
                 statWrapper.id = 'score-wrapper';
                 statWrapper.className = 'flex items-center min-w-[38px] justify-center select-none';
@@ -6137,9 +6211,7 @@ function updateHeaderPinnedStatsValues() {
                     goal: dailyGoal,
                     reviewed: reviewedToday
                 }));
-                if (!cntWrapper.classList.contains('cursor-pointer')) {
-                    cntWrapper.classList.add('cursor-pointer', 'hover:opacity-80', 'transition');
-                }
+                cntWrapper.classList.remove('cursor-pointer', 'hover:opacity-80');
             }
         } else {
             if (qLeft) {
@@ -6150,9 +6222,7 @@ function updateHeaderPinnedStatsValues() {
             }
             if (cntWrapper) {
                 setTitleIfChanged(cntWrapper, t('notebook_set_goal_tooltip'));
-                if (!cntWrapper.classList.contains('cursor-pointer')) {
-                    cntWrapper.classList.add('cursor-pointer', 'hover:opacity-80', 'transition');
-                }
+                cntWrapper.classList.remove('cursor-pointer', 'hover:opacity-80');
             }
         }
         if (scWrapper) {
@@ -6559,8 +6629,8 @@ async function sendChatMessage() {
 }
 
 // --- EVENT LISTENERS ---
-resetBtn.addEventListener('click', () => {
-    if (confirm(t('confirm_exit_game'))) {
+resetBtn.addEventListener('click', async () => {
+    if (await appConfirm(t('confirm_exit_game'))) {
         localStorage.removeItem('flashcardsSave');
         localStorage.removeItem('flashcardsActiveMode');
         window.location.href = ROUTES.HOME;
@@ -7452,7 +7522,7 @@ if (hlAiOpenChatBtn) {
 
         // Respect prefers-reduced-motion or missing popup elements
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (prefersReducedMotion || !textHighlightPopup || !hlAiCard) {
+        if (!isAnimationsEnabled() || prefersReducedMotion || !textHighlightPopup || !hlAiCard) {
             hideHighlightPopup();
             if (aiChatContainer) {
                 aiChatContainer.classList.add('open');
@@ -7850,7 +7920,7 @@ if (menuShareDeckBtn) {
                 return; // User cancelled slot replacement dialog cleanly
             }
             console.error('[Share] Erro ao compartilhar baralho:', err);
-            alert(t('error_sharing_deck'));
+            await appAlert(t('error_sharing_deck'), { variant: 'warning' });
         }
     });
 }
@@ -7901,9 +7971,9 @@ goToEditorBtn.addEventListener('click', () => {
 });
 
 // --- CLEAR NOTEBOOK LISTENER ---
-clearNotebookBtn?.addEventListener('click', () => {
+clearNotebookBtn?.addEventListener('click', async () => {
     closeHamburgerMenu();
-    const confirmed = confirm(t('confirm_clear_entire_notebook'));
+    const confirmed = await appConfirm(t('confirm_clear_entire_notebook'), { variant: 'danger' });
     if (confirmed) {
         localStorage.removeItem(NOTEBOOK_STORAGE_KEY);
         cachedBookmarkedSet = null;
@@ -7991,12 +8061,7 @@ saveDailyGoalBtn?.addEventListener('click', () => {
     checkAndCelebrateNotebookDailyGoal(false);
 });
 
-counterLeftWrapper?.addEventListener('click', (e) => {
-    if (activeMode === 'notebook') {
-        e.stopPropagation();
-        openDailyGoalModal();
-    }
-});
+
 if (aiToggleBtn) {
     aiToggleBtn.addEventListener('click', () => {
         closeHamburgerMenu();
@@ -8078,7 +8143,9 @@ const settingAiRow = document.getElementById('setting-ai-row');
 const settingAiSwitch = document.getElementById('setting-ai-switch');
 
 // Notebook goal & clear controls in settings modal
-const settingNotebookGoalSelect = document.getElementById('setting-notebook-goal-select');
+const settingNotebookGoalInput = document.getElementById('setting-notebook-goal-input');
+const settingNotebookGoalSaveBtn = document.getElementById('setting-notebook-goal-save-btn');
+const settingGoalPresetBtns = document.querySelectorAll('.setting-goal-preset-btn');
 const settingNotebookGoalInfo = document.getElementById('setting-notebook-goal-info');
 const settingNotebookSchedulerSelect = document.getElementById('setting-notebook-scheduler-select');
 const settingNotebookSchedulerInfo = document.getElementById('setting-notebook-scheduler-info');
@@ -8136,9 +8203,18 @@ async function updateSettingsModalState() {
 
     // 4. Notebook goal & status
     const currentGoal = getNotebookDailyGoal();
-    if (settingNotebookGoalSelect) {
-        settingNotebookGoalSelect.value = String(currentGoal);
+    if (settingNotebookGoalInput) {
+        settingNotebookGoalInput.value = String(currentGoal);
     }
+    settingGoalPresetBtns.forEach(btn => {
+        const g = Number(btn.getAttribute('data-goal'));
+        const isActive = g === currentGoal;
+        btn.classList.toggle('bg-[#3b82f7]', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('border-[#3b82f7]', isActive);
+        btn.classList.toggle('bg-white', !isActive);
+        btn.classList.toggle('text-[var(--md-sys-color-on-surface-variant)]', !isActive);
+    });
     if (settingNotebookGoalInfo) {
         const dueInfo = getNotebookDueCounts(allQuestions || []);
         const reviewedToday = dueInfo.reviewedToday || 0;
@@ -8253,9 +8329,9 @@ async function updateApiSettingsUI() {
                 const res = await generateUserApiKey();
                 currentLoadedApiKey = res?.apiKey || null;
                 syncSlotsToCloud();
-                showNotificationPill(t('settings_api_key_label') + ' gerada!', 'check');
+                showNotificationPill(t('settings_api_key_label') + ' gerada!', 'check.svg');
             } catch (err) {
-                showNotificationPill(err.message || 'Erro ao gerar chave', 'error');
+                showNotificationPill(err.message || 'Erro ao gerar chave', 'error.svg');
             }
             updateApiSettingsUI();
         });
@@ -8344,7 +8420,7 @@ async function updateApiSettingsUI() {
                             ${escapeHtml(t('webhook_heading'))}
                         </label>
                     </div>
-                    <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200">POST Event</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 text-[#3b82f7] border border-blue-200">POST Event</span>
                 </div>
                 <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] leading-normal" data-i18n="webhook_desc">
                     ${escapeHtml(t('webhook_desc'))}
@@ -8357,7 +8433,7 @@ async function updateApiSettingsUI() {
                     </button>
                 </div>
                 <div class="flex items-center justify-between pt-1">
-                    <button type="button" id="setting-webhook-test-btn" class="px-3 py-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-xs font-bold text-purple-700 transition cursor-pointer flex items-center gap-1">
+                    <button type="button" id="setting-webhook-test-btn" class="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-xs font-bold text-[#3b82f7] transition cursor-pointer flex items-center gap-1">
                         <span class="material-symbols-rounded text-sm">send</span>
                         <span data-i18n="webhook_test_btn">${escapeHtml(t('webhook_test_btn'))}</span>
                     </button>
@@ -8388,7 +8464,7 @@ async function updateApiSettingsUI() {
                 copyBtn.innerHTML = `<span class="material-symbols-rounded text-sm">check</span><span>${escapeHtml(t('settings_api_copied'))}</span>`;
                 setTimeout(() => { copyBtn.innerHTML = prev; }, 2000);
             }
-            showNotificationPill(t('settings_api_copied'), 'check');
+            showNotificationPill(t('settings_api_copied'), 'check.svg');
         } catch {
             keyInput?.select();
         }
@@ -8427,7 +8503,7 @@ async function updateApiSettingsUI() {
 
     // Regenerate Key button
     document.getElementById('setting-api-regen-btn')?.addEventListener('click', async () => {
-        if (!confirm(t('settings_api_confirm_regenerate'))) return;
+        if (!await appConfirm(t('settings_api_confirm_regenerate'), { variant: 'warning' })) return;
         const regenBtn = document.getElementById('setting-api-regen-btn');
         if (regenBtn) {
             regenBtn.disabled = true;
@@ -8437,16 +8513,16 @@ async function updateApiSettingsUI() {
             const res = await generateUserApiKey();
             currentLoadedApiKey = res?.apiKey || null;
             syncSlotsToCloud();
-            showNotificationPill(t('settings_api_key_label') + ' regerada!', 'check');
+            showNotificationPill(t('settings_api_key_label') + ' regerada!', 'check.svg');
         } catch (err) {
-            showNotificationPill(err.message || 'Erro ao regerar chave', 'error');
+            showNotificationPill(err.message || 'Erro ao regerar chave', 'error.svg');
         }
         updateApiSettingsUI();
     });
 
     // Revoke Key button
     document.getElementById('setting-api-revoke-btn')?.addEventListener('click', async () => {
-        if (!confirm(t('settings_api_confirm_revoke'))) return;
+        if (!await appConfirm(t('settings_api_confirm_revoke'), { variant: 'danger' })) return;
         const revokeBtn = document.getElementById('setting-api-revoke-btn');
         if (revokeBtn) {
             revokeBtn.disabled = true;
@@ -8455,9 +8531,9 @@ async function updateApiSettingsUI() {
         try {
             await revokeUserApiKey();
             currentLoadedApiKey = null;
-            showNotificationPill('Chave revogada com sucesso', 'check');
+            showNotificationPill('Chave revogada com sucesso', 'check.svg');
         } catch (err) {
-            showNotificationPill(err.message || 'Erro ao revogar chave', 'error');
+            showNotificationPill(err.message || 'Erro ao revogar chave', 'error.svg');
         }
         updateApiSettingsUI();
     });
@@ -8471,9 +8547,9 @@ async function updateApiSettingsUI() {
         try {
             await saveUserWebhook(urlVal);
             currentLoadedWebhookUrl = urlVal;
-            showNotificationPill(t('webhook_saved_toast'), 'check');
+            showNotificationPill(t('webhook_saved_toast'), 'check.svg');
         } catch (err) {
-            showNotificationPill(err.message || 'Erro ao salvar webhook', 'error');
+            showNotificationPill(err.message || 'Erro ao salvar webhook', 'error.svg');
         } finally {
             if (saveBtn) saveBtn.disabled = false;
         }
@@ -8486,7 +8562,7 @@ async function updateApiSettingsUI() {
         const statusSpan = document.getElementById('setting-webhook-status');
         const urlVal = input ? input.value.trim() : '';
         if (!urlVal) {
-            showNotificationPill('Informe a URL do webhook antes de testar', 'warning');
+            showNotificationPill('Informe a URL do webhook antes de testar', 'warning.svg', true);
             return;
         }
         if (testBtn) {
@@ -8500,13 +8576,13 @@ async function updateApiSettingsUI() {
                 statusSpan.textContent = `${t('webhook_test_success')} (${res.status})`;
                 statusSpan.className = 'text-[11px] text-emerald-600 font-semibold';
             }
-            showNotificationPill(t('webhook_test_success'), 'check');
+            showNotificationPill(t('webhook_test_success'), 'check.svg');
         } catch (err) {
             if (statusSpan) {
                 statusSpan.textContent = err.message;
                 statusSpan.className = 'text-[11px] text-red-600 font-semibold';
             }
-            showNotificationPill(err.message || 'Falha no teste de webhook', 'error');
+            showNotificationPill(err.message || 'Falha no teste de webhook', 'error.svg');
         } finally {
             if (testBtn) {
                 testBtn.disabled = false;
@@ -8633,11 +8709,31 @@ function renderSettingsPinnedStatsList(mode = settingsCurrentStatsTab) {
     });
 }
 
-function openAppSettingsModal() {
+function openAppSettingsModal(scrollSectionId = null) {
     if (!appSettingsModal) return;
     updateSettingsModalState();
     openModalWithMotion(appSettingsModal);
+    if (scrollSectionId) {
+        requestAnimationFrame(() => {
+            const target = document.getElementById(scrollSectionId);
+            if (target) {
+                target.scrollIntoView({ behavior: isAnimationsEnabled() ? 'smooth' : 'auto', block: 'center' });
+                target.classList.add('ring-2', 'ring-[#3b82f7]', 'ring-offset-4');
+                setTimeout(() => target.classList.remove('ring-2', 'ring-[#3b82f7]', 'ring-offset-4'), 1600);
+            }
+        });
+    }
 }
+
+window.addEventListener('flashcards:open-settings-section', (e) => {
+    const sec = e?.detail?.section;
+    closeHamburgerMenu();
+    if (sec === 'pomodoro') {
+        openAppSettingsModal('settings-pomodoro-section');
+    } else {
+        openAppSettingsModal();
+    }
+});
 
 function closeAppSettingsModal() {
     if (!appSettingsModal) return;
@@ -8789,11 +8885,10 @@ settingProBtn?.addEventListener('click', () => {
     openAccountModal();
 });
 
-// Notebook Goal Select in Settings Modal
-settingNotebookGoalSelect?.addEventListener('change', () => {
-    const rawVal = settingNotebookGoalSelect.value;
+// Free Numeric Notebook Goal Input & Quick Presets in Settings Modal (0-999)
+function applySettingsNotebookGoal(rawVal) {
     const num = parseInt(rawVal, 10);
-    const goal = (!isNaN(num) && num > 0) ? num : 0;
+    const goal = (!isNaN(num) && num > 0) ? Math.min(999, num) : 0;
     setNotebookDailyGoal(goal);
     updateScoreDisplay();
     triggerHaptic('snap');
@@ -8803,6 +8898,21 @@ settingNotebookGoalSelect?.addEventListener('change', () => {
         'collection.svg'
     );
     checkAndCelebrateNotebookDailyGoal(false);
+}
+
+settingNotebookGoalSaveBtn?.addEventListener('click', () => {
+    applySettingsNotebookGoal(settingNotebookGoalInput?.value);
+});
+settingNotebookGoalInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        applySettingsNotebookGoal(settingNotebookGoalInput.value);
+    }
+});
+settingGoalPresetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        applySettingsNotebookGoal(btn.getAttribute('data-goal'));
+    });
 });
 
 // Notebook SRS Scheduler Select in Settings Modal
@@ -9075,8 +9185,8 @@ nextQuestionBtn.addEventListener('click', () => {
     });
 });
 
-const handleDelete = () => {
-    if (!confirm(t('confirm_delete_card_simple'))) return;
+const handleDelete = async () => {
+    if (!await appConfirm(t('confirm_delete_card_simple'), { variant: 'danger' })) return;
     allQuestions = allQuestions.filter(q => q !== currentQuestion);
     questionsPool.splice(currentQuestionIndexInPool, 1);
     saveGameState(true);
@@ -9142,7 +9252,7 @@ if (speechCardsSwitch) {
 // Question card click to flip for Anki
 if (questionCard) {
     questionCard.addEventListener('click', (e) => {
-        if (currentQuestion && currentQuestion.type === 'anki' && !isAnkiFlipped) {
+        if (currentQuestion && (currentQuestion.type === 'anki' || currentQuestion.type === 'voice') && !isAnkiFlipped) {
             // Ignore if clicked on bookmark, delete, image zoom, highlight popup, or marked text
             if (e.target.closest('#bookmark-card-btn') || e.target.closest('#delete-card-btn') || e.target.closest('#question-image-container') || e.target.closest('#text-highlight-popup') || e.target.closest('mark.card-hl')) {
                 return;
@@ -9498,7 +9608,7 @@ function renderEditMcOptions(options = ["", "", "", ""], correctAnswer = "") {
         removeBtn.addEventListener('click', () => {
             const currentVals = Array.from(document.querySelectorAll('.edit-mc-opt-val')).map(inp => inp.value);
             if (currentVals.length <= 2) {
-                alert(t('mc_min_options_error'));
+                appAlert(t('mc_min_options_error'), { variant: 'warning' });
                 return;
             }
             currentVals.splice(i, 1);
@@ -9922,13 +10032,13 @@ function renderExamDecksInDropdown(examData) {
 
         item.innerHTML = `
             <label class="flex items-center gap-2 min-w-0 flex-1 cursor-pointer select-none">
-                <input type="checkbox" class="exam-deck-toggle rounded text-purple-600 focus:ring-purple-500" ${isEnabled ? 'checked' : ''} data-deck-id="${safeDeckId}">
+                <input type="checkbox" class="exam-deck-toggle rounded text-amber-600 focus:ring-amber-500" ${isEnabled ? 'checked' : ''} data-deck-id="${safeDeckId}">
                 <span class="font-medium text-gray-800 truncate ${isEnabled ? '' : 'line-through opacity-50'}" title="${safeDeckName}">${safeDeckName}</span>
             </label>
             <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">${cardCount}</span>
-                <button type="button" class="exam-deck-del-btn p-1 text-gray-400 hover:text-red-500 transition" title="${t('remove_from_mix_tooltip')}">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">${cardCount}</span>
+                <button type="button" class="exam-deck-del-btn p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center" title="${t('remove_from_mix_tooltip')}">
+                    <span class="material-symbols-rounded text-sm leading-none">delete</span>
                 </button>
             </div>
         `;
@@ -9940,9 +10050,9 @@ function renderExamDecksInDropdown(examData) {
         });
 
         const delBtn = item.querySelector('.exam-deck-del-btn');
-        delBtn.addEventListener('click', (e) => {
+        delBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (confirm(t('confirm_remove_deck_from_exam', { name: deck.name }))) {
+            if (await appConfirm(t('confirm_remove_deck_from_exam', { name: deck.name }), { variant: 'danger' })) {
                 removeDeckFromExamMix(deck.id);
             }
         });
@@ -10117,8 +10227,12 @@ function updateMenuButtonsForActiveMode() {
         if (editorTitle) editorTitle.textContent = t('add_multiple_title');
         if (editorDesc) editorDesc.textContent = t('add_multiple_desc');
         if (editorIcon) {
-            editorIcon.src = "../assets/img/bulk_add.svg";
-            editorIcon.alt = t('add_multiple_title');
+            if (editorIcon.tagName === 'IMG') {
+                editorIcon.src = "../assets/img/bulk_add.svg";
+                editorIcon.alt = t('add_multiple_title');
+            } else {
+                editorIcon.textContent = 'library_add';
+            }
         }
         if (goToEditorBtn) goToEditorBtn.title = t('add_multiple_decks_notebook_tooltip');
         if (clearNotebookBtn) clearNotebookBtn.classList.remove('hidden');
@@ -10130,8 +10244,12 @@ function updateMenuButtonsForActiveMode() {
         if (editorTitle) editorTitle.textContent = t('edit_deck_action_title');
         if (editorDesc) editorDesc.textContent = t('open_editor_ai_generator_desc');
         if (editorIcon) {
-            editorIcon.src = "../assets/img/edit.svg";
-            editorIcon.alt = t('edit');
+            if (editorIcon.tagName === 'IMG') {
+                editorIcon.src = "../assets/img/edit.svg";
+                editorIcon.alt = t('edit');
+            } else {
+                editorIcon.textContent = 'edit';
+            }
         }
         if (goToEditorBtn) goToEditorBtn.title = t('edit_with_ai_assistant_tooltip');
         if (clearNotebookBtn) clearNotebookBtn.classList.add('hidden');
@@ -10370,7 +10488,6 @@ async function initGame() {
 
     initTransferLazy(); // Lazy load P2P logic and QR scripts on demand
     initExploreModal(); // Initialize Explore Files & Pro Modal
-    initPwaInstallBanner(); // PWA Install Notification on Mobile/Tablet
 
     // Check if opening a shared deck via link (?share=...)
     const sharedLoaded = await checkAndLoadSharedDeck();

@@ -309,11 +309,11 @@ export function initPwaInstallBanner() {
 
     bannerEl = document.createElement('div');
     bannerEl.id = 'pwa-install-notification-banner';
-    bannerEl.className = 'fixed top-14 sm:top-16 left-3 right-3 sm:left-auto sm:right-6 sm:w-96 z-40 flex items-center justify-between gap-3 p-3 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-blue-200 transition-all duration-300 transform -translate-y-4 opacity-0 select-none';
+    bannerEl.className = 'fixed top-14 sm:top-16 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-40 flex items-center justify-between gap-3 p-3 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-blue-200 transition-all duration-300 transform -translate-y-4 opacity-0 select-none';
 
     bannerEl.innerHTML = `
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
-        <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 shadow-2xs">
+        <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#3b82f7] flex items-center justify-center flex-shrink-0 shadow-2xs">
           <span class="material-symbols-rounded text-xl">install_mobile</span>
         </div>
         <p class="text-xs font-semibold text-gray-800 leading-tight line-clamp-2">
@@ -322,7 +322,7 @@ export function initPwaInstallBanner() {
       </div>
 
       <div class="flex items-center gap-1.5 flex-shrink-0">
-        <button id="pwa-install-action-btn" class="m3-btn-expressive m3-btn-filled py-1.5 px-3 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-xs cursor-pointer flex items-center gap-1 transition">
+        <button id="pwa-install-action-btn" class="m3-btn-expressive m3-btn-filled py-1.5 px-3 rounded-xl text-xs font-bold text-white bg-[#3b82f7] hover:bg-[#2563eb] shadow-xs cursor-pointer flex items-center gap-1 transition">
           <span class="material-symbols-rounded text-base">download</span>
           <span>${t('install_btn')}</span>
         </button>

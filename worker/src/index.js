@@ -9,7 +9,7 @@
  */
 
 import { verifyFirebaseIdToken, setFirebaseUserProClaim, deleteFirebaseUser, getFirebaseUserByEmail, getFirebaseUserByUid } from './google-auth.js';
-import { callGemini, callGeminiDecision, callGeminiWithCoverageAudit } from './gemini.js';
+import { AI_MODELS_CONFIG, resolveModelConfig, callGemini, callGeminiDecision, callGeminiWithCoverageAudit } from './gemini.js';
 import { getUserDocument, updateUserDocument, deleteUserDocument, getDocument, setDocument, deleteDeckDocument, clearUserCloudData, deleteDocument, findUserByApiKey } from './firestore.js';
 import { fetchCambluClubeStatus, resolveUserEntitlement } from './camblu-clube.js';
 import {
@@ -67,30 +67,12 @@ async function getLifetimeProEmails(serviceAccount) {
   }
 }
 
-const ALLOWED_GEMINI_MODELS = new Set([
-  'gemini-flash-latest',
-  'gemini-flash-lite-latest',
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite'
-]);
+function sanitizeGeminiModel(requestedModel, fallbackTier = 'flashLite', { allowDecision = false } = {}) {
+  return resolveModelConfig(requestedModel, fallbackTier, { allowDecision }).model;
+}
 
-const ALLOWED_DECISION_MODELS = new Set([
-  'gemini-decision-1'
-]);
-
-function sanitizeGeminiModel(requestedModel, fallbackModel = 'gemini-flash-lite-latest', { allowDecision = false } = {}) {
-  if (typeof requestedModel === 'string') {
-    const trimmed = requestedModel.trim();
-    if (ALLOWED_GEMINI_MODELS.has(trimmed)) {
-      return trimmed;
-    }
-    if (allowDecision && ALLOWED_DECISION_MODELS.has(trimmed)) {
-      return trimmed;
-    }
-  }
-  return fallbackModel;
+function isDecisionModel(modelName) {
+  return Boolean(modelName && modelName === (AI_MODELS_CONFIG.models?.decision || 'gemini-decision-1'));
 }
 
 function getSafeOrigin(request) {
@@ -179,6 +161,24 @@ function getServiceAccount(env) {
   return typeof env.FIREBASE_SERVICE_ACCOUNT === 'string'
     ? JSON.parse(env.FIREBASE_SERVICE_ACCOUNT)
     : env.FIREBASE_SERVICE_ACCOUNT;
+}
+
+/**
+ * Selects the appropriate Gemini API key and provider based on entitlement source.
+ * Clube CAMBLU subscribers route to CAMBLU's dedicated Google Cloud (Vertex AI Express Mode) key.
+ */
+function resolveGeminiClientConfig(env, entitlement) {
+  const cambluKey = typeof env?.CAMBLU_GEMINI_API_KEY === 'string' ? env.CAMBLU_GEMINI_API_KEY.trim() : '';
+  if (entitlement?.proSource === 'camblu_clube' && cambluKey) {
+    return {
+      apiKey: cambluKey,
+      provider: 'vertex'
+    };
+  }
+  return {
+    apiKey: env?.GEMINI_API_KEY,
+    provider: 'aistudio'
+  };
 }
 
 async function getEntitlement({
@@ -1478,6 +1478,7 @@ export default {
         const isNewDeck = reqBody.isNewDeck !== false;
 
         let user = null;
+        let entitlement = null;
         if (authHeader.startsWith('Bearer ')) {
           const token = authHeader.substring(7);
           const projectId = env.FIREBASE_PROJECT_ID || 'flashcards-ead57';
@@ -1498,7 +1499,7 @@ export default {
             console.warn('[Generate] Falha ao ler Firestore:', e.message);
           }
 
-          const entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
+          entitlement = await getEntitlement({ env, serviceAccount, user, userDoc, ctx, syncClaim: true });
           const resolvedDoc = entitlement.userDoc || userDoc;
           const isPro = entitlement.isPro;
           const isLifetime = entitlement.isLifetime;
@@ -1589,7 +1590,8 @@ export default {
 
         // Proxy Gemini call (with server-side coverage audit + complementation when requested on new deck streams)
         const shouldAuditCoverage = isNewDeck && Boolean(reqBody.stream) && Boolean(reqBody.enableCoverageAudit);
-        const sanitizedModel = sanitizeGeminiModel(reqBody.model, 'gemini-flash-latest');
+        const sanitizedModel = sanitizeGeminiModel(reqBody.model, 'flash');
+        const geminiClient = resolveGeminiClientConfig(env, entitlement);
         const geminiRes = shouldAuditCoverage
           ? await callGeminiWithCoverageAudit({
               model: sanitizedModel,
@@ -1599,7 +1601,8 @@ export default {
               tools: reqBody.tools,
               toolConfig: reqBody.toolConfig,
               targetLanguagePrompt: typeof reqBody.targetLanguagePrompt === 'string' ? reqBody.targetLanguagePrompt : '',
-              apiKey: env.GEMINI_API_KEY
+              apiKey: geminiClient.apiKey,
+              provider: geminiClient.provider
             })
           : await callGemini({
               model: sanitizedModel,
@@ -1609,7 +1612,8 @@ export default {
               tools: reqBody.tools,
               toolConfig: reqBody.toolConfig,
               stream: Boolean(reqBody.stream),
-              apiKey: env.GEMINI_API_KEY
+              apiKey: geminiClient.apiKey,
+              provider: geminiClient.provider
             });
 
         // Forward headers with CORS
@@ -1644,11 +1648,12 @@ export default {
 
         const reqBody = await request.json();
         const requestedModel = path === '/api/ai/decision'
-          ? 'gemini-decision-1'
-          : sanitizeGeminiModel(reqBody.model, 'gemini-flash-lite-latest', { allowDecision: true });
+          ? (AI_MODELS_CONFIG.models?.decision || 'gemini-decision-1')
+          : sanitizeGeminiModel(reqBody.model, 'flashLite', { allowDecision: true });
 
+        const geminiClient = resolveGeminiClientConfig(env, entitlement);
         let geminiRes;
-        if (ALLOWED_DECISION_MODELS.has(requestedModel)) {
+        if (isDecisionModel(requestedModel)) {
           const hasValidQuestions = reqBody.questions
             && typeof reqBody.questions === 'object'
             && !Array.isArray(reqBody.questions)
@@ -1659,11 +1664,15 @@ export default {
               message: 'Campos "input" e "questions" são obrigatórios para gemini-decision-1.'
             }, 400, corsHeaders);
           }
+          // Decisions API (/v1beta/decisions) is currently AI Studio-only (controlled via ai-models.json)
+          const decisionApiKey = AI_MODELS_CONFIG.providers?.decisionSupportsVertex
+            ? geminiClient.apiKey
+            : env.GEMINI_API_KEY;
           geminiRes = await callGeminiDecision({
             model: requestedModel,
             input: reqBody.input,
             questions: reqBody.questions,
-            apiKey: env.GEMINI_API_KEY
+            apiKey: decisionApiKey
           });
         } else {
           geminiRes = await callGemini({
@@ -1674,7 +1683,8 @@ export default {
             tools: reqBody.tools,
             toolConfig: reqBody.toolConfig,
             stream: false,
-            apiKey: env.GEMINI_API_KEY
+            apiKey: geminiClient.apiKey,
+            provider: geminiClient.provider
           });
         }
 
@@ -1708,15 +1718,17 @@ export default {
         }
 
         const reqBody = await request.json();
+        const geminiClient = resolveGeminiClientConfig(env, entitlement);
         const geminiRes = await callGemini({
-          model: sanitizeGeminiModel(reqBody.model, 'gemini-flash-lite-latest'),
+          model: sanitizeGeminiModel(reqBody.model, 'flashLite'),
           contents: reqBody.contents,
           systemInstruction: reqBody.systemInstruction,
           generationConfig: reqBody.generationConfig,
           tools: reqBody.tools,
           toolConfig: reqBody.toolConfig,
           stream: false,
-          apiKey: env.GEMINI_API_KEY
+          apiKey: geminiClient.apiKey,
+          provider: geminiClient.provider
         });
 
         const responseHeaders = new Headers(geminiRes.headers);

@@ -10,6 +10,7 @@ import { triggerHaptic } from './engine/effects.js';
 import { isPlayableCard } from './engine/scheduler.js';
 import { debouncedSyncSlotsToCloud } from './slot-manager.js';
 import { t, applyTranslations } from './i18n.js';
+import { appAlert, appConfirm } from './dialogs.js';
 import { renderAnnotatedImage } from './image-editor-modal.js';
 
 // --- DOM ELEMENTS ---
@@ -30,6 +31,9 @@ const transferSquircleBadge = document.getElementById('transfer-squircle-badge')
 
 const leftCardsList = document.getElementById('left-cards-list');
 const leftCardsCountBadge = document.getElementById('left-cards-count-badge');
+const leftDeckSearch = document.getElementById('left-deck-search');
+const clearLeftSearchBtn = document.getElementById('clear-left-search-btn');
+const leftDeckChips = document.getElementById('left-deck-chips');
 const btnSelectAll = document.getElementById('btn-select-all');
 const selectActionsSeparator = document.getElementById('select-actions-separator');
 const btnDeselectAll = document.getElementById('btn-deselect-all');
@@ -57,8 +61,16 @@ const notebookModalDoneBtn = document.getElementById('notebook-modal-done-btn');
 
 // Edit Modal Elements
 const editCardModal = document.getElementById('edit-card-modal');
+const editModalTypeBadge = document.getElementById('edit-modal-type-badge');
 const editModalFront = document.getElementById('edit-modal-front');
+const editModalBackGroup = document.getElementById('edit-modal-back-group');
+const editModalBackLabel = document.getElementById('edit-modal-back-label');
 const editModalBack = document.getElementById('edit-modal-back');
+const editModalBack2Group = document.getElementById('edit-modal-back2-group');
+const editModalBack2 = document.getElementById('edit-modal-back2');
+const editModalMcGroup = document.getElementById('edit-modal-mc-group');
+const editModalMcList = document.getElementById('edit-modal-mc-list');
+const editModalStructuredNote = document.getElementById('edit-modal-structured-note');
 const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
 const cancelEditBtn = document.getElementById('cancel-edit-btn');
 const saveEditBtn = document.getElementById('save-edit-btn');
@@ -76,6 +88,10 @@ let loadedDecksCount = 0;
 let editingCardId = null;
 let notificationTimeout = null;
 
+// Left Uploaded Cards Filter State (L183)
+let leftActiveDeckFilter = 'ALL';
+let leftSearchQuery = '';
+
 // Notebook Overview Modal State
 let activeDeckFilter = 'ALL';
 let notebookSearchQuery = '';
@@ -85,6 +101,7 @@ const collapsedDecks = new Set();
 document.addEventListener('DOMContentLoaded', () => {
     updateNotebookHeaderBadge();
     setupUploadHandlers();
+    setupLeftFilterHandlers();
     setupSelectionHandlers();
     setupTransferHandlers();
     setupEditModalHandlers();
@@ -199,6 +216,82 @@ function handleFilesSelected(e) {
     bulkFileInput.value = '';
 }
 
+function parseStructuredTxtToCards(text) {
+    const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const parsed = [];
+
+    for (const line of lines) {
+        if (line.startsWith('#')) continue;
+
+        const openDoubleMatch = line.match(/^[([]\s*(?:open[_-]?double|duplo)\s*[\])]:?\s*(.*)$/i);
+        const fillMatch = line.match(/^[([]\s*(?:fill|preencher|lacunas?|cloze)\s*[\])]:?\s*(.*)$/i);
+        const mcMatch = line.match(/^[([]\s*(?:multiple[_-]?choice|multipla[_-]?escolha|mc)\s*[\])]:?\s*(.*)$/i);
+        const ankiMatch = line.match(/^[([]\s*(?:anki[_-]?like|anki)\s*[\])]:?\s*(.*)$/i);
+        const openMatch = line.match(/^[([]\s*(?:open|tradicional|aberta?)\s*[\])]:?\s*(.*)$/i);
+
+        if (fillMatch) {
+            const content = fillMatch[1].trim();
+            const braceRegex = /\{([^{}]+)\}/g;
+            const braceAnswers = [];
+            let m;
+            while ((m = braceRegex.exec(content)) !== null) {
+                const v = m[1].trim();
+                if (v) braceAnswers.push(v);
+            }
+            if (braceAnswers.length > 0) {
+                const description = content.replace(/\{([^{}]+)\}/g, (full, inner) => inner.trim() ? '_' : full).trim();
+                parsed.push({ type: 'fill', description, answers: braceAnswers, answer: braceAnswers.join('; ') });
+            } else if (content.includes(':')) {
+                const idx = content.indexOf(':');
+                const p1 = content.substring(0, idx).trim();
+                const p2 = content.substring(idx + 1).trim();
+                const answers = p1.split(';').map(a => a.trim()).filter(Boolean);
+                if (p2 && answers.length > 0) {
+                    parsed.push({ type: 'fill', description: p2, answers, answer: answers.join('; ') });
+                }
+            }
+        } else if (openDoubleMatch) {
+            const content = openDoubleMatch[1].trim();
+            const idx = content.indexOf(':');
+            if (idx !== -1) {
+                const [a1, a2] = content.substring(0, idx).split(';').map(s => s.trim());
+                const desc = content.substring(idx + 1).trim();
+                if (desc && (a1 || a2)) {
+                    parsed.push({ type: 'open_double', description: desc, answer: a1 || '', answer2: a2 || '', placeholder1: 'Resposta 1', placeholder2: 'Resposta 2' });
+                }
+            }
+        } else if (mcMatch) {
+            const content = mcMatch[1].trim();
+            const idx = content.indexOf(':');
+            if (idx !== -1) {
+                const ans = content.substring(0, idx).trim();
+                const desc = content.substring(idx + 1).trim();
+                if (ans && desc) {
+                    parsed.push({ type: 'multiple_choice', description: desc, answer: ans, options: [ans, 'Opção 2', 'Opção 3', 'Opção 4'] });
+                }
+            }
+        } else if (ankiMatch) {
+            const content = ankiMatch[1].trim();
+            const idx = content.indexOf(':');
+            if (idx !== -1) {
+                const front = content.substring(0, idx).trim();
+                const back = content.substring(idx + 1).trim();
+                if (front && back) parsed.push({ type: 'anki', description: front, answer: back });
+            }
+        } else {
+            const content = openMatch ? openMatch[1].trim() : line;
+            const idx = content.indexOf(':');
+            if (idx !== -1) {
+                // Consistent with Modal 1.2: Resposta : Pergunta
+                const ans = content.substring(0, idx).trim();
+                const desc = content.substring(idx + 1).trim();
+                if (ans && desc) parsed.push({ type: 'open', description: desc, answer: ans });
+            }
+        }
+    }
+    return parsed;
+}
+
 function readFileAsText(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -233,24 +326,8 @@ async function processFilesList(files) {
                     deckName = parsed.deckTitle || deckName;
                 }
             } else {
-                // Parse text file line by line (pergunta : resposta)
-                const lines = rawText.split('\n');
-                lines.forEach(line => {
-                    const trimmed = line.trim();
-                    if (!trimmed || trimmed.startsWith('#')) return;
-                    if (trimmed.includes(':')) {
-                        const parts = trimmed.split(':');
-                        const front = parts[0].trim();
-                        const back = parts.slice(1).join(':').trim();
-                        if (front && back) {
-                            cards.push({
-                                description: front,
-                                answer: back,
-                                type: 'open'
-                            });
-                        }
-                    }
-                });
+                // Align .txt parser with generate.html Modal 1.2 syntax: Resposta : Pergunta + (tag) support (L187)
+                cards = parseStructuredTxtToCards(rawText);
             }
 
             if (Array.isArray(cards) && cards.length > 0) {
@@ -300,11 +377,101 @@ async function processFilesList(files) {
     showNotification(t('cards_loaded_success', { count: newCardsLoaded.length }), "collections_bookmark");
 }
 
+// --- LEFT PANEL SEARCH & SOURCE-DECK FILTER (L183) ---
+function setupLeftFilterHandlers() {
+    leftDeckSearch?.addEventListener('input', (e) => {
+        leftSearchQuery = (e.target.value || '').trim().toLowerCase();
+        if (clearLeftSearchBtn) {
+            clearLeftSearchBtn.classList.toggle('hidden', !leftSearchQuery);
+        }
+        renderLeftCardsList();
+        updateSelectAllButtonState();
+    });
+
+    clearLeftSearchBtn?.addEventListener('click', () => {
+        if (leftDeckSearch) leftDeckSearch.value = '';
+        leftSearchQuery = '';
+        clearLeftSearchBtn.classList.add('hidden');
+        renderLeftCardsList();
+        updateSelectAllButtonState();
+        leftDeckSearch?.focus();
+    });
+}
+
+function getFilteredLeftCards() {
+    return uploadedCards.filter(c => {
+        const deckName = (c.sourceDeck || '').trim() || t('deck_default');
+        if (leftActiveDeckFilter !== 'ALL' && deckName !== leftActiveDeckFilter) {
+            return false;
+        }
+        if (leftSearchQuery) {
+            const front = (c.description || '').toLowerCase();
+            const back = (c.answer || '').toLowerCase();
+            const back2 = (c.answer2 || '').toLowerCase();
+            const deck = deckName.toLowerCase();
+            return front.includes(leftSearchQuery) || back.includes(leftSearchQuery) || back2.includes(leftSearchQuery) || deck.includes(leftSearchQuery);
+        }
+        return true;
+    });
+}
+
+function renderLeftDeckChips() {
+    if (!leftDeckChips) return;
+    const deckCounts = new Map();
+    uploadedCards.forEach(c => {
+        const deckName = (c.sourceDeck || '').trim() || t('deck_default');
+        deckCounts.set(deckName, (deckCounts.get(deckName) || 0) + 1);
+    });
+
+    if (leftActiveDeckFilter !== 'ALL' && !deckCounts.has(leftActiveDeckFilter)) {
+        leftActiveDeckFilter = 'ALL';
+    }
+
+    if (deckCounts.size <= 1) {
+        leftDeckChips.innerHTML = '';
+        leftDeckChips.classList.add('hidden');
+        return;
+    }
+
+    leftDeckChips.classList.remove('hidden');
+    leftDeckChips.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
+    const makeChip = (label, value, count) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const isActive = leftActiveDeckFilter === value;
+        btn.className = `px-2.5 py-1 rounded-full font-semibold transition flex items-center gap-1 flex-shrink-0 cursor-pointer max-w-[180px] ${
+            isActive ? 'bg-[#3b82f7] text-white shadow-2xs' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+        }`;
+        btn.title = label;
+        btn.innerHTML = `<span class="truncate">${escapeHtml(label)}</span><span class="px-1.5 rounded-full text-[10px] flex-shrink-0 ${isActive ? 'bg-white/25 text-white' : 'bg-gray-200 text-gray-700'}">${count}</span>`;
+        btn.addEventListener('click', () => {
+            leftActiveDeckFilter = value;
+            triggerHaptic('tick');
+            renderLeftCardsList();
+            updateSelectAllButtonState();
+        });
+        return btn;
+    };
+
+    frag.appendChild(makeChip(t('all_decks_filter') || 'Todos', 'ALL', uploadedCards.length));
+    deckCounts.forEach((count, deckName) => {
+        frag.appendChild(makeChip(deckName, deckName, count));
+    });
+    leftDeckChips.appendChild(frag);
+}
+
 // --- NATIVE HARDWARE-ACCELERATED CARD RENDERING ---
 function updateLeftCardsCountBadge() {
     if (leftCardsCountBadge) {
+        const filtered = getFilteredLeftCards().length;
         const totalCards = uploadedCards.length;
-        leftCardsCountBadge.textContent = `${totalCards} ${totalCards === 1 ? t('card_unit_singular') : t('cards_unit')}`;
+        if (filtered !== totalCards && totalCards > 0) {
+            leftCardsCountBadge.textContent = `${filtered}/${totalCards} ${totalCards === 1 ? t('card_unit_singular') : t('cards_unit')}`;
+        } else {
+            leftCardsCountBadge.textContent = `${totalCards} ${totalCards === 1 ? t('card_unit_singular') : t('cards_unit')}`;
+        }
     }
 }
 
@@ -312,11 +479,12 @@ function showLeftEmptyState() {
     if (!leftCardsList) return;
     leftCardsList.innerHTML = `
         <div class="h-64 flex flex-col items-center justify-center text-center p-6 text-gray-400 select-none">
-            <svg class="w-12 h-12 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="material-symbols-rounded text-5xl mb-2 opacity-40 select-none">check_circle</span>
             <p class="font-bold text-sm text-gray-600">${t('all_cards_transferred')}</p>
             <p class="text-xs mt-1">${t('load_more_to_add')}</p>
         </div>
     `;
+    renderLeftDeckChips();
     updateSelectAllButtonState();
     updateTransferButtonState();
 }
@@ -324,6 +492,7 @@ function showLeftEmptyState() {
 function renderLeftCardsList() {
     if (!leftCardsList) return;
 
+    renderLeftDeckChips();
     updateLeftCardsCountBadge();
 
     if (uploadedCards.length === 0) {
@@ -331,8 +500,20 @@ function renderLeftCardsList() {
         return;
     }
 
+    const visibleCards = getFilteredLeftCards();
+    if (visibleCards.length === 0) {
+        leftCardsList.innerHTML = `
+            <div class="h-56 flex flex-col items-center justify-center text-center p-6 text-gray-400 select-none">
+                <span class="material-symbols-rounded text-4xl mb-2 opacity-45 select-none">search_off</span>
+                <p class="font-bold text-sm text-gray-600">${t('no_cards_found')}</p>
+                <p class="text-xs mt-1">${t('try_another_search_or_deck')}</p>
+            </div>
+        `;
+        return;
+    }
+
     const fragment = document.createDocumentFragment();
-    uploadedCards.forEach((card, idx) => {
+    visibleCards.forEach((card, idx) => {
         const cardEl = createLeftCardElement(card, idx);
         fragment.appendChild(cardEl);
     });
@@ -345,7 +526,7 @@ function getTypeBadgeInfo(type) {
     if (type === 'anki') {
         return { label: "Anki", classes: "bg-indigo-100 text-indigo-800" };
     } else if (type === 'voice') {
-        return { label: t('card_type_voice') || "Voz", classes: "bg-blue-100 text-blue-800" };
+        return { label: t('card_type_voice') || "Voz", classes: "bg-purple-100 text-purple-800" };
     } else if (type === 'multiple_choice') {
         return { label: t('multiple_choice'), classes: "bg-cyan-100 text-cyan-800" };
     } else if (type === 'open_double') {
@@ -354,8 +535,10 @@ function getTypeBadgeInfo(type) {
         return { label: t('fill_in_the_blank'), classes: "bg-teal-100 text-teal-800" };
     } else if (type === 'flowchart') {
         return { label: t('card_type_flowchart') || "Fluxograma", classes: "bg-sky-100 text-sky-800" };
+    } else if (type === 'image_arrows') {
+        return { label: t('card_type_image_arrows') || "Imagem", classes: "bg-emerald-100 text-emerald-800" };
     } else {
-        return { label: t('write_direct'), classes: "bg-gray-100 text-gray-700" };
+        return { label: t('write_direct'), classes: "bg-blue-100 text-blue-800" };
     }
 }
 
@@ -462,17 +645,15 @@ function setupSelectionHandlers() {
 }
 
 function handleToggleSelectAll() {
-    const totalCards = uploadedCards.length;
-    if (totalCards === 0) return;
+    const visibleCards = getFilteredLeftCards();
+    if (visibleCards.length === 0) return;
 
-    const isAllSelected = (selectedCardIds.size === totalCards);
+    const isAllVisibleSelected = visibleCards.every(c => selectedCardIds.has(c.id));
 
-    if (isAllSelected) {
-        // Estava tudo selecionado: limpa a seleção
-        selectedCardIds.clear();
+    if (isAllVisibleSelected) {
+        visibleCards.forEach(c => selectedCardIds.delete(c.id));
     } else {
-        // Seleciona todos os cards
-        uploadedCards.forEach(c => selectedCardIds.add(c.id));
+        visibleCards.forEach(c => selectedCardIds.add(c.id));
     }
 
     updateSelectAllButtonState();
@@ -491,7 +672,8 @@ function handleClearSelection() {
 
 function updateSelectAllButtonState() {
     if (!btnSelectAll) return;
-    const totalCards = uploadedCards.length;
+    const visibleCards = getFilteredLeftCards();
+    const totalCards = visibleCards.length;
     const selectedCount = selectedCardIds.size;
 
     if (totalCards === 0) {
@@ -506,8 +688,8 @@ function updateSelectAllButtonState() {
     btnSelectAll.disabled = false;
     btnSelectAll.classList.remove('opacity-50', 'pointer-events-none');
 
-    // Quando todos os cards estiverem selecionados, o botão "Selecionar todos" automaticamente vira "Limpar seleção"
-    if (selectedCount === totalCards) {
+    const isAllVisibleSelected = visibleCards.every(c => selectedCardIds.has(c.id));
+    if (isAllVisibleSelected) {
         btnSelectAll.textContent = t('clear_selection');
         selectActionsSeparator?.classList.add('hidden');
         btnDeselectAll?.classList.add('hidden');
@@ -635,6 +817,8 @@ function handleInstantMoveCard(card, cardEl) {
         cardEl.remove();
         if (uploadedCards.length === 0) {
             showLeftEmptyState();
+        } else {
+            renderLeftDeckChips();
         }
 
         updateLeftCardsCountBadge();
@@ -679,6 +863,33 @@ function handleTransferSelectedCards() {
     nbData.allQuestions.push(...preparedCards);
     nbData.questionsPool.push(...preparedCards);
     saveNotebookDataToStorage(nbData);
+
+    // Honor prefers-reduced-motion cleanly while preserving full expressive animation by default (L184)
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+        selectedCardIds.forEach(id => {
+            const el = leftCardsList?.querySelector(`[data-id="${id}"]`);
+            if (el) el.remove();
+        });
+        uploadedCards = uploadedCards.filter(c => !selectedCardIds.has(c.id));
+        selectedCardIds.clear();
+        sessionAddedCards.push(...preparedCards);
+        if (rightEmptyHint) rightEmptyHint.classList.add('hidden');
+        const fragment = document.createDocumentFragment();
+        preparedCards.forEach(c => fragment.appendChild(createRightCardElement(c)));
+        rightCardsList.appendChild(fragment);
+        if (rightCardsCountBadge) {
+            rightCardsCountBadge.textContent = `${sessionAddedCards.length} ${sessionAddedCards.length === 1 ? t('added_singular') : t('added_plural')}`;
+        }
+        if (uploadedCards.length === 0) showLeftEmptyState();
+        else renderLeftCardsList();
+        updateLeftCardsCountBadge();
+        updateSelectAllButtonState();
+        updateTransferButtonState();
+        isTransferring = false;
+        showNotification(preparedCards.length === 1 ? t('card_added_toast', { count: 1 }) : t('cards_added_toast', { count: preparedCards.length }), "check_circle");
+        return;
+    }
 
     // 2. Animação Cinematográfica Otimizada de Transferência em Lote:
     // Passo A: Fade in blur somente em cima dos deck-previews (listas de cartões)
@@ -788,15 +999,13 @@ function handleTransferSelectedCards() {
 
         if (uploadedCards.length === 0) {
             showLeftEmptyState();
+        } else {
+            renderLeftDeckChips();
         }
 
         updateLeftCardsCountBadge();
         updateSelectAllButtonState();
         updateTransferButtonState();
-
-        if (summaryCardsText) {
-            summaryCardsText.textContent = `${uploadedCards.length} ${t('cards_available_in_list')}`;
-        }
     }, 400);
 
     // Passo D: Desce sobre a direita e blur fade out
@@ -885,23 +1094,23 @@ function createRightCardElement(card) {
     const actionsBar = document.createElement('div');
     actionsBar.className = "flex items-center justify-end gap-2 pt-2 border-t border-gray-100 mt-1";
 
-    // Edit (Lápis) Button
+    // Edit Button
     const editBtn = document.createElement('button');
     editBtn.type = "button";
-    editBtn.className = "p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-600 transition flex items-center justify-center shadow-2xs";
+    editBtn.className = "p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 active:scale-95 text-[#3b82f7] transition flex items-center justify-center shadow-2xs cursor-pointer";
     editBtn.title = t('edit_this_card');
-    editBtn.innerHTML = `<img src="../assets/img/edit.svg" class="w-4 h-4 pointer-events-none" alt="${t('edit')}">`;
+    editBtn.innerHTML = `<span class="material-symbols-rounded text-base leading-none pointer-events-none select-none">edit</span>`;
     editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         openEditModal(card.id);
     });
 
-    // Delete (Lixeira) Button
+    // Delete Button
     const delBtn = document.createElement('button');
     delBtn.type = "button";
-    delBtn.className = "p-1.5 rounded-xl bg-red-50 hover:bg-red-100 active:scale-95 text-red-600 transition flex items-center justify-center shadow-2xs";
+    delBtn.className = "p-1.5 rounded-xl bg-red-50 hover:bg-red-100 active:scale-95 text-red-600 transition flex items-center justify-center shadow-2xs cursor-pointer";
     delBtn.title = t('remove_from_notebook');
-    delBtn.innerHTML = `<img src="../assets/img/delete.svg" class="w-4 h-4 pointer-events-none" alt="${t('delete')}">`;
+    delBtn.innerHTML = `<span class="material-symbols-rounded text-base leading-none pointer-events-none select-none">delete</span>`;
     delBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         handleDeleteCardFromNotebook(card.id, cardEl);
@@ -968,8 +1177,62 @@ function openEditModal(cardId) {
     if (!card) return;
 
     editingCardId = cardId;
+    const type = card.type || 'open';
+    const typeInfo = getTypeBadgeInfo(type);
+    if (editModalTypeBadge) {
+        editModalTypeBadge.className = `text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded flex-shrink-0 ${typeInfo.classes}`;
+        editModalTypeBadge.textContent = typeInfo.label;
+    }
+
     if (editModalFront) editModalFront.value = card.description || '';
-    if (editModalBack) editModalBack.value = card.answer || '';
+
+    const isMc = type === 'multiple_choice';
+    const isDouble = type === 'open_double';
+    const isFill = type === 'fill';
+    const isStructuredReadonlyBack = type === 'flowchart' || type === 'image_arrows';
+
+    editModalBackGroup?.classList.toggle('hidden', isMc || isStructuredReadonlyBack);
+    editModalBack2Group?.classList.toggle('hidden', !isDouble);
+    editModalMcGroup?.classList.toggle('hidden', !isMc);
+    editModalStructuredNote?.classList.toggle('hidden', !isStructuredReadonlyBack);
+
+    if (editModalBackLabel) {
+        if (isFill) editModalBackLabel.textContent = t('fill_blanks_label');
+        else if (isDouble) editModalBackLabel.textContent = t('edit_answer_label');
+        else editModalBackLabel.textContent = t('back_answer');
+    }
+
+    if (editModalBack) {
+        if (isFill && Array.isArray(card.answers) && card.answers.length > 0) {
+            editModalBack.value = card.answers.join('; ');
+        } else {
+            editModalBack.value = card.answer || '';
+        }
+    }
+    if (editModalBack2) {
+        editModalBack2.value = card.answer2 || '';
+    }
+
+    if (isMc && editModalMcList) {
+        editModalMcList.innerHTML = '';
+        const opts = Array.isArray(card.options) && card.options.length > 0 ? card.options : [card.answer || '', ''];
+        opts.forEach((optText, i) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-2';
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'bulk-edit-mc-correct';
+            radio.value = String(i);
+            radio.checked = (optText === card.answer) || (i === 0 && !opts.includes(card.answer));
+            radio.className = 'w-4 h-4 accent-[#3b82f7] cursor-pointer';
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'bulk-edit-mc-opt flex-1 p-2 bg-gray-50 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#3b82f7] focus:outline-none';
+            inp.value = optText || '';
+            row.append(radio, inp);
+            editModalMcList.appendChild(row);
+        });
+    }
 
     openModalWithMotion(editCardModal);
     setTimeout(() => editModalFront?.focus(), 60);
@@ -987,26 +1250,55 @@ function handleSaveCardEdit() {
     const newBack = editModalBack?.value.trim() || '';
 
     if (!newFront) {
-        alert(t('alert_question_empty_bulk'));
+        appAlert(t('alert_question_empty_bulk'), { variant: 'warning' });
         return;
     }
 
-    // 1. Atualiza no estado in-memory da sessão
-    const card = sessionAddedCards.find(c => c.id === editingCardId);
-    if (card) {
-        card.description = newFront;
-        card.answer = newBack;
+    const nbData = getNotebookDataFromStorage();
+    const refCard = sessionAddedCards.find(c => c.id === editingCardId) || (nbData.allQuestions || []).find(c => c.id === editingCardId);
+    const type = refCard?.type || 'open';
+
+    let finalAnswer = newBack;
+    let finalAnswer2 = undefined;
+    let finalAnswersArr = undefined;
+    let finalOptions = undefined;
+
+    if (type === 'open_double') {
+        finalAnswer2 = editModalBack2?.value.trim() || '';
+    } else if (type === 'fill') {
+        finalAnswersArr = newBack.split(';').map(a => a.trim()).filter(Boolean);
+        finalAnswer = finalAnswersArr.join('; ');
+    } else if (type === 'multiple_choice') {
+        const optInputs = Array.from(document.querySelectorAll('.bulk-edit-mc-opt'));
+        finalOptions = optInputs.map(i => i.value.trim()).filter(Boolean);
+        const checked = document.querySelector('input[name="bulk-edit-mc-correct"]:checked');
+        const idx = checked ? parseInt(checked.value, 10) : 0;
+        finalAnswer = optInputs[idx]?.value.trim() || finalOptions[0] || '';
+    } else if (type === 'flowchart' || type === 'image_arrows') {
+        finalAnswer = refCard?.answer || '';
     }
 
+    const applyUpdate = (target) => {
+        if (!target) return;
+        target.description = newFront;
+        if (type !== 'flowchart' && type !== 'image_arrows') {
+            target.answer = finalAnswer;
+        }
+        if (type === 'open_double') target.answer2 = finalAnswer2;
+        if (type === 'fill') target.answers = finalAnswersArr;
+        if (type === 'multiple_choice' && finalOptions && finalOptions.length >= 2) {
+            target.options = finalOptions;
+        }
+    };
+
+    // 1. Atualiza no estado in-memory da sessão
+    const card = sessionAddedCards.find(c => c.id === editingCardId);
+    applyUpdate(card);
+
     // 2. Atualiza no save do Caderno no localStorage
-    const nbData = getNotebookDataFromStorage();
     const updateInList = (list) => {
         if (!Array.isArray(list)) return;
-        const target = list.find(c => c.id === editingCardId);
-        if (target) {
-            target.description = newFront;
-            target.answer = newBack;
-        }
+        applyUpdate(list.find(c => c.id === editingCardId));
     };
     updateInList(nbData.allQuestions);
     updateInList(nbData.questionsPool);
@@ -1021,7 +1313,8 @@ function handleSaveCardEdit() {
             descView.innerHTML = `<strong>${t('front_label')}:</strong> <div class="mt-0.5 text-gray-800">${renderMathAndMarkdown(newFront)}</div>`;
         }
         if (ansView) {
-            ansView.innerHTML = `<strong>${t('back_label')}:</strong> <div class="mt-0.5 text-emerald-800">${renderMathAndMarkdown(newBack)}</div>`;
+            const displayAns = type === 'open_double' && finalAnswer2 ? `${finalAnswer} ; ${finalAnswer2}` : finalAnswer;
+            ansView.innerHTML = `<strong>${t('back_label')}:</strong> <div class="mt-0.5 text-emerald-800">${renderMathAndMarkdown(displayAns)}</div>`;
         }
     }
 
@@ -1485,10 +1778,10 @@ function handleModalDeleteCard(cardId, cardEl) {
     showNotification(t('card_removed_from_notebook'), "delete");
 }
 
-function handleModalDeleteDeck(deckName) {
+async function handleModalDeleteDeck(deckName) {
     if (!deckName) return;
 
-    if (!confirm(t('confirm_remove_deck_from_notebook', { deckName }))) {
+    if (!await appConfirm(t('confirm_remove_deck_from_notebook', { deckName }), { variant: 'danger' })) {
         return;
     }
 

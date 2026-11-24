@@ -9,6 +9,7 @@ import { isLifetime, isUserPro, openProModal, refreshUserProStatus, getUserProSt
 import { getSubscriptionDetails, cancelSubscriptionOnly, reactivateSubscription, deleteAccountAndCancelSubscription } from './backend-api.js';
 import { escapeHtml, sanitizeImageUrl, openModalWithMotion, closeModalWithMotion } from './utils.js';
 import { t, applyTranslations, getCurrentLanguage } from './i18n.js';
+import { appAlert, appConfirm, appPrompt } from './dialogs.js';
 
 let accountModalInitialized = false;
 let subDetailsCache = null;
@@ -55,11 +56,16 @@ function injectAccountModalHtml() {
   document.body.appendChild(modalEl);
   applyTranslations(modalEl);
 
-  // Close handlers
+  // Close handlers (backdrop, button & Escape key — L216)
   modalEl.addEventListener('click', (e) => {
     if (e.target === modalEl) closeAccountModal();
   });
   document.getElementById('close-account-modal-btn')?.addEventListener('click', closeAccountModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modalEl.classList.contains('hidden')) {
+      closeAccountModal();
+    }
+  });
 }
 
 /**
@@ -277,10 +283,17 @@ async function renderAccountModalContent() {
       subDetailsCache?.cancel_at_period_end
     );
 
+    const locale = getCurrentLanguage() === 'en-US' ? 'en-US' : 'pt-BR';
     const rawActiveDate = subDetailsCache?.activeUntil || subDetailsCache?.nextDueDate;
     const activeUntilDateFormatted = rawActiveDate 
-      ? new Date(rawActiveDate + (rawActiveDate.includes('T') ? '' : 'T12:00:00Z')).toLocaleDateString('pt-BR') 
-      : 'Mensal';
+      ? new Date(rawActiveDate + (rawActiveDate.includes('T') ? '' : 'T12:00:00Z')).toLocaleDateString(locale) 
+      : t('monthly_label');
+
+    const monthlyLimit = Math.max(1, Number(userStatus?.monthlyIncluded || userStatus?.subscription?.monthlyIncluded || 4));
+    const monthlyUsed = Math.max(0, Number(userStatus?.monthlyGenerationsUsed || 0));
+    const monthlyRemaining = Math.max(0, monthlyLimit - monthlyUsed);
+    const extraGens = Math.max(0, Number(userStatus?.extraGenerations || 0));
+    const quotaPct = Math.min(100, Math.round((monthlyUsed / monthlyLimit) * 100));
 
     const invoiceUrl = escapeHtml(sanitizeImageUrl(subDetailsCache?.invoiceUrl || ''));
 
@@ -288,12 +301,28 @@ async function renderAccountModalContent() {
       <div class="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 text-blue-950 font-bold text-xs sm:text-sm">
-            <span class="material-symbols-rounded text-lg text-blue-600">workspace_premium</span>
+            <span class="material-symbols-rounded text-lg text-[#3b82f7]">workspace_premium</span>
             <span>${t('flashcards_pro_monthly')}</span>
           </div>
-          <span class="text-xs font-black text-blue-700 bg-blue-100/80 px-2.5 py-0.5 rounded-full border border-blue-300">
+          <span class="text-xs font-black text-[#3b82f7] bg-blue-100/80 px-2.5 py-0.5 rounded-full border border-blue-300">
             ${t('price_per_month')}
           </span>
+        </div>
+
+        <!-- Monthly AI Quota Progress for Stripe Monthly Pro (L218) -->
+        <div class="p-3 bg-white/85 rounded-xl border border-blue-200/80 space-y-1.5">
+          <div class="flex items-center justify-between text-[11px] font-semibold text-[var(--md-sys-color-on-surface)]">
+            <span>${escapeHtml(t('camblu_clube_quota_summary', { used: monthlyUsed, limit: monthlyLimit, remaining: monthlyRemaining }))}</span>
+          </div>
+          <div class="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-300 bg-[#3b82f7]" style="width: ${quotaPct}%"></div>
+          </div>
+          ${extraGens > 0 ? `
+            <p class="text-[11px] text-amber-800 font-semibold flex items-center gap-1 pt-0.5">
+              <span class="material-symbols-rounded text-sm text-amber-700">stars</span>
+              <span>${t('extra_gens_available', { count: extraGens })}</span>
+            </p>
+          ` : ''}
         </div>
 
         ${isCanceling ? `
@@ -436,7 +465,7 @@ async function renderAccountModalContent() {
       </button>
 
       <button type="button" id="account-delete-account-btn"
-        class="text-[11px] text-gray-400 hover:text-red-600 transition underline cursor-pointer"
+        class="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-xl transition underline underline-offset-2 cursor-pointer"
         title="${t('delete_account_tooltip')}">
         ${t('delete_account_link')}
       </button>
@@ -479,7 +508,7 @@ async function renderAccountModalContent() {
 
   // Cancelar Assinatura (mantém acesso até o fim do período já pago)
   document.getElementById('account-cancel-sub-btn')?.addEventListener('click', async () => {
-    const confirmed = confirm(t('confirm_cancel_sub_modal'));
+    const confirmed = await appConfirm(t('confirm_cancel_sub_modal'), { variant: 'danger' });
     if (!confirmed) return;
 
     try {
@@ -495,10 +524,10 @@ async function renderAccountModalContent() {
         cancelAtPeriodEnd: true,
         activeUntil: res?.activeUntil || subDetailsCache?.nextDueDate
       };
-      alert(t('sub_canceled_success_modal'));
+      await appAlert(t('sub_canceled_success_modal'), { variant: 'success' });
       renderAccountModalContent();
     } catch (err) {
-      alert(t('error_canceling_sub', { error: err.message || "Tente novamente mais tarde" }));
+      await appAlert(t('error_canceling_sub', { error: err.message || "Tente novamente mais tarde" }), { variant: 'warning' });
       renderAccountModalContent();
     }
   });
@@ -515,7 +544,7 @@ async function renderAccountModalContent() {
       await reactivateSubscription();
       subDetailsCache = null;
       await refreshUserProStatus();
-      alert(t('sub_reactivated_success_modal'));
+      await appAlert(t('sub_reactivated_success_modal'), { variant: 'success' });
       renderAccountModalContent();
     } catch (err) {
       console.warn("Reativação direta falhou, abrindo modal Pro:", err);
@@ -526,12 +555,12 @@ async function renderAccountModalContent() {
 
   // Exclusão definitiva de conta
   document.getElementById('account-delete-account-btn')?.addEventListener('click', async () => {
-    const confirmed = confirm(t('confirm_delete_account_modal'));
+    const confirmed = await appConfirm(t('confirm_delete_account_modal'), { variant: 'danger' });
     if (!confirmed) return;
 
-    const check = prompt(t('prompt_delete_confirm'));
+    const check = await appPrompt(t('prompt_delete_confirm'), '', { variant: 'danger', icon: 'delete_forever', placeholder: 'EXCLUIR' });
     if (!check || (check.trim().toUpperCase() !== 'EXCLUIR' && check.trim().toUpperCase() !== 'DELETE')) {
-      alert(t('action_canceled_account_active'));
+      await appAlert(t('action_canceled_account_active'), { variant: 'info' });
       return;
     }
 
@@ -542,10 +571,10 @@ async function renderAccountModalContent() {
       localStorage.removeItem('flashcardsActiveMode');
       await signOutUser();
       closeAccountModal();
-      alert(t('account_deleted_success'));
+      await appAlert(t('account_deleted_success'), { variant: 'success' });
       window.location.reload();
     } catch (err) {
-      alert(t('error_deleting_account', { error: err.message || "Erro inesperado" }));
+      await appAlert(t('error_deleting_account', { error: err.message || "Erro inesperado" }), { variant: 'warning' });
     }
   });
 
@@ -576,6 +605,16 @@ export function initAccountModal() {
     const modal = document.getElementById('account-subscription-modal');
     if (modal && !modal.classList.contains('hidden')) {
       renderAccountModalContent();
+    }
+  });
+
+  window.addEventListener('flashcards:language-change', () => {
+    const modal = document.getElementById('account-subscription-modal');
+    if (modal) {
+      applyTranslations(modal);
+      if (!modal.classList.contains('hidden')) {
+        renderAccountModalContent();
+      }
     }
   });
 }

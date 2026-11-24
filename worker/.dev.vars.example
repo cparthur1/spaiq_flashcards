@@ -3,3 +3,9 @@
 STRIPE_SECRET_KEY=sk_test_placeholder
 STRIPE_WEBHOOK_SECRET=whsec_placeholder
 STRIPE_PRICE_ID=price_1Q_PLACEHOLDER
+
+# Gemini API Keys
+# Default (Google AI Studio)
+GEMINI_API_KEY=AIza_placeholder
+# Clube CAMBLU dedicated key (Google Cloud Vertex AI Express Mode)
+CAMBLU_GEMINI_API_KEY=AQ.placeholder

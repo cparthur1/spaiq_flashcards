@@ -283,13 +283,14 @@ export async function resolveUserEntitlement({
 
   // 4. Combine Stripe + Clube CAMBLU into effective Pro entitlement
   const cambluEligible = Boolean(cambluClube?.isEligiblePro);
+  const verifiedStripeActive = Boolean(hasStripeDoc || stripeSub);
   const isPro = Boolean(stripeActive || cambluEligible);
 
   let proSource = null;
   let monthlyIncluded = 0;
   let effectiveSubscription = existingSub;
 
-  if (stripeActive) {
+  if (verifiedStripeActive) {
     proSource = 'stripe';
     monthlyIncluded = cambluEligible ? Math.max(4, cambluClube.monthlyIncluded) : 4;
     effectiveSubscription = stripeSub || existingSub || {
@@ -311,6 +312,14 @@ export async function resolveUserEntitlement({
       monthlyIncluded: cambluClube.monthlyIncluded,
       checkedAt: nowIso,
       updatedAt: nowIso
+    };
+  } else if (hasLegacyClaim) {
+    proSource = 'stripe';
+    monthlyIncluded = 4;
+    effectiveSubscription = existingSub || {
+      status: 'active',
+      plan: 'pro_monthly',
+      provider: 'stripe'
     };
   } else if (existingSub?.provider === 'camblu_clube') {
     effectiveSubscription = {
@@ -365,7 +374,7 @@ export async function resolveUserEntitlement({
       nextUserDoc.cambluClube = cambluSummary;
     }
 
-    if (!stripeActive) {
+    if (!verifiedStripeActive) {
       if (cambluEligible) {
         const subChanged = existingSub?.provider !== 'camblu_clube'
           || existingSub?.status !== 'active'

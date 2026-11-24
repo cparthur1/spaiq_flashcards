@@ -5,6 +5,7 @@
  */
 
 import { t } from './i18n.js';
+import { appAlert } from './dialogs.js';
 import {
     NOTEBOOK_STORAGE_KEY,
     encodeStoragePayload,
@@ -198,7 +199,7 @@ async function generateQR(stateString) {
 export async function openScanner() {
     // Check for Secure Context (HTTPS)
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        alert(t('camera_blocked_http_alert'));
+        await appAlert(t('camera_blocked_http_alert'), { variant: 'warning' });
         return;
     }
 
@@ -212,7 +213,7 @@ export async function openScanner() {
         await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
     } catch (err) {
         console.error("Falha ao inicializar o leitor de QR:", err);
-        alert(t('camera_error_permissions'));
+        await appAlert(t('camera_error_permissions'), { variant: 'warning' });
         closeScanner();
     }
 }
@@ -274,7 +275,7 @@ async function applyProgress(stateString) {
             window.location.href = window.location.origin + window.location.pathname;
         }, 1000);
     } catch (err) {
-        alert(err.message);
+        await appAlert(err.message, { variant: 'warning' });
         window.location.search = '';
     }
 }

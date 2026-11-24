@@ -3,20 +3,131 @@
  * gemini.js - Secure Gemini AI proxy for Cloudflare Worker
  */
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+import AI_MODELS_CONFIG from './ai-models-loader.mjs';
+
+export { AI_MODELS_CONFIG };
+
+const AI_STUDIO_API_BASE = AI_MODELS_CONFIG.providers?.aistudioBaseUrl || 'https://generativelanguage.googleapis.com/v1beta';
+const VERTEX_EXPRESS_API_BASE = AI_MODELS_CONFIG.providers?.vertexExpressBaseUrl || 'https://aiplatform.googleapis.com/v1/publishers/google';
+
+function isForbiddenGemini2Model(name) {
+  return typeof name === 'string' && /^gemini-2(\.|-|$)/i.test(name.trim());
+}
 
 /**
- * Proxies generateContent or streamGenerateContent to Google Gemini
+ * Resolves any requested model name or logical tier alias against `worker/src/ai-models.json`.
+ * Strictly rejects any Gemini 2.x model and maps legacy aliases (e.g. `gemini-flash-latest`)
+ * to the currently configured models.
+ */
+export function resolveModelConfig(requestedModel, fallbackTier = 'flashLite', { allowDecision = false } = {}) {
+  const models = AI_MODELS_CONFIG.models || {};
+  const aliases = AI_MODELS_CONFIG.aliases || {};
+  const fallbacks = AI_MODELS_CONFIG.fallbacks || {};
+
+  const resolveTier = (tierKey) => {
+    if (tierKey === 'decision' && allowDecision) {
+      const decisionModel = models.decision || 'gemini-decision-1';
+      return { tier: 'decision', model: decisionModel, candidates: [decisionModel] };
+    }
+    const safeTier = tierKey === 'flash' ? 'flash' : 'flashLite';
+    const primary = models[safeTier] || (safeTier === 'flash' ? 'gemini-3.8-flash' : 'gemini-3.5-flash-lite');
+    const rawFallbacks = Array.isArray(fallbacks[safeTier]) && fallbacks[safeTier].length > 0
+      ? fallbacks[safeTier]
+      : [primary];
+    const candidates = [...new Set([primary, ...rawFallbacks])]
+      .filter(m => typeof m === 'string' && m.trim() && !isForbiddenGemini2Model(m));
+    return { tier: safeTier, model: candidates[0] || primary, candidates };
+  };
+
+  if (typeof requestedModel === 'string') {
+    const trimmed = requestedModel.trim();
+    if (trimmed && !isForbiddenGemini2Model(trimmed)) {
+      if (aliases[trimmed]) {
+        const mappedTier = aliases[trimmed];
+        if (mappedTier !== 'decision' || allowDecision) {
+          return resolveTier(mappedTier);
+        }
+      }
+      if (allowDecision && trimmed === models.decision) {
+        return resolveTier('decision');
+      }
+      if (trimmed === models.flash) {
+        return resolveTier('flash');
+      }
+      if (trimmed === models.flashLite) {
+        return resolveTier('flashLite');
+      }
+      // Allow any explicitly listed fallback model from ai-models.json (never Gemini 2)
+      for (const tierKey of ['flash', 'flashLite']) {
+        const list = Array.isArray(fallbacks[tierKey]) ? fallbacks[tierKey] : [];
+        if (list.includes(trimmed)) {
+          const rest = list.filter(m => m !== trimmed && !isForbiddenGemini2Model(m));
+          return { tier: tierKey, model: trimmed, candidates: [trimmed, ...rest] };
+        }
+      }
+    }
+  }
+
+  // Fallback tier (supports passing either 'flash'/'flashLite' or an alias/model name)
+  const normalizedFallbackTier = (fallbackTier === 'flash' || fallbackTier === 'gemini-flash-latest' || fallbackTier === models.flash)
+    ? 'flash'
+    : 'flashLite';
+  return resolveTier(normalizedFallbackTier);
+}
+
+/**
+ * Determines whether a Gemini call should target Google Cloud Vertex AI Express Mode
+ * instead of Google AI Studio.
+ */
+export function isVertexExpressProvider(apiKey, provider = null) {
+  if (provider === 'vertex') return true;
+  if (provider === 'aistudio') return false;
+  return typeof apiKey === 'string' && apiKey.trim().startsWith('AQ.');
+}
+
+/**
+ * Resolves ordered model candidates from `worker/src/ai-models.json` for both AI Studio and Vertex AI.
+ */
+export function resolveModelCandidates(model, fallbackTier = 'flash') {
+  return resolveModelConfig(model, fallbackTier).candidates;
+}
+
+function buildGeminiEndpointUrl({ model, action, stream = false, useVertex = false }) {
+  const base = useVertex ? VERTEX_EXPRESS_API_BASE : AI_STUDIO_API_BASE;
+  const queryString = stream ? '?alt=sse' : '';
+  return `${base}/models/${encodeURIComponent(model)}:${action}${queryString}`;
+}
+
+function buildGeminiSuccessResponse(upstreamResponse, stream) {
+  if (stream) {
+    return new Response(upstreamResponse.body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
+    });
+  }
+  return upstreamResponse.json().then(data => new Response(JSON.stringify(data), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  }));
+}
+
+/**
+ * Proxies generateContent or streamGenerateContent to Google Gemini (AI Studio or Vertex AI Express Mode)
  * @param {object} params
- * @param {string} params.model - e.g. "gemini-2.5-flash"
+ * @param {string} params.model - Logical tier ('flash' | 'flash-lite') or configured model ID
  * @param {object} params.contents - Gemini request body contents
  * @param {object} [params.systemInstruction]
  * @param {object} [params.generationConfig]
  * @param {boolean} [params.stream]
  * @param {string} params.apiKey - Internal server Gemini API key
+ * @param {'aistudio'|'vertex'|null} [params.provider] - Explicit API provider (auto-detected from AQ. key if omitted)
  */
 export async function callGemini({
-  model = 'gemini-flash-latest',
+  model = 'flash',
   contents,
   systemInstruction,
   generationConfig,
@@ -24,27 +135,21 @@ export async function callGemini({
   toolConfig,
   stream = false,
   apiKey,
+  provider = null,
   fetchImpl = fetch
 }) {
   const action = stream ? 'streamGenerateContent' : 'generateContent';
-  const queryParams = new URLSearchParams();
-  if (stream) {
-    queryParams.set('alt', 'sse');
-  }
-  if (apiKey) {
-    queryParams.set('key', apiKey);
-  }
-  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
-  const url = `${GEMINI_API_BASE}/models/${model}:${action}${queryString}`;
+  const useVertex = isVertexExpressProvider(apiKey, provider);
+  const candidates = resolveModelCandidates(model, 'flash');
 
-  // Normalize contents and parts so strings are cleanly wrapped in { text: string }
-  // and map any 'function' roles to 'user' as strictly required by Google Gemini API
+  // Normalize contents and parts so strings are cleanly wrapped in { text: string },
+  // map 'function' roles to 'user', and guarantee explicit role for Vertex AI v1 compliance.
   const normalizedContents = (Array.isArray(contents) ? contents : [contents]).filter(Boolean).map(item => {
     if (typeof item === 'string') {
       return { role: 'user', parts: [{ text: item }] };
     }
     if (item && Array.isArray(item.parts)) {
-      let role = item.role;
+      let role = item.role || 'user';
       if (role === 'function' || item.parts.some(p => p && !!p.functionResponse)) {
         role = 'user';
       }
@@ -62,119 +167,78 @@ export async function callGemini({
     return item;
   });
 
-  const body = {
+  const baseBody = {
     contents: normalizedContents
   };
   if (systemInstruction) {
-    body.systemInstruction = typeof systemInstruction === 'string'
+    baseBody.systemInstruction = typeof systemInstruction === 'string'
       ? { parts: [{ text: systemInstruction }] }
       : systemInstruction;
   }
-  if (generationConfig) body.generationConfig = generationConfig;
-  if (tools) body.tools = tools;
-  if (toolConfig) body.toolConfig = toolConfig;
+  if (generationConfig) baseBody.generationConfig = generationConfig;
+  if (tools) baseBody.tools = tools;
+  if (toolConfig) baseBody.toolConfig = toolConfig;
 
-  const response = await fetchImpl(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey || ''
-    },
-    body: JSON.stringify(body)
-  });
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-goog-api-key': apiKey || ''
+  };
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[Gemini API Error] (${response.status}) Model: ${model}:`, errorText);
+  let lastStatus = 500;
+  let lastErrorText = '';
 
-    // Fallback 1: Se erro 400 com thinkingConfig, retenta sem thinkingConfig
-    if (response.status === 400 && body.generationConfig?.thinkingConfig) {
-      console.warn(`[Gemini Fallback] Tentando novamente sem thinkingConfig para ${model}...`);
-      const fallbackBody = { ...body, generationConfig: { ...body.generationConfig } };
+  for (let i = 0; i < candidates.length; i++) {
+    const candidateModel = candidates[i];
+    const url = buildGeminiEndpointUrl({ model: candidateModel, action, stream, useVertex });
+    const reqBody = i === 0
+      ? baseBody
+      : (() => {
+          const clean = { ...baseBody };
+          if (clean.generationConfig?.thinkingConfig) {
+            clean.generationConfig = { ...clean.generationConfig };
+            delete clean.generationConfig.thinkingConfig;
+          }
+          return clean;
+        })();
+
+    const response = await fetchImpl(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(reqBody)
+    });
+
+    if (response.ok) {
+      return await buildGeminiSuccessResponse(response, stream);
+    }
+
+    lastStatus = response.status;
+    lastErrorText = await response.text();
+    console.error(`[Gemini API Error] (${response.status}) Provider: ${useVertex ? 'vertex' : 'aistudio'} Model: ${candidateModel}:`, lastErrorText);
+
+    // Fallback 1: If HTTP 400 with thinkingConfig on this model, retry same model without thinkingConfig
+    if (response.status === 400 && reqBody.generationConfig?.thinkingConfig) {
+      console.warn(`[Gemini Fallback] Tentando novamente sem thinkingConfig para ${candidateModel}...`);
+      const fallbackBody = { ...reqBody, generationConfig: { ...reqBody.generationConfig } };
       delete fallbackBody.generationConfig.thinkingConfig;
       const retryRes = await fetchImpl(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey || ''
-        },
+        headers,
         body: JSON.stringify(fallbackBody)
       });
       if (retryRes.ok) {
-        if (stream) {
-          return new Response(retryRes.body, {
-            status: 200,
-            headers: {
-              'Content-Type': 'text/event-stream; charset=utf-8',
-              'Cache-Control': 'no-cache',
-              'Connection': 'keep-alive'
-            }
-          });
-        }
-        return new Response(JSON.stringify(await retryRes.json()), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return await buildGeminiSuccessResponse(retryRes, stream);
       }
+      lastStatus = retryRes.status;
+      lastErrorText = await retryRes.text();
     }
 
-    // Fallback 2: Se erro 404 ou 400 persistir, tenta fallback para gemini-flash-latest
-    if ((response.status === 404 || response.status === 400) && model !== 'gemini-flash-latest') {
-      console.warn(`[Gemini Fallback] Tentando fallback para gemini-flash-latest...`);
-      const fallbackUrl = `${GEMINI_API_BASE}/models/gemini-flash-latest:${action}${queryString}`;
-      const cleanBody = { ...body };
-      if (cleanBody.generationConfig?.thinkingConfig) {
-        cleanBody.generationConfig = { ...cleanBody.generationConfig };
-        delete cleanBody.generationConfig.thinkingConfig;
-      }
-      const retryRes = await fetchImpl(fallbackUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey || ''
-        },
-        body: JSON.stringify(cleanBody)
-      });
-      if (retryRes.ok) {
-        if (stream) {
-          return new Response(retryRes.body, {
-            status: 200,
-            headers: {
-              'Content-Type': 'text/event-stream; charset=utf-8',
-              'Cache-Control': 'no-cache',
-              'Connection': 'keep-alive'
-            }
-          });
-        }
-        return new Response(JSON.stringify(await retryRes.json()), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
+    // Fallback 2: Only try next model candidate on 404 or 400 (model unavailable / unsupported param)
+    if (lastStatus !== 404 && lastStatus !== 400) {
+      break;
     }
-
-    throw new Error(`Erro na API do Gemini (${response.status}): ${errorText}`);
   }
 
-  if (stream) {
-    // Return readable stream with SSE headers
-    return new Response(response.body, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
-    });
-  }
-
-  const data = await response.json();
-  return new Response(JSON.stringify(data), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
+  throw new Error(`Erro na API do Gemini (${lastStatus}): ${lastErrorText}`);
 }
 
 /**
@@ -186,19 +250,21 @@ export async function callGemini({
  * @param {string} params.apiKey - Internal server Gemini API key
  */
 export async function callGeminiDecision({
-  model = 'gemini-decision-1',
+  model = AI_MODELS_CONFIG.models?.decision || 'gemini-decision-1',
   input,
   questions,
-  apiKey
+  apiKey,
+  fetchImpl = fetch
 }) {
-  const url = `${GEMINI_API_BASE}/decisions`;
+  const decisionModel = AI_MODELS_CONFIG.models?.decision || 'gemini-decision-1';
+  const url = `${AI_STUDIO_API_BASE}/decisions`;
   const body = {
-    model: model || 'gemini-decision-1',
+    model: model || decisionModel,
     input,
     questions
   };
 
-  const response = await fetch(url, {
+  const response = await fetchImpl(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -319,6 +385,7 @@ export async function auditMaterialCoverageWithFlashLite({
   materialParts = [],
   cards = [],
   apiKey,
+  provider = null,
   fetchImpl = fetch
 }) {
   const playableCount = cards.filter(isPlayableGeneratedCard).length;
@@ -334,7 +401,7 @@ export async function auditMaterialCoverageWithFlashLite({
     `- Só defina "sufficient": true quando praticamente todo o conteúdo relevante dos materiais já estiver adequadamente coberto.`;
 
   const res = await callGemini({
-    model: 'gemini-flash-lite-latest',
+    model: AI_MODELS_CONFIG.models?.flashLite || 'gemini-3.5-flash-lite',
     contents: [{ role: 'user', parts: [...materialParts, { text: auditPrompt }] }],
     systemInstruction: {
       parts: [{ text: 'Você é um auditor objetivo de cobertura conceitual entre materiais de estudo e flashcards gerados. Responda exclusivamente em JSON válido.' }]
@@ -345,6 +412,7 @@ export async function auditMaterialCoverageWithFlashLite({
     },
     stream: false,
     apiKey,
+    provider,
     fetchImpl
   });
 
@@ -407,7 +475,7 @@ async function forwardGeminiSseBody({ body, controller, encoder, onChunkText }) 
  * gemini-flash-latest chat to complement any missing/under-covered topics.
  */
 export async function callGeminiWithCoverageAudit({
-  model = 'gemini-flash-latest',
+  model = AI_MODELS_CONFIG.models?.flash || 'gemini-3.8-flash',
   contents,
   systemInstruction,
   generationConfig,
@@ -415,6 +483,7 @@ export async function callGeminiWithCoverageAudit({
   toolConfig,
   targetLanguagePrompt = '',
   apiKey,
+  provider = null,
   fetchImpl = fetch
 }) {
   const phase1Res = await callGemini({
@@ -426,6 +495,7 @@ export async function callGeminiWithCoverageAudit({
     toolConfig,
     stream: true,
     apiKey,
+    provider,
     fetchImpl
   });
 
@@ -462,6 +532,7 @@ export async function callGeminiWithCoverageAudit({
               materialParts,
               cards: initialCards,
               apiKey,
+              provider,
               fetchImpl
             });
 
@@ -486,7 +557,7 @@ export async function callGeminiWithCoverageAudit({
 
               const baseTurns = Array.isArray(contents) ? contents : [contents];
               const phase3Res = await callGemini({
-                model: 'gemini-flash-latest',
+                model: AI_MODELS_CONFIG.models?.flash || 'gemini-3.8-flash',
                 contents: [
                   ...baseTurns,
                   { role: 'model', parts: [{ text: initialFullText }] },
@@ -498,6 +569,7 @@ export async function callGeminiWithCoverageAudit({
                 toolConfig,
                 stream: true,
                 apiKey,
+                provider,
                 fetchImpl
               });
 

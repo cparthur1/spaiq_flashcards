@@ -458,11 +458,13 @@ export function initPomodoro() {
     if (settingFocusSelect) settingFocusSelect.addEventListener('change', handleSettingDurationChange);
     if (settingBreakSelect) settingBreakSelect.addEventListener('change', handleSettingDurationChange);
 
-    // Config trigger (click row or title to open popup)
+    // Config trigger (click row or title to open App Settings scrolled to Pomodoro section)
     if (pomodoroConfigTriggerEl) {
         pomodoroConfigTriggerEl.addEventListener('click', (e) => {
             e.preventDefault();
-            openPomodoroSettingsModal();
+            window.dispatchEvent(new CustomEvent('flashcards:open-settings-section', {
+                detail: { section: 'pomodoro' }
+            }));
         });
     }
 

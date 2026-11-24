@@ -110,8 +110,6 @@
 <body
     class="bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-background)] flex flex-col items-center justify-center min-h-screen p-4">
 
-    <canvas id="background-canvas" class="fixed top-0 left-0 w-full h-full" style="z-index: -1;"></canvas>
-
     <!-- TOP-RIGHT LANGUAGE SELECTOR -->
     <div class="fixed top-4 right-4 z-40 flex items-center gap-2">
         <div class="relative">
@@ -162,11 +160,18 @@
         </div>
 
         <div class="flex flex-col gap-3.5">
-            <!-- Botão Explorar Arquivos (Abre o Modal com Slots e Caderno) -->
+            <!-- 1. Botão Explorar Arquivos (Abre o Modal com Slots e Caderno) -->
             <button id="open-explore-btn"
                 class="m3-btn-expressive m3-btn-filled w-full py-4 px-4 text-base font-bold shadow-md flex items-center justify-center gap-2.5">
                 <img src="assets/img/open_folder.svg" class="w-6 h-6 flex-shrink-0" alt="" aria-hidden="true" width="24" height="24">
                 <span data-i18n="explore_files">Explorar arquivos</span>
+            </button>
+
+            <!-- 2. Continuar Sessão em Aberto (visível dinamicamente se houver deck ativo) -->
+            <button id="continue-session-btn"
+                class="hidden m3-btn-expressive m3-btn-outlined w-full py-3 px-4 text-sm font-semibold flex items-center justify-center gap-2 text-[#3b82f7] border-blue-200 hover:bg-blue-50">
+                <span class="material-symbols-rounded text-lg">play_arrow</span>
+                <span data-i18n="continue_session">Continuar Sessão Atual</span>
             </button>
 
             <div class="relative flex py-1 items-center">
@@ -175,52 +180,26 @@
                 <div class="flex-grow border-t border-[var(--md-sys-color-outline-variant)]"></div>
             </div>
 
-            <!-- Botão Criar Baralho -->
+            <!-- 3. Botão Criar Baralho (Design original + ícone original) -->
             <a href="pages/generate.html" id="open-create-btn"
                 class="m3-btn-expressive m3-btn-tonal w-full py-3.5 px-4 text-base font-bold shadow-sm flex items-center justify-center gap-2">
                 <img src="assets/img/criar_novo.svg" class="w-5 h-5 flex-shrink-0" alt="" aria-hidden="true" width="20" height="20">
                 <span data-i18n="create_deck">Criar Baralho</span>
-            </a>
-
-            <!-- Continuar Sessão em Aberto (visível dinamicamente se houver deck ativo) -->
-            <button id="continue-session-btn"
-                class="hidden m3-btn-expressive m3-btn-outlined w-full py-3 px-4 text-sm font-semibold flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50">
-                <span class="material-symbols-rounded text-lg">play_arrow</span>
-                <span data-i18n="continue_session">Continuar Sessão Atual</span>
-            </button>
-        </div>
-
-        <!-- Cross-Promotion: Gorit (Tarefas & Conteúdos) -->
-        <div class="mt-6 pt-5 border-t border-[var(--md-sys-color-outline-variant)] text-left">
-            <span class="block text-[11px] font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-2.5" data-i18n="try_also">Teste também</span>
-            <a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer"
-                class="group block p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-low)] hover:bg-[var(--md-sys-color-surface-container)] border border-[var(--md-sys-color-outline-variant)] hover:border-blue-300 transition-all duration-200 hover:shadow-xs">
-                <div class="flex items-center gap-3">
-                    <img src="assets/img/gorit-logo.svg" class="w-10 h-10 rounded-xl object-contain shadow-2xs flex-shrink-0 transition-transform duration-200 group-hover:scale-105" alt="Gorit" width="40" height="40">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="text-sm font-bold text-[var(--md-sys-color-on-surface)] group-hover:text-[#3b82f7] transition-colors" data-i18n="gorit_app_name">Gorit</span>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-[#1d61e8] border border-blue-200" data-i18n="pro_included_badge">PRO Incluso</span>
-                        </div>
-                        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5" data-i18n="gorit_desc">Gestão de matérias, provas e tarefas</p>
-                    </div>
-                    <span class="material-symbols-rounded text-lg text-[var(--md-sys-color-on-surface-variant)] group-hover:text-[#3b82f7] group-hover:translate-x-0.5 transition-all flex-shrink-0">open_in_new</span>
-                </div>
             </a>
         </div>
         <p id="upload-error" class="text-red-500 mt-4 text-sm font-medium"></p>
     </div>
 
     <!-- MODAL SEMANA DE PROVAS (MULTI-BARALHOS) -->
-    <div id="exam-modal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+    <div id="exam-modal" role="dialog" aria-modal="true" aria-labelledby="exam-modal-title" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
         <div class="m3-dialog-card w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div class="px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 shadow-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <div class="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shadow-sm">
+                        <span class="material-symbols-rounded text-xl">layers</span>
                     </div>
                     <div class="text-left">
-                        <h3 class="text-lg font-bold text-[var(--md-sys-color-on-surface)] leading-tight" data-i18n="exam_week">Semana de Provas</h3>
+                        <h3 id="exam-modal-title" class="text-lg font-bold text-[var(--md-sys-color-on-surface)] leading-tight" data-i18n="exam_week">Semana de Provas</h3>
                         <p class="text-xs text-[var(--md-sys-color-on-surface-variant)]" data-i18n="exam_week_subtitle">Misture múltiplos baralhos para estudar</p>
                     </div>
                 </div>
@@ -231,13 +210,13 @@
 
             <div class="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                 <!-- Banner de Sessão Salva (se existir) -->
-                <div id="exam-saved-session-box" class="hidden p-4 bg-purple-50 rounded-2xl border border-purple-200 text-left">
+                <div id="exam-saved-session-box" class="hidden p-4 bg-amber-50 rounded-2xl border border-amber-200 text-left">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold text-purple-700 uppercase tracking-wide" data-i18n="exam_saved_title">Sessão em Andamento</span>
-                        <span id="exam-saved-cards-count" class="text-xs px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-800 font-semibold" data-i18n="cards_remaining_zero">0 cards restantes</span>
+                        <span class="text-xs font-bold text-amber-800 uppercase tracking-wide" data-i18n="exam_saved_title">Sessão em Andamento</span>
+                        <span id="exam-saved-cards-count" class="text-xs px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-semibold" data-i18n="cards_remaining_zero">0 cards restantes</span>
                     </div>
-                    <p class="text-xs text-purple-600 mb-3" id="exam-saved-decks-text" data-i18n="exam_saved_desc">Você já tem uma mistura salva.</p>
-                    <button id="exam-continue-btn" class="m3-btn-expressive w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow cursor-pointer">
+                    <p class="text-xs text-amber-700 mb-3" id="exam-saved-decks-text" data-i18n="exam_saved_desc">Você já tem uma mistura salva.</p>
+                    <button id="exam-continue-btn" class="m3-btn-expressive w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow cursor-pointer">
                         <span class="material-symbols-rounded text-base">play_arrow</span> <span data-i18n="exam_continue_btn">Continuar Sessão Salva</span>
                     </button>
                 </div>
@@ -245,10 +224,10 @@
                 <!-- Área de upload / seleção de múltiplos baralhos -->
                 <div>
                     <label class="block text-left text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)] mb-1.5" data-i18n="exam_upload_label">Carregar Baralhos (.json)</label>
-                    <div id="exam-drop-zone" class="border-2 border-dashed border-[var(--md-sys-color-outline-variant)] hover:border-purple-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-[var(--md-sys-color-surface-container-low)]">
+                    <div id="exam-drop-zone" class="border-2 border-dashed border-[var(--md-sys-color-outline-variant)] hover:border-amber-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-[var(--md-sys-color-surface-container-low)]">
                         <input type="file" id="exam-file-input" accept=".json" multiple class="hidden">
                         <div class="flex flex-col items-center gap-2">
-                            <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                            <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-700">
                                 <span class="material-symbols-rounded text-2xl">upload_file</span>
                             </div>
                             <div>
@@ -277,7 +256,7 @@
                 <button id="cancel-exam-modal-btn" class="m3-btn-expressive m3-btn-text text-sm cursor-pointer" data-i18n="cancel">
                     Cancelar
                 </button>
-                <button id="start-exam-btn" disabled class="m3-btn-expressive m3-btn-filled bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+                <button id="start-exam-btn" disabled class="m3-btn-expressive m3-btn-filled bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
                     <span class="material-symbols-rounded text-base">bolt</span> <span data-i18n="exam_start_btn">Iniciar Mistura</span>
                 </button>
             </div>

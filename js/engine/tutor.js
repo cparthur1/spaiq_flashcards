@@ -13,9 +13,9 @@ import { t } from '../i18n.js';
 
 let lastUserAnswerForChat = "";
 let currentBackendChatHistory = [];
-let currentChatModel = "gemini-flash-lite-latest";
+let currentChatModel = "flash-lite";
 export const BACKGROUND_CORRECTOR_MODEL = "gemini-decision-1";
-const BACKGROUND_CORRECTOR_FALLBACK_MODEL = "gemini-flash-lite-latest";
+const BACKGROUND_CORRECTOR_FALLBACK_MODEL = "flash-lite";
 const DECISION_ACCEPT_THRESHOLD = 0.60;
 const DECISION_CORROBORATED_THRESHOLD = 0.50;
 let hasChatInteraction = false;
@@ -394,7 +394,7 @@ export async function sendTutorChatMessage({ msg, currentQuestion, chatInput, ch
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    model: currentChatModel || 'gemini-flash-lite-latest',
+                    model: currentChatModel || 'flash-lite',
                     contents: currentBackendChatHistory,
                     systemInstruction: { parts: [{ text: systemPrompt }] }
                 })
@@ -459,7 +459,7 @@ Termo selecionado para definir: "${selectedText}"`;
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                model: "gemini-flash-lite-latest",
+                model: "flash-lite",
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 generationConfig: {
