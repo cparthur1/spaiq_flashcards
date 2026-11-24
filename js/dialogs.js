@@ -121,7 +121,8 @@ function showBaseDialog({
     cancelText = '',
     variant = '',
     icon = '',
-    lightDismiss = true
+    lightDismiss = true,
+    confirmOnEnter = false
 } = {}) {
     return enqueueDialog(() => new Promise((resolve) => {
         if (typeof document === 'undefined' || !document.body) {
@@ -211,7 +212,7 @@ function showBaseDialog({
             cancelBtn.type = 'button';
             cancelBtn.className = 'm3-btn-expressive px-4 py-2 text-sm font-semibold text-[var(--md-sys-color-on-surface-variant)] bg-transparent hover:bg-[var(--md-sys-color-surface-container-high)] rounded-full transition cursor-pointer';
             cancelBtn.textContent = resolvedCancel;
-            if (mode === 'confirm' && resolvedVariant === 'danger') {
+            if (mode === 'confirm' && resolvedVariant === 'danger' && !confirmOnEnter) {
                 cancelBtn.autofocus = true;
             }
             cancelBtn.addEventListener('click', () => {
@@ -225,7 +226,7 @@ function showBaseDialog({
         confirmBtn.value = 'confirm';
         confirmBtn.className = `m3-btn-expressive px-5 py-2 text-sm font-bold rounded-full transition cursor-pointer ${styleSpec.confirmBtn}`;
         confirmBtn.textContent = resolvedConfirm;
-        if (mode === 'alert' || (mode === 'confirm' && resolvedVariant !== 'danger')) {
+        if (mode === 'alert' || (mode === 'confirm' && (resolvedVariant !== 'danger' || confirmOnEnter))) {
             confirmBtn.autofocus = true;
         }
         footer.appendChild(confirmBtn);
@@ -298,6 +299,10 @@ function showBaseDialog({
             requestAnimationFrame(() => {
                 promptInput.focus();
                 promptInput.select();
+            });
+        } else if (confirmOnEnter && mode === 'confirm') {
+            requestAnimationFrame(() => {
+                confirmBtn.focus();
             });
         }
     }));

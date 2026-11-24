@@ -54,6 +54,21 @@ function handleKeyDown(e) {
         return;
     }
 
+    // Atalho Delete para excluir o card atual (quando nenhuma caixa de texto está focada)
+    if (
+        (e.key === 'Delete' || e.code === 'Delete') &&
+        !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.repeat
+    ) {
+        if (controllerHandlers.onDeleteCard) {
+            const handled = controllerHandlers.onDeleteCard();
+            if (handled !== false) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+        }
+    }
+
     const isSpaceKey = (evt) => Boolean(
         evt.code === 'Space' ||
         evt.key === ' ' ||

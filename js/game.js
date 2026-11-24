@@ -9186,7 +9186,9 @@ nextQuestionBtn.addEventListener('click', () => {
 });
 
 const handleDelete = async () => {
-    if (!await appConfirm(t('confirm_delete_card_simple'), { variant: 'danger' })) return;
+    if (!currentQuestion || isAnimating) return false;
+    if (deckCompletionView && !deckCompletionView.classList.contains('hidden')) return false;
+    if (!await appConfirm(t('confirm_delete_card_simple'), { variant: 'danger', confirmOnEnter: true })) return;
     allQuestions = allQuestions.filter(q => q !== currentQuestion);
     questionsPool.splice(currentQuestionIndexInPool, 1);
     saveGameState(true);
@@ -9323,10 +9325,17 @@ initInputController({
         }
         return false;
     },
+    onDeleteCard: () => {
+        if (!currentQuestion || isAnimating) return false;
+        if (deckCompletionView && !deckCompletionView.classList.contains('hidden')) return false;
+        handleDelete();
+        return true;
+    },
     isModalOrDrawerOpen: () => {
         const hasOpenModal = document.querySelector('.modal-overlay:not(.hidden)') !== null;
+        const hasOpenDialog = document.querySelector('dialog[open]') !== null;
         const isHamburgerOpen = hamburgerMenu && !hamburgerMenu.classList.contains('hidden');
-        return hasOpenModal || isHamburgerOpen;
+        return hasOpenModal || hasOpenDialog || isHamburgerOpen;
     }
 });
 
