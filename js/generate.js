@@ -3001,34 +3001,18 @@ async function executeAiEnhanceFromDoc(file) {
         openEditorView('ai');
 
         deckTitleDisplay.value = file.name.replace(/\.[^/.]+$/, "");
-        deckCards = localCards;
+        deckCards = [...localCards];
         renderCardsList(true);
 
-        const hasPlaceholders = JSON.stringify(localCards).includes("[GEMINI]");
+        const pendingItems = localCards
+            .map((card, index) => ({ index, card }))
+            .filter(item => JSON.stringify(item.card).includes("[GEMINI]"));
 
-        if (!hasPlaceholders) {
+        if (pendingItems.length === 0) {
             geminiChatSession = { _history: [] };
             addChatMessage('model', t('doc_imported_chat_msg', { count: deckCards.length }));
             return;
         }
-
-        // Fill placeholders with Gemini
-        showGeneratingAnimation(t('enhancing_flashcards_status'));
-        addAiChatGeneratingBubble(t('gemini_enhancing_bubble'));
-
-        const fillPrompt = `Aqui está uma lista de flashcards que precisam que você preencha os campos '[GEMINI]'.
-As perguntas ('description') de todos os tipos de cartões podem usar formatação Markdown e fórmulas LaTeX livremente.
-Para 'open_double', preencha 'placeholder1' e 'placeholder2' com rótulos descritivos curtos para as respostas. Respostas digitadas devem ser texto puro sem Markdown e sem fórmulas.
-Para 'multiple_choice', complete o array 'options' com alternativas incorretas porém plausíveis (distratores), mantendo a resposta correta informada. Pode usar Markdown e LaTeX livremente.
-Para 'fill', se 'answers' contiver '[GEMINI]' ou estiver vazio, identifique as respostas corretas para cada lacuna '_' na frase de 'description' e preencha o array 'answers' com as respostas em ordem. As respostas das lacunas DEVEM SER ESTRITAMENTE TEXTO PURO (sem negrito **, sem itálico *, sem código \` e sem fórmulas LaTeX). Se 'answers' já estiver preenchido, mantenha-o intacto.
-Para 'anki', mantenha o type 'anki' intacto, preservando exatamente 'description' (frente/pergunta) e 'answer' (verso/resposta detalhada, que suporta Markdown rico, tabelas e LaTeX livremente).
-Para 'flowchart', mantenha o type 'flowchart', 'description' e suas etapas 'nodes' (suportando conexões lineares/ramificadas e lacunas opcionais '{termo}').
-Para 'open', mantenha o type 'open' intacto com 'description' (que pode usar Markdown e LaTeX livremente) e 'answer' (estritamente texto puro, sem Markdown e sem fórmulas).
-Mantenha quaisquer itens com type 'divisor', 'anki', 'fill', 'flowchart' e 'open' intactos e em suas respectivas posições entre os cartões.
-Ao terminar, chame 'adicionar_varios_cards' para enviar o baralho finalizado.
-
-JSON:
-${JSON.stringify(localCards, null, 2)}`;
 
         const token = await getCurrentUserToken().catch(() => null);
         const isTrial = !isUserPro() && !hasUsedFreeAiDeck();
@@ -3041,51 +3025,168 @@ ${JSON.stringify(localCards, null, 2)}`;
             return;
         }
 
+        // Fill only [GEMINI] placeholders via SSE streaming to avoid non-streaming 524 timeouts
+        showGeneratingAnimation(t('enhancing_flashcards_status'));
+        addAiChatGeneratingBubble(t('gemini_enhancing_bubble'));
+
         const reqHeaders = { 'Content-Type': 'application/json' };
         if (token) {
             reqHeaders['Authorization'] = `Bearer ${token}`;
         }
 
-        const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
-            method: 'POST',
-            headers: reqHeaders,
-            body: JSON.stringify({
-                model: "gemini-flash-latest",
-                contents: [{ role: 'user', parts: [{ text: fillPrompt }] }],
-                tools: deckTools,
-                systemInstruction: { parts: [{ text: systemInstruction + "\nPreencha os placeholders '[GEMINI]' no JSON de flashcards e retorne-os usando a ferramenta 'adicionar_varios_cards'. Preserve cards com type 'anki' (frente e verso), 'fill' (lacunas), 'flowchart' (fluxogramas), 'open' e 'divisor' exatamente como foram fornecidos. REGRA MANDATÓRIA: As perguntas ('description') de todos os cartões podem e devem usar Markdown (inclusive tabelas) e LaTeX livremente. Apenas respostas digitadas na gameplay ('open', 'open_double', 'fill' e lacunas de 'flowchart') NUNCA devem usar Markdown nem fórmulas matemáticas." }] },
-                generationConfig: { temperature: 0.7, responseMimeType: "text/plain" },
-                stream: false,
-                isNewDeck: true
-            })
-        });
+        const batchSize = token ? 30 : pendingItems.length;
+        const batches = [];
+        for (let i = 0; i < pendingItems.length; i += batchSize) {
+            batches.push(pendingItems.slice(i, i + batchSize));
+        }
 
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            if (errData.error === 'quota_exceeded') {
-                const limitCount = Number(errData.limit) || Number(getUserProStatus()?.monthlyIncluded) || 4;
-                const promptMsg = isUserPro() ? t('alert_pro_monthly_limit', { limit: limitCount }) : t('alert_non_pro_limit');
-                if (confirm(promptMsg)) {
-                    if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
-                        window.flashcardsOpenExtraDeckModal();
-                    }
+        const enhanceSystemInstruction = systemInstruction +
+            "\nPreencha APENAS os placeholders '[GEMINI]' nos cartões recebidos e retorne EXCLUSIVAMENTE um array JSON ([]) com cada objeto contendo o campo numérico 'index' original e os campos preenchidos. " +
+            "REGRA MANDATÓRIA: As perguntas ('description') podem usar Markdown (inclusive tabelas) e LaTeX livremente. Respostas digitadas na gameplay ('open', 'open_double', 'fill' e lacunas de 'flowchart') NUNCA devem usar Markdown nem fórmulas matemáticas.";
+
+        let enhancedCount = 0;
+        const processedIndices = new Set();
+
+        const applyEnhancedObject = (rawFilled, fallbackBatchIndex = null, batch = []) => {
+            if (!rawFilled || typeof rawFilled !== 'object') return false;
+            let idx = Number(rawFilled.index);
+            if (!Number.isInteger(idx) || !localCards[idx]) {
+                if (fallbackBatchIndex !== null && batch[fallbackBatchIndex]) {
+                    idx = batch[fallbackBatchIndex].index;
+                } else {
+                    return false;
                 }
             }
-            throw new Error(errData.message || `Erro no servidor (${res.status})`);
-        }
+            if (processedIndices.has(idx)) return false;
 
-        const fillData = await res.json();
-        deckCards = [];
-        renderCardsList(true);
+            const original = localCards[idx];
+            const merged = { ...original };
+            if (original.type === 'open_double') {
+                if (typeof rawFilled.placeholder1 === 'string' && rawFilled.placeholder1.trim() && !rawFilled.placeholder1.includes('[GEMINI]')) {
+                    merged.placeholder1 = rawFilled.placeholder1.trim();
+                }
+                if (typeof rawFilled.placeholder2 === 'string' && rawFilled.placeholder2.trim() && !rawFilled.placeholder2.includes('[GEMINI]')) {
+                    merged.placeholder2 = rawFilled.placeholder2.trim();
+                }
+            } else if (original.type === 'multiple_choice') {
+                const rawOpts = Array.isArray(rawFilled.options)
+                    ? rawFilled.options.map(o => String(o || '').trim()).filter(o => o && !o.includes('[GEMINI]'))
+                    : [];
+                if (original.answer && !rawOpts.includes(original.answer)) {
+                    rawOpts.unshift(original.answer);
+                }
+                if (rawOpts.length >= 2) {
+                    merged.options = rawOpts;
+                }
+            } else if (original.type === 'fill') {
+                const filledAnswers = Array.isArray(rawFilled.answers)
+                    ? rawFilled.answers.map(a => String(a || '').trim()).filter(a => a && !a.includes('[GEMINI]'))
+                    : (typeof rawFilled.answer === 'string' && !rawFilled.answer.includes('[GEMINI]')
+                        ? rawFilled.answer.split(';').map(a => a.trim()).filter(Boolean)
+                        : []);
+                if (filledAnswers.length > 0) {
+                    merged.answers = filledAnswers;
+                    merged.answer = filledAnswers.join('; ');
+                }
+            }
 
-        const candidate = fillData.candidates?.[0];
-        const calls = candidate?.content?.parts?.filter(p => !!p.functionCall) || [];
-        for (const call of calls) {
-            if (call.functionCall.name === 'adicionar_varios_cards') {
-                const args = call.functionCall.args;
-                executeAddMultipleCards(args.cards || args);
+            const normalized = normalizeCard(merged) || merged;
+            deckCards[idx] = normalized;
+            processedIndices.add(idx);
+            enhancedCount++;
+            return true;
+        };
+
+        for (let bIdx = 0; bIdx < batches.length; bIdx++) {
+            const batch = batches[bIdx];
+            const batchPayload = batch.map(({ index, card }) => ({ index, ...card }));
+
+            const fillPrompt = `Preencha os campos '[GEMINI]' nos cartões abaixo mantendo o 'index' exato de cada cartão:\n` +
+                `- Para 'open_double': preencha 'placeholder1' e 'placeholder2' com rótulos descritivos curtos em texto puro.\n` +
+                `- Para 'multiple_choice': complete 'options' com 4 alternativas plausíveis (incluindo a 'answer' correta + 3 distratores inteligentes; pode usar Markdown e LaTeX).\n` +
+                `- Para 'fill': identifique as respostas corretas em TEXTO PURO (sem Markdown e sem LaTeX) para cada lacuna '_' em 'description' e retorne 'answers' (array em ordem) e 'answer' (unido por '; ').\n` +
+                `Retorne EXCLUSIVAMENTE o array JSON ([]) com os objetos preenchidos.\n\nJSON:\n${JSON.stringify(batchPayload, null, 2)}`;
+
+            const res = await fetch(`${BACKEND_URL}/api/ai/generate`, {
+                method: 'POST',
+                headers: reqHeaders,
+                body: JSON.stringify({
+                    model: "gemini-flash-latest",
+                    contents: [{ role: 'user', parts: [{ text: fillPrompt }] }],
+                    systemInstruction: { parts: [{ text: enhanceSystemInstruction }] },
+                    generationConfig: { temperature: 0.5, responseMimeType: "application/json" },
+                    stream: true,
+                    isNewDeck: bIdx === 0
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                if (errData.error === 'quota_exceeded') {
+                    const limitCount = Number(errData.limit) || Number(getUserProStatus()?.monthlyIncluded) || 4;
+                    const promptMsg = isUserPro() ? t('alert_pro_monthly_limit', { limit: limitCount }) : t('alert_non_pro_limit');
+                    if (confirm(promptMsg)) {
+                        if (typeof window.flashcardsOpenExtraDeckModal === 'function') {
+                            window.flashcardsOpenExtraDeckModal();
+                        }
+                    }
+                }
+                throw new Error(errData.message || `Erro no servidor (${res.status})`);
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let sseBuffer = '';
+            let streamText = '';
+            let batchApplied = 0;
+
+            for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+                sseBuffer += decoder.decode(chunk.value, { stream: true });
+                const lines = sseBuffer.split('\n');
+                sseBuffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const jsonStr = line.slice(6).trim();
+                    if (jsonStr === '[DONE]') continue;
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        const chunkText = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                        if (!chunkText) continue;
+                        streamText += chunkText;
+                        const objs = extractBalancedJsonObjects(streamText);
+                        let changed = false;
+                        objs.forEach((obj, pos) => {
+                            if (applyEnhancedObject(obj, pos, batch)) {
+                                batchApplied++;
+                                changed = true;
+                            }
+                        });
+                        if (changed) {
+                            updateGeneratingProgress(enhancedCount);
+                            renderCardsList(true);
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            if (batchApplied === 0 && streamText.trim()) {
+                const fallbackObjs = parseJsonCardsSafely(streamText);
+                let changed = false;
+                fallbackObjs.forEach((obj, pos) => {
+                    if (applyEnhancedObject(obj, pos, batch)) {
+                        batchApplied++;
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    updateGeneratingProgress(enhancedCount);
+                    renderCardsList(true);
+                }
             }
         }
+
+        renderCardsList(true);
         geminiChatSession = { _history: [] };
         if (window.currentDeckIsFreeAiTrial) {
             markFreeAiDeckUsed();

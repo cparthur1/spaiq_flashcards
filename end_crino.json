@@ -1,0 +1,2344 @@
+[
+    {
+        "type": "open",
+        "description": "Qual é a principal enzima/proteína carreadora que atua como limitante da taxa de entrada do colesterol na esteroidogênese adrenal?",
+        "answer": "Proteína StAR / P450scc",
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são, respectivamente, a camada do córtex adrenal responsável pela síntese de aldosterona e a camada que sintetiza cortisol?",
+        "answer": "Zona glomerulosa",
+        "answer2": "Zona fasciculada",
+        "placeholder1": "Síntese de aldosterona",
+        "placeholder2": "Síntese de cortisol",
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual camada do córtex da adrenal é a principal produtora de andrógenos suprarrenais (DHEA e androstenediona)?",
+        "answer": "Zona reticulada",
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são os principais fatores reguladores sistêmicos da **zona glomerulosa** e das **zonas fasciculada/reticulada**, respectivamente?",
+        "answer": "Sistema renina-angiotensina-aldosterona / Angiotensina II",
+        "answer2": "ACTH / Eixo hipotálamo-hipófise-adrenal",
+        "placeholder1": "Regulação da zona glomerulosa",
+        "placeholder2": "Regulação da fasciculada/reticulada",
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual enzima expressa no tecido adiposo periférico converte a testosterona em estradiol-17$\\beta$?",
+        "answer": "Aromatase",
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual enzima é inibida pela **finasterida** no tratamento da alopecia androgenética para evitar a formação do andrógeno potente di-hidrotestosterona (DHT)?",
+        "answer": "5-alfarredutase",
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "flowchart",
+        "description": "Esteroidogênese Adrenal: vias de síntese a partir do colesterol",
+        "nodes": [
+            {
+                "id": "s1",
+                "text": "Captação de **Colesterol** mediada pela proteína _",
+                "blanks": [
+                    "StAR / P450scc"
+                ],
+                "next": [
+                    "s2"
+                ]
+            },
+            {
+                "id": "s2",
+                "text": "Conversão em **Pregnenolona**",
+                "blanks": [],
+                "next": [
+                    "s3",
+                    "s4"
+                ]
+            },
+            {
+                "id": "s3",
+                "text": "Via Mineralocorticoide: Progesterona -> 11-desoxicorticosterona -> Corticosterona -> _",
+                "blanks": [
+                    "Aldosterona"
+                ],
+                "next": []
+            },
+            {
+                "id": "s4",
+                "text": "Via 17$\\alpha$-hidroxilada: 17$\\alpha$-hidroxipregnenolona -> 17$\\alpha$-hidroxiprogesterona",
+                "blanks": [],
+                "next": [
+                    "s5",
+                    "s6"
+                ]
+            },
+            {
+                "id": "s5",
+                "text": "Via Glicocorticoide: 11-desoxicortisol -> _",
+                "blanks": [
+                    "Cortisol"
+                ],
+                "next": []
+            },
+            {
+                "id": "s6",
+                "text": "Via Androgênica: _ -> Androstenediona -> Testosterona",
+                "blanks": [
+                    "DHEA / Desidroepiandrosterona"
+                ],
+                "next": []
+            }
+        ],
+        "answer": "Captação de **Colesterol** mediada pela proteína StAR / P450scc -> Conversão em **Pregnenolona** -> Via Mineralocorticoide: Progesterona -> 11-desoxicorticosterona -> Corticosterona -> Aldosterona -> Via 17$\\alpha$-hidroxilada: 17$\\alpha$-hidroxipregnenolona -> 17$\\alpha$-hidroxiprogesterona -> Via Glicocorticoide: 11-desoxicortisol -> Cortisol -> Via Androgênica: DHEA / Desidroepiandrosterona -> Androstenediona -> Testosterona",
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Como os estados de hiperestrogenismo (gestação e anticoncepcionais orais) e hipoalbuminemia afetam a dosagem de cortisol sérico total versus cortisol livre?",
+        "answer": "### Fisiologia do Transporte de Cortisol:\nO cortisol plasmático circula ligado a:\n- **CBG (Globulina Ligadora de Corticosteroides):** ~80% a 90%\n- **Albumina:** ~10%\n- **Fração livre (biologicamente ativa):** ~5%\n\n### Impacto das Condições Clínicas:\n- **Hiperestrogenismo (Gestação / ACOs):** Estimula a síntese hepática de CBG. O cortisol total sérico eleva-se (**falso-positivo** no rastreio sérico), porém o **cortisol livre permanece normal**.\n- **Hipoalbuminemia severa / Cirrose / Desnutrição:** Redução das proteínas carreadoras reduz o pool total de cortisol sérico, mantendo a fração livre estável.\n\n> **Regra prática:** Na suspeita de alteração de proteínas transportadoras, priorizar métodos que quantifiquem a fração livre (cortisol salivar à meia-noite ou cortisol urinário livre de 24h).",
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a principal causa geral (mais frequente na prática clínica) de Síndrome de Cushing?",
+        "answer": "Uso exógeno de glicocorticoides / Causa exógena iatrogênica",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a causa endógena mais comum de Síndrome de Cushing, correspondendo a 80-85% das causas dependentes de ACTH?",
+        "answer": "Doença de Cushing / Adenoma hipofisário secretor de ACTH",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é o sintoma muscular considerado mais específico no quadro clínico da Síndrome de Cushing, decorrente do catabolismo proteico?",
+        "answer": "Fraqueza muscular proximal / Miopatia proximal",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Em crianças com obesidade, como se comporta a **idade óssea** na obesidade exógena comum versus na Síndrome de Cushing?",
+        "answer": "Avançada",
+        "answer2": "Atrasada",
+        "placeholder1": "Obesidade exógena",
+        "placeholder2": "Síndrome de Cushing",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Um paciente de 58 anos, tabagista pesado, apresenta quadro abrupto de astenia intensa, perda ponderal rápida, hiperpigmentação cutânea, hipertensão grave e hipocalemia refratária com alcalose metabólica. Exames revelam cortisol sérico extremamente elevado e ACTH de $280\\text{ pg/mL}$. Qual é o tumor primário mais provável subjacente a essa síndrome?",
+        "answer": "Carcinoma de pequenas células do pulmão (oat cell)",
+        "options": [
+            "Carcinoma de pequenas células do pulmão (oat cell)",
+            "Corticotropinoma hipofisário benigno",
+            "Adenoma da zona fasciculada da adrenal",
+            "Carcinoma papilífero da tireoide"
+        ],
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete as características e pontos de corte dos testes de confirmação diagnóstica de hipercortisolismo:\n\n1. Cortisol sérico matinal após 1 mg de dexametasona à meia-noite não suprimido: > _ $\\mu\\text_$.\n2. Cortisol urinário livre de 24 horas considerado positivo quando maior que _ a _ vezes o limite superior da normalidade em pelo menos 2 amostras.\n3. Diagnóstico confirmado de hipercortisolismo requer a positividade de pelo menos _ testes diferentes alterados.",
+        "answer": "1,8; 3; 4; 2",
+        "answers": [
+            "1,8",
+            "3",
+            "4",
+            "2"
+        ],
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "flowchart",
+        "description": "Abordagem Sistemática e Diagnóstico Diferencial da Síndrome de Cushing",
+        "nodes": [
+            {
+                "id": "s1",
+                "text": "Suspeita clínica: Confirmar hipercortisolismo com pelo menos _ testes positivos (1mg DST, Salivar noturno, UFC 24h)",
+                "blanks": [
+                    "2"
+                ],
+                "next": [
+                    "s2"
+                ]
+            },
+            {
+                "id": "s2",
+                "text": "Dosagem de _ sérico para definir dependência",
+                "blanks": [
+                    "ACTH"
+                ],
+                "next": [
+                    "s3",
+                    "s4",
+                    "s5"
+                ]
+            },
+            {
+                "id": "s3",
+                "text": "ACTH < 5 pg/mL: ACTH-independente -> Solicitar _",
+                "blanks": [
+                    "TC de abdome / adrenais"
+                ],
+                "next": []
+            },
+            {
+                "id": "s4",
+                "text": "ACTH > 20 pg/mL: ACTH-dependente -> Solicitar _",
+                "blanks": [
+                    "RM de hipófise / sela túrcica"
+                ],
+                "next": [
+                    "s6"
+                ]
+            },
+            {
+                "id": "s5",
+                "text": "ACTH entre 5 e 20 pg/mL: Realizar teste de estímulo com _",
+                "blanks": [
+                    "CRH / DDAVP"
+                ],
+                "next": []
+            },
+            {
+                "id": "s6",
+                "text": "RM com lesão < 6 mm ou duvidosa: Realizar _",
+                "blanks": [
+                    "cateterismo de seio petroso inferior"
+                ],
+                "next": []
+            }
+        ],
+        "answer": "Suspeita clínica: Confirmar hipercortisolismo com pelo menos 2 testes positivos (1mg DST, Salivar noturno, UFC 24h) -> Dosagem de ACTH sérico para definir dependência -> ACTH < 5 pg/mL: ACTH-independente -> Solicitar TC de abdome / adrenais -> ACTH > 20 pg/mL: ACTH-dependente -> Solicitar RM de hipófise / sela túrcica -> ACTH entre 5 e 20 pg/mL: Realizar teste de estímulo com CRH / DDAVP -> RM com lesão < 6 mm ou duvidosa: Realizar cateterismo de seio petroso inferior",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "O que caracteriza a Síndrome de Nelson, qual a sua etiologia e quais são as suas manifestações clínicas clássicas?",
+        "answer": "### Definição e Etiopatogenia:\nComplicação grave que surge após a realização de **adrenalectomia bilateral total** em pacientes com **Doença de Cushing** não controlada.\n- A retirada de ambas as adrenais remove completamente o mecanismo de *feedback* negativo que o cortisol exercia sobre o tumor hipofisário.\n- O corticotropinoma residual sofre expansão tumoral agressiva e veloz, tornando-se um macroadenoma invasivo.\n\n### Tríade Clínica / Laboratorial:\n1. **Hiperpigmentação cutâneo-mucosa difusa:** Devido à hiperprodução desordenada de POMC, ACTH e MSH.\n2. **Compressão quiasmática / neuroftálmica:** Hemianopsia bitemporal e paralisia de pares cranianos oculomotores.\n3. **Níveis séricos de ACTH astronomicamente elevados** (frequentemente $> 1.000\\text{ pg/mL}$).",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a via cirúrgica padrão-ouro de primeira linha para o tratamento curativo da Doença de Cushing?",
+        "answer": "Cirurgia transesfenoidal / Ressecção hipofisária transesfenoidal",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são as duas causas mais frequentes de Hiperaldosteronismo Primário (HAP), especificando a conduta padrão (clínica ou cirúrgica) de cada uma?",
+        "answer": "Hiperplasia adrenal bilateral com tratamento clínico",
+        "answer2": "Adenoma produtor de aldosterona com tratamento cirúrgico",
+        "placeholder1": "Causa mais comum global e conduta",
+        "placeholder2": "Causa unilateral cirúrgica clássica (Conn)",
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a tríade clínica e laboratorial clássica do Hiperaldosteronismo Primário?",
+        "answer": "Hipertensão, hipocalemia e alcalose metabólica",
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Preencha os impactos farmacológicos das classes de anti-hipertensivos sobre a avaliação laboratorial do eixo renina-aldosterona (use apenas as setas ↑, ↓ ou ↔):\n\n| Droga / Classe | Efeito na Aldosterona | Efeito na Renina | Efeito na Relação Aldo/APR |\n|---|---|---|---|\n| Betabloqueadores | _ | _ | _ |\n| Diuréticos espoliadores de potássio | _ | _ | _ |\n| IECA / BRA | _ | _ | _ |",
+        "answer": "↓; ↓; ↑; ↑; ↑; ↓; ↓; ↑; ↓",
+        "answers": [
+            "↓",
+            "↓",
+            "↑",
+            "↑",
+            "↑",
+            "↓",
+            "↓",
+            "↑",
+            "↓"
+        ],
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Por quantas semanas antes do rastreio bioquímico de HAP medicamentos como espironolactona e diuréticos espoliadores de potássio devem ser suspensos?",
+        "answer": "4 semanas",
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Em qual das seguintes situações clínicas o teste confirmatório de hiperaldosteronismo primário é **dispensado**, autorizando seguir diretamente para o diagnóstico topográfico?",
+        "answer": "Hipocalemia espontânea documentada associada a aldosterona > 20 ng/dL e renina suprimida",
+        "options": [
+            "Hipocalemia espontânea documentada associada a aldosterona > 20 ng/dL e renina suprimida",
+            "Hipertensão estágio 1 controlada com monoterapia de hidroclorotiazida",
+            "Relação aldosterona/renina (RAR) igual a 25 com potássio sérico de 4,2 mEq/L",
+            "Paciente portador de incidentaloma adrenal de 8 mm não funcionante"
+        ],
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual classe farmacológica é empregada no preparo pré-operatório da adrenalectomia unilateral por adenoma de Conn por pelo menos 2 semanas para evitar hipotensão pós-operatória?",
+        "answer": "Antagonistas do receptor de mineralocorticoide / Espironolactona / Eplerenona",
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual exame invasivo é o padrão-ouro para lateralizar a fonte de hipersecreção de aldosterona quando a TC de adrenais é duvidosa ou evidencia lesões bilaterais em candidato cirúrgico?",
+        "answer": "Cateterismo de veias adrenais",
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a tríade de sintomas paroxísticos clássica do feocromocitoma?",
+        "answer": "Cefaleia, palpitações e sudorese",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a denominação específica dada aos tumores secretores de catecolaminas derivados de células cromafins de localização extra-adrenal?",
+        "answer": "Paragangliomas",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é o principal agrupamento anatômico para-aórtico extra-adrenal de células cromafins onde mais frequentemente se originam os paragangliomas?",
+        "answer": "Órgão de Zuckerkandl",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete as estatísticas históricas da clássica **Regra dos 10** do feocromocitoma:\n- _% dos tumores têm localização extra-adrenal (paragangliomas).\n- _% são bilaterais ou múltiplos.\n- _% são malignos na adrenal (chegando a 33% nos paragangliomas).\n- _% têm recorrência pós-cirúrgica.\n- 10% a _% possuem determinismo genético / familiar.",
+        "answer": "10; 10; 10; 10; 25",
+        "answers": [
+            "10",
+            "10",
+            "10",
+            "10",
+            "25"
+        ],
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é o exame laboratorial com maior sensibilidade para o diagnóstico bioquímico de feocromocitoma?",
+        "answer": "Metanefrinas livres plasmáticas / Metanefrinas plasmáticas fracionadas",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "No preparo pré-operatório para ressecção cirúrgica de um feocromocitoma, por que é formalmente contraindicado prescrever betabloqueador antes de se atingir o bloqueio alfa-adrenérgico pleno?",
+        "answer": "O betabloqueio isolado anula a vasodilatação mediada por $\\beta_2$, gerando estímulo $\\alpha_1$ vasoconstritor desimpedido e crise hipertensiva grave",
+        "options": [
+            "O betabloqueio isolado anula a vasodilatação mediada por $\\beta_2$, gerando estímulo $\\alpha_1$ vasoconstritor desimpedido e crise hipertensiva grave",
+            "O betabloqueador acelera a degradação periférica de adrenalina em metanefrinas, falseando a dosagem",
+            "O betabloqueio precipita hipoglicemia refratária imediata e acidose metabólica hiperclorêmica",
+            "O uso prévio de betabloqueador inibe a proliferação dos receptores alfa vasculares essenciais para evitar colapso"
+        ],
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "No preparo pré-operatório do feocromocitoma, qual é o fármaco alfa-bloqueador de primeira linha no Brasil e qual é o tempo padrão de duração desse preparo prévio à cirurgia?",
+        "answer": "Prazosina",
+        "answer2": "10 a 14 dias",
+        "placeholder1": "Alfa-bloqueador de 1ª linha no Brasil",
+        "placeholder2": "Tempo padrão de preparo",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Como diferenciar a composição genética e clínica da Neoplasia Endócrina Múltipla tipo 2A (NEM 2A) versus tipo 2B (NEM 2B)?",
+        "answer": "Ambas decorrem de mutações ativadoras com herança autossômica dominante no **proto-oncogene RET** (cromossomo 10).\n\n### Comparativo Clínico:\n| Parâmetro | NEM 2A (Síndrome de Sipple) | NEM 2B |\n|---|---|---|\n| **Carcinoma Medular de Tireoide (CMT)** | Presente (100%), surge até a juventude | Presente (100%), extremamente precoce e virulento |\n| **Feocromocitoma** | Presente em 50% (adrenais e bilaterais) | Presente em 50% (adrenais e bilaterais) |\n| **Hiperparatireoidismo Primário** | Presente em 20% a 30% (hiperplasia) | **AUSENTE** |\n| **Estigmas Fenotípicos Físicos** | Ausentes | **Neuromas de mucosa** (lábios/língua), ganglioneuromatose e **hábito marfanoide** |",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a mutação genética mais comum associada a feocromocitomas e paragangliomas familiares com predisposição a comportamento maligno ('SDH-Bad')?",
+        "answer": "Mutação na subunidade SDHB / Succinato desidrogenase B",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "A partir de qual diâmetro em milímetros uma massa adrenal descoberta ao acaso preenche a definição de incidentaloma adrenal necessitando de investigação?",
+        "answer": "10 mm",
+        "topic": "Incidentalomas Adrenais",
+        "aiTopic": "Incidentalomas Adrenais",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete as características tomográficas que diferenciam adenomas benignos de carcinomas adrenais suspeitos:\n\n- Tamanho tumoral de suspeição de malignidade: > _ cm.\n- Atenuação tomográfica basal na TC sem contraste indicativa de malignidade: > _ UH.\n- Lavagem do meio de contraste (*washout*) no carcinoma é caracteristicamente _.\n- Atenuação tomográfica típica do adenoma rico em lipídios: < _ UH.",
+        "answer": "4; 20; lento; 10",
+        "answers": [
+            "4",
+            "20",
+            "lento",
+            "10"
+        ],
+        "topic": "Incidentalomas Adrenais",
+        "aiTopic": "Incidentalomas Adrenais",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual exame bioquímico deve ser obrigatoriamente realizado e negativo antes de se considerar a realização de qualquer biópsia percutânea de adrenal para evitar crise adrenérgica fatal?",
+        "answer": "Rastreio de feocromocitoma / Metanefrinas plasmáticas ou urinárias",
+        "topic": "Incidentalomas Adrenais",
+        "aiTopic": "Incidentalomas Adrenais",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a principal etiologia de insuficiência adrenal no mundo ocidental, considerando causas endógenas e iatrogênicas?",
+        "answer": "Suspensão abrupta de corticoterapia exógena / Uso exógeno crônico de glicocorticoides",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual autoanticorpo sérico é positivo em mais de 80-85% dos pacientes com adrenalite autoimune (Doença de Addison primária)?",
+        "answer": "Anti-21-hidroxilase / Anti-21OH",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "No diagnóstico diferencial da insuficiência adrenal, quais são os dois principais achados clínicos/laboratoriais que ocorrem exclusivamente na forma **primária** (ausentes na secundária)?",
+        "answer": "Hiperpigmentação cutaneomucosa",
+        "answer2": "Hipercalemia / Hipoaldosteronismo",
+        "placeholder1": "Achado físico decorrente de POMC/MSH",
+        "placeholder2": "Distúrbio eletrolítico por falta de mineralocorticoide",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete os critérios diagnósticos hormonais da insuficiência adrenal colhidos entre 7h e 10h da manhã:\n- Cortisol sérico basal $\\le$ _ $\\mu\\text_$: confirma insuficiência adrenal.\n- Cortisol sérico basal $\\ge$ _ $\\mu\\text_$: exclui insuficiência adrenal.\n- Valores intermediários entre 3 e 18 $\\mu\\text_$ exigem o teste de estímulo com cortrosina, confirmando falência caso o cortisol pós-estímulo permaneça < _ $\\mu\\text_$.\n- Níveis basais de ACTH $\\ge$ _ $\\text_$ diferenciam a causa primária da central.",
+        "answer": "3; 18; 18; 100",
+        "answers": [
+            "3",
+            "18",
+            "18",
+            "100"
+        ],
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual síndrome rara é caracterizada por necrose hemorrágica maciça bilateral das glândulas adrenais no contexto de sepse grave bacteriana (meningococo/Pseudomonas)?",
+        "answer": "Síndrome de Waterhouse-Friderichsen",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual patologia genética ligada ao X decorre do acúmulo de ácidos graxos de cadeia muito longa (VLCFA), provocando desmielinização e insuficiência adrenal em meninos?",
+        "answer": "Adrenoleucodistrofia",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Quais são os componentes endócrinos e as mutações genéticas que diferenciam a Síndrome Poliglandular Autoimune tipo 1 da Síndrome Poliglandular tipo 2 (Síndrome de Schmidt)?",
+        "answer": "### Comparação das Síndromes Poliglandulares:\n\n| Característica | Tipo 1 (APECED) | Tipo 2 (Síndrome de Schmidt) |\n|---|---|---|\n| **Herança Genética** | Autossômica recessiva (mutação do gene **AIRE**) | Poligênica / HLA-DR3 e HLA-DR4 |\n| **Idade de Acometimento** | Infância precoce | Adultos jovens e meia-idade |\n| **Componentes Cardinais** | Tríade clássica:<br>1. Candidíase mucocutânea crônica (~100%)<br>2. Hipoparatireoidismo primário (~80-90%)<br>3. Insuficiência Adrenal primária (~60-70%) | Associação obrigatória:<br>1. Insuficiência Adrenal primária (Addison - 100%)<br>2. Tireoidite autoimune (Hashimoto/Graves) e/ou DM1 |\n| **Outros Acometimentos** | Ectodermopatia, vitiligo, hipogonadismo | Doença celíaca, vitiligo, anemia perniciosa |",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "flowchart",
+        "description": "Protocolo de Manejo Emergencial da Crise Adrenal Aguda (Addisoniana)",
+        "nodes": [
+            {
+                "id": "s1",
+                "text": "Instabilidade hemodinâmica, choque refratário, vômitos e hiponatremia/hipercalemia",
+                "blanks": [],
+                "next": [
+                    "s2"
+                ]
+            },
+            {
+                "id": "s2",
+                "text": "Expansão volêmica vigorosa com _ e glicose se hipoglicemia",
+                "blanks": [
+                    "Soro Fisiológico 0,9%"
+                ],
+                "next": [
+                    "s3"
+                ]
+            },
+            {
+                "id": "s3",
+                "text": "Dose de ataque imediata de _ 100 mg a 300 mg EV em bolus",
+                "blanks": [
+                    "Hidrocortisona"
+                ],
+                "next": [
+                    "s4"
+                ]
+            },
+            {
+                "id": "s4",
+                "text": "Manutenção com Hidrocortisona 50 a 100 mg EV a cada _",
+                "blanks": [
+                    "6 a 8 horas"
+                ],
+                "next": [
+                    "s5"
+                ]
+            },
+            {
+                "id": "s5",
+                "text": "Transição para via oral em dose dobrada após estabilização e pesquisa do fator desencadeante",
+                "blanks": [],
+                "next": []
+            }
+        ],
+        "answer": "Instabilidade hemodinâmica, choque refratário, vômitos e hiponatremia/hipercalemia -> Expansão volêmica vigorosa com Soro Fisiológico 0,9% e glicose se hipoglicemia -> Dose de ataque imediata de Hidrocortisona 100 mg a 300 mg EV em bolus -> Manutenção com Hidrocortisona 50 a 100 mg EV a cada 6 a 8 horas -> Transição para via oral em dose dobrada após estabilização e pesquisa do fator desencadeante",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Quais são as regras práticas de desmame e riscos de supressão do eixo HHA em pacientes em corticoterapia crônica?",
+        "answer": "### Riscos de Supressão do Eixo HHA:\n- **Dose e Tempo com Supressão Provável (Exige Desmame):**\n  - Prednisona $\\ge 20\\text{ mg/dia}$ por mais de 3 semanas.\n  - Prednisona $\\ge 7,5\\text{ mg/dia}$ por mais de 1 mês.\n  - Qualquer paciente que apresente fenótipo cushingoide clínico.\n- **Doses Seguras (Sem Supressão Relevante):** Doses de prednisona $< 5\\text{ mg/dia}$ ou uso por período menor que 3 semanas.\n\n### Esquema de Redução Gradual:\n- Reduzir 10% a 20% da dose semanalmente.\n- Se dose $> 40\\text{ mg}$: reduzir 5 a 10 mg a cada 1-2 semanas.\n- Entre 20-40 mg: reduzir 5 mg a cada 1-2 semanas.\n- Entre 10-20 mg: reduzir 2,5 mg a cada 2-3 semanas.\n- $\\le 5\\text{ mg/dia}$: dosar cortisol sérico basal para avaliar integridade do eixo antes da suspensão.",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual estrutura embrionária localizada na base da língua (assoalho da faringe primitiva) marca a origem anatômica inicial da glândula tireoide?",
+        "answer": "Forame cego / Foramen caecum",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual ligamento fibroso fixa firmemente a glândula tireoide à cartilagem cricoide e anéis traqueais, justificando sua elevação na deglutição?",
+        "answer": "Ligamento de Berry / Ligamento suspensório de Berry",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais nervos cranianos/ramos apresentam íntima relação anatômica de risco cirúrgico com a **artéria tireóidea superior** e com a **artéria tireóidea inferior**, respectivamente?",
+        "answer": "Ramo externo do nervo laríngeo superior",
+        "answer2": "Nervo laríngeo recorrente",
+        "placeholder1": "Relação com artéria tireóidea superior",
+        "placeholder2": "Relação com artéria tireóidea inferior",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a manifestação funcional vocal típica ocasionada pela secção inadvertida unilateral do ramo externo do nervo laríngeo superior?",
+        "answer": "Incapacidade de emitir sons agudos / Perda dos tons agudos",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual artéria inconstante presente em cerca de 10% dos indivíduos ascende na linha média traqueal diretamente da aorta/tronco braquiocefálico até o istmo tireoidiano?",
+        "answer": "Artéria tireóidea ima",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Em torno de quais estruturas vasculares os **nervos laríngeos recorrentes direito e esquerdo** realizam suas alças anatômicas, respectivamente?",
+        "answer": "Artéria subclávia direita",
+        "answer2": "Arco da aorta",
+        "placeholder1": "Nervos laríngeo recorrente direito",
+        "placeholder2": "Nervo laríngeo recorrente esquerdo",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a origem embriológica das células parafoliculares (células C) da tireoide, responsáveis pela secreção do hormônio calcitonina?",
+        "answer": "Crista neural",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual simportador da membrana basolateral do tireócito transporta ativamente o iodeto plasmático para o meio intracelular acoplado a dois íons sódio?",
+        "answer": "NIS / Simportador Sódio-Iodeto",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual transportador da membrana apical do tireócito efetua o efluxo de iodeto citoplasmático para o lúmen folicular preenchido por coloide?",
+        "answer": "Pendrina",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a principal enzima da síntese tireoidiana, localizada na membrana apical, que executa oxidação, iodação e acoplamento?",
+        "answer": "Tireoperoxidase / TPO",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "flowchart",
+        "description": "Etapas Bioquímicas Intracelulares da Hormonogênese Tireoidiana",
+        "nodes": [
+            {
+                "id": "s1",
+                "text": "Captação ativa basolateral de iodeto pelo carreador _",
+                "blanks": [
+                    "NIS"
+                ],
+                "next": [
+                    "s2"
+                ]
+            },
+            {
+                "id": "s2",
+                "text": "Transporte apical e efluxo ao lúmen coloide pela proteína _",
+                "blanks": [
+                    "Pendrina"
+                ],
+                "next": [
+                    "s3"
+                ]
+            },
+            {
+                "id": "s3",
+                "text": "Oxidação do iodeto mediada pela enzima _ e água oxigenada (DUOX2)",
+                "blanks": [
+                    "TPO"
+                ],
+                "next": [
+                    "s4"
+                ]
+            },
+            {
+                "id": "s4",
+                "text": "Organificação: acoplamento do iodo aos anéis tirosil da _ gerando MIT e DIT",
+                "blanks": [
+                    "tireoglobulina"
+                ],
+                "next": [
+                    "s5"
+                ]
+            },
+            {
+                "id": "s5",
+                "text": "Acoplamento intramembranar oxidativo formando _",
+                "blanks": [
+                    "T3 e T4"
+                ],
+                "next": [
+                    "s6"
+                ]
+            },
+            {
+                "id": "s6",
+                "text": "Pinocitose coloide e proteólise lisossômica liberando os hormônios livres na circulação",
+                "blanks": [],
+                "next": []
+            }
+        ],
+        "answer": "Captação ativa basolateral de iodeto pelo carreador NIS -> Transporte apical e efluxo ao lúmen coloide pela proteína Pendrina -> Oxidação do iodeto mediada pela enzima TPO e água oxigenada (DUOX2) -> Organificação: acoplamento do iodo aos anéis tirosil da tireoglobulina gerando MIT e DIT -> Acoplamento intramembranar oxidativo formando T3 e T4 -> Pinocitose coloide e proteólise lisossômica liberando os hormônios livres na circulação",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Qual é a principal proteína plasmática carreadora responsável pelo transporte de 70-80% do T3 e T4 circulantes e qual é a meia-vida do T4 livre?",
+        "answer": "TBG / Globulina ligadora de tiroxina",
+        "answer2": "7 dias",
+        "placeholder1": "Proteína de transporte majoritária",
+        "placeholder2": "Meia-vida do T4L",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete as características funcionais das deiodinases:\n- A deiodinase do tipo _ atua no fígado, rins e tireoide e é inibida por propiltiouracil (PTU), propranolol e glicocorticoides.\n- A deiodinase do tipo _ é expressa no SNC e adenohipófise, sendo a responsável pelo feedback negativo sobre a secreção de TSH.\n- A deiodinase do tipo _ realiza a inativação de T4 em T3 reverso ($rT_3$).",
+        "answer": "1; 2; 3",
+        "answers": [
+            "1",
+            "2",
+            "3"
+        ],
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Como se denominam, respectivamente, o fenômeno de bloqueio agudo da síntese hormonal por sobrecarga de iodo e o fenômeno de hiperprodução de hormônios induzido por iodo em nódulo autônomo?",
+        "answer": "Efeito Wolff-Chaikoff",
+        "answer2": "Fenômeno de Jod-Basedow",
+        "placeholder1": "Bloqueio transitório pela TPO",
+        "placeholder2": "Tireotoxicose induzida por substrato",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "O que é a relação log-linear entre TSH e T4 livre e qual é o seu significado na prática clínica laboratorial?",
+        "answer": "### Relação Log-Linear:\nA secreção adenohipofisária de TSH responde a variações nos níveis periféricos de T4 livre através de um modelo logaritmicamente amplificado inverso.\n- **Conceito Matemático:** Pequenas alterações de **2 vezes** nos níveis de T4 livre resultam em variações de até **100 vezes** na concentração sérica basal de TSH.\n\n### Implicação Diagnóstica Prática:\n- O **TSH é o teste mais sensível e precoce** para identificar disfunções tireoidianas intrínsecas (primárias).\n- Ele se altera substancialmente mesmo quando o T4L ainda se mantém dentro dos valores de referência laboratoriais (estágios subclínicos de hipo e hipertireoidismo).",
+        "topic": "Anatomia e Fisiologia Tireoidiana",
+        "aiTopic": "Anatomia e Fisiologia Tireoidiana",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Um paciente admitido na UTI em choque séptico grave apresenta: TSH $0,2\\text{ mUI/L}$ (VR: 0,4-4,5), T4 Livre normal, T3 Total acentuadamente diminuído e $rT_3$ (T3 reverso) bastante aumentado. Não há histórico de doença tireoidiana. Qual é a conduta médica correta?",
+        "answer": "Não administrar levotiroxina ou triiodotironina; apenas tratar a sepse de base e reavaliar ambulatorialmente",
+        "options": [
+            "Não administrar levotiroxina ou triiodotironina; apenas tratar a sepse de base e reavaliar ambulatorialmente",
+            "Iniciar reposição imediata de levotiroxina em dose plena de $1,6\\ \\mu\\text{g/kg/dia}$ para acelerar o desmame de drogas vasoativas",
+            "Prescrever liotironina (T3 sintético) intravenosa devido à falha da desiodase tipo 1 tecidual",
+            "Solicitar ressonância magnética de urgência de sela túrcica para investigar hipofisite séptica"
+        ],
+        "topic": "Síndrome do Eutireoideo Doente",
+        "aiTopic": "Síndrome do Eutireoideo Doente",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a alteração hormonal isolada mais precoce e característica na fase inicial da Síndrome do Eutireoideo Doente?",
+        "answer": "Queda isolada de T3 / T3 baixo",
+        "topic": "Síndrome do Eutireoideo Doente",
+        "aiTopic": "Síndrome do Eutireoideo Doente",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual anticorpo sérico é o mais sensível e específico para comprovação da autoimunidade na Tireoidite de Hashimoto, presente em >90-95% dos pacientes?",
+        "answer": "Anti-TPO / Anticorpo antitireoperoxidase",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete as alterações laboratoriais sistêmicas secundárias ao hipotireoidismo descompensado:\n- No perfil lipídico ocorre elevação expressiva de _ devido à redução dos receptores hepáticos.\n- Nas enzimas musculares observa-se elevação persistente de _.\n- No hemograma o achado clássico da série vermelha é anemia _ e _.\n- No eixo hipofisário pode haver elevação sérica de _ gerando galactorreia e amenorreia.",
+        "answer": "LDL / colesterol; CPK; normocítica; normocrômica; prolactina",
+        "answers": [
+            "LDL / colesterol",
+            "CPK",
+            "normocítica",
+            "normocrômica",
+            "prolactina"
+        ],
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são as doses iniciais diárias recomendadas de Levotiroxina (LT4) para um **adulto jovem hígido** e para um **idoso cardiopata com coronariopatia**, respectivamente?",
+        "answer": "1,6 a 1,8 mcg/kg/dia",
+        "answer2": "12,5 a 25 mcg/dia",
+        "placeholder1": "Dose plena no jovem",
+        "placeholder2": "Dose inicial no idoso/cardiopata",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Quantos minutos antes do café da manhã o comprimido de levotiroxina sódica deve ser ingerido, apenas com água pura, para garantir sua absorção ideal?",
+        "answer": "30 a 60 minutos",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual intervalo de horas deve ser respeitado entre a administração de Levotiroxina e suplementos orais de cálcio ou sulfato ferroso para evitar quelação luminar?",
+        "answer": "4 horas",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Em uma paciente com diagnóstico prévio de hipotireoidismo primário que acaba de confirmar gestação no primeiro trimestre (teste de gravidez positivo), qual conduta farmacológica deve ser imediatamente adotada?",
+        "answer": "Aumentar empiricamente a dose semanal de levotiroxina em 25% a 30% e solicitar dosagem de TSH imediata",
+        "options": [
+            "Aumentar empiricamente a dose semanal de levotiroxina em 25% a 30% e solicitar dosagem de TSH imediata",
+            "Suspender a levotiroxina para não expor a tireoide fetal a excesso hormonal no primeiro trimestre",
+            "Trocar a levotiroxina oral por propiltiouracil (PTU) devido à segurança obstétrica",
+            "Manter a mesma dose inalterada e aguardar o ultrassom obstétrico morfológico"
+        ],
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual síndrome infantil decorre de hipotireoidismo primário severo de longa data não tratado, levando a pseudopuberdade precoce com atraso extremo da idade óssea?",
+        "answer": "Síndrome de Van Wyk-Grumbach",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a janela cronológica neonatal obrigatória estipulada para a coleta do Teste do Pezinho na triagem do hipotireoidismo congênito?",
+        "answer": "Entre o 3º e o 5º dia de vida",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "No paciente admitido em coma mixedematoso com instabilidade hemodinâmica, hiporreflexia e hipotermia grave, por que a infusão intravenosa de glicocorticoides deve anteceder a reposição hormonal tireoidiana?",
+        "answer": "O hormônio tireoidiano acelera a depuração hepática do cortisol e pode deflagrar crise adrenal fulminante em caso de insuficiência adrenal concomitante",
+        "options": [
+            "O hormônio tireoidiano acelera a depuração hepática do cortisol e pode deflagrar crise adrenal fulminante em caso de insuficiência adrenal concomitante",
+            "O corticoide atua como substrato direto para a entrada de levotiroxina no sistema nervoso central",
+            "O glicocorticoide induz a abertura imediata dos canais de cálcio SERCA2a miocárdicos",
+            "A reposição isolada de levotiroxina precipita hipocalcemia sintomática imediata"
+        ],
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual medida física de aquecimento ativo é contraindicada no coma mixedematoso pelo risco de vasodilatação cutânea periférica abrupta e colapso circulatório?",
+        "answer": "Aquecimento ativo externo com cobertores a vapor ou bolsas de água quente",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual vitamina (B7/H) presente em fórmulas capilares promove interferência metodológica gerando falso aumento de T4L/T3L e falsa supressão de TSH nos imunoensaios?",
+        "answer": "Biotina",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são, respectivamente, o autoanticorpo patognomônico da Doença de Graves e a sua classe de imunoglobulina?",
+        "answer": "Anti-TRAb / TSI",
+        "answer2": "IgG",
+        "placeholder1": "Nome do anticorpo",
+        "placeholder2": "Classe de imunoglobulina",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a denominação semiológica dada à incapacidade ou atraso na descida da pálpebra superior ao acompanhar o olhar de cima para baixo na tireotoxicose?",
+        "answer": "Sinal de Von Graefe / Lid lag",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a alteração dermatológica infiltrativa típica da Doença de Graves decorrente da deposição de glicosaminoglicanos na derme reticular pré-tibial?",
+        "answer": "Mixedema pré-tibial",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é o principal fator de risco comportamental ambiental modificável associado à exacerbação e pior prognóstico da Oftalmopatia de Graves?",
+        "answer": "Tabagismo / Fumo",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é o padrão clássico à ultrassonografia com Doppler da glândula tireoide na Doença de Graves ativa decorrente da hipervascularização difusa?",
+        "answer": "Inferno tireoidiano",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Preencha o quadro diferencial das formas de tireotoxicose:\n\n| Condição | Captação no Radioiodo (RAIU) | Níveis de Tireoglobulina Sérica | Padrão Doppler |\n|---|---|---|---|\n| Doença de Graves | Aumentada _ | Elevada | Fluxo difusamente elevado |\n| Tireoidite Destrutiva | Nula / Baixa (< _%) | Muito _ | Fluxo normal ou reduzido |\n| Tireotoxicose Factícia | Nula / Baixa (< 1%) | _ ou indetectável | Fluxo reduzido |",
+        "answer": "difusamente; 2; elevada; Muito baixa",
+        "answers": [
+            "difusamente",
+            "2",
+            "elevada",
+            "Muito baixa"
+        ],
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual droga antitireoidiana da classe das tionamidas é a preferencial no primeiro trimestre da gestação devido ao menor risco teratogênico comparado ao metimazol?",
+        "answer": "Propiltiouracila / PTU",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual reação adversa idiossincrática grave das tionamidas (metimazol/PTU) manifesta-se tipicamente com febre alta e odinofagia, exigindo hemograma imediato e suspensão definitiva?",
+        "answer": "Agranulocitose / Neutropenia neutrofílica severa",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a duração preconizada do curso inicial contínuo de tratamento com tionamidas na Doença de Graves antes de tentar a suspensão por remissão?",
+        "answer": "12 a 18 meses",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Qual das seguintes situações clínicas contraindica formalmente a realização de radioiodoterapia com Iodo-131 na Doença de Graves?",
+        "answer": "Oftalmopatia infiltrativa de Graves em atividade clínica moderada a grave",
+        "options": [
+            "Oftalmopatia infiltrativa de Graves em atividade clínica moderada a grave",
+            "Paciente idoso com fibrilação atrial associada à tireotoxicose",
+            "Recidiva de hipertireoidismo após curso de 18 meses de metimazol",
+            "Alergia cutânea leve e prurido secundários às tionamidas"
+        ],
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual solução farmacológica rica em iodo deve ser administrada por 7 a 10 dias antes da tireoidectomia na Doença de Graves para reduzir a vascularização e friabilidade glandular?",
+        "answer": "Solução de Lugol",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete os critérios diagnósticos da escala de Burch e Wartofsky (BWPS) para crise tireotóxica:\n- Pontuação < _ pontos: crise tireotóxica improvável.\n- Pontuação de 25 a _ pontos: crise iminente.\n- Pontuação $\\ge$ _ pontos: diagnóstico altamente sugestivo de crise tireotóxica deflagrando protocolo de tratamento imediato.",
+        "answer": "25; 44; 45",
+        "answers": [
+            "25",
+            "44",
+            "45"
+        ],
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "flowchart",
+        "description": "Sequência Farmacológica Emergencial da Tempestade Tireoidiana (Crise Tireotóxica)",
+        "nodes": [
+            {
+                "id": "s1",
+                "text": "1ª Etapa: Bloqueio da síntese e da D1 com _ (500-1000 mg dose de ataque)",
+                "blanks": [
+                    "Propiltiouracila / PTU"
+                ],
+                "next": [
+                    "s2"
+                ]
+            },
+            {
+                "id": "s2",
+                "text": "2ª Etapa: Bloqueio adrenérgico e periférico com _ em doses altas",
+                "blanks": [
+                    "Propranolol"
+                ],
+                "next": [
+                    "s3"
+                ]
+            },
+            {
+                "id": "s3",
+                "text": "Aguardar intervalo obrigatório de pelo menos _ para não ofertar substrato novo à tireoide",
+                "blanks": [
+                    "1 hora"
+                ],
+                "next": [
+                    "s4"
+                ]
+            },
+            {
+                "id": "s4",
+                "text": "3ª Etapa: Bloqueio da liberação folicular com _ ou iodeto de potássio",
+                "blanks": [
+                    "Solução de Lugol"
+                ],
+                "next": [
+                    "s5"
+                ]
+            },
+            {
+                "id": "s5",
+                "text": "4ª Etapa: Inibição da conversão periférica e cobertura de estresse com _ intravenosa",
+                "blanks": [
+                    "Hidrocortisona"
+                ],
+                "next": []
+            }
+        ],
+        "answer": "1ª Etapa: Bloqueio da síntese e da D1 com Propiltiouracila / PTU (500-1000 mg dose de ataque) -> 2ª Etapa: Bloqueio adrenérgico e periférico com Propranolol em doses altas -> Aguardar intervalo obrigatório de pelo menos 1 hora para não ofertar substrato novo à tireoide -> 3ª Etapa: Bloqueio da liberação folicular com Solução de Lugol ou iodeto de potássio -> 4ª Etapa: Inibição da conversão periférica e cobertura de estresse com Hidrocortisona intravenosa",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual antipirético comum é formalmente contraindicado na crise tireotóxica por deslocar T4 e T3 dos seus sítios de ligação à TBG?",
+        "answer": "Ácido acetilsalicílico / Salicilatos / AAS",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual mutação somática pontual adquirida em clones celulares foliculares é a principal responsável pelo Bócio Multinodular Tóxico e Doença de Plummer?",
+        "answer": "Mutação no receptor de TSH / Gene TSHR ou GNAS",
+        "topic": "Bócio Tóxico e Multinodular",
+        "aiTopic": "Bócio Tóxico e Multinodular",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são os padrões característicos encontrados na **cintilografia tireoidiana** no Bócio Multinodular Tóxico e no Adenoma Tóxico Solitário (Plummer), respectivamente?",
+        "answer": "Padrão em mosaico com áreas hiper e hipocaptantes intercaladas",
+        "answer2": "Nódulo único hipercaptante com supressão do parênquima remanescente",
+        "placeholder1": "Cintilografia no BMT (sal e pimenta)",
+        "placeholder2": "Cintilografia no Adenoma Tóxico",
+        "topic": "Bócio Tóxico e Multinodular",
+        "aiTopic": "Bócio Tóxico e Multinodular",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a conduta cirúrgica curativa conservadora de escolha para o Adenoma Tóxico Solitário da tireoide?",
+        "answer": "Lobectomia com istmectomia / Tireoidectomia parcial unilateral",
+        "topic": "Bócio Tóxico e Multinodular",
+        "aiTopic": "Bócio Tóxico e Multinodular",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual antígeno leucocitário humano (HLA) confere forte predisposição à Tireoidite Subaguda Granulomatosa de De Quervain?",
+        "answer": "HLA-B35 / HLA-Bw35",
+        "topic": "Tireoidites",
+        "aiTopic": "Tireoidites",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual exame inflamatório inespecífico encontra-se caracteristicamente em níveis estratosféricos (>50 a 100 mm/h) na fase dolorosa aguda da tireoidite de De Quervain?",
+        "answer": "VHS / Velocidade de hemossedimentação",
+        "topic": "Tireoidites",
+        "aiTopic": "Tireoidites",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "flowchart",
+        "description": "Evolução Temporal Trifásica Típica da Tireoidite Subaguda de De Quervain",
+        "nodes": [
+            {
+                "id": "s1",
+                "text": "Fase 1: _ aguda (2-6 sem) por lise folicular, dor cervical intensa e RAIU < 1-2%",
+                "blanks": [
+                    "Tireotoxicose"
+                ],
+                "next": [
+                    "s2"
+                ]
+            },
+            {
+                "id": "s2",
+                "text": "Fase 2: _ transitório (2-8 sem) com esgotamento dos estoques de coloide",
+                "blanks": [
+                    "Hipotireoidismo"
+                ],
+                "next": [
+                    "s3"
+                ]
+            },
+            {
+                "id": "s3",
+                "text": "Fase 3: _ e cura definitiva em > 95% dos pacientes com regeneração folicular",
+                "blanks": [
+                    "Eutireoidismo"
+                ],
+                "next": []
+            }
+        ],
+        "answer": "Fase 1: Tireotoxicose aguda (2-6 sem) por lise folicular, dor cervical intensa e RAIU < 1-2% -> Fase 2: Hipotireoidismo transitório (2-8 sem) com esgotamento dos estoques de coloide -> Fase 3: Eutireoidismo e cura definitiva em > 95% dos pacientes com regeneração folicular",
+        "topic": "Tireoidites",
+        "aiTopic": "Tireoidites",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual anomalia anatômica congênita de arco branquial deve ser investigada em crianças e jovens com episódios recorrentes de tireoidite aguda piogênica supurativa?",
+        "answer": "Fístula de seio piriforme / Fístula da 4ª fenda branquial",
+        "topic": "Tireoidites",
+        "aiTopic": "Tireoidites",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Quais são as diferenças fisiopatológicas, de vascularização ao Doppler e tratamento entre a Tireotoxicose Induzida por Amiodarona (AIT) Tipo 1 e Tipo 2?",
+        "answer": "A amiodarona contém ~37% de seu peso molecular em iodo puro (libera 7 a 9 mg de iodo livre/dia).\n\n### Comparativo Diagnóstico e Conduta:\n\n| Característica | AIT Tipo 1 | AIT Tipo 2 |\n|---|---|---|\n| **Mecanismo Patogênico** | Efeito Jod-Basedow em glândula com doença prévia latente | Efeito citotóxico direto com tireoidite destrutiva lítica |\n| **Parênquima Pré-Existente** | Bócio nodular ou Graves subclínico | Glândula morfologicamente normal |\n| **Interleucina-6 (IL-6)** | Normal ou levemente elevada | **Acentuadamente elevada** (marcador de lise) |\n| **Doppler Tireoidiano** | Hipervascularização com fluxo aumentado | Ausência de vascularização / hipofluxo |\n| **Tratamento de Escolha** | **Tionamidas em doses altas** (Metimazol 40 mg/dia) | **Glicocorticoides orais** (Prednisona 40 mg/dia) |\n\n> *Nas formas indeterminadas:* faz-se o teste terapêutico empírico associando Metimazol + Prednisona por 7 a 14 dias.",
+        "topic": "Tireoidites",
+        "aiTopic": "Tireoidites",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual forma rara de tireoidite inflamatória crônica cursa com massa cervical anterior de consistência pétrea ('tireoide em madeira') e pertence ao espectro da doença relacionada à IgG4?",
+        "answer": "Tireoidite de Riedel / Tireoidite fibrosante de Riedel",
+        "topic": "Tireoidites",
+        "aiTopic": "Tireoidites",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual manobra semiológica para avaliação de bócio volumoso consiste na elevação dos braços acima da cabeça gerando pletora facial e turgência jugular?",
+        "answer": "Manobra de Pemberton / Sinal de Pemberton",
+        "topic": "Bócio Tireoidiano",
+        "aiTopic": "Bócio Tireoidiano",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a tríade clínica da Síndrome de Horner que pode surgir por compressão do tronco simpático cervical por um bócio tireoidiano volumoso?",
+        "answer": "Ptose palpebral, miose e anidrose",
+        "topic": "Bócio Tireoidiano",
+        "aiTopic": "Bócio Tireoidiano",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Por que as diretrizes internacionais atuais contraindicam formalmente o uso empírico de doses supressivas de levotiroxina para tentar reduzir o tamanho do bócio tireoidiano atóxico eutireóideo?",
+        "answer": "A supressão do TSH não reduz a massa fibrótica estabelecida e acarreta riscos elevados de arritmias cardíacas (FA) e osteoporose",
+        "options": [
+            "A supressão do TSH não reduz a massa fibrótica estabelecida e acarreta riscos elevados de arritmias cardíacas (FA) e osteoporose",
+            "A levotiroxina induz mutações ativadoras oncogênicas no proto-oncogene RET",
+            "O uso exógeno de levotiroxina inibe a absorção de iodo alimentar pela pendrina",
+            "A administração crônica provoca elevação descontrolada da globulina ligadora de tiroxina"
+        ],
+        "topic": "Bócio Tireoidiano",
+        "aiTopic": "Bócio Tireoidiano",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é o primeiro exame laboratorial obrigatório a ser dosado na investigação de qualquer nódulo tireoidiano detectado na prática clínica?",
+        "answer": "Dosagem de TSH sérico / TSH",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Se o TSH sérico de um paciente portador de nódulo tireoidiano vier suprimido (<0,1 mUI/L), qual exame de imagem funcional está indicado a seguir?",
+        "answer": "Cintilografia de tireoide",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Preencha a pontuação atribuída pelo sistema ultrassonográfico ACR TI-RADS nas seguintes características:\n- Nódulo puramente cístico: _ pontos.\n- Nódulo sólido: _ pontos.\n- Ecogenicidade hipoecoica: _ pontos.\n- Forma 'mais alto do que largo': _ pontos.\n- Margens espiculadas/irregulares: _ pontos.\n- Presença de microcalcificações puntiformes: _ pontos.",
+        "answer": "0; 2; 2; 3; 3; 3",
+        "answers": [
+            "0",
+            "2",
+            "2",
+            "3",
+            "3",
+            "3"
+        ],
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual tipo de nódulo tireoidiano à cintilografia possui risco insignificante de malignidade (<1%), o que geralmente dispensa a realização rotineira de PAAF?",
+        "answer": "Nódulo quente / Nódulo hipercaptante autônomo",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete a tabela da classificação citopatológica de Bethesda para punção de tireoide (PAAF):\n\n| Categoria Bethesda | Risco Estimado de Malignidade | Conduta Padrão Recomendada |\n|---|---|---|\n| Bethesda I (Insatisfatória) | 1% a 4% | Repetir PAAF guiada por US em _ a _ meses |\n| Bethesda II (Benigno) | 0% a 3% | Acompanhamento ultrassonográfico a cada _ a _ meses |\n| Bethesda III (AUS/FLUS) | 5% a 15% | Repetir PAAF em 3-6m ou testes moleculares |\n| Bethesda IV (Neoplasia Folicular) | 20% a 30% | Cirurgia diagnóstica (_) ou painel molecular |\n| Bethesda VI (Maligno) | 97% a 99% | _ \\pm esvaziamento |",
+        "answer": "3; 6; 12; 24; Lobectomia; Tireoidectomia total",
+        "answers": [
+            "3",
+            "6",
+            "12",
+            "24",
+            "Lobectomia",
+            "Tireoidectomia total"
+        ],
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Por que a citologia obtida pela Punção Aspirativa por Agulha Fina (PAAF) é **incapaz** de diferenciar com segurança um adenoma folicular benigno de um carcinoma folicular maligno (Bethesda IV)?",
+        "answer": "O diagnóstico de malignidade no câncer folicular exige a demonstração histopatológica arquitetural de invasão capsular ou angioinvasão vascular, visível apenas na peça cirúrgica inteira",
+        "options": [
+            "O diagnóstico de malignidade no câncer folicular exige a demonstração histopatológica arquitetural de invasão capsular ou angioinvasão vascular, visível apenas na peça cirúrgica inteira",
+            "As células neoplásicas foliculares perdem completamente seus núcleos no aspirado por agulha fina",
+            "O adenoma folicular expressa mutações no gene BRAF V600E idênticas às do carcinoma folicular",
+            "A presença de coloide viscoso destrói a morfologia das células foliculares na lâmina citológica"
+        ],
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a neoplasia maligna mais frequente da glândula tireoide, correspondendo a mais de 80% a 85% de todos os casos?",
+        "answer": "Carcinoma papilífero da tireoide",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual mutação somática pontual na via MAPK/ERK é a alteração genética mais comumente identificada no carcinoma papilífero da tireoide (40-60%)?",
+        "answer": "Mutação BRAF V600E",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Quais são as alterações nucleares patognomônicas encontradas na citopatologia/histopatologia do carcinoma papilífero de tireoide?",
+        "answer": "Núcleos em vidro fosco / Olhos da órfã Annie, fendas nucleares e pseudoinclusões",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a principal via preferencial de disseminação metastática do carcinoma papilífero de tireoide?",
+        "answer": "Disseminação linfática / Metástases linfonodais cervicais",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a principal via preferencial de disseminação metastática do carcinoma folicular de tireoide?",
+        "answer": "Disseminação hematogênica / Metástases hematogênicas",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual variante histopatológica de carcinoma tireoidiano oncocítico é caracterizada por acúmulo de mitocôndrias degeneradas e perda de captação de iodo radioativo?",
+        "answer": "Carcinoma de células de Hürthle / Carcinoma oncocítico",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "No seguimento ambulatorial pós-tireoidectomia total de pacientes com Carcinoma Diferenciado da Tireoide (CDT), qual marcador tumoral circulante é monitorado e qual autoanticorpo deve ser dosado conjuntamente para evitar resultados falso-negativos?",
+        "answer": "Tireoglobulina sérica",
+        "answer2": "Anticorpo antitireoglobulina / Anti-Tg",
+        "placeholder1": "Marcador tumoral específico",
+        "placeholder2": "Autoanticorpo interferente",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são os dois principais marcadores tumorais séricos secretados pelo Carcinoma Medular da Tireoide (um diagnóstico e o outro de carga/prognóstico)?",
+        "answer": "Calcitonina",
+        "answer2": "Antígeno carcinoembrionário / CEA",
+        "placeholder1": "Marcador diagnóstico altamente sensível",
+        "placeholder2": "Marcador de prognóstico e desdiferenciação",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual substância amorfa acelular, identificada pela coloração em vermelho-congo com birrefringência verde-maçã, compõe o estroma do Carcinoma Medular de Tireoide?",
+        "answer": "Substância amiloide / Depósitos amiloides",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "flowchart",
+        "description": "Conduta Cirúrgica Mandatória no Diagnóstico de Carcinoma Medular de Tireoide",
+        "nodes": [
+            {
+                "id": "s1",
+                "text": "Diagnóstico confirmado de Carcinoma Medular de Tireoide (CMT)",
+                "blanks": [],
+                "next": [
+                    "s2"
+                ]
+            },
+            {
+                "id": "s2",
+                "text": "Exclusão formal pré-operatória de _ oculto (metanefrinas)",
+                "blanks": [
+                    "feocromocitoma"
+                ],
+                "next": [
+                    "s3",
+                    "s4"
+                ]
+            },
+            {
+                "id": "s3",
+                "text": "Feocromocitoma confirmado: realizar _ antes da cirurgia cervical",
+                "blanks": [
+                    "adrenalectomia"
+                ],
+                "next": [
+                    "s4"
+                ]
+            },
+            {
+                "id": "s4",
+                "text": "Tireoidectomia Total com esvaziamento cervical central (_)",
+                "blanks": [
+                    "Nível VI"
+                ],
+                "next": [
+                    "s5"
+                ]
+            },
+            {
+                "id": "s5",
+                "text": "Pesquisa genética molecular obrigatória de mutação germinativa no proto-oncogene _",
+                "blanks": [
+                    "RET"
+                ],
+                "next": []
+            }
+        ],
+        "answer": "Diagnóstico confirmado de Carcinoma Medular de Tireoide (CMT) -> Exclusão formal pré-operatória de feocromocitoma oculto (metanefrinas) -> Feocromocitoma confirmado: realizar adrenalectomia antes da cirurgia cervical -> Tireoidectomia Total com esvaziamento cervical central (Nível VI) -> Pesquisa genética molecular obrigatória de mutação germinativa no proto-oncogene RET",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Até que faixa etária crianças portadoras da mutação germinativa do proto-oncogene RET com fenótipo de NEM 2B devem ser submetidas à tireoidectomia total profilática?",
+        "answer": "Antes de 1 ano de vida / Primeiros meses de vida",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual neoplasia tireoidiana indiferenciada, típica de pacientes idosos, cursa com crescimento cervical explosivo, invasão traqueal e taxa de mortalidade próxima a 100%?",
+        "answer": "Carcinoma anaplásico da tireoide",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual neoplasia hematológica tireoidiana possui incidência 40 a 80 vezes maior em portadores de tireoidite crônica de Hashimoto e deve ser tratada preferencialmente com quimioterapia (R-CHOP)?",
+        "answer": "Linfoma primário da tireoide",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Quais são as metas terapêuticas de TSH no primeiro ano de seguimento pós-operatório do carcinoma diferenciado da tireoide conforme o estrato de risco de recorrência da ATA?",
+        "answer": "### Metas Alvo de TSH no 1º Ano de Terapia Supressiva (Consenso ATA):\n\n| Estrato de Risco | Perfil Clínico-Patológico | Meta de Supressão do TSH no 1º Ano |\n|---|---|---|\n| **Baixo Risco** | Tumor intratiroidiano unifocal ou multifocal pequeno, sem angioinvasão ou metástases | **0,5 a 2,0 mUI/L** (manter no limite inferior normal; suprimir a 0,1-0,5 se tireoglobulina detectável) |\n| **Risco Intermediário** | Invasão microscópica extracapsular, angioinvasão tumoral focal ou linfonodos micrometastáticos | **0,1 a 0,5 mUI/L** (supressão leve a moderada) |\n| **Alto Risco** | Invasão macroscópica em tecidos peritireoidianos, ressecção incompleta, linfonodo volumoso ($> 3\\text{ cm}$) ou metástase a distância | **< 0,1 mUI/L** (supressão profunda contínua) |",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a complicação cirúrgica pós-operatória precoce mais frequente da tireoidectomia total, habitualmente decorrente de isquemia transitória das paratireoides?",
+        "answer": "Hipocalcemia transitória / Hipoparatireoidismo transitório",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual conduta de emergência à beira do leito deve ser adotada diante de um hematoma cervical expansivo sufocante no pós-operatório imediato de tireoidectomia?",
+        "answer": "Abertura imediata dos pontos da ferida cirúrgica / Descompressão imediata no leito",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Uma mulher de 34 anos apresenta fraqueza, ganho de peso central e estrias violáceas de 1,5 cm de largura nos flancos. O teste de supressão noturna com 1 mg de dexametasona resulta em cortisol de $8,2\\ \\mu\\text{g/dL}$ e o cortisol salivar à meia-noite está elevado em duas amostras. O ACTH sérico é dosado e resulta em $1,2\\text{ pg/mL}$. Qual é o próximo passo correto na investigação diagnóstica?",
+        "answer": "Realizar tomografia computadorizada de abdome com foco nas glândulas adrenais",
+        "options": [
+            "Realizar tomografia computadorizada de abdome com foco nas glândulas adrenais",
+            "Solicitar ressonância magnética contrastada de sela túrcica",
+            "Indicar cateterismo de seio petroso inferior com coleta bilateral de ACTH",
+            "Iniciar propiltiouracil e cetoconazol imediatamente em doses altas"
+        ],
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são, respectivamente, o mineralocorticoide sintético oral utilizado na reposição de longo prazo da Doença de Addison e a sua dose média habitual?",
+        "answer": "Fludrocortisona",
+        "answer2": "50 a 200 mcg ao dia",
+        "placeholder1": "Fármaco mineralocorticoide",
+        "placeholder2": "Faixa de dose diária",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual parâmetro laboratorial é o mais fidedigno para avaliar se o tratamento medicamentoso com espironolactona está sendo eficaz na hiperplasia adrenal bilateral?",
+        "answer": "Normalização ou elevação da atividade de renina / Desbloqueio da renina",
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Em relação à regulação da síntese de mineralocorticoides na adrenal humana, qual afirmação é fisiologicamente correta?",
+        "answer": "A angiotensina II é o regulador fisiológico primordial da aldosterona, enquanto o ACTH exerce papel regulatório menor (10-20%) restrito às etapas enzimáticas iniciais",
+        "options": [
+            "A angiotensina II é o regulador fisiológico primordial da aldosterona, enquanto o ACTH exerce papel regulatório menor (10-20%) restrito às etapas enzimáticas iniciais",
+            "O ACTH hipofisário exerce controle absoluto sobre a aldosterona sintase na zona glomerulosa através de retroalimentação direta",
+            "A renina é sintetizada pelas células cromafins da medula adrenal e estimula a zona reticulada",
+            "A aldosterona atua estimulando os receptores beta-1 cardíacos para promover a secreção renal de sódio"
+        ],
+        "topic": "Anatomia e Fisiologia Adrenal",
+        "aiTopic": "Anatomia e Fisiologia Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a alteração encontrada no eletrocardiograma (ECG) decorrente da hipocalemia moderada a severa provocada pelo hiperaldosteronismo primário?",
+        "answer": "Infradesnivelamento de ST, inversão de onda T e onda U",
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual fármaco anti-hipertensivo inibidor da enzima de conversão é utilizado em um dos testes dinâmicos de desbloqueio da renina para confirmação de HAP?",
+        "answer": "Captopril",
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Como a deficiência de cortisol na insuficiência adrenal primária ou secundária provoca hiponatremia dilucional no sangue?",
+        "answer": "### Fisiopatologia da Hiponatremia pelo Hipocortisolismo:\n1. O cortisol plasmático exerce um papel inibitório tônico direto sobre os núcleos hipotalâmicos e a hipófise posterior regulando a liberação do **Hormônio Antidiurético (ADH / Vasopressina)**.\n2. Na carência de cortisol, perde-se esse freio fisiológico, promovendo **hipersecreção de ADH mediada por via não osmótica**.\n3. O ADH liga-se aos receptores V2 nos ductos coletores renais, translocando canais de **aquaporina-2** e promovendo reabsorção renal maciça de **água livre**.\n4. Isso induz **hemodiluição e hiponatremia hipotônica euvolêmica** (ou associada à depleção na forma primária).\n\n> *Nota de Prova:* Embora haja excesso de ADH, essa condição **não é SIADH**, pois a insuficiência adrenal e o hipotireoidismo são critérios obrigatórios de exclusão para o diagnóstico formal de SIADH.",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Em mulheres com insuficiência adrenal e queixas de fadiga persistente, humor deprimido e redução importante da libido, qual andrógeno oral pode ser prescrito na dose de 25-50 mg/dia?",
+        "answer": "DHEA / Desidroepiandrosterona",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Um paciente portador de insuficiência adrenal primária em uso regular de hidrocortisona e fludrocortisona apresenta TSH sérico elevado de $7,8\\text{ mUI/L}$ com T4 Livre normal. Não possui histórico de doença tireoidiana. Qual a conduta correta?",
+        "answer": "Reavaliar o TSH após otimização da dose de glicocorticoide, iniciando levotiroxina apenas se o TSH persistir elevado",
+        "options": [
+            "Reavaliar o TSH após otimização da dose de glicocorticoide, iniciando levotiroxina apenas se o TSH persistir elevado",
+            "Iniciar imediatamente levotiroxina em dose alta de $2,0\\ \\mu\\text{g/kg/dia}$ para compensar a falência glandular múltipla",
+            "Suspender a fludrocortisona devido ao efeito inibidor cruzado sobre a tireoperoxidase",
+            "Prescrever radioiodoterapia devido ao risco iminente de tempestade tireotóxica"
+        ],
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são, respectivamente, o exame cintilográfico funcional clássico utilizando análogo da guanetidina marcado com iodo e o melhor exame atual de imagem funcional com sensibilidade próxima a 100% para tumores cromafins?",
+        "answer": "Cintilografia com MIBG",
+        "answer2": "PET-CT com Gálio 68 DOTATATE",
+        "placeholder1": "Cintilografia funcional clássica",
+        "placeholder2": "Padrão-ouro funcional atual (PET)",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a via cirúrgica padrão recomendada para a ressecção de feocromocitomas adrenais unilaterais benignos menores que 5 a 6 cm de diâmetro?",
+        "answer": "Adrenalectomia laparoscópica / Videolaparoscópica",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Qual é a repercussão cardiovascular aguda e o mecanismo da pressão arterial divergente observada na tireotoxicose/hipertireoidismo?",
+        "answer": "### Hemodinâmica da Tireotoxicose:\n- **Pressão Divergente (Aumento da Pressão de Pulso):**\n  - **PA Sistólica Elevada:** O T3 estimula diretamente o miocárdio, aumentando a expressão de $\\alpha$-MHC e SERCA2a, elevando o inotropismo e o volume de ejeção sistólico.\n  - **PA Diastólica Reduzida:** O T3 estimula a síntese vascular de óxido nítrico e ativa receptores adrenérgicos $\\beta_2$, diminuindo a Resistência Vascular Periférica (RVP) em até 50%.\n- **Manifestação Semiológica:** Pressão arterial ampla (ex.: $150\\times 60\\text{ mmHg}$) associada a pulso célere e hipercinético (*pulso em martelo d'água*).",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual complicação neuromuscular paroxística caracterizada por tetraparesia flácida e hipopotassemia aguda ocorre preferencialmente em homens de etnia asiática ou hispânica com tireotoxicose?",
+        "answer": "Paralisia periódica hipocalêmica tireotóxica",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Como se denomina a manifestação atípica de tireotoxicose em pacientes idosos cursando sem agitação adrenérgica, com depressão, apatia, emagrecimento grave e fibrilação atrial?",
+        "answer": "Hipertireoidismo apatético / Tireotoxicose apatética",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Um paciente de 45 anos apresenta TSH sérico elevado de $14,2\\text{ mUI/L}$ coexistindo com níveis francamente aumentados de T4 Livre e T3 Total. A ressonância magnética revela um macroadenoma hipofisário selar expansivo de 18 mm. A dosagem da subunidade alfa do TSH ($\\alpha$-GSU) encontra-se marcadamente elevada. Qual é o diagnóstico correto?",
+        "answer": "TSHoma (Adenoma hipofisário produtor de TSH)",
+        "options": [
+            "TSHoma (Adenoma hipofisário produtor de TSH)",
+            "Síndrome de Resistência ao Hormônio Tireoidiano (mutação no receptor TR-beta)",
+            "Doença de Graves com bócio difuso tóxico",
+            "Interferência laboratorial analítica por uso de biotina"
+        ],
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual tumor teratomatoso ovariano raro é composto por tecido tireoidiano maduro funcional ectópico, apresentando captação radioativa nula na região cervical e alta na pelve?",
+        "answer": "Struma ovarii",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "No seguimento ultrassonográfico e tomográfico de incidentalomas adrenais conservadores, a partir de qual taxa de crescimento anual em centímetros está indicado o tratamento cirúrgico e qual o tempo total recomendado de seguimento?",
+        "answer": "0,8 cm ao ano",
+        "answer2": "5 anos",
+        "placeholder1": "Crescimento anual indicativo de cirurgia",
+        "placeholder2": "Tempo total de acompanhamento",
+        "topic": "Incidentalomas Adrenais",
+        "aiTopic": "Incidentalomas Adrenais",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual exame citopatológico ou biópsia em cunha aberta é o padrão-ouro definitivo para confirmação diagnóstica da Tireoidite Fibrosante de Riedel?",
+        "answer": "Biópsia cirúrgica aberta em cunha",
+        "topic": "Tireoidites",
+        "aiTopic": "Tireoidites",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a via cirúrgica indicada para a realização da adrenalectomia na suspeita clínica e tomográfica de carcinoma adrenal volumoso (>4 cm)?",
+        "answer": "Adrenalectomia aberta / Cirurgia laparotômica aberta",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Em uma criança de 4 anos do sexo masculino com histórico de atraso de desenvolvimento neuropsicomotor, hiperpigmentação cutânea e insuficiência adrenal primária confirmada, a dosagem plasmática revela acúmulo de ácidos graxos de cadeia muito longa (VLCFA). Qual é a herança genética característica dessa doença?",
+        "answer": "Herança recessiva ligada ao cromossomo X",
+        "options": [
+            "Herança recessiva ligada ao cromossomo X",
+            "Herança autossômica dominante com penetrância incompleta",
+            "Mutação somática não hereditária no gene PRKAR1A",
+            "Herança mitocondrial com heteroplasmia materna"
+        ],
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual alteração no exame físico das mãos e dedos, caracterizada por edema periosteal e baqueteamento digital, compõe o quadro avançado e raro de acropatia tireóidea de Graves?",
+        "answer": "Acropatia tireóidea / Baqueteamento digital",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Qual é o mecanismo farmacológico do efeito Wolff-Chaikoff agudo empregado na administração pré-operatória de Lugol antes de tireoidectomias na Doença de Graves?",
+        "answer": "### Mecanismo do Lugol Pré-Operatório:\n- **Oferta Farmacológica de Iodo:** Fornece altas doses de iodeto (solução a 5% de iodo inorgânico + 10% de iodeto de potássio).\n- **Indução do Efeito Wolff-Chaikoff Agudo:** O excesso citosólico súbito de iodeto inibe temporariamente a tireoperoxidase (TPO), bloqueando a organificação e a secreção de tironinas pré-formadas.\n- **Efeito Hemodinâmico Intrínseco:** Reduz acentuadamente o fluxo sanguíneo arteriolar parenquimatoso da glândula tireoide, tornando-a **mais firme, menos friável e diminuindo expressivamente o risco de hemorragia cirúrgica** intraoperatória.\n\n> *Prazo estrito:* Deve ser administrado por apenas **7 a 10 dias** antes do procedimento para prevenir o escape fisiológico do efeito.",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são os dois fatores de risco da história pregressa que mais fortemente aumentam a suspeição de malignidade diante de um nódulo tireoidiano palpável?",
+        "answer": "Exposição prévia a radiação ionizante de cabeça e pescoço na infância",
+        "answer2": "História familiar de carcinoma tireoidiano ou síndromes genéticas",
+        "placeholder1": "Histórico ambiental de radiação",
+        "placeholder2": "Histórico familiar hereditário",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual categoria do sistema Bethesda para punção de tireoide agrupa a Lesão Folicular de Significado Indeterminado (FLUS) ou Atipia de Significado Indeterminado (AUS)?",
+        "answer": "Bethesda III",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual conduta terapêutica definitiva é indicada para nódulos tireoidianos submetidos à biópsia por agulha fina com diagnóstico citológico conclusivo de Bethesda VI?",
+        "answer": "Tireoidectomia total / Cirurgia ressectiva total",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Quais são as principais características da síndrome de McCune-Albright e do Complexo de Carney relacionadas à patologia adrenal autônoma?",
+        "answer": "### Causas Raras de Cushing ACTH-Independente:\n\n1. **Complexo de Carney:**\n   - Mutação no gene **PRKAR1A** (subunidade regulatória da proteína quinase A).\n   - Histopatologia: **Doença Adrenal Nodular Pigmentada Primária (PPNAD)**.\n   - Associação Clínica: Lentiginose cutânea (sardas não solares), mixomas cardíacos/mamários, Schwannomas e tumores testiculares.\n\n2. **Síndrome de McCune-Albright:**\n   - Mutação em mosaico no gene **GNAS** (proteína Gs$\\alpha$).\n   - Manifestações: Displasia fibrosa poliostótica, manchas cutâneas 'café com leite' com bordas irregulares e puberdade precoce periférica com hipercortisolismo autônomo na infância.",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Qual das seguintes drogas inibidoras da esteroidogênese adrenal pode ser administrada por via intravenosa, sendo especialmente útil para controle rápido do hipercortisolismo em pacientes críticos com Síndrome de Cushing internados em UTI?",
+        "answer": "Etomidato",
+        "options": [
+            "Etomidato",
+            "Cetoconazol",
+            "Mitotano",
+            "Espironolactona"
+        ],
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a alteração de leucograma clássica provocada pelo efeito fisiológico do excesso de glicocorticoides decorrente da desmarginação endotelial?",
+        "answer": "Leucocitose por neutrofilia sem desvio",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a via cirúrgica padrão e abordagem curativa indicada no Carcinoma Medular da Tireoide?",
+        "answer": "Tireoidectomia total com esvaziamento linfonodal central / Nível VI",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são os dois principais motivos pelos quais a **radioiodoterapia com Iodo-131** é absolutamente **ineficaz e contraindicada** no tratamento do Carcinoma Medular da Tireoide?",
+        "answer": "Células C parafoliculares não expressam o simportador NIS",
+        "answer2": "Células C não captam iodo inorgânico",
+        "placeholder1": "Ausência do carreador biológico",
+        "placeholder2": "Fisiologia celular de captação",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual classe de fármacos antineoplásicos orais direcionados (como vandetanibe e cabozantinibe) é indicada no tratamento de formas avançadas e metastáticas refratárias de Carcinoma Medular da Tireoide?",
+        "answer": "Inibidores de tirosina quinase",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete os critérios da classificação clínica da OMS para avaliação física do bócio tireoidiano:\n- Grau 0: Tireoide não palpável ou lobos _ que a falange distal do polegar do paciente.\n- Grau Ia: Bócio palpável com lobos maiores que o polegar do paciente, porém _ à inspeção.\n- Grau Ib: Bócio palpável e _ à deglutição quando com o pescoço estendido.\n- Grau II: Bócio volumoso, visível com o pescoço em posição anatômica _.\n- Grau III: Bócio exuberante, visível a distância, podendo ser mergulhante.",
+        "answer": "menores; não visível; visível; neutra",
+        "answers": [
+            "menores",
+            "não visível",
+            "visível",
+            "neutra"
+        ],
+        "topic": "Bócio Tireoidiano",
+        "aiTopic": "Bócio Tireoidiano",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a etiologia microbiana mais comum associada à Síndrome de Waterhouse-Friderichsen clássica no contexto de meningite purulenta?",
+        "answer": "Neisseria meningitidis / Meningococo",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Um paciente portador de hipertensão arterial resistente em uso de 4 anti-hipertensivos em doses máximas (incluindo espironolactona) deve ter sua medicação ajustada para viabilizar o rastreio laboratorial de Hiperaldosteronismo Primário. Quais dos seguintes anti-hipertensivos são opções que exercem menor interferência na relação aldosterona/renina (RAR)?",
+        "answer": "Verapamil, hidralazina e doxazosina",
+        "options": [
+            "Verapamil, hidralazina e doxazosina",
+            "Atenolol, enalapril e hidroclorotiazida",
+            "Propranolol, losartana e amilorida",
+            "Clonidina, captopril e furosemida"
+        ],
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a conduta diagnóstica recomendada para nódulos tireoidianos puramente císticos à ultrassonografia de acordo com o sistema ACR TI-RADS?",
+        "answer": "Não realizar PAAF / Apenas seguimento clínico",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são as duas principais manifestações hormonais da Neoplasia Endócrina Múltipla tipo 1 (NEM 1 / Síndrome de Wermer) frequentemente associadas a nódulos adrenais?",
+        "answer": "Hiperparatireoidismo primário",
+        "answer2": "Tumores neuroendócrinos enteropancreáticos",
+        "placeholder1": "Envolvimento paratireoidiano (3 Ps)",
+        "placeholder2": "Envolvimento pancreático gastrointestinal",
+        "topic": "Incidentalomas Adrenais",
+        "aiTopic": "Incidentalomas Adrenais",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Por que pacientes portadores de feocromocitoma são hipovolêmicos crônicos ('desidratados até que se prove o contrário') e qual a conduta perioperatória decorrente?",
+        "answer": "### Fisiopatologia da Volemia no Feocromocitoma:\n1. A hipersecreção crônica de catecolaminas ativa intensamente os receptores vasculares $\\alpha_1$, causando **vasoconstrição arteriolar e venosa sustentada**.\n2. Essa vasoconstrição reduz a capacitância do leito vascular periférico e induz natriurese pressórica nos rins.\n3. Ocorre **depleção volêmica intravascular profunda** com hemoconcentração relativa (eritrocitose espúria).\n\n### Conduta Perioperatória Obrigatória:\n- O paciente deve receber **hidratação vigorosa com solução salina isotônica (SF 0,9%)** associada a dieta rica em sal nos dias que antecedem a cirurgia (paralelamente ao bloqueio alfa).\n- **Objetivo:** Restaurar a volemia efetiva antes da ressecção do tumor, prevenindo colapso hemodinâmico e choque vasodilatador pós-adrenalectomia.",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual índice urinário permite certificar que uma amostra de urina de 24 horas colhida para dosagem de cortisol livre ou catecolaminas foi coletada adequadamente em homens?",
+        "answer": "Creatinina urinária superior a 20 mg/kg",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a conduta diagnóstica definitiva na citopatologia de tireoide quando o resultado da PAAF é laudo de Bethesda I por amostra hemática acelular?",
+        "answer": "Repetir a PAAF guiada por ultrassonografia",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "fill",
+        "description": "Complete os valores e conceitos da dosagem de cortisol basal matinal (7h às 10h):\n- A secreção fisiológica de cortisol é _ e apresenta seu pico máximo habitual pela manhã.\n- A única utilidade da dosagem de cortisol basal matinal é o diagnóstico de _ adrenal.\n- Ele é completamente _ para confirmar hipercortisolismo na Síndrome de Cushing.",
+        "answer": "pulsátil; insuficiência; inútil",
+        "answers": [
+            "pulsátil",
+            "insuficiência",
+            "inútil"
+        ],
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é o efeito do excesso patológico de cortisol sobre a proliferação e função dos osteoblastos ósseos?",
+        "answer": "Inibição da formação osteoblástica e osteoporose",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Um paciente do sexo masculino de 35 anos apresenta incidentaloma adrenal à direita medindo 2,8 cm. Exames laboratoriais confirmam feocromocitoma funcionante. O paciente relata também histórico de nódulos cutâneos moles e manchas 'café com leite' no tronco e axilas desde a infância. Qual síndrome neurocutânea está associada a esse quadro?",
+        "answer": "Neurofibromatose tipo 1 (Doença de von Recklinghausen)",
+        "options": [
+            "Neurofibromatose tipo 1 (Doença de von Recklinghausen)",
+            "Síndrome de Von Hippel-Lindau",
+            "Neoplasia Endócrina Múltipla tipo 2A",
+            "Síndrome de Peutz-Jeghers"
+        ],
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual exame de imagem torácico/cervical sem contraste iodado é mandatório na investigação anatômica de grandes bócios para mensurar desvio e compressão da via aérea traqueal?",
+        "answer": "Tomografia computadorizada de pescoço e tórax sem contraste",
+        "topic": "Bócio Tireoidiano",
+        "aiTopic": "Bócio Tireoidiano",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Por que o hipotireoidismo descompensado com mixedema grave pode ocasionar pseudo-obstrução intestinal ou íleo adinâmico?",
+        "answer": "### Fisiopatologia Gastrointestinal do Hipotireoidismo:\n- **Queda do Tônus Motor Entérico:** O déficit de T3 nos receptores miocitários do trato gastrointestinal reduz a atividade mioelétrica basal e a amplitude das contrações peristálticas.\n- **Infiltração Mixedematosa da Parede Intestinal:** Ocorre deposição de proteoglicanos e ácido hialurônico nas camadas submucosa e muscular própria do cólon e intestino delgado.\n- **Consequência Clínica:** Constipação crônica grave que pode evoluir para **megacólon mixedematoso**, impactação fecal (fecaloma) e **íleo paralítico adinâmico**.",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a via padrão de reconstituição e administração de hidrocortisona na dose de ataque para pacientes admitidos em choque com suspeita clínica de crise adrenal aguda?",
+        "answer": "Intravenosa em bolus / Via endovenosa",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Qual a conduta recomendada para um nódulo tireoidiano de 0,7 cm (subcentimétrico), sólido e acentuadamente hipoecoico, categorizado como ACR TI-RADS 5, sem adenomegalia cervical associada ou extensão extratireoidiana?",
+        "answer": "Acompanhamento ultrassonográfico seriado sem punção (PAAF não indicada para subcentimétricos rotineiramente)",
+        "options": [
+            "Acompanhamento ultrassonográfico seriado sem punção (PAAF não indicada para subcentimétricos rotineiramente)",
+            "Realização imediata de PAAF guiada por ultrassonografia",
+            "Indicação direta de tireoidectomia total profilática",
+            "Prescrição imediata de doses supressivas de levotiroxina"
+        ],
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual síndrome congênita autossômica recessiva associa hipotireoidismo com bócio por defeito na organificação do iodo a surdez neurossensorial por malformação da cóclea?",
+        "answer": "Síndrome de Pendred",
+        "topic": "Hipotireoidismo",
+        "aiTopic": "Hipotireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual alteração cardiovascular ao ecocardiograma é frequentemente induzida pela exposição prolongada às catecolaminas em pacientes com feocromocitoma crônico descompensado?",
+        "answer": "Miocardiopatia dilatada ou hipertrófica por catecolaminas",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são, respectivamente, o tempo cirúrgico prévio e a conduta obrigatória na suspeita de síndrome poliglandular NEM 2 em paciente com Carcinoma Medular de Tireoide e Feocromocitoma concomitante?",
+        "answer": "Operar o feocromocitoma em primeiro lugar",
+        "answer2": "Realizar a adrenalectomia antes da tireoidectomia",
+        "placeholder1": "Ordem cronológica operatória",
+        "placeholder2": "Conduta adrenal prévia à tireoide",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Como a ativação do eixo neuro-hormonal simpático na feocromocitose induz intolerância à glicose e descompensação de diabetes mellitus?",
+        "answer": "### Fisiopatologia da Hiperglicemia no Feocromocitoma:\nAs catecolaminas em níveis patológicos atuam em múltiplos sítios do metabolismo glicídico:\n1. **Receptores $\\alpha_2$ nas ilhotas pancreáticas:** Inibem diretamente a secreção de insulina pelas células beta.\n2. **Receptores $\\beta_2$ hepáticos:** Estimulam ativamente a **glicogenólise** e a **gliconeogênese**, acelerando a liberação de glicose pelo fígado.\n3. **Receptores $\\beta_3$ e $\\beta_1$ no tecido adiposo:** Provocam **lipólise intensa** com liberação de ácidos graxos livres, que induzem resistência periférica à ação da insulina no músculo esquelético.\n\n> *Após a ressecção do tumor, é frequente a resolução completa ou melhora expressiva do diabetes.",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual anticorpo monoclonal anti-CD20 é a base imunoterápica padrão combinada à quimioterapia (CHOP) para o tratamento curativo do linfoma primário de tireoide?",
+        "answer": "Rituximabe",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual distúrbio genético raro ligado ao X manifesta-se no recém-nascido ou lactente com a tríade de enteropatia autoimune, poliendocrinopatia e dermatite eczematosa grave?",
+        "answer": "Síndrome IPEX",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Em uma paciente jovem em tratamento para Doença de Graves que atinge eutireoidismo com metimazol após 14 meses, qual parâmetro laboratorial imunológico é o melhor preditor de remissão estável a longo prazo antes de tentar suspender a medicação?",
+        "answer": "Negativação dos títulos séricos de anticorpo anti-TRAb",
+        "options": [
+            "Negativação dos títulos séricos de anticorpo anti-TRAb",
+            "Normalização da excreção urinária de iodo inorgânico",
+            "Ausência de linfonodos cervicais à ultrassonografia",
+            "Elevação da velocidade de hemossedimentação (VHS)"
+        ],
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual parâmetro laboratorial quantitativo no líquido de lavagem da agulha de PAAF auxilia a confirmar metástase linfonodal de carcinoma papilífero da tireoide?",
+        "answer": "Dosagem de tireoglobulina no lavado da agulha",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Quais são as principais características microscópicas e a relevância diagnóstica dos corpos psamomatosos no carcinoma papilífero de tireoide?",
+        "answer": "### Corpos Psamomatosos (Psammoma Bodies):\n- **Definição Histológica:** Estruturas microscópicas arredondadas compostas por **calcificações laminadas concêntricas basofílicas**.\n- **Mecanismo de Formação:** Decorrem da necrose isquêmica distrófica com infarto e calcificação dos ápices das papilas vasculares tumorais.\n- **Relevância Prática:**\n  - São achados virtualmente patognomônicos do **Carcinoma Papilífero da Tireoide** no tecido tireoidiano (praticamente ausentes no carcinoma folicular e medular).\n  - Podem ser visualizados na ultrassonografia cervical de alta resolução como **microcalcificações puntiformes centrais sem sombra acústica posterior** (atribuindo 3 pontos no escore ACR TI-RADS).",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual exame genético molecular com painel de mRNA (ex: Afirma ou ThyroSeq) é útil para evitar lobectomias diagnósticas desnecessárias em nódulos Bethesda III e IV?",
+        "answer": "Testes moleculares genéticos de expressão gênica",
+        "topic": "Nódulos Tireoidianos",
+        "aiTopic": "Nódulos Tireoidianos",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Uma mulher de 28 anos, no 4º mês pós-parto, desenvolve fadiga, palpitações e perda ponderal. Ao exame, tireoide indolor e sem bócio evidente. O TSH está suprimido com T4 Livre elevado. O anti-TPO é positivo e a captação de iodo radioativo em 24h (RAIU) resulta em 0,8%. Qual é a melhor abordagem terapêutica para a fase atual dessa tireoidite?",
+        "answer": "Betabloqueador sintomático (ex.: propranolol) e seguimento clínico da evolução funcional",
+        "options": [
+            "Betabloqueador sintomático (ex.: propranolol) e seguimento clínico da evolução funcional",
+            "Metimazol em dose alta de 40 mg/dia para bloquear a síntese folicular",
+            "Radioiodoterapia com 15 mCi de Iodo-131 para ablação glandular definitiva",
+            "Antibioticoterapia intravenosa com oxacilina e drenagem percutânea guiada por US"
+        ],
+        "topic": "Tireoidites",
+        "aiTopic": "Tireoidites",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open_double",
+        "description": "Quais são, respectivamente, a neoplasia pulmonar maligna que mais comumente causa metástase para a glândula adrenal e a conduta que se deve ter antes de biopsiar a lesão adrenal?",
+        "answer": "Carcinoma de pulmão",
+        "answer2": "Excluir feocromocitoma",
+        "placeholder1": "Tumor primário metastático mais comum",
+        "placeholder2": "Exclusão mandatória prévia à punção",
+        "topic": "Incidentalomas Adrenais",
+        "aiTopic": "Incidentalomas Adrenais",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual teste provocativo com clonidina pode ser realizado para distinguir feocromocitoma autônomo de hipertensão essencial com hiperatividade simpática leve a moderada?",
+        "answer": "Teste de supressão pela clonidina",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Como os hormônios tireoidianos afetam os receptores adrenérgicos cardíacos e quais as consequências dessa interação no miocárdio?",
+        "answer": "### Efeitos Cardíacos do T3:\n1. **Upregulation Gênica:** O T3 estimula diretamente a transcrição no DNA dos miócitos, aumentando o número e a densidade de **receptores $\\beta_1$-adrenérgicos** na membrana celular.\n2. **Aumento da Sensibilidade:** Mesmo com concentrações fisiológicas ou normais de catecolaminas circulantes, o coração passa a responder de forma hiper-reativa.\n3. **Alterações Funcionais:**\n   - **Cronotropismo Positivo:** Elevação substancial da frequência cardíaca de repouso (taquicardia sinusal e palpitações).\n   - **Inotropismo Positivo:** Aumento da força de ejeção ventricular sistólica.\n   - **Lusitropismo Acelerado:** Relaxamento diastólico veloz mediado pela bomba de cálcio SERCA2a.\n4. **Arritmias:** O encurtamento do período refratário atrial predispõe ao surgimento de **Fibrilação Atrial com resposta ventricular alta**.",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a conduta farmacológica padrão em pacientes com feocromocitoma que desenvolvem taquicardia reflexa após a introdução de bloqueadores alfa-adrenérgicos?",
+        "answer": "Adicionar betabloqueador oral",
+        "topic": "Feocromocitoma e Paraganglioma",
+        "aiTopic": "Feocromocitoma e Paraganglioma",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Paciente de 62 anos é submetido a tireoidectomia total por carcinoma papilífero de tireoide de 4,5 cm. No pós-operatório tardio, o mapeamento de corpo inteiro e ultrassom estão limpos, porém o título sérico de anticorpos anti-tireoglobulina (anti-Tg) começa a apresentar elevações sucessivas e progressivas. Como esse achado imunológico deve ser interpretado?",
+        "answer": "Sugere fortemente persistência de tecido tireoidiano funcionante ou recidiva tumoral oculta, pois o anti-Tg atua como marcador substituto evolutivo",
+        "options": [
+            "Sugere fortemente persistência de tecido tireoidiano funcionante ou recidiva tumoral oculta, pois o anti-Tg atua como marcador substituto evolutivo",
+            "Confirma remissão completa e eliminação definitiva de todos os clones neoplásicos",
+            "Indica infecção bacteriana aguda da ferida operatória na loja tireoidiana",
+            "Representa efeito adverso esperado e inócuo da terapia supressiva com levotiroxina"
+        ],
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a apresentação histológica padrão do Carcinoma Anaplásico de Tireoide visualizada na biópsia por agulha grossa (core-biopsy)?",
+        "answer": "Células pleomórficas indiferenciadas bizarras com fusiformismo ou células gigantes multinucleadas",
+        "topic": "Câncer de Tireoide",
+        "aiTopic": "Câncer de Tireoide",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Quais são as características da hiperplasia macronodular adrenal e como a expressão ectópica de receptores anômalos explica seus sintomas intermitentes?",
+        "answer": "### Hiperplasia Macronodular Adrenal Independente de ACTH:\n- **Fisiopatologia Peculiar:** As células adrenais hiperplásicas expressam na sua membrana plasmática **receptores ilícitos / anômalos** para ligantes sistêmicos variados (que normalmente não estimulam o córtex adrenal):\n  - Receptores de **GIP (Peptídeo Inibitório Gástrico)** ou GLP-1.\n  - Receptores de **Vasopressina (V1)**.\n  - Receptores de **LH / FSH / GnRH**.\n  - Receptores de serotonina (5-HT) ou catecolaminas $\\beta$.\n\n### Manifestações Clínicas Intermitentes:\n- A produção de cortisol não é contínua, mas sim **precipitada pelo estímulo fisiológico específico correspondente**:\n  - Se expressar receptor de GIP: pico de hipercortisolismo e sintomas cushingoides desencadeados exclusivamente **após as refeições**.\n  - Se expressar receptor de LH/FSH: sintomas flutuantes de hipercortisolismo relacionados à fase lútea do **ciclo menstrual** ou pós-menopausa.",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é o principal marcador laboratorial utilizado para titular e monitorar a eficácia da reposição com fludrocortisona na insuficiência adrenal primária?",
+        "answer": "Atividade de renina plasmática no limite superior da normalidade e eletrólitos normais",
+        "topic": "Insuficiência Adrenal",
+        "aiTopic": "Insuficiência Adrenal",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "multiple_choice",
+        "description": "Uma mulher de 38 anos apresenta hipertensão refratária de início recente associada a fraqueza muscular proximal e cefaleia ocasional. Exames laboratoriais revelam: Potássio sérico de $2,4\\text{ mEq/L}$, Bicarbonato de $32\\text{ mEq/L}$, Aldosterona sérica de $35\\text{ ng/dL}$ e Atividade Plasmática de Renina (APR) suprimida ($<0,2\\text{ ng/mL/h}$). Qual é o próximo passo correto na propedêutica?",
+        "answer": "Realizar tomografia computadorizada de abdome com cortes finos de adrenais para definir a etiologia (adenoma versus hiperplasia)",
+        "options": [
+            "Realizar tomografia computadorizada de abdome com cortes finos de adrenais para definir a etiologia (adenoma versus hiperplasia)",
+            "Realizar teste de sobrecarga oral de sódio para confirmar a autonomia da secreção",
+            "Iniciar metimazol em altas doses associado a prednisona oral",
+            "Indicar cateterismo de seio petroso inferior para dosagem de ACTH"
+        ],
+        "topic": "Hiperaldosteronismo Primário",
+        "aiTopic": "Hiperaldosteronismo Primário",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual alteração no exame físico da órbita na Doença de Graves consiste na exposição escleral acima do limbo corneano superior decorrente do tônus simpático do músculo de Müller?",
+        "answer": "Sinal de Dalrymple",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "open",
+        "description": "Qual é a droga glicocorticoide sintética de escolha para teste de rastreio de hipercortisolismo noturno (1 mg à meia-noite) por não sofrer dosagem cruzada como cortisol endógeno?",
+        "answer": "Dexametasona",
+        "topic": "Síndrome de Cushing",
+        "aiTopic": "Síndrome de Cushing",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    },
+    {
+        "type": "anki",
+        "description": "Por que o tratamento da crise tireotóxica exige que a administração de soluções iodadas (Lugol) ocorra rigorosamente pelo menos uma hora após o uso de tionamidas (PTU)?",
+        "answer": "### Racional Fisiopatológico Cronológico:\n1. **Ação da Tionamida (PTU):** Bloqueia a enzima tireoperoxidase (TPO), paralisando a oxidação e a organificação de novo iodo dentro do folículo tireoidiano.\n2. **Risco da Solução Iodada Precoce:** Se a Solução de Lugol for infundida antes ou concomitantemente sem o bloqueio prévio da TPO, a sobrecarga maciça de iodo servirá de **substrato maciço imediato para a síntese descontrolada de novos hormônios tireoidianos (Fenômeno de Jod-Basedow)**.\n3. **Regra de Ouro:** Administrar o iodo inorgânico **pelo menos 1 hora após** a dose plena de propiltiouracil assegura que a maquinaria enzimática da TPO esteja completamente inibida, permitindo que o iodo exerça apenas o bloqueio da secreção folicular pré-formada.",
+        "topic": "Tireotoxicose e Hipertireoidismo",
+        "aiTopic": "Tireotoxicose e Hipertireoidismo",
+        "subject": "Endocrinologia",
+        "aiSubject": "Endocrinologia"
+    }
+]

@@ -1148,28 +1148,227 @@ function getLastPlacedFlowchartNodeId() {
     return placed.length > 0 ? placed[placed.length - 1] : null;
 }
 
-function computeCanvasDropPlacement(clientX, clientY) {
-    const refId = getLastPlacedFlowchartNodeId();
-    if (!refId || !flowchartLevelsContainer) {
-        return { mode: 'root', parentIds: [], refId: null };
-    }
-    const refEl = flowchartLevelsContainer.querySelector(`[data-fc-node-id="${CSS.escape(refId)}"]`);
-    if (!refEl) {
-        return { mode: 'sequent', parentIds: [refId], refId };
-    }
-    const refRect = refEl.getBoundingClientRect();
+const flowchartDragPreview = {
+    key: null,
+    placement: null,
+    placeholderEl: null,
+    placeholderRowEl: null
+};
 
-    // Below the bottom of the last step -> add as sequent step
-    if (clientY > refRect.bottom + 4) {
-        return { mode: 'sequent', parentIds: [refId], refId };
+function clearFlowchartDragPreview() {
+    if (flowchartDragPreview.placeholderEl?.parentNode) {
+        flowchartDragPreview.placeholderEl.parentNode.removeChild(flowchartDragPreview.placeholderEl);
     }
-    // To the left or right side of the last step -> start parallel sequence
-    if (clientX < refRect.left - 4 || clientX > refRect.right + 4) {
-        const parentsOfRef = flowchartState.edges.filter(e => e.to === refId).map(e => e.from);
-        return { mode: 'parallel', parentIds: parentsOfRef, refId };
+    if (flowchartDragPreview.placeholderRowEl?.parentNode) {
+        flowchartDragPreview.placeholderRowEl.parentNode.removeChild(flowchartDragPreview.placeholderRowEl);
     }
-    // Inside or directly below defaults to sequent step
-    return { mode: 'sequent', parentIds: [refId], refId };
+    flowchartLevelsContainer?.classList.remove('has-drag-preview');
+    const hadPreview = Boolean(flowchartDragPreview.key);
+    flowchartDragPreview.key = null;
+    flowchartDragPreview.placement = null;
+    if (hadPreview) {
+        scheduleFlowchartEdgesRedraw();
+    }
+}
+
+function getOrCreateFlowchartPlaceholderEl() {
+    if (!flowchartDragPreview.placeholderEl) {
+        const el = document.createElement('div');
+        el.className = 'flowchart-drop-placeholder';
+        el.setAttribute('aria-hidden', 'true');
+        flowchartDragPreview.placeholderEl = el;
+    }
+    return flowchartDragPreview.placeholderEl;
+}
+
+function getOrCreateFlowchartPlaceholderRowEl() {
+    if (!flowchartDragPreview.placeholderRowEl) {
+        const row = document.createElement('div');
+        row.className = 'flowchart-level-row flowchart-placeholder-row';
+        row.setAttribute('aria-hidden', 'true');
+        flowchartDragPreview.placeholderRowEl = row;
+    }
+    return flowchartDragPreview.placeholderRowEl;
+}
+
+function computeCanvasDropPlacement(clientX, clientY) {
+    if (!flowchartLevelsContainer) {
+        return { mode: 'root', parentIds: [], refId: null, kind: 'empty', key: 'empty' };
+    }
+
+    const rowEls = Array.from(flowchartLevelsContainer.querySelectorAll('.flowchart-level-row[data-fc-level-index]'));
+    if (rowEls.length === 0) {
+        return { mode: 'root', parentIds: [], refId: null, kind: 'empty', key: 'empty' };
+    }
+
+    // Find which row the pointer is over or closest to vertically
+    let targetRowEl = rowEls[rowEls.length - 1];
+    let isBelowLastRow = false;
+    const lastRowRect = rowEls[rowEls.length - 1].getBoundingClientRect();
+
+    if (clientY > lastRowRect.bottom + 8) {
+        isBelowLastRow = true;
+    } else {
+        let bestDist = Infinity;
+        for (const rowEl of rowEls) {
+            const rect = rowEl.getBoundingClientRect();
+            if (clientY >= rect.top - 10 && clientY <= rect.bottom + 10) {
+                targetRowEl = rowEl;
+                bestDist = 0;
+                break;
+            }
+            const center = (rect.top + rect.bottom) / 2;
+            const d = Math.abs(clientY - center);
+            if (d < bestDist) {
+                bestDist = d;
+                targetRowEl = rowEl;
+            }
+        }
+    }
+
+    const rowIdx = Number(targetRowEl.dataset.fcLevelIndex || 0);
+    const cardEls = Array.from(targetRowEl.querySelectorAll('.flowchart-node-card[data-fc-node-id]'));
+    if (cardEls.length === 0) {
+        return { mode: 'root', parentIds: [], refId: null, kind: 'empty', key: 'empty' };
+    }
+
+    if (isBelowLastRow) {
+        const activeId = getLastPlacedFlowchartNodeId();
+        const refCard = cardEls.find(c => c.dataset.fcNodeId === activeId) || cardEls[cardEls.length - 1];
+        const refId = refCard.dataset.fcNodeId;
+        return {
+            mode: 'sequent',
+            kind: 'new-row',
+            afterRowIndex: rowIdx,
+            parentIds: [refId],
+            refId,
+            key: `new-row:${rowIdx}:${refId}`
+        };
+    }
+
+    // Find closest card horizontally inside targetRowEl
+    let nearestCard = cardEls[0];
+    let nearestDist = Infinity;
+    for (const card of cardEls) {
+        const r = card.getBoundingClientRect();
+        const cx = (r.left + r.right) / 2;
+        const dist = Math.abs(clientX - cx);
+        if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestCard = card;
+        }
+    }
+
+    const nearRect = nearestCard.getBoundingClientRect();
+    const nearId = nearestCard.dataset.fcNodeId;
+    const rowRect = targetRowEl.getBoundingClientRect();
+
+    // Bottom edge of the row -> new sequential row directly below this row
+    if (clientY > rowRect.bottom - 12) {
+        return {
+            mode: 'sequent',
+            kind: 'new-row',
+            afterRowIndex: rowIdx,
+            parentIds: [nearId],
+            refId: nearId,
+            key: `new-row:${rowIdx}:${nearId}`
+        };
+    }
+
+    // Left / right side zones of the card -> parallel column inside this same row
+    const sideThreshold = Math.min(54, nearRect.width * 0.3);
+    const parentsOfRef = flowchartState.edges.filter(e => e.to === nearId).map(e => e.from);
+
+    if (clientX < nearRect.left + sideThreshold) {
+        return {
+            mode: 'parallel',
+            kind: 'in-row',
+            rowIndex: rowIdx,
+            beforeId: nearId,
+            parentIds: parentsOfRef,
+            refId: nearId,
+            key: `in-row:${rowIdx}:before:${nearId}`
+        };
+    }
+
+    if (clientX > nearRect.right - sideThreshold) {
+        return {
+            mode: 'parallel',
+            kind: 'in-row',
+            rowIndex: rowIdx,
+            afterId: nearId,
+            parentIds: parentsOfRef,
+            refId: nearId,
+            key: `in-row:${rowIdx}:after:${nearId}`
+        };
+    }
+
+    // Center of card -> sequential step right below this row
+    return {
+        mode: 'sequent',
+        kind: 'new-row',
+        afterRowIndex: rowIdx,
+        parentIds: [nearId],
+        refId: nearId,
+        key: `new-row:${rowIdx}:${nearId}`
+    };
+}
+
+function showFlowchartCanvasPlaceholder(placement) {
+    if (!flowchartLevelsContainer) return;
+    if (!placement) {
+        clearFlowchartDragPreview();
+        return;
+    }
+
+    if (flowchartDragPreview.key === placement.key) {
+        flowchartDragPreview.placement = placement;
+        return;
+    }
+
+    // Detach existing preview nodes before re-inserting at the new spot
+    if (flowchartDragPreview.placeholderEl?.parentNode) {
+        flowchartDragPreview.placeholderEl.parentNode.removeChild(flowchartDragPreview.placeholderEl);
+    }
+    if (flowchartDragPreview.placeholderRowEl?.parentNode) {
+        flowchartDragPreview.placeholderRowEl.parentNode.removeChild(flowchartDragPreview.placeholderRowEl);
+    }
+
+    flowchartDragPreview.key = placement.key;
+    flowchartDragPreview.placement = placement;
+    flowchartLevelsContainer.classList.add('has-drag-preview');
+
+    const placeholderEl = getOrCreateFlowchartPlaceholderEl();
+    if (placement.kind === 'in-row') {
+        placeholderEl.innerHTML = `<img src="../assets/img/parallel.svg" class="w-4 h-4 flex-shrink-0" alt="" aria-hidden="true"><span>${escapeHtml(t('flowchart_placeholder_parallel'))}</span>`;
+        const targetRow = flowchartLevelsContainer.querySelector(`.flowchart-level-row[data-fc-level-index="${placement.rowIndex}"]`);
+        if (targetRow) {
+            const realCards = Array.from(targetRow.querySelectorAll('.flowchart-node-card[data-fc-node-id]'));
+            const beforeNode = placement.beforeId
+                ? realCards.find(c => c.dataset.fcNodeId === placement.beforeId)
+                : (placement.afterId
+                    ? realCards.find(c => c.dataset.fcNodeId === placement.afterId)?.nextElementSibling
+                    : null);
+            targetRow.insertBefore(placeholderEl, beforeNode || null);
+        }
+    } else if (placement.kind === 'new-row') {
+        placeholderEl.innerHTML = `<img src="../assets/img/next_step.svg" class="w-4 h-4 flex-shrink-0" alt="" aria-hidden="true"><span>${escapeHtml(t('flowchart_placeholder_next'))}</span>`;
+        const placeholderRow = getOrCreateFlowchartPlaceholderRowEl();
+        placeholderRow.appendChild(placeholderEl);
+        const afterRow = flowchartLevelsContainer.querySelector(`.flowchart-level-row[data-fc-level-index="${placement.afterRowIndex}"]`);
+        if (afterRow && afterRow.parentNode === flowchartLevelsContainer) {
+            flowchartLevelsContainer.insertBefore(placeholderRow, afterRow.nextElementSibling);
+        } else {
+            flowchartLevelsContainer.appendChild(placeholderRow);
+        }
+    } else {
+        placeholderEl.innerHTML = `<img src="../assets/img/next_step.svg" class="w-4 h-4 flex-shrink-0" alt="" aria-hidden="true"><span>${escapeHtml(t('flowchart_placeholder_start'))}</span>`;
+        const placeholderRow = getOrCreateFlowchartPlaceholderRowEl();
+        placeholderRow.appendChild(placeholderEl);
+        flowchartLevelsContainer.appendChild(placeholderRow);
+    }
+
+    scheduleFlowchartEdgesRedraw();
 }
 
 function showFlowchartDropHint(mode) {
@@ -1191,10 +1390,24 @@ function showFlowchartDropHint(mode) {
     }
 }
 
-function placeFlowchartNode(nodeId, explicitParentIds) {
+function placeFlowchartNode(nodeId, explicitParentIds, insertOptions = null) {
     if (flowchartState.locked || !nodeId) return;
     const alreadyPlaced = flowchartState.placedIds.has(nodeId);
     flowchartState.placedIds.add(nodeId);
+
+    if (insertOptions && (insertOptions.beforeId || insertOptions.afterId)) {
+        const order = flowchartState.displayOrder.filter(id => id !== nodeId);
+        if (insertOptions.beforeId) {
+            const idx = order.indexOf(insertOptions.beforeId);
+            if (idx !== -1) order.splice(idx, 0, nodeId);
+            else order.push(nodeId);
+        } else if (insertOptions.afterId) {
+            const idx = order.indexOf(insertOptions.afterId);
+            if (idx !== -1) order.splice(idx + 1, 0, nodeId);
+            else order.push(nodeId);
+        }
+        flowchartState.displayOrder = order;
+    }
 
     let parentIds;
     if (Array.isArray(explicitParentIds)) {
@@ -1217,6 +1430,7 @@ function placeFlowchartNode(nodeId, explicitParentIds) {
         flowchartState.activeOriginId = nodeId;
     }
     flowchartState.linkingFromId = null;
+    clearFlowchartDragPreview();
     showFlowchartDropHint(null);
     renderFlowchartUI();
 }
@@ -1345,28 +1559,6 @@ function redrawFlowchartEdgesSvg() {
 
     if (flowchartState.edges.length === 0) return;
 
-    const defs = document.createElementNS(svgNs, 'defs');
-    const mkDefs = [
-        { id: 'fc-arrow-default', color: '#3b82f7' },
-        { id: 'fc-arrow-correct', color: '#16a34a' },
-        { id: 'fc-arrow-wrong', color: '#ef4444' }
-    ];
-    mkDefs.forEach(({ id, color }) => {
-        const marker = document.createElementNS(svgNs, 'marker');
-        marker.setAttribute('id', id);
-        marker.setAttribute('markerWidth', '9');
-        marker.setAttribute('markerHeight', '7');
-        marker.setAttribute('refX', '7.5');
-        marker.setAttribute('refY', '3.5');
-        marker.setAttribute('orient', 'auto');
-        const poly = document.createElementNS(svgNs, 'polygon');
-        poly.setAttribute('points', '0 0.7, 8 3.5, 0 6.3');
-        poly.setAttribute('fill', color);
-        marker.appendChild(poly);
-        defs.appendChild(marker);
-    });
-    flowchartEdgesSvg.appendChild(defs);
-
     const wrapRect = flowchartLevelsWrapper.getBoundingClientRect();
     const cardEls = new Map();
     flowchartLevelsContainer.querySelectorAll('[data-fc-node-id]').forEach(el => {
@@ -1388,7 +1580,7 @@ function redrawFlowchartEdgesSvg() {
         let d;
         if (y2 >= y1 - 4) {
             const dy = Math.max(22, Math.abs(y2 - y1) * 0.55);
-            d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${x1.toFixed(1)} ${(y1 + dy).toFixed(1)}, ${x2.toFixed(1)} ${(y2 - dy).toFixed(1)}, ${x2.toFixed(1)} ${(y2 - 2).toFixed(1)}`;
+            d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${x1.toFixed(1)} ${(y1 + dy).toFixed(1)}, ${x2.toFixed(1)} ${(y2 - dy).toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
         } else {
             const curveX = Math.max(x1, x2) + 34;
             d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${curveX.toFixed(1)} ${y1.toFixed(1)}, ${curveX.toFixed(1)} ${y2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
@@ -1397,13 +1589,10 @@ function redrawFlowchartEdgesSvg() {
         const edgeKey = `${edge.from}->${edge.to}`;
         const edgeStatus = statusMap ? statusMap.get(edgeKey) : null;
         let lineClass = 'flowchart-edge-line';
-        let markerId = 'fc-arrow-default';
         if (edgeStatus === 'correct') {
             lineClass += ' is-correct';
-            markerId = 'fc-arrow-correct';
         } else if (edgeStatus === 'wrong') {
             lineClass += ' is-wrong';
-            markerId = 'fc-arrow-wrong';
         }
 
         const g = document.createElementNS(svgNs, 'g');
@@ -1412,7 +1601,6 @@ function redrawFlowchartEdgesSvg() {
         const line = document.createElementNS(svgNs, 'path');
         line.setAttribute('d', d);
         line.setAttribute('class', lineClass);
-        line.setAttribute('marker-end', `url(#${markerId})`);
 
         const hit = document.createElementNS(svgNs, 'path');
         hit.setAttribute('d', d);
@@ -1479,22 +1667,24 @@ function renderFlowchartUI() {
     const activeBlankIdx = activeEl?.classList?.contains('flowchart-blank-input') ? activeEl.dataset.blankIndex : null;
 
     // Render placed DAG levels
+    clearFlowchartDragPreview();
     const placedNodes = getOrderedPlacedNodes();
     const levels = computeFlowchartLevels(placedNodes, flowchartState.edges);
     flowchartLevelsContainer.replaceChildren();
 
     if (levels.length === 0) {
         const emptyHint = document.createElement('div');
-        emptyHint.className = 'py-6 text-center text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium';
+        emptyHint.className = 'flowchart-empty-hint py-6 text-center text-xs text-[var(--md-sys-color-on-surface-variant)] font-medium';
         emptyHint.textContent = t('flowchart_tray_title');
         flowchartLevelsContainer.appendChild(emptyHint);
     } else {
         let visualNum = 0;
         const evalData = flowchartState.evaluation;
 
-        levels.forEach(rowNodes => {
+        levels.forEach((rowNodes, levelIdx) => {
             const rowEl = document.createElement('div');
             rowEl.className = 'flowchart-level-row';
+            rowEl.dataset.fcLevelIndex = String(levelIdx);
 
             rowNodes.forEach(node => {
                 visualNum++;
@@ -1623,19 +1813,22 @@ function renderFlowchartUI() {
                 });
                 cardEl.addEventListener('dragend', () => {
                     flowchartState.draggedNodeId = null;
+                    clearFlowchartDragPreview();
                     showFlowchartDropHint(null);
                     flowchartCanvas?.classList.remove('is-drop-target');
                 });
                 cardEl.addEventListener('dragover', (e) => {
                     if (flowchartState.locked || !flowchartState.draggedNodeId || flowchartState.draggedNodeId === node.id) return;
                     e.preventDefault();
-                    e.stopPropagation();
                     if (flowchartState.placedIds.has(flowchartState.draggedNodeId)) {
+                        e.stopPropagation();
+                        clearFlowchartDragPreview();
                         cardEl.classList.add('is-swap-target');
                         showFlowchartDropHint('swap');
                     } else {
-                        cardEl.classList.add('is-drag-over');
-                        showFlowchartDropHint('sequent');
+                        const placement = computeCanvasDropPlacement(e.clientX, e.clientY);
+                        showFlowchartCanvasPlaceholder(placement);
+                        showFlowchartDropHint(placement.mode);
                     }
                 });
                 cardEl.addEventListener('dragleave', () => {
@@ -1647,13 +1840,16 @@ function renderFlowchartUI() {
                     cardEl.classList.remove('is-drag-over', 'is-swap-target');
                     flowchartCanvas?.classList.remove('is-drop-target');
                     const draggedId = flowchartState.draggedNodeId || e.dataTransfer?.getData('text/plain');
+                    const activePreview = flowchartDragPreview.placement;
                     flowchartState.draggedNodeId = null;
+                    clearFlowchartDragPreview();
                     showFlowchartDropHint(null);
                     if (!draggedId || draggedId === node.id || flowchartState.locked) return;
                     if (flowchartState.placedIds.has(draggedId)) {
                         swapFlowchartNodes(draggedId, node.id);
                     } else {
-                        placeFlowchartNode(draggedId, [node.id]);
+                        const placement = activePreview || computeCanvasDropPlacement(e.clientX, e.clientY);
+                        placeFlowchartNode(draggedId, placement.parentIds, placement);
                     }
                 });
 
@@ -1695,20 +1891,67 @@ function renderFlowchartUI() {
     unplacedIds.forEach(nodeId => {
         const node = flowchartState.nodes.find(n => n.id === nodeId);
         if (!node) return;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'flowchart-tray-card';
-        btn.draggable = !flowchartState.locked;
-        btn.innerHTML = `<span class="material-symbols-rounded text-base text-[#3b82f7] flex-shrink-0">add_circle</span><span class="min-w-0">${renderTextWithBlanks(node.text, { mode: 'flowchart-tray', nodeId: node.id })}</span>`;
+        const card = document.createElement('div');
+        card.className = 'flowchart-tray-card';
+        card.draggable = !flowchartState.locked;
 
-        btn.addEventListener('click', () => {
-            if (btn.dataset.suppressClick === '1') {
-                delete btn.dataset.suppressClick;
+        const textSpan = document.createElement('span');
+        textSpan.className = 'min-w-0 flex-1';
+        textSpan.innerHTML = renderTextWithBlanks(node.text, { mode: 'flowchart-tray', nodeId: node.id });
+
+        const actions = document.createElement('div');
+        actions.className = 'flowchart-tray-actions';
+        actions.addEventListener('mousedown', (e) => e.stopPropagation());
+
+        const createTrayActionBtn = (iconName, labelKey, onPlace) => {
+            const actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.draggable = false;
+            actionBtn.className = 'flowchart-tray-action-btn';
+            const label = t(labelKey);
+            actionBtn.title = label;
+            actionBtn.setAttribute('aria-label', label);
+            actionBtn.disabled = flowchartState.locked;
+
+            const img = document.createElement('img');
+            img.src = `../assets/img/${iconName}`;
+            img.alt = '';
+            img.setAttribute('aria-hidden', 'true');
+            img.className = 'w-4 h-4 pointer-events-none';
+            actionBtn.appendChild(img);
+
+            actionBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (flowchartState.locked) return;
+                onPlace();
+            });
+            return actionBtn;
+        };
+
+        const nextStepBtn = createTrayActionBtn('next_step.svg', 'flowchart_add_next_step_btn', () => {
+            const refId = getLastPlacedFlowchartNodeId();
+            placeFlowchartNode(node.id, refId ? [refId] : []);
+        });
+
+        const parallelBtn = createTrayActionBtn('parallel.svg', 'flowchart_add_parallel_btn', () => {
+            const refId = getLastPlacedFlowchartNodeId();
+            const parentsOfRef = refId
+                ? flowchartState.edges.filter(edge => edge.to === refId).map(edge => edge.from)
+                : [];
+            placeFlowchartNode(node.id, parentsOfRef);
+        });
+
+        actions.append(nextStepBtn, parallelBtn);
+        card.append(textSpan, actions);
+
+        card.addEventListener('click', () => {
+            if (card.dataset.suppressClick === '1') {
+                delete card.dataset.suppressClick;
                 return;
             }
             if (!flowchartState.locked) placeFlowchartNode(node.id);
         });
-        btn.addEventListener('dragstart', (e) => {
+        card.addEventListener('dragstart', (e) => {
             if (flowchartState.locked) {
                 e.preventDefault();
                 return;
@@ -1716,13 +1959,14 @@ function renderFlowchartUI() {
             flowchartState.draggedNodeId = node.id;
             e.dataTransfer?.setData('text/plain', node.id);
         });
-        btn.addEventListener('dragend', () => {
+        card.addEventListener('dragend', () => {
             flowchartState.draggedNodeId = null;
+            clearFlowchartDragPreview();
             showFlowchartDropHint(null);
             flowchartCanvas?.classList.remove('is-drop-target');
         });
-        attachFlowchartTouchDrag(btn, node.id, 'tray');
-        flowchartTrayList.appendChild(btn);
+        attachFlowchartTouchDrag(card, node.id, 'tray');
+        flowchartTrayList.appendChild(card);
     });
 
     if (activeNodeId && activeBlankIdx !== null) {
@@ -1737,7 +1981,7 @@ function attachFlowchartTouchDrag(el, nodeId, sourceKind) {
     if (!el || flowchartState.locked) return;
     el.addEventListener('pointerdown', (e) => {
         if (e.pointerType === 'mouse' || flowchartState.locked) return;
-        if (e.target?.closest('.flowchart-blank-input, .flowchart-node-action-btn')) return;
+        if (e.target?.closest('.flowchart-blank-input, .flowchart-node-action-btn, .flowchart-tray-action-btn')) return;
 
         const startX = e.clientX;
         const startY = e.clientY;
@@ -1759,6 +2003,7 @@ function attachFlowchartTouchDrag(el, nodeId, sourceKind) {
                 lastTargetCard = null;
             }
             flowchartCanvas?.classList.remove('is-drop-target');
+            clearFlowchartDragPreview();
             showFlowchartDropHint(null);
             flowchartState.draggedNodeId = null;
         };
@@ -1792,24 +2037,21 @@ function attachFlowchartTouchDrag(el, nodeId, sourceKind) {
             const targetCard = hit?.closest?.('.flowchart-node-card[data-fc-node-id]');
             const targetNodeId = targetCard?.dataset?.fcNodeId;
 
-            if (targetCard && targetNodeId && targetNodeId !== nodeId) {
+            if (targetCard && targetNodeId && targetNodeId !== nodeId && sourceKind === 'canvas') {
                 lastTargetCard = targetCard;
-                if (sourceKind === 'canvas') {
-                    targetCard.classList.add('is-swap-target');
-                    showFlowchartDropHint('swap');
-                } else {
-                    targetCard.classList.add('is-drag-over');
-                    showFlowchartDropHint('sequent');
-                }
+                targetCard.classList.add('is-swap-target');
+                showFlowchartDropHint('swap');
                 flowchartCanvas?.classList.add('is-drop-target');
             } else if (sourceKind === 'tray' && flowchartCanvas) {
                 const cRect = flowchartCanvas.getBoundingClientRect();
                 if (ev.clientX >= cRect.left && ev.clientX <= cRect.right && ev.clientY >= cRect.top && ev.clientY <= cRect.bottom) {
                     flowchartCanvas.classList.add('is-drop-target');
                     const placement = computeCanvasDropPlacement(ev.clientX, ev.clientY);
+                    showFlowchartCanvasPlaceholder(placement);
                     showFlowchartDropHint(placement.mode);
                 } else {
                     flowchartCanvas.classList.remove('is-drop-target');
+                    clearFlowchartDragPreview();
                     showFlowchartDropHint(null);
                 }
             }
@@ -1822,23 +2064,20 @@ function attachFlowchartTouchDrag(el, nodeId, sourceKind) {
             const targetCard = hit?.closest?.('.flowchart-node-card[data-fc-node-id]');
             const targetNodeId = targetCard?.dataset?.fcNodeId;
             const cRect = flowchartCanvas?.getBoundingClientRect();
+            const activePreview = flowchartDragPreview.placement;
             cleanup();
 
             if (!wasDragging) return;
             setTimeout(() => { delete el.dataset.suppressClick; }, 50);
 
-            if (targetNodeId && targetNodeId !== nodeId) {
-                if (sourceKind === 'canvas') {
-                    swapFlowchartNodes(nodeId, targetNodeId);
-                } else {
-                    placeFlowchartNode(nodeId, [targetNodeId]);
-                }
+            if (targetNodeId && targetNodeId !== nodeId && sourceKind === 'canvas') {
+                swapFlowchartNodes(nodeId, targetNodeId);
                 return;
             }
 
             if (sourceKind === 'tray' && cRect && ev.clientX >= cRect.left && ev.clientX <= cRect.right && ev.clientY >= cRect.top && ev.clientY <= cRect.bottom) {
-                const placement = computeCanvasDropPlacement(ev.clientX, ev.clientY);
-                placeFlowchartNode(nodeId, placement.parentIds);
+                const placement = activePreview || computeCanvasDropPlacement(ev.clientX, ev.clientY);
+                placeFlowchartNode(nodeId, placement.parentIds, placement);
             }
         };
 
@@ -1884,12 +2123,14 @@ function wireFlowchartEventsOnce() {
             flowchartCanvas.classList.add('is-drop-target');
             if (!flowchartState.placedIds.has(flowchartState.draggedNodeId)) {
                 const placement = computeCanvasDropPlacement(e.clientX, e.clientY);
+                showFlowchartCanvasPlaceholder(placement);
                 showFlowchartDropHint(placement.mode);
             }
         });
         flowchartCanvas.addEventListener('dragleave', (e) => {
             if (!flowchartCanvas.contains(e.relatedTarget)) {
                 flowchartCanvas.classList.remove('is-drop-target');
+                clearFlowchartDragPreview();
                 showFlowchartDropHint(null);
             }
         });
@@ -1897,12 +2138,14 @@ function wireFlowchartEventsOnce() {
             e.preventDefault();
             flowchartCanvas.classList.remove('is-drop-target');
             const draggedId = flowchartState.draggedNodeId || e.dataTransfer?.getData('text/plain');
+            const activePreview = flowchartDragPreview.placement;
             flowchartState.draggedNodeId = null;
+            clearFlowchartDragPreview();
             showFlowchartDropHint(null);
             if (!draggedId || flowchartState.locked) return;
             if (!flowchartState.placedIds.has(draggedId)) {
-                const placement = computeCanvasDropPlacement(e.clientX, e.clientY);
-                placeFlowchartNode(draggedId, placement.parentIds);
+                const placement = activePreview || computeCanvasDropPlacement(e.clientX, e.clientY);
+                placeFlowchartNode(draggedId, placement.parentIds, placement);
             }
         });
     }
