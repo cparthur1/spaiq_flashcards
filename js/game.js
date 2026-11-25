@@ -413,6 +413,8 @@ function openZoomForCard(url, crop = null, arrows = [], { showNumbers = false } 
     const safeUrl = sanitizeImageUrl(url);
     if (!safeUrl || !imageZoomModal) return;
 
+    resetLightboxZoom();
+
     const zoomWrapper = document.getElementById('zoomed-image-wrapper') || imageZoomModal.querySelector('.relative');
     if (zoomWrapper && zoomedImage) {
         renderAnnotatedImage({
@@ -9323,7 +9325,107 @@ initInputController({
     }
 });
 
-// --- IMAGE LIGHTBOX ZOOM ---
+// --- IMAGE LIGHTBOX ZOOM & PAN (PINCH / WHEEL / DRAG) ---
+const lightboxZoomState = {
+    scale: 1,
+    tx: 0,
+    ty: 0,
+    minScale: 1,
+    maxScale: 5,
+    pointers: new Map(),
+    prevPinchDist: 0,
+    prevMidX: 0,
+    prevMidY: 0,
+    dragStartX: 0,
+    dragStartY: 0,
+    lastX: 0,
+    lastY: 0,
+    didGesture: false,
+    suppressBackdropClick: false,
+    lastTapTime: 0
+};
+
+function getLightboxWrapper() {
+    return document.getElementById('zoomed-image-wrapper');
+}
+
+function clampLightboxPan(tx, ty, scale) {
+    const wrapper = getLightboxWrapper();
+    if (!wrapper || scale <= 1) return { tx: 0, ty: 0 };
+
+    const baseW = wrapper.offsetWidth || 0;
+    const baseH = wrapper.offsetHeight || 0;
+    const maxTx = Math.max(0, (baseW * scale - Math.min(window.innerWidth * 0.9, baseW)) / 2);
+    const maxTy = Math.max(0, (baseH * scale - Math.min(window.innerHeight * 0.85, baseH)) / 2);
+
+    return {
+        tx: Math.min(maxTx, Math.max(-maxTx, tx)),
+        ty: Math.min(maxTy, Math.max(-maxTy, ty))
+    };
+}
+
+function applyLightboxTransform({ animate = false } = {}) {
+    const wrapper = getLightboxWrapper();
+    if (!wrapper) return;
+
+    const { scale, tx, ty, pointers } = lightboxZoomState;
+    wrapper.style.transition = animate ? 'transform 180ms cubic-bezier(0.2, 0, 0, 1)' : 'none';
+    wrapper.style.transformOrigin = 'center center';
+    wrapper.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+
+    if (scale > 1) {
+        wrapper.style.cursor = pointers.size === 1 ? 'grabbing' : 'grab';
+    } else {
+        wrapper.style.cursor = 'zoom-in';
+    }
+}
+
+function resetLightboxZoom({ animate = false } = {}) {
+    lightboxZoomState.scale = 1;
+    lightboxZoomState.tx = 0;
+    lightboxZoomState.ty = 0;
+    lightboxZoomState.pointers.clear();
+    lightboxZoomState.prevPinchDist = 0;
+    lightboxZoomState.didGesture = false;
+    lightboxZoomState.suppressBackdropClick = false;
+    applyLightboxTransform({ animate });
+}
+
+function zoomLightboxAt(nextScale, clientX, clientY, { animate = false } = {}) {
+    const wrapper = getLightboxWrapper();
+    if (!wrapper) return;
+
+    const prevScale = lightboxZoomState.scale;
+    const clampedScale = Math.min(
+        lightboxZoomState.maxScale,
+        Math.max(lightboxZoomState.minScale, nextScale)
+    );
+
+    if (clampedScale <= 1.01) {
+        lightboxZoomState.scale = 1;
+        lightboxZoomState.tx = 0;
+        lightboxZoomState.ty = 0;
+        applyLightboxTransform({ animate });
+        return;
+    }
+
+    const rect = wrapper.getBoundingClientRect();
+    const baseCenterX = rect.left + rect.width / 2 - lightboxZoomState.tx;
+    const baseCenterY = rect.top + rect.height / 2 - lightboxZoomState.ty;
+    const dx = clientX - baseCenterX;
+    const dy = clientY - baseCenterY;
+    const ratio = clampedScale / prevScale;
+
+    const rawTx = dx - ratio * (dx - lightboxZoomState.tx);
+    const rawTy = dy - ratio * (dy - lightboxZoomState.ty);
+    const clamped = clampLightboxPan(rawTx, rawTy, clampedScale);
+
+    lightboxZoomState.scale = clampedScale;
+    lightboxZoomState.tx = clamped.tx;
+    lightboxZoomState.ty = clamped.ty;
+    applyLightboxTransform({ animate });
+}
+
 if (questionImage && imageZoomModal && zoomedImage) {
     questionImage.addEventListener('click', () => {
         const cardImg = currentQuestion?.image || currentQuestion?.imageUrl || currentQuestion?.img || '';
@@ -9344,6 +9446,7 @@ function closeImageZoom() {
     if (imageZoomModal && !imageZoomModal.classList.contains('hidden')) {
         closeModalWithMotion(imageZoomModal, {
             onClosed: () => {
+                resetLightboxZoom();
                 if (zoomedImage) zoomedImage.src = '';
                 const zoomWrapper = document.getElementById('zoomed-image-wrapper');
                 if (zoomWrapper) {
@@ -9360,9 +9463,149 @@ if (closeImageZoomBtn && imageZoomModal) {
 }
 if (imageZoomModal) {
     imageZoomModal.addEventListener('click', (e) => {
+        if (lightboxZoomState.suppressBackdropClick) {
+            lightboxZoomState.suppressBackdropClick = false;
+            return;
+        }
         if (e.target === imageZoomModal) {
             closeImageZoom();
         }
+    });
+
+    // Mouse wheel / trackpad pinch zoom on PC
+    imageZoomModal.addEventListener('wheel', (e) => {
+        if (imageZoomModal.classList.contains('hidden')) return;
+        e.preventDefault();
+        const sensitivity = e.ctrlKey ? 0.01 : 0.0022;
+        const factor = Math.exp(-e.deltaY * sensitivity);
+        zoomLightboxAt(lightboxZoomState.scale * factor, e.clientX, e.clientY);
+    }, { passive: false });
+
+    // Pinch-to-zoom (mobile) and drag-to-pan (mobile & PC when zoomed)
+    imageZoomModal.addEventListener('pointerdown', (e) => {
+        if (imageZoomModal.classList.contains('hidden')) return;
+        if (e.target.closest('#close-image-zoom-btn')) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+        lightboxZoomState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (lightboxZoomState.pointers.size === 1) {
+            lightboxZoomState.dragStartX = e.clientX;
+            lightboxZoomState.dragStartY = e.clientY;
+            lightboxZoomState.lastX = e.clientX;
+            lightboxZoomState.lastY = e.clientY;
+            lightboxZoomState.didGesture = false;
+            if (lightboxZoomState.scale > 1) {
+                applyLightboxTransform();
+            }
+        } else if (lightboxZoomState.pointers.size === 2) {
+            const [p1, p2] = Array.from(lightboxZoomState.pointers.values());
+            lightboxZoomState.prevPinchDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            lightboxZoomState.prevMidX = (p1.x + p2.x) / 2;
+            lightboxZoomState.prevMidY = (p1.y + p2.y) / 2;
+            lightboxZoomState.didGesture = true;
+        }
+    });
+
+    imageZoomModal.addEventListener('pointermove', (e) => {
+        if (!lightboxZoomState.pointers.has(e.pointerId)) return;
+        lightboxZoomState.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (lightboxZoomState.pointers.size === 2) {
+            e.preventDefault();
+            const [p1, p2] = Array.from(lightboxZoomState.pointers.values());
+            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+
+            if (lightboxZoomState.prevPinchDist > 0) {
+                const panDx = midX - lightboxZoomState.prevMidX;
+                const panDy = midY - lightboxZoomState.prevMidY;
+                const clampedPan = clampLightboxPan(
+                    lightboxZoomState.tx + panDx,
+                    lightboxZoomState.ty + panDy,
+                    lightboxZoomState.scale
+                );
+                lightboxZoomState.tx = clampedPan.tx;
+                lightboxZoomState.ty = clampedPan.ty;
+
+                const nextScale = lightboxZoomState.scale * (dist / lightboxZoomState.prevPinchDist);
+                zoomLightboxAt(nextScale, midX, midY);
+            }
+
+            lightboxZoomState.prevPinchDist = dist;
+            lightboxZoomState.prevMidX = midX;
+            lightboxZoomState.prevMidY = midY;
+            lightboxZoomState.didGesture = true;
+        } else if (lightboxZoomState.pointers.size === 1 && lightboxZoomState.scale > 1) {
+            e.preventDefault();
+            const dx = e.clientX - lightboxZoomState.lastX;
+            const dy = e.clientY - lightboxZoomState.lastY;
+            if (!lightboxZoomState.didGesture) {
+                const totalMove = Math.hypot(
+                    e.clientX - lightboxZoomState.dragStartX,
+                    e.clientY - lightboxZoomState.dragStartY
+                );
+                if (totalMove > 4) {
+                    lightboxZoomState.didGesture = true;
+                }
+            }
+            const clamped = clampLightboxPan(
+                lightboxZoomState.tx + dx,
+                lightboxZoomState.ty + dy,
+                lightboxZoomState.scale
+            );
+            lightboxZoomState.tx = clamped.tx;
+            lightboxZoomState.ty = clamped.ty;
+            lightboxZoomState.lastX = e.clientX;
+            lightboxZoomState.lastY = e.clientY;
+            applyLightboxTransform();
+        }
+    });
+
+    const handleLightboxPointerEnd = (e) => {
+        if (!lightboxZoomState.pointers.has(e.pointerId)) return;
+        lightboxZoomState.pointers.delete(e.pointerId);
+
+        if (lightboxZoomState.didGesture && e.pointerType === 'mouse') {
+            lightboxZoomState.suppressBackdropClick = true;
+            setTimeout(() => {
+                lightboxZoomState.suppressBackdropClick = false;
+            }, 0);
+        }
+
+        if (lightboxZoomState.pointers.size === 1) {
+            const [remaining] = Array.from(lightboxZoomState.pointers.values());
+            lightboxZoomState.lastX = remaining.x;
+            lightboxZoomState.lastY = remaining.y;
+            lightboxZoomState.prevPinchDist = 0;
+        } else if (lightboxZoomState.pointers.size === 0) {
+            lightboxZoomState.prevPinchDist = 0;
+
+            // Double-tap on touch devices to toggle 2.5x / 1x zoom
+            if (e.pointerType !== 'mouse' && !lightboxZoomState.didGesture && e.target.closest('#zoomed-image-wrapper')) {
+                const now = Date.now();
+                if (now - lightboxZoomState.lastTapTime < 280) {
+                    lightboxZoomState.lastTapTime = 0;
+                    const targetScale = lightboxZoomState.scale > 1.05 ? 1 : 2.5;
+                    zoomLightboxAt(targetScale, e.clientX, e.clientY, { animate: true });
+                } else {
+                    lightboxZoomState.lastTapTime = now;
+                }
+            }
+
+            applyLightboxTransform();
+        }
+    };
+
+    imageZoomModal.addEventListener('pointerup', handleLightboxPointerEnd);
+    imageZoomModal.addEventListener('pointercancel', handleLightboxPointerEnd);
+
+    // Double-click on PC to toggle 2.5x / 1x zoom
+    imageZoomModal.addEventListener('dblclick', (e) => {
+        if (!e.target.closest('#zoomed-image-wrapper')) return;
+        const targetScale = lightboxZoomState.scale > 1.05 ? 1 : 2.5;
+        zoomLightboxAt(targetScale, e.clientX, e.clientY, { animate: true });
     });
 }
 

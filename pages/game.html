@@ -1588,13 +1588,13 @@
     </div>
 
     <!-- MODAL DE ZOOM DE IMAGEM (LIGHTBOX) -->
-    <div id="image-zoom-modal" class="hidden fixed inset-0 modal-overlay z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+    <div id="image-zoom-modal" class="hidden fixed inset-0 modal-overlay z-[100] flex items-center justify-center p-4 backdrop-blur-md touch-none overscroll-contain select-none">
         <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
-            <button id="close-image-zoom-btn" class="absolute -top-10 right-0 text-white hover:text-gray-300 p-2">
+            <button id="close-image-zoom-btn" class="absolute -top-10 right-0 z-20 text-white hover:text-gray-300 p-2">
                 <span class="material-symbols-rounded text-3xl leading-none text-white">close</span>
             </button>
-            <div id="zoomed-image-wrapper" class="relative max-h-[85vh] max-w-full flex items-center justify-center">
-                <img id="zoomed-image" src="" alt="Imagem Ampliada" class="lightbox-content bg-white" data-i18n-alt="zoomed_image">
+            <div id="zoomed-image-wrapper" class="relative max-h-[85vh] max-w-full flex items-center justify-center touch-none select-none">
+                <img id="zoomed-image" src="" alt="Imagem Ampliada" draggable="false" class="lightbox-content bg-white select-none" data-i18n-alt="zoomed_image">
             </div>
         </div>
     </div>
