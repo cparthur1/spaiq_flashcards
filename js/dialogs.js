@@ -62,27 +62,27 @@ const VARIANT_STYLES = {
     info: {
         icon: 'info',
         badgeBg: 'bg-blue-50 text-[#3b82f7] border-blue-200/80',
-        confirmBtn: 'bg-[#3b82f7] hover:bg-blue-600 text-white shadow-sm'
+        confirmBtn: 'btn-primary-25d'
     },
     primary: {
         icon: 'help',
         badgeBg: 'bg-blue-50 text-[#3b82f7] border-blue-200/80',
-        confirmBtn: 'bg-[#3b82f7] hover:bg-blue-600 text-white shadow-sm'
+        confirmBtn: 'btn-primary-25d'
     },
     success: {
         icon: 'check_circle',
         badgeBg: 'bg-emerald-50 text-emerald-600 border-emerald-200/80',
-        confirmBtn: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+        confirmBtn: 'btn-primary-25d btn-25d-success'
     },
     warning: {
         icon: 'warning',
         badgeBg: 'bg-amber-50 text-amber-600 border-amber-200/80',
-        confirmBtn: 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm'
+        confirmBtn: 'btn-primary-25d btn-25d-warning'
     },
     danger: {
         icon: 'delete_forever',
         badgeBg: 'bg-red-50 text-red-600 border-red-200/80',
-        confirmBtn: 'bg-red-600 hover:bg-red-700 text-white shadow-sm'
+        confirmBtn: 'btn-primary-25d btn-25d-danger'
     }
 };
 
@@ -224,7 +224,7 @@ function showBaseDialog({
         const confirmBtn = document.createElement('button');
         confirmBtn.type = 'submit';
         confirmBtn.value = 'confirm';
-        confirmBtn.className = `m3-btn-expressive px-5 py-2 text-sm font-bold rounded-full transition cursor-pointer ${styleSpec.confirmBtn}`;
+        confirmBtn.className = `px-5 py-2 text-sm font-bold rounded-full cursor-pointer ${styleSpec.confirmBtn}`;
         confirmBtn.textContent = resolvedConfirm;
         if (mode === 'alert' || (mode === 'confirm' && (resolvedVariant !== 'danger' || confirmOnEnter))) {
             confirmBtn.autofocus = true;
