@@ -2721,11 +2721,43 @@ async function streamDeckCardsFromSseResponse(res, seenSignatures) {
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
     let streamText = '';
+    let thoughtBuffer = '';
+    let lastThoughtHeadline = '';
     let phaseAddedCount = 0;
     let totalAddedCount = 0;
     let complementAddedCount = 0;
     let complementTopics = [];
     let activePhase = 'initial';
+
+    const updateThoughtStatus = (thoughtChunk) => {
+        if (!thoughtChunk || deckCards.length > 0 || activePhase !== 'initial') return;
+        thoughtBuffer += thoughtChunk;
+        const blocks = thoughtBuffer
+            .split(/\n{2,}|(?=\n\*\*[^*\n]+\*\*)/)
+            .map(block => block.trim())
+            .filter(Boolean);
+        if (blocks.length === 0) return;
+
+        const currentBlock = blocks[blocks.length - 1];
+        let headline = currentBlock
+            .split('\n')[0]
+            .replace(/^#+\s*/, '')
+            .replace(/^[-*•]\s+/, '')
+            .replace(/[*_`]+/g, '')
+            .trim();
+        if (!headline) return;
+        if (headline.length > 110) {
+            headline = headline.slice(0, 107).trimEnd() + '…';
+        }
+        if (headline !== lastThoughtHeadline) {
+            if (generationStatusInterval) {
+                clearInterval(generationStatusInterval);
+                generationStatusInterval = null;
+            }
+            lastThoughtHeadline = headline;
+            updateGeneratingStatus(headline);
+        }
+    };
 
     const flushFallbackForCurrentPhase = () => {
         if (phaseAddedCount === 0 && streamText.trim()) {
@@ -2759,28 +2791,41 @@ async function streamDeckCardsFromSseResponse(res, seenSignatures) {
             if (!line.startsWith('data: ')) continue;
             const jsonStr = line.slice(6).trim();
             if (jsonStr === '[DONE]') continue;
+            let parsed = null;
             try {
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.spaiqMeta) {
-                    const meta = parsed.spaiqMeta;
-                    if (meta.phase === 'auditing') {
-                        flushFallbackForCurrentPhase();
-                        activePhase = 'auditing';
-                        updateGeneratingStatus(t('verifying_material_coverage', { count: meta.playableCount || deckCards.length }));
-                    } else if (meta.phase === 'complementing') {
-                        flushFallbackForCurrentPhase();
-                        activePhase = 'complementing';
-                        streamText = '';
-                        phaseAddedCount = 0;
-                        complementTopics = Array.isArray(meta.missingTopics) ? meta.missingTopics : [];
-                        updateGeneratingStatus(t('complementing_missing_concepts', { count: complementTopics.length }));
-                    }
+                parsed = JSON.parse(jsonStr);
+            } catch (_) {
+                continue;
+            }
+
+            if (parsed.spaiqMeta) {
+                const meta = parsed.spaiqMeta;
+                if (meta.phase === 'error') {
+                    throw new Error(meta.message || 'Erro na API do Gemini');
+                } else if (meta.phase === 'auditing') {
+                    flushFallbackForCurrentPhase();
+                    activePhase = 'auditing';
+                    updateGeneratingStatus(t('verifying_material_coverage', { count: meta.playableCount || deckCards.length }));
+                } else if (meta.phase === 'complementing') {
+                    flushFallbackForCurrentPhase();
+                    activePhase = 'complementing';
+                    streamText = '';
+                    phaseAddedCount = 0;
+                    complementTopics = Array.isArray(meta.missingTopics) ? meta.missingTopics : [];
+                    updateGeneratingStatus(t('complementing_missing_concepts', { count: complementTopics.length }));
+                }
+                continue;
+            }
+
+            const parts = parsed.candidates?.[0]?.content?.parts;
+            if (!Array.isArray(parts)) continue;
+            for (const part of parts) {
+                if (!part?.text) continue;
+                if (part.thought) {
+                    updateThoughtStatus(part.text);
                     continue;
                 }
-
-                const chunkText = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                if (!chunkText) continue;
-                streamText += chunkText;
+                streamText += part.text;
                 const streamObjects = extractBalancedJsonObjects(streamText);
                 for (const rawObj of streamObjects) {
                     const card = normalizeCard(rawObj);
@@ -2798,7 +2843,7 @@ async function streamDeckCardsFromSseResponse(res, seenSignatures) {
                         renderCardsList();
                     }
                 }
-            } catch (e) {}
+            }
         }
     }
 
@@ -2931,7 +2976,8 @@ Retorne EXCLUSIVAMENTE o array JSON ([]) contendo os flashcards estruturados con
                 systemInstruction: { parts: [{ text: generationSystemInstruction }] },
                 generationConfig: {
                     thinkingConfig: {
-                        thinkingLevel: "HIGH"
+                        thinkingLevel: "HIGH",
+                        includeThoughts: true
                     },
                     responseMimeType: "application/json"
                 },

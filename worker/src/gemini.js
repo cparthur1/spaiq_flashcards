@@ -449,7 +449,7 @@ async function forwardGeminiSseBody({ body, controller, encoder, onChunkText }) 
         const parts = parsed?.candidates?.[0]?.content?.parts;
         if (Array.isArray(parts)) {
           for (const part of parts) {
-            if (part?.text) onChunkText(part.text);
+            if (part?.text && !part?.thought) onChunkText(part.text);
           }
         }
       } catch (_) {}
@@ -484,33 +484,76 @@ export async function callGeminiWithCoverageAudit({
   targetLanguagePrompt = '',
   apiKey,
   provider = null,
-  fetchImpl = fetch
+  fetchImpl = fetch,
+  keepaliveIntervalMs = 8000
 }) {
-  const phase1Res = await callGemini({
-    model,
-    contents,
-    systemInstruction,
-    generationConfig,
-    tools,
-    toolConfig,
-    stream: true,
-    apiKey,
-    provider,
-    fetchImpl
-  });
-
   const encoder = new TextEncoder();
-  const emitMeta = (controller, meta) => {
-    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ spaiqMeta: meta })}\n\n`));
+  let keepaliveTimer = null;
+  let streamClosed = false;
+
+  const stopKeepalive = () => {
+    if (keepaliveTimer !== null) {
+      clearInterval(keepaliveTimer);
+      keepaliveTimer = null;
+    }
   };
 
   const stream = new ReadableStream({
     async start(controller) {
+      const safeEnqueue = (chunk) => {
+        if (streamClosed) return false;
+        try {
+          controller.enqueue(chunk);
+          return true;
+        } catch (_) {
+          streamClosed = true;
+          stopKeepalive();
+          return false;
+        }
+      };
+
+      const safeController = {
+        enqueue: (chunk) => safeEnqueue(chunk)
+      };
+
+      const emitMeta = (meta) => {
+        safeEnqueue(encoder.encode(`data: ${JSON.stringify({ spaiqMeta: meta })}\n\n`));
+      };
+
+      const startKeepalive = () => {
+        stopKeepalive();
+        if (streamClosed || !(keepaliveIntervalMs > 0)) return;
+        keepaliveTimer = setInterval(() => {
+          if (streamClosed) {
+            stopKeepalive();
+            return;
+          }
+          safeEnqueue(encoder.encode(': keepalive\n\n'));
+        }, keepaliveIntervalMs);
+      };
+
+      // Flush initial SSE comment immediately (TTFB ~0ms) and keep connection alive during thinking/audit pauses
+      safeEnqueue(encoder.encode(': keepalive\n\n'));
+      startKeepalive();
+
       try {
+        const phase1Res = await callGemini({
+          model,
+          contents,
+          systemInstruction,
+          generationConfig,
+          tools,
+          toolConfig,
+          stream: true,
+          apiKey,
+          provider,
+          fetchImpl
+        });
+
         let initialFullText = '';
         await forwardGeminiSseBody({
           body: phase1Res.body,
-          controller,
+          controller: safeController,
           encoder,
           onChunkText: (txt) => {
             initialFullText += txt;
@@ -520,14 +563,14 @@ export async function callGeminiWithCoverageAudit({
         const initialCards = extractBalancedJsonObjects(initialFullText);
         const playableCount = initialCards.filter(isPlayableGeneratedCard).length;
 
-        if (playableCount > 0 && playableCount < 100) {
+        if (playableCount > 0 && playableCount < 100 && !streamClosed) {
           try {
             const firstUserParts = Array.isArray(contents) && Array.isArray(contents[0]?.parts)
               ? contents[0].parts
               : [];
             const materialParts = firstUserParts.slice(1);
 
-            emitMeta(controller, { phase: 'auditing', playableCount });
+            emitMeta({ phase: 'auditing', playableCount });
             const audit = await auditMaterialCoverageWithFlashLite({
               materialParts,
               cards: initialCards,
@@ -536,8 +579,8 @@ export async function callGeminiWithCoverageAudit({
               fetchImpl
             });
 
-            if (!audit.sufficient && audit.missingTopics.length > 0) {
-              emitMeta(controller, {
+            if (!audit.sufficient && audit.missingTopics.length > 0 && !streamClosed) {
+              emitMeta({
                 phase: 'complementing',
                 missingTopics: audit.missingTopics
               });
@@ -555,6 +598,16 @@ export async function callGeminiWithCoverageAudit({
                 complementPrompt += `\n\n${targetLanguagePrompt.trim()}`;
               }
 
+              const phase3GenerationConfig = {
+                ...(generationConfig && typeof generationConfig === 'object' ? generationConfig : {}),
+                thinkingConfig: {
+                  ...(generationConfig?.thinkingConfig && typeof generationConfig.thinkingConfig === 'object'
+                    ? generationConfig.thinkingConfig
+                    : {}),
+                  thinkingLevel: 'LOW'
+                }
+              };
+
               const baseTurns = Array.isArray(contents) ? contents : [contents];
               const phase3Res = await callGemini({
                 model: AI_MODELS_CONFIG.models?.flash || 'gemini-3.8-flash',
@@ -564,7 +617,7 @@ export async function callGeminiWithCoverageAudit({
                   { role: 'user', parts: [{ text: complementPrompt }] }
                 ],
                 systemInstruction,
-                generationConfig,
+                generationConfig: phase3GenerationConfig,
                 tools,
                 toolConfig,
                 stream: true,
@@ -575,7 +628,7 @@ export async function callGeminiWithCoverageAudit({
 
               await forwardGeminiSseBody({
                 body: phase3Res.body,
-                controller,
+                controller: safeController,
                 encoder
               });
             }
@@ -584,12 +637,32 @@ export async function callGeminiWithCoverageAudit({
           }
         }
 
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
+        stopKeepalive();
+        safeEnqueue(encoder.encode('data: [DONE]\n\n'));
+        if (!streamClosed) {
+          streamClosed = true;
+          controller.close();
+        }
       } catch (err) {
+        stopKeepalive();
         console.error('[Gemini Stream Pipeline Error]:', err);
-        controller.error(err);
+        if (!streamClosed) {
+          emitMeta({
+            phase: 'error',
+            message: err?.message || 'Erro na API do Gemini'
+          });
+          streamClosed = true;
+          try {
+            controller.close();
+          } catch (_) {}
+        }
+      } finally {
+        stopKeepalive();
       }
+    },
+    cancel() {
+      streamClosed = true;
+      stopKeepalive();
     }
   });
 

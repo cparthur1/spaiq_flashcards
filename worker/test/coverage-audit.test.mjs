@@ -189,3 +189,86 @@ test('worker /api/ai/generate allows unauthenticated free trial with isNewDeck=t
     globalThis.fetch = originalFetch;
   }
 });
+
+test('callGeminiWithCoverageAudit streams immediately with keepalive, filters thoughts from model history, and uses LOW thinkingLevel in phase 3', async () => {
+  const calls = [];
+  const initialCards = [
+    { type: 'open', subject: 'Bio', topic: 'Cell', description: 'Q1', answer: 'A1' }
+  ];
+  const complementCards = [
+    { type: 'open', subject: 'Bio', topic: 'Mito', description: 'Q2', answer: 'A2' }
+  ];
+
+  const mockFetch = async (url, init) => {
+    const body = JSON.parse(init.body);
+    calls.push({ url, body });
+
+    if (calls.length === 1) {
+      await new Promise(resolve => setTimeout(resolve, 35));
+      return new Response(createSseStream([
+        { candidates: [{ content: { parts: [{ thought: true, text: '**Analisando material**\nVou ler o PDF.' }] } }] },
+        makeGeminiTextChunk(JSON.stringify(initialCards)),
+        '[DONE]'
+      ]), { status: 200 });
+    }
+
+    if (calls.length === 2) {
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: JSON.stringify({ sufficient: false, missing_topics: ['Mitocondria'] }) }] } }]
+      }), { status: 200 });
+    }
+
+    if (calls.length === 3) {
+      return new Response(createSseStream([
+        makeGeminiTextChunk(JSON.stringify(complementCards)),
+        '[DONE]'
+      ]), { status: 200 });
+    }
+
+    throw new Error(`Unexpected call #${calls.length}`);
+  };
+
+  const res = await callGeminiWithCoverageAudit({
+    model: 'gemini-flash-latest',
+    contents: [{ role: 'user', parts: [{ text: 'Prompt' }, { text: 'Material' }] }],
+    generationConfig: {
+      thinkingConfig: { thinkingLevel: 'HIGH', includeThoughts: true },
+      responseMimeType: 'application/json'
+    },
+    apiKey: 'test-key',
+    fetchImpl: mockFetch,
+    keepaliveIntervalMs: 10
+  });
+
+  // Response must return immediately before phase 1 fetch finishes
+  assert.equal(res.status, 200);
+  const rawText = await res.text();
+  assert.ok(rawText.includes(': keepalive\n\n'));
+
+  // Thought chunk must be forwarded to client, but excluded from phase 3 model history
+  assert.ok(rawText.includes('"thought":true'));
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2].body.contents[1].parts[0].text.includes('Analisando material'), false);
+  assert.equal(calls[2].body.generationConfig.thinkingConfig.thinkingLevel, 'LOW');
+});
+
+test('callGeminiWithCoverageAudit stops keepalive and emits error meta when Gemini API returns error', async () => {
+  const mockFetch = async () => {
+    await new Promise(resolve => setTimeout(resolve, 25));
+    return new Response('Upstream rate limit', { status: 429 });
+  };
+
+  const res = await callGeminiWithCoverageAudit({
+    model: 'gemini-flash-latest',
+    contents: [{ role: 'user', parts: [{ text: 'Prompt' }, { text: 'Material' }] }],
+    apiKey: 'test-key',
+    fetchImpl: mockFetch,
+    keepaliveIntervalMs: 10
+  });
+
+  assert.equal(res.status, 200);
+  const events = await readAllSseEvents(res);
+  const errorEvent = events.find(e => e?.spaiqMeta?.phase === 'error');
+  assert.ok(errorEvent);
+  assert.ok(errorEvent.spaiqMeta.message.includes('429'));
+});
