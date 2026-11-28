@@ -604,6 +604,63 @@ export function triggerSpringPop(el, className = 'm3-bookmark-pop', durationMs =
     });
 }
 
+/**
+ * Resolves a relative asset path depending on whether the current page is inside /pages/.
+ * @param {string} relativePath - Path relative to project root (e.g. 'assets/img/pro_tier_wave.svg')
+ * @returns {string}
+ */
+export function getAssetUrl(relativePath) {
+    const clean = String(relativePath || '').replace(/^\/+/, '');
+    const isSubpage = typeof window !== 'undefined' && window.location.pathname.includes('/pages/');
+    return isSubpage ? `../${clean}` : clean;
+}
+
+/**
+ * Builds the Google-style Pro tier wave chip HTML.
+ * @param {{ label?: string, compact?: boolean, className?: string }} [options]
+ * @returns {string}
+ */
+export function buildGoogleProChipHtml({ label = 'Pro', compact = false, className = '' } = {}) {
+    const waveSrc = escapeHtml(getAssetUrl('assets/img/pro_tier_wave.svg'));
+    const safeLabel = escapeHtml(label || 'Pro');
+    const classes = ['kykVM', compact ? 'kykVM--sm' : '', className].filter(Boolean).join(' ');
+    return `<div class="${classes}" aria-hidden="true"><img src="${waveSrc}" class="oU5yj" alt="" role="presentation"><span class="YzbLde">${safeLabel}</span></div>`;
+}
+
+/**
+ * Builds a user profile avatar with the Google subscriber gradient ring when isPro is true.
+ * @param {{ photoUrl?: string, displayName?: string, isPro?: boolean, sizeClass?: string, compact?: boolean, fallbackIconClass?: string }} [options]
+ * @returns {string}
+ */
+export function buildGoogleProfileAvatarHtml({
+    photoUrl = '',
+    displayName = '',
+    isPro = false,
+    sizeClass = 'w-16 h-16',
+    compact = false,
+    fallbackIconClass = 'text-5xl'
+} = {}) {
+    const safePhoto = sanitizeImageUrl(photoUrl || '');
+    const ringSrc = escapeHtml(getAssetUrl('assets/img/pro_avatar_ring.png'));
+    const wrapClasses = [
+        'google-pro-avatar-wrap',
+        sizeClass,
+        isPro ? 'is-pro' : '',
+        compact ? 'google-pro-avatar-wrap--sm' : ''
+    ].filter(Boolean).join(' ');
+
+    const avatarInner = safePhoto
+        ? `<img src="${escapeHtml(safePhoto)}" referrerpolicy="no-referrer" class="google-pro-avatar-img ${isPro ? '' : 'border border-[#dadce0]'}" alt="${escapeHtml(displayName || 'Avatar')}">`
+        : `<span class="material-symbols-rounded ${fallbackIconClass} leading-none text-[#3b82f7]">account_circle</span>`;
+
+    const ringOverlay = isPro
+        ? `<img src="${ringSrc}" alt="" aria-hidden="true" class="google-pro-avatar-ring">`
+        : '';
+
+    return `<div class="${wrapClasses}">${avatarInner}${ringOverlay}</div>`;
+}
+
+
 
 
 

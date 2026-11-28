@@ -103,9 +103,15 @@
                 title="Minha Conta e Sincronização" data-i18n-title="my_account_title">
                 <div class="flex items-center gap-3 min-w-0">
                     <span id="menu-account-icon" class="material-symbols-rounded text-2xl text-[var(--md-sys-color-primary)] flex-shrink-0 transition-transform group-hover:scale-110">account_circle</span>
-                    <img id="menu-account-avatar" referrerpolicy="no-referrer" class="hidden w-7 h-7 rounded-full object-cover border border-blue-400 flex-shrink-0" alt="Avatar">
+                    <div id="menu-account-avatar-wrap" class="hidden google-pro-avatar-wrap google-pro-avatar-wrap--sm w-8 h-8 flex-shrink-0">
+                        <img id="menu-account-avatar" referrerpolicy="no-referrer" class="google-pro-avatar-img border border-[#dadce0]" alt="Avatar">
+                        <img id="menu-account-pro-ring" src="../assets/img/pro_avatar_ring.png" alt="" aria-hidden="true" class="hidden google-pro-avatar-ring">
+                    </div>
                     <div class="flex-1 min-w-0">
-                        <p id="menu-account-title" class="text-[13px] font-semibold leading-tight text-[var(--md-sys-color-on-surface)] truncate" data-i18n="my_account">Minha Conta</p>
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <p id="menu-account-title" class="text-[13px] font-semibold leading-tight text-[var(--md-sys-color-on-surface)] truncate" data-i18n="my_account">Minha Conta</p>
+                            <span id="menu-account-pro-chip" class="hidden flex-shrink-0"></span>
+                        </div>
                         <p id="menu-account-subtitle" class="text-[11px] leading-tight text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5" data-i18n="my_account_subtitle">Sincronização e Plano Pro</p>
                     </div>
                 </div>

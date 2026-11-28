@@ -7,7 +7,7 @@
 import { auth, signInWithGoogle, signOutUser, onAuthChange } from './firebase-client.js';
 import { isLifetime, isUserPro, openProModal, refreshUserProStatus, getUserProStatus, getCambluTierLabel } from './explore-modal.js';
 import { getSubscriptionDetails, cancelSubscriptionOnly, reactivateSubscription, deleteAccountAndCancelSubscription } from './backend-api.js';
-import { escapeHtml, sanitizeImageUrl, openModalWithMotion, closeModalWithMotion } from './utils.js';
+import { escapeHtml, sanitizeImageUrl, openModalWithMotion, closeModalWithMotion, buildGoogleProChipHtml, buildGoogleProfileAvatarHtml, getAssetUrl } from './utils.js';
 import { t, applyTranslations, getCurrentLanguage } from './i18n.js';
 import { appAlert, appConfirm, appPrompt } from './dialogs.js';
 
@@ -29,25 +29,20 @@ function injectAccountModalHtml() {
   modalEl.setAttribute('aria-labelledby', 'account-modal-title');
 
   modalEl.innerHTML = `
-    <div class="m3-dialog-card w-full max-w-md bg-[var(--md-sys-color-surface-container-lowest)] rounded-[28px] shadow-2xl border border-[var(--md-sys-color-outline-variant)] overflow-hidden flex flex-col max-h-[90vh]">
-      <!-- Header -->
-      <div class="px-5 sm:px-6 py-4 border-b border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-container-low)] flex justify-between items-center flex-shrink-0">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-blue-100 text-[var(--md-sys-color-primary)] flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-rounded text-xl">manage_accounts</span>
-          </div>
-          <div>
-            <h3 id="account-modal-title" class="font-bold text-base sm:text-lg text-[var(--md-sys-color-on-surface)] leading-tight" data-i18n="account_subscription_title">Minha Conta & Assinatura</h3>
-            <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)]" data-i18n="account_subscription_subtitle">Gerencie seu perfil, plano e pagamentos</p>
-          </div>
+    <div class="m3-dialog-card google-profile-sheet w-full max-w-[420px] overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Top Bar (Google Account Switcher Style) -->
+      <div class="px-5 pt-3.5 pb-1.5 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="material-symbols-rounded text-lg text-[#444746]">manage_accounts</span>
+          <h3 id="account-modal-title" class="font-medium text-[13px] text-[#444746] truncate" data-i18n="account_subscription_title">Minha Conta & Assinatura</h3>
         </div>
-        <button id="close-account-modal-btn" type="button" class="p-1.5 rounded-full hover:bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] transition cursor-pointer" aria-label="Fechar" data-i18n-aria-label="close">
+        <button id="close-account-modal-btn" type="button" class="w-9 h-9 rounded-full hover:bg-black/5 active:bg-black/10 text-[#444746] flex items-center justify-center transition cursor-pointer flex-shrink-0" aria-label="Fechar" data-i18n-aria-label="close">
           <span class="material-symbols-rounded text-xl">close</span>
         </button>
       </div>
 
       <!-- Content Body -->
-      <div id="account-modal-body" class="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-5">
+      <div id="account-modal-body" class="px-4 pb-4 pt-1 overflow-y-auto custom-scrollbar space-y-2.5">
         <!-- Renderizado dinamicamente via renderAccountModalContent() -->
       </div>
     </div>
@@ -79,23 +74,22 @@ async function renderAccountModalContent() {
 
   // ESTADO 1: Usuário NÃO autenticado
   if (!user) {
-    const isSubpage = typeof window !== 'undefined' && window.location.pathname.includes('/pages/');
-    const googleLogoSrc = isSubpage ? '../assets/img/google_g_logo.svg' : 'assets/img/google_g_logo.svg';
+    const googleLogoSrc = getAssetUrl('assets/img/google_g_logo.svg');
 
     container.innerHTML = `
-      <div class="text-center py-4 space-y-4">
-        <div class="w-16 h-16 rounded-3xl bg-blue-50 text-[var(--md-sys-color-primary)] flex items-center justify-center mx-auto border border-blue-100 shadow-sm">
-          <span class="material-symbols-rounded text-3xl">account_circle</span>
+      <div class="google-profile-card p-6 text-center space-y-4">
+        <div class="w-16 h-16 rounded-full bg-[#f0f4f9] text-[#3b82f7] flex items-center justify-center mx-auto border border-[#dce3ee]">
+          <span class="material-symbols-rounded text-4xl">account_circle</span>
         </div>
         <div>
-          <h4 class="font-bold text-base text-[var(--md-sys-color-on-surface)]" data-i18n="connect_google_title">${t('connect_google_title')}</h4>
-          <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 max-w-xs mx-auto" data-i18n="connect_google_desc">
+          <h4 class="font-medium text-base text-[#1f1f1f]" data-i18n="connect_google_title">${t('connect_google_title')}</h4>
+          <p class="text-xs text-[#444746] mt-1.5 max-w-xs mx-auto leading-relaxed" data-i18n="connect_google_desc">
             ${t('connect_google_desc')}
           </p>
         </div>
 
         <button id="account-login-google-btn" type="button"
-          class="m3-btn-expressive m3-btn-filled w-full py-3 px-4 font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow cursor-pointer transition">
+          class="m3-btn-expressive m3-btn-filled w-full py-3 px-4 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-sm cursor-pointer transition">
           <img src="${googleLogoSrc}" alt="Google" class="w-4 h-4 flex-shrink-0 brightness-0 invert" style="filter: brightness(0) invert(1);">
           <span>${t('sign_in_with_google')}</span>
         </button>
@@ -131,41 +125,36 @@ async function renderAccountModalContent() {
 
   let planBadge = '';
   if (lifetime) {
-    planBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-      <span class="material-symbols-rounded text-xs">star</span> ${t('pro_lifetime_badge')}
-    </span>`;
+    planBadge = buildGoogleProChipHtml({ label: t('pro_lifetime_badge') });
   } else if (isCambluPro) {
-    const badgeColorClass = cambluTierCode >= 4
-      ? 'bg-amber-100 text-amber-800 border-amber-300'
-      : (cambluTierCode === 3 ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-blue-100 text-blue-800 border-blue-300');
-    planBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeColorClass}">
-      <span class="material-symbols-rounded text-xs">verified</span> ${escapeHtml(t('camblu_clube_badge', { tier: cambluTierLabel.toUpperCase() }))}
-    </span>`;
+    planBadge = buildGoogleProChipHtml({ label: t('camblu_clube_badge', { tier: cambluTierLabel.toUpperCase() }) });
   } else if (pro) {
-    planBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-      <span class="material-symbols-rounded text-xs">verified</span> ${t('pro_active_badge')}
-    </span>`;
+    planBadge = buildGoogleProChipHtml({ label: 'Pro' });
   } else {
-    planBadge = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+    planBadge = `<span class="inline-flex items-center text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-[#f0f4f9] text-[#444746] border border-[#dce3ee]">
       ${t('free_plan_badge')}
     </span>`;
   }
 
-  // Bloco do Perfil
+  // Bloco do Perfil (Google Account Hero Card)
+  const avatarHtml = buildGoogleProfileAvatarHtml({
+    photoUrl: photo,
+    displayName: name,
+    isPro: pro,
+    sizeClass: 'w-16 h-16',
+    fallbackIconClass: 'text-[56px]'
+  });
+
   let html = `
     <!-- Perfil do Usuário -->
-    <div class="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)]">
-      <div class="relative flex-shrink-0">
-        ${photo ? `<img src="${photo}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover border-2 border-blue-400" alt="Avatar">`
-                : `<span class="material-symbols-rounded text-5xl text-blue-600">account_circle</span>`}
-        ${pro ? `<span class="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-0.5 text-[10px]" title="${t('pro_subscriber_title')}"><span class="material-symbols-rounded text-xs block">star</span></span>` : ''}
-      </div>
+    <div class="google-profile-card p-4 flex items-center gap-4">
+      ${avatarHtml}
       <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2 flex-wrap">
-          <p class="font-bold text-sm text-[var(--md-sys-color-on-surface)] truncate">${name}</p>
+        <p class="font-medium text-[17px] text-[#1f1f1f] truncate leading-snug">${name}</p>
+        <p class="text-[13px] text-[#444746] truncate mt-0.5">${email}</p>
+        <div class="mt-2 flex items-center gap-1.5 flex-wrap">
           ${planBadge}
         </div>
-        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] truncate mt-0.5">${email}</p>
       </div>
     </div>
   `;
@@ -174,14 +163,16 @@ async function renderAccountModalContent() {
   if (lifetime) {
     // 2.1 ${t('pro_lifetime_badge')}
     html += `
-      <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
-        <div class="flex items-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
-          <span class="material-symbols-rounded text-lg text-amber-600">verified</span>
-          <span>${t('lifetime_access_guaranteed')}</span>
+      <div class="google-profile-group">
+        <div class="google-profile-row p-4 space-y-1.5">
+          <div class="flex items-center gap-2.5 text-[#1f1f1f] font-medium text-sm">
+            <span class="material-symbols-rounded text-xl text-[#0b57d0]">verified</span>
+            <span>${t('lifetime_access_guaranteed')}</span>
+          </div>
+          <p class="text-xs text-[#444746] leading-relaxed pl-7">
+            ${t('lifetime_access_desc')}
+          </p>
         </div>
-        <p class="text-xs text-amber-800/90 leading-relaxed">
-          ${t('lifetime_access_desc')}
-        </p>
       </div>
     `;
   } else if (isCambluPro) {
@@ -195,85 +186,87 @@ async function renderAccountModalContent() {
     const locale = getCurrentLanguage() === 'en-US' ? 'en-US' : 'pt-BR';
     const validUntilFormatted = rawValidUntil ? new Date(rawValidUntil).toLocaleDateString(locale) : null;
 
-    const cardBoxClass = cambluTierCode >= 4
-      ? 'bg-amber-50/60 border-amber-200'
-      : (cambluTierCode === 3 ? 'bg-purple-50/60 border-purple-200' : 'bg-blue-50/60 border-blue-200');
-    const titleColorClass = cambluTierCode >= 4
-      ? 'text-amber-950'
-      : (cambluTierCode === 3 ? 'text-purple-950' : 'text-blue-950');
     const iconColorClass = cambluTierCode >= 4
       ? 'text-amber-600'
-      : (cambluTierCode === 3 ? 'text-purple-600' : 'text-[#3b82f7]');
+      : (cambluTierCode === 3 ? 'text-purple-600' : 'text-[#0b57d0]');
     const pillClass = cambluTierCode >= 4
-      ? 'text-amber-800 bg-amber-100/80 border-amber-300'
-      : (cambluTierCode === 3 ? 'text-purple-800 bg-purple-100/80 border-purple-300' : 'text-blue-800 bg-blue-100/80 border-blue-300');
+      ? 'text-amber-800 bg-amber-50 border-amber-200'
+      : (cambluTierCode === 3 ? 'text-purple-800 bg-purple-50 border-purple-200' : 'text-[#0b57d0] bg-[#e8f0fe] border-[#c2e7ff]');
     const barColorClass = cambluTierCode >= 4
       ? 'bg-amber-500'
       : (cambluTierCode === 3 ? 'bg-purple-600' : 'bg-[#3b82f7]');
 
     html += `
-      <div class="p-4 rounded-2xl border ${cardBoxClass} space-y-3">
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 ${titleColorClass} font-bold text-xs sm:text-sm min-w-0">
-            <span class="material-symbols-rounded text-lg ${iconColorClass}">workspace_premium</span>
-            <span class="truncate">${escapeHtml(t('camblu_clube_plan_title', { tier: cambluTierLabel }))}</span>
+      <div class="google-profile-group">
+        <!-- Resumo do Plano & Cota -->
+        <div class="google-profile-row p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 text-[#1f1f1f] font-medium text-sm min-w-0">
+              <span class="material-symbols-rounded text-xl ${iconColorClass}">workspace_premium</span>
+              <span class="truncate">${escapeHtml(t('camblu_clube_plan_title', { tier: cambluTierLabel }))}</span>
+            </div>
+            <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border flex-shrink-0 ${pillClass}">
+              Spaiq + Gorit PRO
+            </span>
           </div>
-          <span class="text-[11px] font-black px-2.5 py-0.5 rounded-full border flex-shrink-0 ${pillClass}">
-            Spaiq + Gorit PRO
-          </span>
+
+          <p class="text-xs text-[#444746] leading-relaxed">
+            ${escapeHtml(t('camblu_clube_pro_desc', { tier: cambluTierLabel }))}
+          </p>
+
+          <!-- Monthly AI Quota Progress -->
+          <div class="p-3 bg-[#f8fafd] rounded-2xl border border-[#e1e5ea] space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] font-medium text-[#1f1f1f]">
+              <span>${escapeHtml(t('camblu_clube_quota_summary', { used: monthlyUsed, limit: monthlyLimit, remaining: monthlyRemaining }))}</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full bg-[#e1e5ea] overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-300 ${barColorClass}" style="width: ${quotaPct}%"></div>
+            </div>
+            ${extraGens > 0 ? `
+              <p class="text-[11px] text-amber-800 font-medium flex items-center gap-1 pt-0.5">
+                <span class="material-symbols-rounded text-sm text-amber-700">stars</span>
+                <span>${t('extra_gens_available', { count: extraGens })}</span>
+              </p>
+            ` : ''}
+          </div>
         </div>
 
-        <p class="text-xs text-[var(--md-sys-color-on-surface-variant)] leading-relaxed">
-          ${escapeHtml(t('camblu_clube_pro_desc', { tier: cambluTierLabel }))}
-        </p>
-
-        <!-- Monthly AI Quota Progress -->
-        <div class="p-3 bg-white/80 rounded-xl border border-[var(--md-sys-color-outline-variant)] space-y-1.5">
-          <div class="flex items-center justify-between text-[11px] font-semibold text-[var(--md-sys-color-on-surface)]">
-            <span>${escapeHtml(t('camblu_clube_quota_summary', { used: monthlyUsed, limit: monthlyLimit, remaining: monthlyRemaining }))}</span>
-          </div>
-          <div class="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden">
-            <div class="h-full rounded-full transition-all duration-300 ${barColorClass}" style="width: ${quotaPct}%"></div>
-          </div>
-          ${extraGens > 0 ? `
-            <p class="text-[11px] text-amber-800 font-semibold flex items-center gap-1 pt-0.5">
-              <span class="material-symbols-rounded text-sm text-amber-700">stars</span>
-              <span>${t('extra_gens_available', { count: extraGens })}</span>
-            </p>
-          ` : ''}
-        </div>
-
-        <div class="space-y-1.5 text-xs text-[var(--md-sys-color-on-surface)] pt-0.5">
+        <!-- Benefícios e Validade -->
+        <div class="google-profile-row px-4 py-3 space-y-2 text-xs text-[#444746]">
           ${validUntilFormatted ? `
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2.5">
               <span class="material-symbols-rounded text-base ${iconColorClass}">event_available</span>
               <span>${escapeHtml(t('camblu_clube_valid_until', { date: validUntilFormatted }))}</span>
             </div>
           ` : ''}
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2.5">
             <span class="material-symbols-rounded text-base ${iconColorClass}">bolt</span>
             <span>${t('pro_unlimited_tutor_generations')}</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2.5">
             <span class="material-symbols-rounded text-base ${iconColorClass}">checklist_rtl</span>
-            <span><a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer" class="underline font-semibold hover:text-[#3b82f7] inline-flex items-center gap-1">${t('pro_active_gorit_perk')} <span class="material-symbols-rounded text-xs">open_in_new</span></a></span>
+            <span><a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer" class="underline font-medium text-[#0b57d0] hover:text-[#3b82f7] inline-flex items-center gap-1">${t('pro_active_gorit_perk')} <span class="material-symbols-rounded text-xs">open_in_new</span></a></span>
           </div>
         </div>
 
-        <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)] space-y-2">
-          <button type="button" id="account-buy-extra-deck-btn"
-            class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer shadow-xs">
-            <span class="material-symbols-rounded text-base text-amber-700">add_circle</span>
-            <span>${t('buy_extra_deck_btn')}</span>
-          </button>
+        <!-- Ações -->
+        <button type="button" id="account-buy-extra-deck-btn"
+          class="google-profile-row w-full px-4 py-3 text-left flex items-center justify-between gap-3 text-[13px] font-medium text-[#1f1f1f] cursor-pointer">
+          <span class="flex items-center gap-3 min-w-0">
+            <span class="material-symbols-rounded text-xl text-amber-600 flex-shrink-0">add_circle</span>
+            <span class="truncate">${t('buy_extra_deck_btn')}</span>
+          </span>
+          <span class="material-symbols-rounded text-lg text-[#444746] flex-shrink-0">chevron_right</span>
+        </button>
 
-          <a href="https://camblu.web.app/clube" target="_blank" rel="noopener noreferrer"
-            class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-[#3b82f7] bg-white hover:bg-blue-50 border border-blue-200 transition cursor-pointer shadow-xs">
-            <span class="material-symbols-rounded text-base text-[#3b82f7]">card_membership</span>
-            <span>${t('camblu_clube_manage_btn')}</span>
-            <span class="material-symbols-rounded text-sm">open_in_new</span>
-          </a>
-        </div>
+        <a href="https://camblu.web.app/clube" target="_blank" rel="noopener noreferrer"
+          class="google-profile-row w-full px-4 py-3 text-left flex items-center justify-between gap-3 text-[13px] font-medium text-[#1f1f1f] cursor-pointer">
+          <span class="flex items-center gap-3 min-w-0">
+            <span class="material-symbols-rounded text-xl text-[#0b57d0] flex-shrink-0">card_membership</span>
+            <span class="truncate">${t('camblu_clube_manage_btn')}</span>
+          </span>
+          <span class="material-symbols-rounded text-lg text-[#444746] flex-shrink-0">open_in_new</span>
+        </a>
       </div>
     `;
   } else if (pro) {
@@ -298,100 +291,109 @@ async function renderAccountModalContent() {
     const invoiceUrl = escapeHtml(sanitizeImageUrl(subDetailsCache?.invoiceUrl || ''));
 
     html += `
-      <div class="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 text-blue-950 font-bold text-xs sm:text-sm">
-            <span class="material-symbols-rounded text-lg text-[#3b82f7]">workspace_premium</span>
-            <span>${t('flashcards_pro_monthly')}</span>
-          </div>
-          <span class="text-xs font-black text-[#3b82f7] bg-blue-100/80 px-2.5 py-0.5 rounded-full border border-blue-300">
-            ${t('price_per_month')}
-          </span>
-        </div>
-
-        <!-- Monthly AI Quota Progress for Stripe Monthly Pro (L218) -->
-        <div class="p-3 bg-white/85 rounded-xl border border-blue-200/80 space-y-1.5">
-          <div class="flex items-center justify-between text-[11px] font-semibold text-[var(--md-sys-color-on-surface)]">
-            <span>${escapeHtml(t('camblu_clube_quota_summary', { used: monthlyUsed, limit: monthlyLimit, remaining: monthlyRemaining }))}</span>
-          </div>
-          <div class="w-full h-1.5 rounded-full bg-gray-200 overflow-hidden">
-            <div class="h-full rounded-full transition-all duration-300 bg-[#3b82f7]" style="width: ${quotaPct}%"></div>
-          </div>
-          ${extraGens > 0 ? `
-            <p class="text-[11px] text-amber-800 font-semibold flex items-center gap-1 pt-0.5">
-              <span class="material-symbols-rounded text-sm text-amber-700">stars</span>
-              <span>${t('extra_gens_available', { count: extraGens })}</span>
-            </p>
-          ` : ''}
-        </div>
-
-        ${isCanceling ? `
-          <!-- Disclaimer de Cancelamento: Assinatura ativa até o dia X -->
-          <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium flex items-center gap-2">
-            <span class="material-symbols-rounded text-base text-amber-700 flex-shrink-0">info</span>
-            <span>${t('active_until_label')} <strong>${activeUntilDateFormatted}</strong></span>
-          </div>
-        ` : `
-          <div class="space-y-1.5 text-xs text-blue-900/90 pt-1">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-rounded text-base text-blue-600">calendar_month</span>
-              <span>${t('next_renewal_label')}: <strong>${activeUntilDateFormatted}</strong></span>
+      <div class="google-profile-group">
+        <!-- Plano & Cota Mensal -->
+        <div class="google-profile-row p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 text-[#1f1f1f] font-medium text-sm min-w-0">
+              <span class="material-symbols-rounded text-xl text-[#0b57d0]">workspace_premium</span>
+              <span class="truncate">${t('flashcards_pro_monthly')}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-rounded text-base text-blue-600">bolt</span>
+            <span class="text-xs font-semibold text-[#0b57d0] bg-[#e8f0fe] px-2.5 py-0.5 rounded-full border border-[#c2e7ff] flex-shrink-0">
+              ${t('price_per_month')}
+            </span>
+          </div>
+
+          <!-- Monthly AI Quota Progress for Stripe Monthly Pro (L218) -->
+          <div class="p-3 bg-[#f8fafd] rounded-2xl border border-[#e1e5ea] space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] font-medium text-[#1f1f1f]">
+              <span>${escapeHtml(t('camblu_clube_quota_summary', { used: monthlyUsed, limit: monthlyLimit, remaining: monthlyRemaining }))}</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full bg-[#e1e5ea] overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-300 bg-[#3b82f7]" style="width: ${quotaPct}%"></div>
+            </div>
+            ${extraGens > 0 ? `
+              <p class="text-[11px] text-amber-800 font-medium flex items-center gap-1 pt-0.5">
+                <span class="material-symbols-rounded text-sm text-amber-700">stars</span>
+                <span>${t('extra_gens_available', { count: extraGens })}</span>
+              </p>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Status da Renovação & Benefícios -->
+        <div class="google-profile-row px-4 py-3 space-y-2 text-xs text-[#444746]">
+          ${isCanceling ? `
+            <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium flex items-center gap-2">
+              <span class="material-symbols-rounded text-base text-amber-700 flex-shrink-0">info</span>
+              <span>${t('active_until_label')} <strong>${activeUntilDateFormatted}</strong></span>
+            </div>
+          ` : `
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-rounded text-base text-[#0b57d0]">calendar_month</span>
+              <span>${t('next_renewal_label')}: <strong class="text-[#1f1f1f]">${activeUntilDateFormatted}</strong></span>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-rounded text-base text-[#0b57d0]">bolt</span>
               <span>${t('pro_unlimited_tutor_generations')}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-rounded text-base text-blue-600">checklist_rtl</span>
-              <span><a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer" class="underline font-semibold hover:text-blue-700 inline-flex items-center gap-1">${t('pro_active_gorit_perk')} <span class="material-symbols-rounded text-xs">open_in_new</span></a></span>
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-rounded text-base text-[#0b57d0]">checklist_rtl</span>
+              <span><a href="https://gorit.camblu.org" target="_blank" rel="noopener noreferrer" class="underline font-medium text-[#0b57d0] hover:text-[#3b82f7] inline-flex items-center gap-1">${t('pro_active_gorit_perk')} <span class="material-symbols-rounded text-xs">open_in_new</span></a></span>
             </div>
             ${userStatus?.cambluClube?.eligible ? `
-              <div class="flex items-center gap-2 text-blue-800 font-medium">
+              <div class="flex items-center gap-2.5 text-[#0b57d0] font-medium">
                 <span class="material-symbols-rounded text-base text-[#3b82f7]">card_membership</span>
                 <span>${escapeHtml(t('camblu_clube_boost_note', { tier: cambluTierLabel, limit: Number(userStatus?.monthlyIncluded || 4) }))}</span>
               </div>
             ` : ''}
+          `}
+        </div>
+
+        <!-- Fatura / Gerenciar Stripe -->
+        ${invoiceUrl ? `
+          <a href="${invoiceUrl}" target="_blank" rel="noopener noreferrer"
+            class="google-profile-row w-full px-4 py-3 text-left flex items-center justify-between gap-3 text-[13px] font-medium text-[#1f1f1f] cursor-pointer">
+            <span class="flex items-center gap-3 min-w-0">
+              <span class="material-symbols-rounded text-xl text-[#444746] flex-shrink-0">credit_card</span>
+              <span class="truncate">${t('view_invoice_or_manage_stripe')}</span>
+            </span>
+            <span class="material-symbols-rounded text-lg text-[#444746] flex-shrink-0">open_in_new</span>
+          </a>
+        ` : `
+          <div id="account-loading-details" class="google-profile-row px-4 py-2.5 text-[11px] text-[#444746] font-medium text-center">
+            ${isLoadingSubDetails ? t('loading_payment_options') : (isCanceling ? t('cancellation_scheduled') : t('renewals_active'))}
           </div>
         `}
 
-        <!-- Ações do Stripe: Fatura / Gerenciar -->
-        <div class="pt-2 border-t border-blue-200/80 space-y-2">
-          ${invoiceUrl ? `
-            <a href="${invoiceUrl}" target="_blank" rel="noopener noreferrer"
-              class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 transition cursor-pointer shadow-xs">
-              <span class="material-symbols-rounded text-base">credit_card</span>
-              <span>${t('view_invoice_or_manage_stripe')}</span>
-              <span class="material-symbols-rounded text-sm">open_in_new</span>
-            </a>
-          ` : `
-            <div id="account-loading-details" class="text-[11px] text-blue-700 font-medium text-center">
-              ${isLoadingSubDetails ? t('loading_payment_options') : (isCanceling ? t('cancellation_scheduled') : t('renewals_active'))}
-            </div>
-          `}
+        <!-- Botão Comprar Baralho Extra -->
+        <button type="button" id="account-buy-extra-deck-btn"
+          class="google-profile-row w-full px-4 py-3 text-left flex items-center justify-between gap-3 text-[13px] font-medium text-[#1f1f1f] cursor-pointer">
+          <span class="flex items-center gap-3 min-w-0">
+            <span class="material-symbols-rounded text-xl text-amber-600 flex-shrink-0">add_circle</span>
+            <span class="truncate">${t('buy_extra_deck_btn')}</span>
+          </span>
+          <span class="material-symbols-rounded text-lg text-[#444746] flex-shrink-0">chevron_right</span>
+        </button>
 
-          <!-- Botão Comprar Baralho Extra -->
-          <button type="button" id="account-buy-extra-deck-btn"
-            class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer shadow-xs">
-            <span class="material-symbols-rounded text-base text-amber-700">add_circle</span>
-            <span>${t('buy_extra_deck_btn')}</span>
+        ${isCanceling ? `
+          <button type="button" id="account-resubscribe-btn"
+            class="google-profile-row w-full px-4 py-3 text-left flex items-center justify-between gap-3 text-[13px] font-semibold text-[#0b57d0] cursor-pointer">
+            <span class="flex items-center gap-3 min-w-0">
+              <span class="material-symbols-rounded text-xl text-[#0b57d0] flex-shrink-0">restart_alt</span>
+              <span class="truncate">${t('resubscribe_btn')}</span>
+            </span>
+            <span class="material-symbols-rounded text-lg text-[#0b57d0] flex-shrink-0">chevron_right</span>
           </button>
-
-          ${isCanceling ? `
-            <!-- Botão Voltar a Assinar (substitui Cancelar Assinatura) -->
-            <button type="button" id="account-resubscribe-btn"
-              class="m3-btn-expressive m3-btn-filled w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-white bg-blue-600 hover:bg-blue-700 transition cursor-pointer shadow-xs">
-              <span class="material-symbols-rounded text-base">restart_alt</span>
-              <span>${t('resubscribe_btn')}</span>
-            </button>
-          ` : `
-            <!-- Botão Cancelar Assinatura -->
-            <button type="button" id="account-cancel-sub-btn"
-              class="w-full py-2 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer">
-              <span class="material-symbols-rounded text-base">block</span>
-              <span>${t('cancel_sub_btn')}</span>
-            </button>
-          `}
-        </div>
+        ` : `
+          <button type="button" id="account-cancel-sub-btn"
+            class="google-profile-row w-full px-4 py-3 text-left flex items-center justify-between gap-3 text-[13px] font-medium text-red-600 hover:text-red-700 cursor-pointer">
+            <span class="flex items-center gap-3 min-w-0">
+              <span class="material-symbols-rounded text-xl flex-shrink-0">block</span>
+              <span class="truncate">${t('cancel_sub_btn')}</span>
+            </span>
+          </button>
+        `}
       </div>
     `;
   } else {
@@ -400,74 +402,82 @@ async function renderAccountModalContent() {
     const isCambluComum = Boolean(userStatus?.cambluClube?.active && Number(userStatus?.cambluClube?.tierCode) === 1);
 
     html += `
-      <div class="p-4 rounded-2xl bg-[var(--md-sys-color-surface-container-low)] border border-[var(--md-sys-color-outline-variant)] space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-[var(--md-sys-color-on-surface-variant)]">${t('current_plan_free')}</span>
-          <span class="text-xs font-bold text-[var(--md-sys-color-primary)]">R$ 0,00</span>
-        </div>
+      <div class="google-profile-group">
+        <!-- Plano Atual & Benefícios -->
+        <div class="google-profile-row p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-[#444746]">${t('current_plan_free')}</span>
+            <span class="text-xs font-semibold text-[#0b57d0]">R$ 0,00</span>
+          </div>
 
-        ${extraGens > 0 ? `
-          <div class="p-2.5 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-950 font-medium">
-            <div class="flex items-center gap-2">
+          ${extraGens > 0 ? `
+            <div class="p-2.5 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center gap-2 text-xs text-amber-950 font-medium">
               <span class="material-symbols-rounded text-base text-amber-700">stars</span>
               <span>${t('extra_gens_available', { count: extraGens })}</span>
             </div>
-          </div>
-        ` : ''}
+          ` : ''}
 
-        <div class="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl space-y-2">
-          <p class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-            <span class="material-symbols-rounded text-base text-blue-600">workspace_premium</span>
-            ${t('pro_plan_perks_title')}
-          </p>
-          <ul class="text-[11px] text-blue-950/90 space-y-1 pl-1">
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_generate')}</li>
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_tutor')}</li>
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_synonyms')}</li>
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_cloud')}</li>
-            <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_gorit')}</li>
-          </ul>
+          <div class="p-3 bg-[#f8fafd] border border-[#e1e5ea] rounded-2xl space-y-2">
+            <p class="text-xs font-semibold text-[#1f1f1f] flex items-center gap-1.5">
+              <span class="material-symbols-rounded text-base text-[#0b57d0]">workspace_premium</span>
+              ${t('pro_plan_perks_title')}
+            </p>
+            <ul class="text-[11px] text-[#444746] space-y-1 pl-0.5">
+              <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_generate')}</li>
+              <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_tutor')}</li>
+              <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_synonyms')}</li>
+              <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_cloud')}</li>
+              <li class="flex items-center gap-1.5"><span class="material-symbols-rounded text-sm text-green-600">check_circle</span> ${t('pro_perk_gorit')}</li>
+            </ul>
+          </div>
         </div>
 
-        <div class="p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl flex items-start gap-2 text-[11px] text-blue-900">
+        <!-- Camblu Clube Hint -->
+        <div class="google-profile-row px-4 py-3 flex items-start gap-2.5 text-[11px] text-[#444746]">
           <span class="material-symbols-rounded text-base text-[#3b82f7] flex-shrink-0 mt-0.5">card_membership</span>
           <div class="space-y-0.5">
-            <p class="font-semibold leading-snug">${isCambluComum ? t('camblu_clube_comum_detected') : t('camblu_clube_pro_perk_hint')}</p>
-            <p class="text-[10px] text-blue-700">${t('camblu_clube_tiers_quota_info')}</p>
+            <p class="font-medium text-[#1f1f1f] leading-snug">${isCambluComum ? t('camblu_clube_comum_detected') : t('camblu_clube_pro_perk_hint')}</p>
+            <p class="text-[10px] text-[#444746]">${t('camblu_clube_tiers_quota_info')}</p>
           </div>
         </div>
 
-        <div class="space-y-2">
-          <button type="button" id="account-upgrade-pro-btn"
-            class="m3-btn-expressive m3-btn-filled w-full py-2.5 px-4 font-bold text-xs flex items-center justify-center gap-2 shadow cursor-pointer">
-            <span class="material-symbols-rounded text-base">star</span>
-            <span>${t('subscribe_flashcards_pro_btn')}</span>
-          </button>
+        <!-- Upgrade Pro -->
+        <button type="button" id="account-upgrade-pro-btn"
+          class="google-profile-row w-full px-4 py-3 text-left flex items-center justify-between gap-3 text-[13px] font-semibold text-[#0b57d0] cursor-pointer">
+          <span class="flex items-center gap-3 min-w-0">
+            <span class="material-symbols-rounded text-xl text-[#0b57d0] flex-shrink-0">auto_awesome</span>
+            <span class="truncate">${t('subscribe_flashcards_pro_btn')}</span>
+          </span>
+          <span class="material-symbols-rounded text-lg text-[#0b57d0] flex-shrink-0">chevron_right</span>
+        </button>
 
-          <!-- Botão Comprar Geração Avulsa via Stripe -->
-          <button type="button" id="account-buy-single-deck-btn"
-            class="m3-btn-expressive m3-btn-tonal w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer shadow-xs">
-            <span class="material-symbols-rounded text-base text-amber-700">add_circle</span>
-            <span>${t('buy_single_deck_btn')}</span>
-          </button>
-        </div>
+        <!-- Comprar Geração Avulsa via Stripe -->
+        <button type="button" id="account-buy-single-deck-btn"
+          class="google-profile-row w-full px-4 py-3 text-left flex items-center justify-between gap-3 text-[13px] font-medium text-[#1f1f1f] cursor-pointer">
+          <span class="flex items-center gap-3 min-w-0">
+            <span class="material-symbols-rounded text-xl text-amber-600 flex-shrink-0">add_circle</span>
+            <span class="truncate">${t('buy_single_deck_btn')}</span>
+          </span>
+          <span class="material-symbols-rounded text-lg text-[#444746] flex-shrink-0">chevron_right</span>
+        </button>
       </div>
     `;
   }
 
-  // Rodapé com ações de conta (Sair e Excluir)
+  // Rodapé com ações de conta (Sair e Excluir) — Google Split Pill Group
   html += `
-    <div class="pt-2 border-t border-[var(--md-sys-color-outline-variant)] flex items-center justify-between gap-3">
+    <div class="google-profile-split-group">
       <button type="button" id="account-logout-btn"
-        class="px-3 py-1.5 rounded-xl hover:bg-gray-100 text-xs font-bold text-[var(--md-sys-color-on-surface-variant)] hover:text-red-600 transition cursor-pointer flex items-center gap-1.5">
-        <span class="material-symbols-rounded text-base">logout</span>
-        <span>${t('logout_account')}</span>
+        class="google-profile-row px-3.5 py-3 text-xs font-medium text-[#1f1f1f] hover:text-red-600 cursor-pointer flex items-center justify-center gap-2">
+        <span class="material-symbols-rounded text-lg text-[#444746]">logout</span>
+        <span class="truncate">${t('logout_account')}</span>
       </button>
 
       <button type="button" id="account-delete-account-btn"
-        class="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-xl transition underline underline-offset-2 cursor-pointer"
+        class="google-profile-row px-3.5 py-3 text-xs font-medium text-red-600 hover:text-red-700 cursor-pointer flex items-center justify-center gap-2"
         title="${t('delete_account_tooltip')}">
-        ${t('delete_account_link')}
+        <span class="material-symbols-rounded text-lg">delete_forever</span>
+        <span class="truncate">${t('delete_account_link')}</span>
       </button>
     </div>
   `;

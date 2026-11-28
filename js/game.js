@@ -1,4 +1,4 @@
-import { normalizeString, calculateSimilarity, shuffleArray, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload, openWithMotion, closeWithMotion, openModalWithMotion, closeModalWithMotion, triggerSpringPop } from './utils.js';
+import { normalizeString, calculateSimilarity, shuffleArray, ROUTES, renderMathAndMarkdown, sanitizeHtml, generateSecureId, stripHtml, escapeHtml, sanitizeImageUrl, NOTEBOOK_STORAGE_KEY, encodeStoragePayload, openWithMotion, closeWithMotion, openModalWithMotion, closeModalWithMotion, triggerSpringPop, buildGoogleProChipHtml } from './utils.js';
 import { isPlayableCard, calculateThinkingGap, calculateProportionalStepGap, recordNormalCardOutcome, revertNormalCardErrorOnAiCorrection, resetCardForNewSession, selectNextCard, isLeechCard, shouldGraduateCard, formatTimeDisplay, getCardTopic } from './engine/scheduler.js';
 import { getDailyStreak, recordDailyCardAnswered, inferNotebookQuality, calculateNotebookNextSchedule, selectNextNotebookCard, getNotebookDueCounts, isDifficultCard, getTodayDateString, recordNotebookGoalBeaten, getNotebookDailyGoal, getNotebookSchedulerMode, setNotebookSchedulerMode } from './engine/notebook-scheduler.js';
 import {
@@ -10919,7 +10919,10 @@ export function updateSyncButtonsVisibility(user) {
 export function updateHamburgerUserUI(user) {
     const currentUser = user || auth.currentUser;
     const menuAccountIcon = document.getElementById('menu-account-icon');
+    const menuAccountAvatarWrap = document.getElementById('menu-account-avatar-wrap');
     const menuAccountAvatar = document.getElementById('menu-account-avatar');
+    const menuAccountProRing = document.getElementById('menu-account-pro-ring');
+    const menuAccountProChip = document.getElementById('menu-account-pro-chip');
     const menuAccountTitle = document.getElementById('menu-account-title');
     const menuAccountSubtitle = document.getElementById('menu-account-subtitle');
 
@@ -10927,6 +10930,7 @@ export function updateHamburgerUserUI(user) {
         const photo = sanitizeImageUrl(currentUser.photoURL || currentUser.providerData?.[0]?.photoURL || '');
         const displayName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Usuário');
         const fallbackAvatar = sanitizeImageUrl(getInitialsAvatarSvg(displayName));
+        const pro = isUserPro();
 
         if (menuAccountIcon) {
             menuAccountIcon.classList.add('hidden');
@@ -10939,18 +10943,46 @@ export function updateHamburgerUserUI(user) {
                 this.src = fallbackAvatar;
             };
             menuAccountAvatar.src = photo || fallbackAvatar;
-            menuAccountAvatar.classList.remove('hidden');
+            menuAccountAvatar.classList.toggle('border', !pro);
+            menuAccountAvatar.classList.toggle('border-[#dadce0]', !pro);
+        }
+
+        if (menuAccountAvatarWrap) {
+            menuAccountAvatarWrap.classList.remove('hidden');
+            menuAccountAvatarWrap.classList.toggle('is-pro', pro);
+        }
+
+        if (menuAccountProRing) {
+            menuAccountProRing.classList.toggle('hidden', !pro);
+        }
+
+        if (menuAccountProChip) {
+            if (pro) {
+                menuAccountProChip.innerHTML = buildGoogleProChipHtml({ label: 'Pro', compact: true });
+                menuAccountProChip.classList.remove('hidden');
+            } else {
+                menuAccountProChip.innerHTML = '';
+                menuAccountProChip.classList.add('hidden');
+            }
         }
 
         if (menuAccountTitle) {
             menuAccountTitle.textContent = displayName;
         }
         if (menuAccountSubtitle) {
-            menuAccountSubtitle.textContent = isUserPro() ? t('menu_pro_active') : t('menu_connected_google');
+            menuAccountSubtitle.textContent = pro ? t('menu_pro_active') : t('menu_connected_google');
         }
     } else {
-        if (menuAccountAvatar) {
-            menuAccountAvatar.classList.add('hidden');
+        if (menuAccountAvatarWrap) {
+            menuAccountAvatarWrap.classList.add('hidden');
+            menuAccountAvatarWrap.classList.remove('is-pro');
+        }
+        if (menuAccountProRing) {
+            menuAccountProRing.classList.add('hidden');
+        }
+        if (menuAccountProChip) {
+            menuAccountProChip.innerHTML = '';
+            menuAccountProChip.classList.add('hidden');
         }
         if (menuAccountIcon) {
             menuAccountIcon.classList.remove('hidden');

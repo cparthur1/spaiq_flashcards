@@ -32,6 +32,8 @@ const RAW_ASSETS = [
   '/assets/audio/tutorial_out.mp3',
   '/assets/audio/trophy.mp3',
   '/assets/img/trophy.svg',
+  '/assets/img/pro_avatar_ring.png',
+  '/assets/img/pro_tier_wave.svg',
   '/js/i18n.js',
   '/js/dialogs.js',
   '/js/tutorial.js',

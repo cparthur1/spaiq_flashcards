@@ -21,7 +21,7 @@ import {
 import { shareDeckToCloud, subscribeToAllSharedSlots, showShareSuccessDialog } from './share-manager.js';
 import { getUserStatus, verifyPaymentStatus, createExtraDeckCheckoutSession, BACKEND_URL } from './backend-api.js';
 import { triggerProUnlockCelebration } from './engine/pro-unlock-celebration.js';
-import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl, encodeStoragePayload, openModalWithMotion, closeModalWithMotion } from './utils.js';
+import { ROUTES, shuffleArray, escapeHtml, sanitizeImageUrl, encodeStoragePayload, openModalWithMotion, closeModalWithMotion, buildGoogleProChipHtml, buildGoogleProfileAvatarHtml } from './utils.js';
 import { t, applyTranslations } from './i18n.js';
 import { appAlert, appConfirm } from './dialogs.js';
 
@@ -1094,22 +1094,30 @@ function renderAuthHeader() {
     const isCamblu = Boolean(isPro && !lifetime && status?.subscription?.provider === 'camblu_clube');
     const headerProBadgeText = lifetime
       ? t('pro_lifetime_badge')
-      : (isCamblu ? escapeHtml(t('camblu_clube_badge', { tier: getCambluTierLabel(status?.cambluClube?.tier || status?.subscription?.tier).toUpperCase() })) : 'PRO');
+      : (isCamblu ? t('camblu_clube_badge', { tier: getCambluTierLabel(status?.cambluClube?.tier || status?.subscription?.tier).toUpperCase() }) : 'Pro');
+
+    const avatarHtml = buildGoogleProfileAvatarHtml({
+      photoUrl: photo,
+      displayName: name,
+      isPro,
+      sizeClass: 'w-9 h-9',
+      compact: true,
+      fallbackIconClass: 'text-[30px]'
+    });
+    const proChipHtml = isPro
+      ? buildGoogleProChipHtml({ label: headerProBadgeText, compact: true })
+      : '';
 
     container.innerHTML = `
       <div class="flex items-center gap-2 min-w-0 flex-wrap">
-        <button type="button" id="modal-open-account-chip" class="group flex items-center gap-2 pr-2.5 pl-1 py-1 rounded-full bg-white hover:bg-blue-50/70 border border-[var(--md-sys-color-outline-variant)] hover:border-blue-300 shadow-2xs transition cursor-pointer min-w-0 max-w-full" title="${t('account_subscription_title')}">
-          <div class="relative w-8 h-8 flex-shrink-0 flex items-center justify-center">
-            ${photo ? `<img src="${photo}" referrerpolicy="no-referrer" class="w-8 h-8 rounded-full border border-blue-200 object-cover" alt="Avatar">`
-                    : `<span class="material-symbols-rounded text-[30px] leading-none text-[#3b82f7]">account_circle</span>`}
-            ${isPro ? `<span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-amber-500 text-white ring-2 ring-white flex items-center justify-center shadow-2xs" title="${t('pro_subscriber_title')}"><span class="material-symbols-rounded block leading-none" style="font-size: 9px;">star</span></span>` : ''}
-          </div>
+        <button type="button" id="modal-open-account-chip" class="group flex items-center gap-2.5 pr-3 pl-1.5 py-1 rounded-full bg-white hover:bg-[#f0f4f9] border border-[#dce3ee] hover:border-[#c2e7ff] shadow-2xs transition cursor-pointer min-w-0 max-w-full" title="${t('account_subscription_title')}">
+          ${avatarHtml}
           <div class="text-left min-w-0">
             <div class="flex items-center gap-1.5 min-w-0">
-              <p class="font-bold text-xs text-[var(--md-sys-color-on-surface)] truncate max-w-[115px] sm:max-w-[165px] leading-tight">${name}</p>
-              ${isPro ? `<span class="inline-flex items-center text-[9px] tracking-wide ${isCamblu ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-amber-100 text-amber-800 border-amber-200'} font-extrabold px-1.5 py-[2px] rounded-full border leading-none whitespace-nowrap shrink-0 max-w-[92px] truncate">${headerProBadgeText}</span>` : ''}
+              <p class="font-medium text-xs text-[#1f1f1f] truncate max-w-[115px] sm:max-w-[165px] leading-tight">${name}</p>
+              ${proChipHtml}
             </div>
-            <p class="text-[11px] text-[var(--md-sys-color-on-surface-variant)] group-hover:text-[#3b82f7] font-medium flex items-center gap-0.5 leading-tight mt-0.5">
+            <p class="text-[11px] text-[#444746] group-hover:text-[#0b57d0] font-medium flex items-center gap-0.5 leading-tight mt-0.5">
               <span class="truncate">${t('account_chip_label')}</span>
               <span class="material-symbols-rounded text-xs leading-none shrink-0">chevron_right</span>
             </p>

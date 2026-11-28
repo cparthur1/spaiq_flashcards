@@ -5217,6 +5217,163 @@ dialog.m3-app-dialog[open]:where(:not([data-closing]))::backdrop {
     }
 }
 
+/* ==========================================================================
+   GOOGLE ACCOUNT PROFILE POPUP, PRO RING & PRO WAVE CHIP
+   ========================================================================== */
+.kykVM {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1px solid #d3e3fd;
+    padding: 3px 11px;
+    min-height: 22px;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
+    vertical-align: middle;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.kykVM.kykVM--sm {
+    padding: 2px 8px;
+    min-height: 18px;
+}
+
+.oU5yj {
+    position: absolute;
+    left: 50%;
+    bottom: -2px;
+    transform: translateX(-50%);
+    width: 114%;
+    height: auto;
+    pointer-events: none;
+    user-select: none;
+}
+
+.YzbLde {
+    position: relative;
+    z-index: 1;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+    color: #1f1f1f;
+    white-space: nowrap;
+}
+
+.kykVM.kykVM--sm .YzbLde {
+    font-size: 10px;
+}
+
+.google-pro-avatar-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    flex-shrink: 0;
+}
+
+.google-pro-avatar-wrap.is-pro {
+    padding: 3px;
+}
+
+.google-pro-avatar-wrap.is-pro.google-pro-avatar-wrap--sm {
+    padding: 2.5px;
+}
+
+.google-pro-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    object-fit: cover;
+    display: block;
+}
+
+.google-pro-avatar-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    pointer-events: none;
+    user-select: none;
+}
+
+.google-profile-sheet {
+    background: #e9eef6;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.22), 0 2px 8px rgba(15, 23, 42, 0.08);
+    color: #1f1f1f;
+}
+
+.google-profile-card {
+    background: #ffffff;
+    border-radius: 24px;
+}
+
+.google-profile-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.google-profile-row {
+    background: #ffffff;
+    border-radius: 4px;
+    transition: background-color 150ms var(--md-sys-motion-easing-standard);
+}
+
+.google-profile-group > .google-profile-row:first-child {
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+}
+
+.google-profile-group > .google-profile-row:last-child {
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.google-profile-group > .google-profile-row:only-child {
+    border-radius: 20px;
+}
+
+button.google-profile-row:hover:not(:disabled),
+a.google-profile-row:hover {
+    background: #f8fafd;
+}
+
+button.google-profile-row:active:not(:disabled),
+a.google-profile-row:active {
+    background: #edf2fa;
+}
+
+.google-profile-split-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px;
+}
+
+.google-profile-split-group > .google-profile-row:first-child {
+    border-radius: 20px 4px 4px 20px;
+}
+
+.google-profile-split-group > .google-profile-row:last-child {
+    border-radius: 4px 20px 20px 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .google-profile-row {
+        transition: none;
+    }
+}
+
+
 
 
 
